@@ -1,0 +1,65 @@
+50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
+               1x,'# of molecule states = ',I5/,  &
+               1x,'# of unit cells = ',I2) 
+
+51    FORMAT(1x,'>>> PBC  in  use <<<')
+
+52    FORMAT(/,1x,'>>> Hamiltonian  ',I4,'    /     ','time =',F8.4)  
+
+53    FORMAT(1x,'========= STARTING  S_matrix  =========')
+
+54    FORMAT(1x,' >>> no PBC')
+
+71    FORMAT(1x,' >>> PBC in the X direction')
+
+72    FORMAT(1x,' >>> PBC in the Y direction')
+
+55    FORMAT(1x,'========= FINISHING S_matrix  =========',/) 
+
+56    FORMAT(/,1x,'Initial state of the isolated molecule => ',I3)
+ 
+57    FORMAT(1x,'checking normalization of wave-packet =',F8.6,',',F8.6)
+
+58    FORMAT(1x,'Electrons in the Slater determinant = ',F9.3)
+
+59    FORMAT(/,1x,'Energy of orbital state(',I3,') = ',F10.5)
+
+60    FORMAT(1x,'norm of Psi(t) = ',F9.7)     
+
+61    FORMAT(1x,'>>>  2Pi pulse')
+
+69    FORMAT(1x,'Sparsity of OVERLAP Mtrx = ',F10.5)
+
+70    FORMAT(1x,'>>> System Characteristics: ',A72)
+
+73    FORMAT(1x,'Sparsity of DIPOLE Mtrx =',3F7.4)
+
+100   FORMAT(I5,A4,F10.5,F10.5,F10.5)
+
+101   FORMAT(F10.5,F10.5,F10.5,A3,A3,A3)
+
+111   FORMAT(I5,3F12.6)
+
+112   FORMAT(6E13.5)
+
+113   FORMAT(I5,4F12.6)
+
+120   FORMAT(/,1x,'Total number of orbitals  = ',I6)
+
+121   FORMAT(1x,A2,' atoms  = ',I4)
+
+140   FORMAT(/,1x,'Total number of electrons  = ',I6)
+
+141   FORMAT(/,1x,'Total number of atoms  = ',I6,/)
+
+153   FORMAT(/,1x,'======== STARTING  DIPOLE MATRIX ANALYSIS =========')
+
+154   FORMAT(1x,'DIPOLE Vector = (',3F8.4,') ==> ',F7.4,' Debye')
+
+156   FORMAT(1x,' >>> no DIPOLE')
+
+155   FORMAT(1x,'========= FINISHING DIPOLE MATRIX ANALYSIS ========',/)
+
+
+
+
