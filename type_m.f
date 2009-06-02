@@ -62,13 +62,22 @@ module type_m
     type dipole
         real*8 , dimension(3) :: dp
     end type dipole
-
+ 
 
     type real_interval
         real*8 :: inicio 
         real*8 :: fim
     end type real_interval
    
+
+    type transition
+        type(dipole)        , allocatable :: matrix(:,:)
+        type(real_interval)               :: bra_range
+        type(real_interval)               :: ket_range
+        integer             , allocatable :: bra_POINTER(:)
+        integer             , allocatable :: ket_POINTER(:)
+    end type transition
+
 
     include 'parameters.h'    
 

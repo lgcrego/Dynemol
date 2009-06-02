@@ -16,13 +16,14 @@ contains
 !
 !
 !
-subroutine Dipole_Moment(system, basis, M_matrix, L_vec, R_vec)
+subroutine Dipole_Moment(system, basis, DP_matrix_AO, L_vec, R_vec)
 
 type(structure) , intent(in)  :: system
 type(STO_basis) , intent(in)  :: basis(:)
-type(dipole)    , intent(in)  :: M_matrix(:,:)
+type(dipole)    , intent(in)  :: DP_matrix_AO(:,:)
 complex*16      , intent(in)  :: L_vec(:,:) , R_vec(:,:)
 
+! local variables
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), Total_DP(3) 
 real*8          , allocatable :: R_vector(:,:)
@@ -60,9 +61,9 @@ complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
     end forall    
  
-!   origin independent DP = sum{C_dagger * vec{M_matrix(i,j)} * C}
+!   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
-    b = M_matrix%DP(xyz)
+    b = DP_matrix_AO%DP(xyz)
        
     CALL gemm(L_vec,b,a,'N','N',one,zero)    
 

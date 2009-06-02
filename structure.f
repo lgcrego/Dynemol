@@ -5,8 +5,8 @@
     use Allocation_m
     use EHT_parameters
 
-    type(structure)               , public :: unit_cell , extended_cell 
-    type(STO_basis) , allocatable , public :: ExCell_basis(:)
+    type(structure)               , public             :: Unit_Cell , Extended_Cell 
+    type(STO_basis) , allocatable , public , protected :: ExCell_basis(:)
 
     public :: Read_Structure , Generate_Structure , Basis_Builder 
 

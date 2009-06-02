@@ -5,7 +5,7 @@ module EHT_parameters
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
 
-    type(EHT) , public :: atom(300)
+    type(EHT) , public , protected :: atom(300)
 
     contains
 !    

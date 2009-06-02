@@ -4,7 +4,7 @@ module DOS_m
     use constants_m
     use Structure_Builder
     use Overlap_Builder
-    use EHT_parameters , chemical_atom => atom
+    use EHT_parameters , the_chemical_atom => atom
 
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
@@ -125,7 +125,7 @@ DOS(:) = 0.d0
 do l = 1 , n_of_atoms
 
     i1   = system%BasisPointer(atom(l)) + 1
-    i2   = system%BasisPointer(atom(l)) + chemical_atom(system%AtNo(atom(l)))%DOS 
+    i2   = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
 
     do n = 1 , n_of_DOS_states
 

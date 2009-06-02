@@ -11,7 +11,7 @@
     use Overlap_Builder
     use Structure_Builder
 
-    integer , public :: spin(0:n_part) , orbital(0:n_part)
+    integer , public , protected :: spin(0:n_part) , orbital(0:n_part)
 
     public :: FMO_analysis
 

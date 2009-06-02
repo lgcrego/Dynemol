@@ -6,9 +6,9 @@ module Multipole_Core
     use Structure_Builder 
     use Dipole_m
 
-    type(dipole) , allocatable , public :: M_matrix(:,:)
+    type(dipole) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
-    public :: Dipole_Matrix , Build_DIPOLE_Matrix 
+    public :: Dipole_Matrix 
 
     private
 
@@ -16,12 +16,13 @@ contains
 !
 !
 !
-subroutine Dipole_Matrix(system,basis,L_vec,R_vec)
+subroutine Dipole_Matrix(system, basis, L_vec, R_vec)
 
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(in)    :: basis(:)
 complex*16      , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 
+! local variables
 real*8  :: Sparsity(3)
 integer :: NonZero(3) , M_size
 
@@ -34,11 +35,11 @@ Print 153
 !size of M matrix
  M_size = sum(atom(system%AtNo)%DOS)
 
- allocate(M_matrix(M_size,M_size))
+ allocate(DP_matrix_AO(M_size,M_size))
 
  CALL Build_DIPOLE_Matrix(system,basis)
 
- forall(i=1:3) NonZero(i) = count(M_matrix(:,:)%dp(i) /= 0.d0)
+ forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:)%dp(i) /= 0.d0)
 
  Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
@@ -46,10 +47,9 @@ Print 153
 
  CALL Center_of_Charge(system)
 
- if ( DP_Moment ) CALL Dipole_Moment(Extended_Cell, ExCell_basis, M_matrix, L_vec, R_vec)
+ if ( DP_Moment ) CALL Dipole_Moment(Extended_Cell, ExCell_basis, DP_matrix_AO, L_vec, R_vec)
 
 !----------------------------------------------------------
-
  Print*, '>> Dipole Moment done <<'
 
  Print 155
@@ -61,7 +61,7 @@ end subroutine Dipole_Matrix
 !
 !
 !
-subroutine Build_DIPOLE_Matrix(system,basis)
+subroutine Build_DIPOLE_Matrix(system, basis)
 
 implicit real*8 (a-h,o-z)
 
@@ -84,7 +84,7 @@ real*8 , dimension(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup) :: rl , rl2
 
 lmult = 1 ! <== DIPOLE MOMENT
 
-forall(i=1:3) M_matrix(:,:)%dp(i) = 0.d0
+forall(i=1:3) DP_matrix_AO(:,:)%dp(i) = 0.d0
 
 do ib = 1  , system%atoms
 do ia = 1 , system%atoms  
@@ -130,11 +130,11 @@ do ia = 1 , system%atoms
             end if
 
 !           p_x(a,b) 
-            M_matrix(a,b)%dp(1) = M_matrix(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
+            DP_matrix_AO(a,b)%dp(1) = DP_matrix_AO(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
 !           p_y(a,b)
-            M_matrix(a,b)%dp(2) = M_matrix(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
+            DP_matrix_AO(a,b)%dp(2) = DP_matrix_AO(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
 !           p_z(a,b)
-            M_matrix(a,b)%dp(3) = M_matrix(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
+            DP_matrix_AO(a,b)%dp(3) = DP_matrix_AO(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
 
         end do
         end do
