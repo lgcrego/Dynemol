@@ -42,9 +42,9 @@
 
  CALL Optical_Transitions(Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg)
 
- CALL Huckel_dynamics(Extended_Cell, zL, zR, FMO_L, FMO_R, erg)
+ CALL Huckel_dynamics(Extended_Cell, ExCell_basis, zL, zR, FMO_L, FMO_R, erg)
 
- CALL Redfield_Equations(Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg)
+! CALL Redfield_Equations(Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg)
 
  include 'formats.h'
 

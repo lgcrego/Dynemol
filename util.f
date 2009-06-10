@@ -6,8 +6,9 @@ contains
 !
 !
 !
+!-------------------------
 elemental function fact(n)
-
+!-------------------------
 real*8               :: fact
 integer , intent(in) :: n
 
@@ -24,8 +25,9 @@ end function fact
 !
 !
 !
+!-------------------------------
 elemental function binomial(n,k)
-
+!-------------------------------
 integer , intent(in) :: n,k
 real*8               :: binomial
 

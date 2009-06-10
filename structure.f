@@ -32,19 +32,17 @@
 !
 !
 !
+!--------------------------------
  subroutine Generate_Structure(t)
-
+!--------------------------------
  real*8 , intent(in) :: t
 
+ ! . local variables 
  integer :: copy, N_of_orbitals, N_of_electron, N_of_atom_type, AtNo
 
 !----------------------------------------------------------
-!           GENERATES   THE   STRUCTURE
+! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
 !----------------------------------------------------------
-!                  ORIGINAL  CELL 
-!     places the molecule at the end of the list
-!----------------------------------------------------------
-! DEFINES  THE  EXTENDED-STRUCTURE (REAL,not periodic)
 
  CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , extended_cell )
 
@@ -76,9 +74,7 @@
  END DO
  END DO
 
- extended_cell%molecule = k + unit_cell%molecule
-
- DO n = 1 , unit_cell%atoms     ! <== the DONOR CELL is at the end
+ DO n = 1 , unit_cell%atoms     ! <== the DONOR CELL is at the end (extended_cell%copy_No = 0)
 
     k = k + 1
 
@@ -91,24 +87,27 @@
 
  END DO    
 
+ ! . define the DONOR fragment 
+ where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
+
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
  extended_cell%T_xyz(2) = (2*nny+1)*unit_cell%T_xyz(2)
  extended_cell%T_xyz(3) = unit_cell%T_xyz(3)
 
 !------------------------------------------------------------
 
-! total number of orbitals
+ ! total number of orbitals
  N_of_orbitals = sum(atom(extended_cell%AtNo)%DOS)
  Print 120 , N_of_orbitals                       
 
-! total number of electrons
+ ! total number of electrons
  extended_cell%N_of_electrons = sum(atom(extended_cell%AtNo)%Nvalen)
  Print 140 , extended_cell%N_of_electrons
 
-! total number of atoms
+ ! total number of atoms
  Print 141 , extended_cell%atoms
 
-! total number of atoms of given type 
+ ! total number of atoms of given type 
  do AtNo = 1 , size(atom)
 
     N_of_atom_type = count(extended_cell%AtNo == AtNo)
@@ -148,19 +147,21 @@
 !
 !
 !
+!--------------------------------------
  subroutine Basis_Builder(system,basis)
-
+!--------------------------------------
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
 
+! local variables 
  integer :: k , i , l , m
 
 ! total number of orbitals
  N_of_orbitals = sum(atom(system%AtNo)%DOS)
 
-! => building AO basis <= 
+! building AO basis  
  allocate(basis(N_of_orbitals))
-
+ 
  k = 1
  do i = 1 , system%atoms
 
@@ -172,26 +173,27 @@
 
         do m = -l , +l
 
-            basis(k)%atom     =  i
-            basis(k)%copy_No  = system%copy_No(i)
-            basis(k)%AtNo     =  AtNo
-            basis(k)%symbol   =  system%symbol(i)
+            basis(k)%atom      =  i
+            basis(k)%AtNo      =  AtNo
+            basis(k)%copy_No   =  system%copy_No  (i)
+            basis(k)%symbol    =  system%symbol   (i)
+            basis(k)%fragment  =  system%fragment (i)
 
-            basis(k)%n        =  atom(AtNo)%Nquant(l)
-            basis(k)%l        =  l
-            basis(k)%m        =  m
+            basis(k)%n         =  atom(AtNo)%Nquant(l)
+            basis(k)%l         =  l
+            basis(k)%m         =  m
 
-            basis(k)%IP       =  atom(AtNo)%IP(l)
-            basis(k)%Nzeta    =  atom(AtNo)%Nzeta(l)
-            basis(k)%coef(1)  =  atom(AtNo)%coef(l,1)
-            basis(k)%coef(2)  =  atom(AtNo)%coef(l,2)
-            basis(k)%zeta(1)  =  atom(AtNo)%zeta(l,1)
-            basis(k)%zeta(2)  =  atom(AtNo)%zeta(l,2)
-            basis(k)%k_WH     =  system%k_WH(i)
+            basis(k)%IP        =  atom(AtNo)%IP    (l)
+            basis(k)%Nzeta     =  atom(AtNo)%Nzeta (l)
+            basis(k)%coef(1)   =  atom(AtNo)%coef  (l,1)
+            basis(k)%coef(2)   =  atom(AtNo)%coef  (l,2)
+            basis(k)%zeta(1)   =  atom(AtNo)%zeta  (l,1)
+            basis(k)%zeta(2)   =  atom(AtNo)%zeta  (l,2)
+            basis(k)%k_WH      =  system%k_WH(i)
 
-            basis(k)%x        =  system%coord(i,1)
-            basis(k)%y        =  system%coord(i,2)
-            basis(k)%z        =  system%coord(i,3)
+            basis(k)%x         =  system%coord (i,1)
+            basis(k)%y         =  system%coord (i,2)
+            basis(k)%z         =  system%coord (i,3)
 
             k = k + 1
 

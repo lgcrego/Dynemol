@@ -9,7 +9,7 @@ module type_m
         integer                                         :: molecule
         integer          , dimension(:)   , allocatable :: copy_No
         integer          , dimension(:)   , allocatable :: BasisPointer
-        character(len=1) , dimension(:)   , allocatable :: fragment
+        character(len=2) , dimension(:)   , allocatable :: fragment
         character(len=2) , dimension(:)   , allocatable :: symbol
         integer          , dimension(:)   , allocatable :: AtNo
         real*8           , dimension(:,:) , allocatable :: coord
@@ -50,6 +50,7 @@ module type_m
         real*8           :: y
         real*8           :: z
         character(len=2) :: symbol
+        character(len=2) :: fragment
     end type STO_basis
 
 
@@ -68,6 +69,12 @@ module type_m
         real*8 :: inicio 
         real*8 :: fim
     end type real_interval
+
+
+    type integer_interval
+        integer :: inicio
+        integer :: fim
+    end type integer_interval
    
 
     type transition
@@ -77,7 +84,6 @@ module type_m
         integer             , allocatable :: bra_POINTER(:)
         integer             , allocatable :: ket_POINTER(:)
     end type transition
-
 
     include 'parameters.h'    
 

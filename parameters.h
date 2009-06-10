@@ -7,19 +7,19 @@
 !           ACTIONS
 !
             GaussianCube = .false. ,            &
-			Survival     = .false. ,            &
+			Survival     = .true.  ,            &
             CC           = .false. ,            & 
             POSCAR       = .false. ,            & 
-            SPECTRUM     = .true.  ,            & 
-			DP_Moment    = .true.  ,            &
+            SPECTRUM     = .false. ,            & 
+			DP_Moment    = .false. ,            &
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
             t_i           =  0.d0 ,             &
-            t_f           =  10.00 ,            & ! <== final time in PICOseconds
-            n_t           =  500  ,             & ! <== number of time steps
-            initial_state =  97,               & ! <== intial MO
-			HOMO_state    =  96,               & ! <== HOMO of the molecule 
+            t_f           =  2.000 ,            & ! <== final time in PICOseconds
+            n_t           =  50   ,             & ! <== number of time steps
+            initial_state =  104 ,             & ! <== intial MO
+			HOMO_state    =  101 ,             & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
 !           MOLECULAR DYNAMICS
 !
@@ -45,16 +45,16 @@
 !--------------------------------------------------------------------
 !           DOS PARAMETERS
 !
-            sigma       =   0.080d0 ,                            &  !0.01d0
+            sigma       =   0.160d0 ,                            &  !0.01d0
 
 			DOS_range   =  real_interval( -17.d0 , -6.d0 ) ,     &
 
 !--------------------------------------------------------------------
 !           SPECTRUM  PARAMETERS
 !
-            occupied    =  real_interval( -15.00d0 , -10.01d0 ) , & 
+            occupied    =  real_interval( -17.30d0 , -11.01d0 ) , & 
 
-            empty       =  real_interval( -10.00d0 , -4.00d0 )  , & 
+            empty       =  real_interval( -11.00d0 , -5.00d0 )  , & 
 
 !--------------------------------------------------------------------
 !           Readfield  PARAMETERS

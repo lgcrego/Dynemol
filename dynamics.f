@@ -14,12 +14,13 @@
 !
 ! 
 !==============================================================================
- subroutine Huckel_dynamics(system, zL, zR, FMO_L, FMO_R, erg)
+ subroutine Huckel_dynamics(system, basis, zL, zR, FMO_L, FMO_R, erg)
 !==============================================================================
  implicit real*8      (a-h,o-y)
  implicit complex*16  (z)
 
  type(structure) , intent(in)               :: system
+ type(STO_basis) , intent(in)               :: basis(:)
  complex*16      , intent(in) , allocatable :: zL(:,:)
  complex*16      , intent(in) , allocatable :: zR(:,:)
  complex*16      , intent(in) , allocatable :: FMO_L(:,:) 
@@ -93,7 +94,7 @@
 ! coefs of |k(t)> in DUAL basis 
    CALL gemm(zR,zGtR,DUAL_ket,'N','N',one,zero)
 
-   if( Survival ) CALL Dump_Populations(system,DUAL_bra,DUAL_ket,t)
+   if( Survival ) CALL Dump_Populations(system,basis,DUAL_bra,DUAL_ket,t)
 
    t = t + t_rate
 

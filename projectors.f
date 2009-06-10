@@ -9,12 +9,14 @@
 ! 
 !
 !
+!-----------------------------------------------
  subroutine projector( FMO_L, FMO_R, zR, wv_FMO)
-
+!-----------------------------------------------
  complex*16 , ALLOCATABLE , intent(out) :: FMO_L(:,:) , FMO_R(:,:)
  complex*16 , ALLOCATABLE , intent(in)  :: zR(:,:)
  real*8     , ALLOCATABLE , intent(in)  :: wv_FMO(:,:)
 
+! local variables 
  integer :: ALL_size , FMO_size , cluster_size , i , j
  real*8  :: check
 
@@ -57,44 +59,28 @@
 !
 !
 !
- function pop_Slater(za,zb,list_of_atoms,system)
+!-----------------------------------------------
+ function pop_Slater(basis,za,zb,fragment)
+!-----------------------------------------------
+ type(STO_basis)  , intent(in) :: basis(:)
+ complex*16       , intent(in) :: za(:,:) , zb(:,:)
+ character(len=2) , optional   :: fragment
 
- complex*16      , intent(in) :: za(:,:) , zb(:,:)
- integer         , intent(in) :: list_of_atoms(:)
- type(structure) , intent(in) :: system
-
-
+! local variables
  real*8                                :: pop_Slater
  complex*16 , dimension(size(za(1,:))) :: pop
- integer                               :: all_atoms , atom , n , i , j , i1 , i2
- 
- all_atoms = size(list_of_atoms)
+ integer                               :: n , i 
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !        projection of | k(t) >  onto the atom k_atom 
 
  pop(:) = (0.d0,0.d0)
 
- DO n = 1 , n_part
-
-    do j = 1 , all_atoms
-
-        if( list_of_atoms(j) /= 0) then
-
-            atom = list_of_atoms(j)
-
-            i1 = system%BasisPointer(atom) + 1
-            i2 = system%BasisPointer(atom) + the_chemical_atom(system%AtNo(atom))%DOS 
-       
-            DO i = i1 , i2
-                pop(n) = pop(n) + za(i,n)*zb(i,n)
-            END DO   
-
-        end if
-
-    end do
-
- END DO  
+ if( present(fragment) ) then
+    forall(n=1:n_part , i=1:size(basis) , basis(i)%fragment == fragment)  pop(n) = pop(n) + za(i,n)*zb(i,n)
+ else
+    forall(n=1:n_part , i=1:size(basis))  pop(n) = pop(n) + za(i,n)*zb(i,n)
+ end if
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

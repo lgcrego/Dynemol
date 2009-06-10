@@ -107,7 +107,7 @@ OPEN(unit=9,file='PDOS_list-of-atoms',status='unknown')
 
 j=1
 do i = 1 , system%atoms
-    if( system%fragment(i) == 'M' ) then
+    if( (system%fragment(i) == 'M') .OR. (system%fragment(i) == 'D') ) then
         write(9,*) i , system%symbol(i)
         atom(j) = i
         j = j + 1

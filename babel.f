@@ -21,8 +21,9 @@
  type(structure) , intent(out) :: unit_cell
 
  character(len=2) :: dumb_char 
+ character(len=1) :: fragment
  real*8           :: k_WH
- integer          :: i , j , j1 , j2 , n_kWH , N_of_Configurations
+ integer          :: i , j , j1 , j2 , n_kWH , n_fragments , N_of_Configurations
 
  OPEN(unit=3,file='xyz.dat',status='old')   
 
@@ -30,13 +31,21 @@
  read(3,*) System_Characteristics
  read(3,*) N_of_Configurations      ! <== No of configurations 
  read(3,*) unit_cell%atoms          ! <== No of atoms in the ORIGINAL supercell
- read(3,*) unit_cell%molecule       ! <== position of the molecule in the list of atoms
- read(3,*) n_kWH                    ! <== No of k_WH to be used 
 
 ! allocating arrays
  CALL Allocate_UnitCell(unit_cell)
 
+! Acceptor (A) , Donor (D) or Molecule (M)
+! fragment atoms must be packed together
+ read(3,*) n_fragments
+ do i = 1 , n_fragments
+    read(3,*) j1 , j2 , fragment
+    forall(j=j1:j2) unit_cell%fragment(j) = fragment
+ end do
+
 ! defining the k_WH parameter for the atom 
+! No of k_WH to be used 
+ read(3,*) n_kWH                    
  do i = 1 , n_kWH
     read(3,*) j1 , j2 , k_WH
     forall(j=j1:j2) unit_cell%k_WH(j) = k_WH
@@ -55,10 +64,6 @@
  unit_cell%T_xyz(2) = T_y
  unit_cell%T_xyz(3) = T_z
 
-! Cluster or Molecule 
- unit_cell%fragment = 'c' 
- forall( i = 321 : unit_cell%atoms ) unit_cell%fragment(i) = 'M'
-
  CALL Symbol_2_AtNo(unit_cell)
 
  print 70, System_Characteristics
@@ -76,9 +81,9 @@
  real*8            :: x0 , y0 , z0
  real*8            :: a , b , c
  real*8            :: kWH
- integer           :: n_kWH , i , j , j1 , j2 , n , boundary_atom
+ integer           :: n_kWH , n_fragments , i , j , j1 , j2 , n , boundary_atom
  integer           :: N_of_atoms , N_of_elements , N_of_cluster_atoms , N_of_Configurations
- character(len=1)  :: TorF
+ character(len=1)  :: TorF , fragment
  logical           :: flag
 
  real*8           , allocatable :: xyz(:,:)
@@ -91,13 +96,21 @@
  read(3,*) System_Characteristics
  read(3,*) N_of_Configurations      ! <== No of configurations 
  read(3,*) unit_cell%atoms          ! <== No of atoms in the ORIGINAL supercell
- read(3,*) unit_cell%molecule       ! <== position of the molecule in the list of atoms
- read(3,*) n_kWH                    ! <== No of k_WH to be used 
  
 ! allocating arrays
  CALL Allocate_UnitCell(unit_cell)
 
+! Acceptor (A) , Donor (D) or Molecule (M)
+! fragment atoms must be packed together
+ read(3,*) n_fragments
+ do i = 1 , n_fragments
+    read(3,*) j1 , j2 , fragment
+    forall(j=j1:j2) unit_cell%fragment(j) = fragment
+ end do
+
 ! defining the k_WH parameter for the atom 
+! No of k_WH to be used 
+ read(3,*) n_kWH                    
  do i = 1 , n_kWH
     read(3,*) j1 , j2 , k_WH
     forall(j=j1:j2) unit_cell%k_WH(j) = k_WH
@@ -164,8 +177,6 @@
         n = n + 1
     end if
  end do
-
- if( N_of_cluster_atoms+1 /= unit_cell%molecule ) pause 'Position of the molecule does not match !!!' 
 
  CALL Symbol_2_AtNo(unit_cell)
 
