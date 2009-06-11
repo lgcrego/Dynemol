@@ -26,25 +26,25 @@
 
  CALL Read_Structure
 
- CALL Generate_Structure(t_i)
+ CALL Generate_Structure( t_i )
 
- CALL Basis_Builder(Extended_Cell,ExCell_basis)
+ CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- CALL eigen(Extended_Cell,ExCell_basis,zL,zR,erg)
+ CALL eigen( Extended_Cell, ExCell_basis, zL, zR, erg )
 
- CALL TDOS(erg)
+ CALL TDOS( erg )
 
- CALL PDOS(extended_cell,zL,zR,erg)
+ CALL PDOS( Extended_Cell, zL, zR, erg )
 
- CALL FMO_analysis(Extended_Cell,zR,FMO_L,FMO_R,erg_FMO)
+ CALL FMO_analysis( Extended_Cell, ExCell_basis, zR, FMO_L, FMO_R, erg_FMO )
 
- CALL Dipole_Matrix(Extended_Cell,ExCell_basis,zL,zR)  
+ CALL Dipole_Matrix( Extended_Cell, ExCell_basis, zL, zR )  
 
- CALL Optical_Transitions(Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg)
+ CALL Optical_Transitions( Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg )
 
- CALL Huckel_dynamics(Extended_Cell, ExCell_basis, zL, zR, FMO_L, FMO_R, erg)
+ CALL Huckel_dynamics( Extended_Cell, ExCell_basis, zL, zR, FMO_L, FMO_R, erg )
 
-! CALL Redfield_Equations(Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg)
+! CALL Redfield_Equations( Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg )
 
  include 'formats.h'
 

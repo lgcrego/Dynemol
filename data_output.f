@@ -11,9 +11,9 @@
 !
 !
 !
-!---------------------------------------------
+!---------------------------------------------------
  subroutine Dump_Populations(system,basis,bra,ket,t)
-!---------------------------------------------
+!---------------------------------------------------
  type(structure) , intent(in) :: system
  type(STO_basis) , intent(in) :: basis(:)
  complex*16      , intent(in) :: bra(:,:) , ket(:,:)
@@ -33,11 +33,17 @@
 
  pop_1 = pop_Slater(basis,bra,ket,fragment)
 
+! ==> pop_2 = population of acceptor
+
+ fragment = 'A'
+
+ pop_2 = pop_Slater(basis,bra,ket,fragment)
+
 ! ==> pop_total = total population
 
  pop_total = pop_Slater(basis,bra,ket)        
 
- write(26,1001) t , pop_1 , pop_total
+ write(26,1001) t , pop_1 , pop_2 , pop_total
 
 1001  format(8(1x,F8.4))
 ! ---------------------------------------------------- 

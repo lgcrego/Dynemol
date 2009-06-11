@@ -65,7 +65,7 @@
  unit_cell%T_xyz(3) = T_z
 
  CALL Symbol_2_AtNo(unit_cell)
-
+ 
  print 70, System_Characteristics
 
  include 'formats.h'
@@ -208,6 +208,8 @@
             a%AtNo(i) = 9 
         case( 'AL','Al') 
             a%AtNo(i) = 13 
+        case( 'S','s') 
+            a%AtNo(i) = 16 
         case( 'CL','Cl') 
             a%AtNo(i) = 17 
         case( 'TI','Ti') 

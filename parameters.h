@@ -16,10 +16,10 @@
 !           INITIAL  CONDITIONS
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.000 ,            & ! <== final time in PICOseconds
-            n_t           =  50   ,             & ! <== number of time steps
-            initial_state =  104 ,             & ! <== intial MO
-			HOMO_state    =  101 ,             & ! <== HOMO of the molecule 
+            t_f           =  100.00 ,            & ! <== final time in PICOseconds
+            n_t           =  500   ,             & ! <== number of time steps
+            initial_state =  96  ,             & ! <== intial MO
+			HOMO_state    =  95  ,             & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
 !           MOLECULAR DYNAMICS
 !

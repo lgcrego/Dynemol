@@ -21,10 +21,11 @@
 !
 !
 !
-!------------------------------------------------------------
- subroutine FMO_analysis( system, zR, FMO_L, FMO_R, erg_FMO )
-!------------------------------------------------------------
+!-------------------------------------------------------------------
+ subroutine FMO_analysis( system, basis, zR, FMO_L, FMO_R, erg_FMO )
+!-------------------------------------------------------------------
  type(structure)               , intent(in)  :: system
+ type(STO_basis)               , intent(in)  :: basis(:)
  complex*16      , allocatable , intent(in)  :: zR(:,:)
  complex*16      , allocatable , intent(out) :: FMO_L(:,:) , FMO_R(:,:)  
  real*8          , allocatable , intent(out) :: erg_FMO(:)
@@ -43,23 +44,25 @@
  orbital(1) = initial_state ; spin(1) = +1 
 
 ! FMO_system = fragment
+
  FMO_system%atoms = count(system%fragment == fragment)
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
 
  forall(i=1:3)
-    FMO_system%coord(:,i) = pack(system%coord(:,i) , system%fragment == fragment ) 
+ FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
  end forall
- FMO_system%AtNo    =  pack( system%AtNo   , system%fragment == fragment ) 
- FMO_system%k_WH    =  pack( system%k_WH   , system%fragment == fragment )
- FMO_system%symbol  =  pack( system%symbol , system%fragment == fragment )
- FMO_system%copy_No =  0
+ FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
+ FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
+ FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
+ FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
+ FMO_system%copy_No    =  0
 
  CALL Basis_Builder( FMO_system, FMO_basis )
  
  CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, erg_FMO )
 
- CALL projector( FMO_L, FMO_R, zR, wv_FMO )
+ CALL projector( FMO_L, FMO_R, zR, basis%fragment, fragment, wv_FMO )
 
 ! "entropy" of the FMO states with respect to the system 
  OPEN(unit=9,file='entropy.dat',status='unknown')

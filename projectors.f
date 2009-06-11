@@ -9,24 +9,32 @@
 ! 
 !
 !
-!-----------------------------------------------
- subroutine projector( FMO_L, FMO_R, zR, wv_FMO)
-!-----------------------------------------------
- complex*16 , ALLOCATABLE , intent(out) :: FMO_L(:,:) , FMO_R(:,:)
- complex*16 , ALLOCATABLE , intent(in)  :: zR(:,:)
- real*8     , ALLOCATABLE , intent(in)  :: wv_FMO(:,:)
+!-------------------------------------------------------------------------
+ subroutine projector( FMO_L, FMO_R, zR, basis_fragment, fragment, wv_FMO)
+!-------------------------------------------------------------------------
+ complex*16       , ALLOCATABLE          , intent(out) :: FMO_L(:,:) , FMO_R(:,:)
+ complex*16       , ALLOCATABLE , target , intent(in)  :: zR(:,:)
+ character(len=2)                        , intent(in)  :: basis_fragment(:)
+ character(len=1)                        , intent(in)  :: fragment
+ real*8           , ALLOCATABLE          , intent(in)  :: wv_FMO(:,:)
 
 ! local variables 
- integer :: ALL_size , FMO_size , cluster_size , i , j
- real*8  :: check
+ complex*16 , pointer  :: ZR_FMO(:,:) => null()
+ integer               :: ALL_size , FMO_size , i , j , p1 , p2
+ real*8                :: check
 
  ALL_size = size( zR(:,1) )                     ! <== basis size of the entire system
  FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
- cluster_size  = ALL_size - FMO_size            ! <== basis size of the cluster 
-
+ 
  Allocate( FMO_L (ALL_size,FMO_size) )
  Allocate( FMO_R (ALL_size,FMO_size) )
+ Allocate( ZR_FMO(FMO_size,ALL_size) )
 
+ p1 =  minloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
+ p2 =  maxloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
+
+ ZR_FMO => ZR(p1:p2,:)
+ 
 !-----------------------------------------------------------------------------
 !    writes the isolated molecule wavefunction |k> in the MO basis 
 !    the isolated orbitals are stored in the ROWS of wv_FMO
@@ -36,7 +44,7 @@
 
  forall( j=1:FMO_size, i=1:ALL_size )
 
-    FMO_L(i,j) = sum( wv_FMO(j,:) * zR(cluster_size+1:ALL_size,i) )
+    FMO_L(i,j) = sum( wv_FMO(j,:) * zR_FMO(:,i) )
 
  end forall    
 
@@ -52,6 +60,8 @@
  end if
 
 !-----------------------------------------------------------------------------
+
+ nullify( ZR_FMO )
 
  include 'formats.h'
 
