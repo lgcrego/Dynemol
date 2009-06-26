@@ -1,5 +1,7 @@
 module type_m
 
+    use constants_m 
+
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
 
@@ -19,7 +21,6 @@ module type_m
         real*8           , dimension(3)                 :: Center_of_Charge
         real*8           , dimension(3)                 :: T_xyz
     end type structure
-
 
     type EHT
         character(len=2) :: symbol
@@ -53,6 +54,12 @@ module type_m
         character(len=2) :: fragment
     end type STO_basis
 
+    type eigen
+        complex*16 , allocatable :: R(:,:)
+        complex*16 , allocatable :: L(:,:)
+        real*8     , allocatable :: erg(:)
+    end type eigen
+
 
     type spin_orbital
         integer :: orbital
@@ -60,9 +67,9 @@ module type_m
     end type spin_orbital
 
 
-    type dipole
+    type R3_vector
         real*8 , dimension(3) :: dp
-    end type dipole
+    end type R3_vector
  
 
     type real_interval
@@ -78,11 +85,14 @@ module type_m
    
 
     type transition
-        type(dipole)        , allocatable :: matrix(:,:)
-        type(real_interval)               :: bra_range
-        type(real_interval)               :: ket_range
-        integer             , allocatable :: bra_POINTER(:)
-        integer             , allocatable :: ket_POINTER(:)
+        type(R3_vector)        , allocatable :: matrix(:,:)
+        type(real_interval)                  :: bra_range
+        type(real_interval)                  :: ket_range
+        type(integer_interval)               :: bra_indx_range
+        type(integer_interval)               :: ket_indx_range
+        integer                , allocatable :: bra_POINTER(:)
+        integer                , allocatable :: ket_POINTER(:)
+        character(len=8)                     :: flag
     end type transition
 
     include 'parameters.h'    

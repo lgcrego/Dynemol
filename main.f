@@ -12,11 +12,10 @@
  use Dynamics_m
  use QOptics_m
 
- complex*16 , allocatable :: FMO_L(:,:) , FMO_R(:,:) 
- complex*16 , allocatable :: zL(:,:)    , zR(:,:)
- real*8     , allocatable :: erg(:)     , erg_FMO(:) 
+ type(eigen) :: UNI
+ type(eigen) :: FMO
  
- complex*16 , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
+ complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 !========================================================
 !     starting up 
@@ -30,21 +29,21 @@
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- CALL eigen( Extended_Cell, ExCell_basis, zL, zR, erg )
+ CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
- CALL TDOS( erg )
+ CALL TDOS( UNI%erg )
 
- CALL PDOS( Extended_Cell, zL, zR, erg )
+ CALL PDOS( Extended_Cell, UNI )
 
- CALL FMO_analysis( Extended_Cell, ExCell_basis, zR, FMO_L, FMO_R, erg_FMO )
+ CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
 
- CALL Dipole_Matrix( Extended_Cell, ExCell_basis, zL, zR )  
+ CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
- CALL Optical_Transitions( Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg )
+ CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI )
 
- CALL Huckel_dynamics( Extended_Cell, ExCell_basis, zL, zR, FMO_L, FMO_R, erg )
+ CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
-! CALL Redfield_Equations( Extended_Cell, ExCell_basis, DP_matrix_AO, zL, zR, erg )
+! CALL Redfield_Equations( Extended_Cell, ExCell_basis, UNI, FMO )
 
  include 'formats.h'
 

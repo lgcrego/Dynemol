@@ -13,10 +13,12 @@ module DOS_m
 !
 !
 !
-subroutine  TDOS(erg)
-
+!----------------------
+subroutine  TDOS( erg )
+!----------------------
 real*8  , ALLOCATABLE , intent(in)  :: erg(:)
 
+! . local variables
 real*8  , allocatable :: e_grid(:) , DOS_grid(:) , DOS(:)
 real*8                :: erg_MO(size(erg))
 real*8                :: gauss_norm , two_sigma2
@@ -70,15 +72,16 @@ end subroutine TDOS
 !
 !
 !
-subroutine  PDOS(system,zL,zR,erg)
+!-----------------------------
+subroutine  PDOS( system, QM )
+!-----------------------------
+type(structure) , intent(in) :: system
+type(eigen)     , intent(in) :: QM
 
-type(structure) , intent(in)               :: system
-complex*16      , ALLOCATABLE , intent(in) :: zL(:,:) , zR(:,:)
-real*8          , ALLOCATABLE , intent(in) :: erg(:)
-
+! . local variables
 real*8  , allocatable :: e_grid(:) , DOS_grid(:) , DOS(:)
 real*8                :: gauss_norm , two_sigma2 , projection
-integer               :: list_of_DOS_states(size(erg))
+integer               :: list_of_DOS_states(size(QM%erg))
 integer               :: i , j , n_of_atoms , ioerr
 integer               :: atom(system%atoms) 
 integer , parameter   :: npoints = 1500
@@ -91,8 +94,8 @@ ALLOCATE(e_grid(npoints), DOS_grid(npoints), DOS(npoints))
 
 ! find the energies in the range [DOS_range%inicio,DOS_range%fim]
 j = 1
-do i = 1 , size(erg)
-    if( (erg(i) >= DOS_range%inicio) == (erg(i) <= DOS_range%fim) ) then
+do i = 1 , size(QM%erg)
+    if( (QM%erg(i) >= DOS_range%inicio) == (QM%erg(i) <= DOS_range%fim) ) then
         list_of_DOS_states(j) = i
         j = j + 1
     end if
@@ -132,10 +135,10 @@ do l = 1 , n_of_atoms
         j = list_of_DOS_states(n)
         projection = 0.d0
         do i = i1 , i2
-            projection = projection + zL(j,i)*zR(i,j)
+            projection = projection + QM%L(j,i)*QM%R(i,j)
         end do
         
-        erg_MO = erg(list_of_DOS_states(n)) 
+        erg_MO = QM%erg(list_of_DOS_states(n)) 
         forall(k=1:npoints) DOS_grid(k) = gauss_norm*dexp(-(e_grid(k)-erg_MO)*(e_grid(k)-erg_MO)/two_sigma2)
 
         DOS(:) = DOS(:) + projection*DOS_grid(:)

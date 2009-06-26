@@ -1,17 +1,18 @@
  integer :: initial_state , HOMO_state
  logical :: CC , GaussianCube , Survival , POSCAR , SPECTRUM , DP_Moment
- type(real_interval) :: occupied , empty , DOS_range , holes , electrons
+ type(real_interval) :: occupied , empty , DOS_range 
+ type(integer_interval) :: holes , electrons
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTIONS
 !
             GaussianCube = .false. ,            &
-			Survival     = .true.  ,            &
+			Survival     = .false. ,            &
             CC           = .false. ,            & 
             POSCAR       = .false. ,            & 
-            SPECTRUM     = .false. ,            & 
-			DP_Moment    = .false. ,            &
+            SPECTRUM     = .true.  ,            & 
+			DP_Moment    = .true.  ,            &
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
@@ -28,14 +29,14 @@
 !           STRUCTURAL  PARAMETERS
 !
             nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
-
+!
             T_x        =  20.44568 ,            & ! <== translation parameter
 			T_y        =  22.69200 ,            & ! <== translation parameter
 			T_z        =  50.00000 ,            & ! <== translation parameter
 
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  PARAMETERS
@@ -59,9 +60,9 @@
 !--------------------------------------------------------------------
 !           Readfield  PARAMETERS
 !
-            holes     = real_interval( -15.00d0 , -10.01d0 ) ,    & 
+            holes     = integer_interval( 120 , ABOVE ) ,    & 
 
-            electrons = real_interval( -10.00d0 , -4.00d0 )  , 	  & 
+            electrons = integer_interval( 120 , ABOVE )  , 	  & 
 
 !--------------------------------------------------------------------
 !           2-Pi  COHERENT  CONTROL

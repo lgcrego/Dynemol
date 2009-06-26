@@ -13,19 +13,16 @@
  contains
 !
 ! 
-!==============================================================================
- subroutine Huckel_dynamics(system, basis, zL, zR, FMO_L, FMO_R, erg)
-!==============================================================================
+!==================================================
+ subroutine Huckel_dynamics(system, basis, UNI, FMO)
+!==================================================
  implicit real*8      (a-h,o-y)
  implicit complex*16  (z)
 
  type(structure) , intent(in)               :: system
  type(STO_basis) , intent(in)               :: basis(:)
- complex*16      , intent(in) , allocatable :: zL(:,:)
- complex*16      , intent(in) , allocatable :: zR(:,:)
- complex*16      , intent(in) , allocatable :: FMO_L(:,:) 
- complex*16      , intent(in) , allocatable :: FMO_R(:,:) 
- real*8          , intent(in) , allocatable :: erg(:) 
+ type(eigen)     , intent(in)               :: UNI 
+ type(eigen)     , intent(in)               :: FMO 
 
 ! . local variables
  complex*16 , ALLOCATABLE :: zG_L(:,:)     , zGtL(:,:) 
@@ -45,15 +42,15 @@
 
  Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
- CALL Allocate_Brackets( size(zL(1,:))       ,      &
+ CALL Allocate_Brackets( size(UNI%L(1,:))       ,      &
                          zG_L     , zG_R     ,      &
                          zGtL     , zGtR     ,      &
                          AO_bra   , AO_ket   ,      &
                          DUAL_bra , DUAL_ket ,      &
                          bra      , ket      , phase)
 
- zG_L = FMO_L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
- zG_R = FMO_R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
+ zG_L = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
+ zG_R = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
 
 !=========================================================
 !             DYNAMIC  QUANTITIES
@@ -64,7 +61,7 @@
   
  DO it = 1 , n_t    
 
-   phase(:) = cdexp(- zi * erg(:) * t_rate / h_bar)
+   phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
    If( t == t_i ) phase = one
 
@@ -76,23 +73,24 @@
 ! -----------  LOCAL representation  ----------------- c
 
 ! coefs of <k(t)| in AO basis 
-   CALL gemm(zL,zGtL,AO_bra,'T','N',one,zero)
+   CALL gemm(UNI%L,zGtL,AO_bra,'T','N',one,zero)
 
 ! coefs of |k(t)> in AO basis 
-   CALL gemm(zL,zGtR,AO_ket,'T','N',one,zero)
+   CALL gemm(UNI%L,zGtR,AO_ket,'T','N',one,zero)
 
    bra(:) = AO_bra(:,1)
    ket(:) = AO_ket(:,1)
    
    if( GaussianCube ) CALL Gaussian_Cube_Format(bra,ket,it,t)
 
-! -----------  DUAL representation  ----------------- c
+!--------------------------------------------------------------------------
+! . DUAL representation for efficient calculation of survival probabilities
 
-! coefs of <k(t)| in DUAL basis
-   CALL gemm(zL,zGtL,DUAL_bra,'T','N',one,zero)
+! . coefs of <k(t)| in DUAL basis
+   CALL gemm(UNI%L,zGtL,DUAL_bra,'T','N',one,zero)
 
-! coefs of |k(t)> in DUAL basis 
-   CALL gemm(zR,zGtR,DUAL_ket,'N','N',one,zero)
+! . coefs of |k(t)> in DUAL basis 
+   CALL gemm(UNI%R,zGtR,DUAL_ket,'N','N',one,zero)
 
    if( Survival ) CALL Dump_Populations(system,basis,DUAL_bra,DUAL_ket,t)
 

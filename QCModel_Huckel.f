@@ -15,13 +15,13 @@
 !
 !
 !
- subroutine  eigen(system,basis,zL,zR,erg)
+ subroutine EigenSystem( system, basis, QM )
 
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
- complex*16      , ALLOCATABLE , intent(out) :: zL(:,:) , zR(:,:)
- real*8          , ALLOCATABLE , intent(out) :: erg(:)
+ type(eigen)                   , intent(out) :: QM
 
+! . local variables 
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
  real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
 
@@ -31,7 +31,7 @@
 
  CALL Overlap_Matrix(system,basis,S_matrix)
 
- ALLOCATE(erg(size(basis))) 
+ ALLOCATE(QM%erg(size(basis))) 
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
 
@@ -45,9 +45,9 @@
    end do
  end do  
 
- CALL SYGVD(h,dumb_s,erg,1,'V','U',info)
+ CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
- If (info /= 0) write(*,*) 'info = ',info,' in SYGVD in eigen '
+ If (info /= 0) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 
  DEALLOCATE(dumb_s)
 
@@ -74,14 +74,14 @@
 !----------------------------------------------------------
 !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 
- ALLOCATE(zL(size(basis),size(basis))) 
-! eigenvectors in the rows of zL
-    zL = transpose(Lv)                 
+ ALLOCATE(QM%L(size(basis),size(basis))) 
+! eigenvectors in the rows of QM%L
+    QM%L = transpose(Lv)                 
  DEALLOCATE( Lv )
 
- ALLOCATE(zR(size(basis),size(basis)))
-! eigenvectors in the columns of zR
-    zR = Rv             
+ ALLOCATE(QM%R(size(basis),size(basis)))
+! eigenvectors in the columns of QM%R
+    QM%R = Rv             
  DEALLOCATE( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
@@ -91,13 +91,13 @@
 ! save energies of the TOTAL system 
  OPEN(unit=9,file='system-ergs.dat',status='unknown')
     do i = 1 , size(basis)
-        write(9,*) i , erg(i)
+        write(9,*) i , QM%erg(i)
     end do
  CLOSE(9)   
 
- print*, '>> eigen done <<'
+ print*, '>> EigenSystem done <<'
 
- end subroutine
+ end subroutine EigenSystem
 !
 !
 !

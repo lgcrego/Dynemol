@@ -23,14 +23,14 @@ INCS = $(INCS_MKL)
 # general rules
 #-----------------------------------------------------------------------
 
-SOURCE = type_m.o constants_m.o allocation_m.o util.o EHT_input.o babel.o structure.o \
+SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o babel.o structure.o \
 		 pbc.o overlap_D.o STO.o QCModel_Huckel.o projectors.o FMO.o data_output.o film_STO.o  \
-		 DOS_m.o oscillator.o QOptics.o dipole.o multip_core.o dynamics.o main.o
+		 DOS_m.o multip_core.o oscillator.o QOptics.o dynamics.o main.o
 
 a: $(SOURCE)  
 	rm -f a
 	$(FC) $(INCS) -o a $(SOURCE) $(LIB) 
-	-rm -f *.o *.mod; touch *.f
+#-rm -f *.o *.mod; touch *.f
 .f.o:
 	$(FC) $(FFLAGS) $(INCS) -c $*$(SUFFIX)
 clean: 

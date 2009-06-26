@@ -21,14 +21,13 @@
 !
 !
 !
-!-------------------------------------------------------------------
- subroutine FMO_analysis( system, basis, zR, FMO_L, FMO_R, erg_FMO )
-!-------------------------------------------------------------------
+!-------------------------------------------------
+ subroutine FMO_analysis( system, basis, zR, FMO )
+!-------------------------------------------------
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  complex*16      , allocatable , intent(in)  :: zR(:,:)
- complex*16      , allocatable , intent(out) :: FMO_L(:,:) , FMO_R(:,:)  
- real*8          , allocatable , intent(out) :: erg_FMO(:)
+ type(eigen)                   , intent(out) :: FMO
 
 ! . local variables
  type(structure)               :: FMO_system
@@ -58,24 +57,26 @@
  FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
  FMO_system%copy_No    =  0
 
+
  CALL Basis_Builder( FMO_system, FMO_basis )
  
- CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, erg_FMO )
+ CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, FMO )
 
- CALL projector( FMO_L, FMO_R, zR, basis%fragment, fragment, wv_FMO )
+ CALL projector( FMO, zR, basis%fragment, fragment, wv_FMO )
+
 
 ! "entropy" of the FMO states with respect to the system 
  OPEN(unit=9,file='entropy.dat',status='unknown')
  do i = 1 , size(FMO_basis)
-     entropy = - sum( cdabs(FMO_L(:,i))*dlog(cdabs(FMO_L(:,i))) ) 
-     write(9,*) erg_FMO(i) , entropy
+     entropy = - sum( cdabs(FMO%L(:,i))*dlog(cdabs(FMO%L(:,i))) ) 
+     write(9,*) FMO%erg(i) , entropy
  end do
  CLOSE(9)   
 
  DeAllocate( FMO_basis , wv_FMO)
 
  do i = 0 , n_part
-    Print 59, orbital(i) , erg_FMO(orbital(i))
+    Print 59, orbital(i) , FMO%erg(orbital(i))
  end do   
 
  print*, ''
@@ -84,21 +85,81 @@
  include 'formats.h'
 
  end subroutine FMO_analysis
+!
+!
+!
+!----------------------------------------------------------------
+ subroutine projector( FMO, zR, basis_fragment, fragment, wv_FMO)
+!----------------------------------------------------------------
+ type(eigen)                             , intent(inout) :: FMO
+ complex*16       , ALLOCATABLE , target , intent(in)    :: zR(:,:)
+ character(len=2)                        , intent(in)    :: basis_fragment(:)
+ character(len=1)                        , intent(in)    :: fragment
+ real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
+
+! local variables 
+ complex*16 , pointer  :: ZR_FMO(:,:) => null()
+ integer               :: ALL_size , FMO_size , i , j , p1 , p2
+ real*8                :: check
+
+ ALL_size = size( zR(:,1) )                     ! <== basis size of the entire system
+ FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
+ 
+ Allocate( FMO%L (ALL_size,FMO_size) )
+ Allocate( FMO%R (ALL_size,FMO_size) )
+ Allocate( ZR_FMO(FMO_size,ALL_size) )
+
+ p1 =  minloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
+ p2 =  maxloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
+
+ ZR_FMO => ZR(p1:p2,:)
+ 
+!-----------------------------------------------------------------------------
+!    writes the isolated molecule wavefunction |k> in the MO basis 
+!    the isolated orbitals are stored in the ROWS of wv_FMO
+
+ FMO%L = ( 0.d0 , 0.d0 )
+ FMO%R = ( 0.d0 , 0.d0 )
+
+ forall( j=1:FMO_size, i=1:ALL_size )
+
+    FMO%L(i,j) = sum( wv_FMO(j,:) * zR_FMO(:,i) )
+
+ end forall    
+
+ FMO%R = FMO%L
+
+ check = dreal( sum( FMO%L(1:ALL_size,:)*FMO%R(1:ALL_size,:) ) )
+
+ if( dabs(check-FMO_size) < low_prec ) then
+     print*, '>> projection done <<'
+ else
+     Print 58 , check 
+     pause '---> problem in projector <---'
+ end if
+
+!-----------------------------------------------------------------------------
+
+ nullify( ZR_FMO )
+
+ include 'formats.h'
+
+ end subroutine projector
 ! 
 !
 !
-!
- subroutine  eigen_FMO( system, basis, wv_FMO, erg_FMO )
-
+!---------------------------------------------------
+ subroutine  eigen_FMO( system, basis, wv_FMO, FMO )
+!---------------------------------------------------
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  real*8          , ALLOCATABLE , intent(out) :: wv_FMO(:,:)
- real*8          , ALLOCATABLE , intent(out) :: erg_FMO(:)
+ type(eigen)                   , intent(out) :: FMO       
 
  integer               :: N_of_molecule_electrons, i, j
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) 
 
- ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  erg_FMO(size(basis)) )
+ ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  FMO%erg(size(basis)) )
 
 !-----------------------------------------------------------------------
 
@@ -114,7 +175,7 @@
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
- CALL SYGVD(h_FMO,s_FMO,erg_FMO,1,'V','U',info)
+ CALL SYGVD(h_FMO,s_FMO,FMO%erg,1,'V','U',info)
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
@@ -131,7 +192,7 @@
     N_of_molecule_electrons = sum(atom(system%AtNo)%Nvalen)
     write(9,*) float(N_of_molecule_electrons) / 2.0
     do i = 1 , size(basis)
-        write(9,*) i , erg_FMO(i)
+        write(9,*) i , FMO%erg(i)
     end do
  CLOSE(9)   
 
