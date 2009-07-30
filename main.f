@@ -10,7 +10,7 @@
  use Multipole_Core
  use Oscillator_m
  use Dynamics_m
- use QOptics_m
+ use RK_m
 
  type(eigen) :: UNI
  type(eigen) :: FMO
@@ -39,11 +39,11 @@
 
  CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
- CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI )
+! CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI )
 
- CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
+! CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
-! CALL Redfield_Equations( Extended_Cell, ExCell_basis, UNI, FMO )
+ CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
  include 'formats.h'
 

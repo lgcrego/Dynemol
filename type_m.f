@@ -72,6 +72,11 @@ module type_m
     end type R3_vector
  
 
+    type C3_vector
+        complex*16 , dimension(3) :: dp
+    end type C3_vector
+ 
+
     type real_interval
         real*8 :: inicio 
         real*8 :: fim
@@ -90,8 +95,8 @@ module type_m
         type(real_interval)                  :: ket_range
         type(integer_interval)               :: bra_indx_range
         type(integer_interval)               :: ket_indx_range
-        integer                , allocatable :: bra_POINTER(:)
-        integer                , allocatable :: ket_POINTER(:)
+        integer                , allocatable :: bra_PTR(:)
+        integer                , allocatable :: ket_PTR(:)
         character(len=8)                     :: flag
     end type transition
 

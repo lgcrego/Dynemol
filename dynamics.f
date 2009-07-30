@@ -42,7 +42,7 @@
 
  Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
- CALL Allocate_Brackets( size(UNI%L(1,:))       ,      &
+ CALL Allocate_Brackets( size(UNI%L(1,:))    ,      &
                          zG_L     , zG_R     ,      &
                          zGtL     , zGtR     ,      &
                          AO_bra   , AO_ket   ,      &
@@ -70,7 +70,8 @@
       zGtR(:,j) =       phase(:)  * zG_R(:,j) 
    end forall
 
-! -----------  LOCAL representation  ----------------- c
+!--------------------------------------------------------------------------
+! . LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
    CALL gemm(UNI%L,zGtL,AO_bra,'T','N',one,zero)
@@ -84,7 +85,7 @@
    if( GaussianCube ) CALL Gaussian_Cube_Format(bra,ket,it,t)
 
 !--------------------------------------------------------------------------
-! . DUAL representation for efficient calculation of survival probabilities
+! . DUAL representation for efficient calculation of survival probabilities ...
 
 ! . coefs of <k(t)| in DUAL basis
    CALL gemm(UNI%L,zGtL,DUAL_bra,'T','N',one,zero)

@@ -39,7 +39,7 @@
  fragment = 'D'
 
 ! orbitals to be propagated
- orbital(0) = HOMO_state    ; spin(0) = +1 
+ orbital(0) = HOMO_mol      ; spin(0) = +1 
  orbital(1) = initial_state ; spin(1) = +1 
 
 ! FMO_system = fragment
@@ -63,7 +63,6 @@
  CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, FMO )
 
  CALL projector( FMO, zR, basis%fragment, fragment, wv_FMO )
-
 
 ! "entropy" of the FMO states with respect to the system 
  OPEN(unit=9,file='entropy.dat',status='unknown')
@@ -112,6 +111,7 @@
  p1 =  minloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
  p2 =  maxloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
 
+! . the fragment basis MUST correspond to a contiguous window ... 
  ZR_FMO => ZR(p1:p2,:)
  
 !-----------------------------------------------------------------------------
@@ -202,4 +202,6 @@
 !
 !
 !
+include 'red_pro.f'
+
  end module FMO_m

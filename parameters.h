@@ -1,7 +1,7 @@
- integer :: initial_state , HOMO_state
+ integer :: initial_state , HOMO_mol  
  logical :: CC , GaussianCube , Survival , POSCAR , SPECTRUM , DP_Moment
  type(real_interval) :: occupied , empty , DOS_range 
- type(integer_interval) :: holes , electrons
+ type(integer_interval) :: holes , electrons , rho_range
 
  parameter (& 
 !--------------------------------------------------------------------
@@ -11,16 +11,16 @@
 			Survival     = .false. ,            &
             CC           = .false. ,            & 
             POSCAR       = .false. ,            & 
-            SPECTRUM     = .true.  ,            & 
-			DP_Moment    = .true.  ,            &
+            SPECTRUM     = .false. ,            & 
+			DP_Moment    = .false. ,            &
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
             t_i           =  0.d0 ,             &
-            t_f           =  100.00 ,            & ! <== final time in PICOseconds
-            n_t           =  500   ,             & ! <== number of time steps
-            initial_state =  96  ,             & ! <== intial MO
-			HOMO_state    =  95  ,             & ! <== HOMO of the molecule 
+            t_f           =  1.d1 ,             & ! <== final time in PICOseconds
+            n_t           =  500   ,            & ! <== number of time steps
+            initial_state =  99  ,              & ! <== intial MO
+			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
 !           MOLECULAR DYNAMICS
 !
@@ -46,23 +46,28 @@
 !--------------------------------------------------------------------
 !           DOS PARAMETERS
 !
-            sigma       =   0.160d0 ,                            &  !0.01d0
+            sigma       =   0.080d0 ,                            &  !0.01d0
 
 			DOS_range   =  real_interval( -17.d0 , -6.d0 ) ,     &
 
 !--------------------------------------------------------------------
 !           SPECTRUM  PARAMETERS
 !
-            occupied    =  real_interval( -17.30d0 , -11.01d0 ) , & 
+            occupied    =  real_interval( -15.00d0 , -10.01d0 ) , & 
 
-            empty       =  real_interval( -11.00d0 , -5.00d0 )  , & 
+            empty       =  real_interval( -10.00d0 , -4.00d0 )  , & 
 
 !--------------------------------------------------------------------
 !           Readfield  PARAMETERS
 !
-            holes     = integer_interval( 120 , ABOVE ) ,    & 
 
-            electrons = integer_interval( 120 , ABOVE )  , 	  & 
+			hole_state	=	864									,	&
+
+            holes     	= 	integer_interval( 864 , ABOVE ) 	,   & 
+
+            electrons 	= 	integer_interval( 864 , ABOVE )  	,   & 
+
+			rho_range 	= 	integer_interval( 864 , 1300  ) 	,   & 
 
 !--------------------------------------------------------------------
 !           2-Pi  COHERENT  CONTROL

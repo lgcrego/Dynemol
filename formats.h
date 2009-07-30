@@ -60,6 +60,20 @@
 
 155   FORMAT(1x,'========= FINISHING DIPOLE MATRIX ANALYSIS ========',/)
 
+165   FORMAT(1x,'========= ',A20,' =========')
 
+166   FORMAT(1x,'truncation error = ',F8.5)
+
+180   FORMAT(/,1x,'step = ',I6,'		time = ',F7.4,a9)
+
+181   FORMAT(1x,'step is = ',a3)
+
+182   FORMAT(1x,'step tried = ',F7.4)
+
+183   FORMAT(1x,'step did = ',F7.4)
+ 
+184   FORMAT(1x,'step to try = ',F7.4)
+
+185   FORMAT(1x,'truncation error = ',F10.7)
 
 
