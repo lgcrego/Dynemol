@@ -22,11 +22,11 @@
 !
 !
 !-------------------------------------------------
- subroutine FMO_analysis( system, basis, zR, FMO )
+ subroutine FMO_analysis( system, basis, CR, FMO )
 !-------------------------------------------------
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
- complex*16      , allocatable , intent(in)  :: zR(:,:)
+ complex*16      , allocatable , intent(in)  :: CR(:,:)
  type(eigen)                   , intent(out) :: FMO
 
 ! . local variables
@@ -62,7 +62,7 @@
  
  CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, FMO )
 
- CALL projector( FMO, zR, basis%fragment, fragment, wv_FMO )
+ CALL projector( FMO, CR, basis%fragment, fragment, wv_FMO )
 
 ! "entropy" of the FMO states with respect to the system 
  OPEN(unit=9,file='entropy.dat',status='unknown')
@@ -88,31 +88,31 @@
 !
 !
 !----------------------------------------------------------------
- subroutine projector( FMO, zR, basis_fragment, fragment, wv_FMO)
+ subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
 !----------------------------------------------------------------
  type(eigen)                             , intent(inout) :: FMO
- complex*16       , ALLOCATABLE , target , intent(in)    :: zR(:,:)
+ complex*16       , ALLOCATABLE , target , intent(in)    :: CR(:,:)
  character(len=2)                        , intent(in)    :: basis_fragment(:)
  character(len=1)                        , intent(in)    :: fragment
  real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
 
 ! local variables 
- complex*16 , pointer  :: ZR_FMO(:,:) => null()
+ complex*16 , pointer  :: CR_FMO(:,:) => null()
  integer               :: ALL_size , FMO_size , i , j , p1 , p2
  real*8                :: check
 
- ALL_size = size( zR(:,1) )                     ! <== basis size of the entire system
+ ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
  FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
  
  Allocate( FMO%L (ALL_size,FMO_size) )
  Allocate( FMO%R (ALL_size,FMO_size) )
- Allocate( ZR_FMO(FMO_size,ALL_size) )
+ Allocate( CR_FMO(FMO_size,ALL_size) )
 
  p1 =  minloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
  p2 =  maxloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
 
 ! . the fragment basis MUST correspond to a contiguous window ... 
- ZR_FMO => ZR(p1:p2,:)
+ CR_FMO => CR(p1:p2,:)
  
 !-----------------------------------------------------------------------------
 !    writes the isolated molecule wavefunction |k> in the MO basis 
@@ -123,7 +123,7 @@
 
  forall( j=1:FMO_size, i=1:ALL_size )
 
-    FMO%L(i,j) = sum( wv_FMO(j,:) * zR_FMO(:,i) )
+    FMO%L(i,j) = sum( wv_FMO(j,:) * CR_FMO(:,i) )
 
  end forall    
 
@@ -140,7 +140,7 @@
 
 !-----------------------------------------------------------------------------
 
- nullify( ZR_FMO )
+ nullify( CR_FMO )
 
  include 'formats.h'
 
