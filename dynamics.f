@@ -25,8 +25,8 @@
  type(eigen)     , intent(in)               :: FMO 
 
 ! . local variables
- complex*16 , ALLOCATABLE :: zG_L(:,:)     , zGtL(:,:) 
- complex*16 , ALLOCATABLE :: zG_R(:,:)     , zGtR(:,:)
+ complex*16 , ALLOCATABLE :: zG_L(:,:)     , MO_bra(:,:) 
+ complex*16 , ALLOCATABLE :: zG_R(:,:)     , MO_ket(:,:)
  complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:) 
  complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
  complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
@@ -44,7 +44,7 @@
  
  CALL Allocate_Brackets( size(UNI%L(1,:))    ,      &
                          zG_L     , zG_R     ,      &
-                         zGtL     , zGtR     ,      &
+                         MO_bra   , MO_ket   ,      &
                          AO_bra   , AO_ket   ,      &
                          DUAL_bra , DUAL_ket ,      &
                          bra      , ket      , phase)
@@ -66,18 +66,18 @@
    If( t == t_i ) phase = one
 
    forall(j=1:n_part)   
-      zGtL(:,j) = conjg(phase(:)) * zG_L(:,j) 
-      zGtR(:,j) =       phase(:)  * zG_R(:,j) 
+      MO_bra(:,j) = conjg(phase(:)) * zG_L(:,j) 
+      MO_ket(:,j) =       phase(:)  * zG_R(:,j) 
    end forall
 
 !--------------------------------------------------------------------------
 ! . LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
-   CALL gemm(UNI%L,zGtL,AO_bra,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',one,zero)
 
 ! coefs of |k(t)> in AO basis 
-   CALL gemm(UNI%L,zGtR,AO_ket,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',one,zero)
 
    bra(:) = AO_bra(:,1)
    ket(:) = AO_ket(:,1)
@@ -88,17 +88,17 @@
 ! . DUAL representation for efficient calculation of survival probabilities ...
 
 ! . coefs of <k(t)| in DUAL basis
-   CALL gemm(UNI%L,zGtL,DUAL_bra,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
 
 ! . coefs of |k(t)> in DUAL basis 
-   CALL gemm(UNI%R,zGtR,DUAL_ket,'N','N',one,zero)
+   CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
 
    if( Survival ) CALL Dump_Populations(system,basis,DUAL_bra,DUAL_ket,t)
 
    t = t + t_rate
 
-   zG_L = zGtL       ! <== updating expansion coefficients at t 
-   zG_R = zGtR       ! <== updating expansion coefficients at t
+   zG_L = MO_bra       ! <== updating expansion coefficients at t 
+   zG_R = MO_ket       ! <== updating expansion coefficients at t
 
  END DO
 

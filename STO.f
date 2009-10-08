@@ -13,7 +13,7 @@
     private
 
 !   sto = 2^(n+1/2) / sqrt((2*n)!) 
-    real*8  , parameter , dimension(5) :: sto = (/2.0d0,1.1547005d0,0.42163702d0,0.112687234d0,0.23756555d0/) 
+    real*8  , parameter , dimension(5) :: sto = [2.0d0 , 1.1547005d0 , 0.42163702d0 , 0.112687234d0 , 0.23756555d0] 
 
  contains   
 !
