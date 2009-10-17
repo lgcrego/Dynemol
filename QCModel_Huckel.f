@@ -4,7 +4,7 @@
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use EHT_parameters
+    use Semi_Empirical_Parms
     use Structure_Builder
     use Overlap_Builder
 

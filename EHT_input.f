@@ -1,17 +1,42 @@
-module EHT_parameters
+module Semi_Empirical_Parms
 
     use type_m
 
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
 
-    type(EHT) , public , protected :: atom(300)
+    type(EHT)                   , public    , protected :: atom(300)
+    real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
 
     contains
+!
+!
+! 
+!=======================================================================
+ subroutine Define_EH_Parametrization( Unit_Cell , Characteristics ) 
+!=======================================================================
+implicit none
+type(structure) , intent(inout) :: Unit_Cell
+character(*)    , intent(inout) :: Characteristics
+
+! defining the k_WH parameter for the system ...
+
+! AlQ3 ...
+where( Unit_Cell % residue == "Alq" ) unit_cell % k_WH = 2.d0
+
+! ACN
+where( Unit_Cell % residue == "ACN" ) unit_cell % k_WH = 1.75
+
+! to be compared with structure information ...
+Characteristics = "AlQ3-ACN-test"
+
+end subroutine Define_EH_Parametrization 
 !    
 !
 !
+!==============================
  subroutine read_EHT_parameters
+!==============================
 
  implicit none
 
@@ -66,5 +91,36 @@ module EHT_parameters
  end subroutine read_EHT_parameters
 ! 
 !
- end module EHT_parameters
-    
+! 
+!
+!==========================
+subroutine Read_Atomic_Mass
+!==========================
+implicit none
+
+! local variables ...
+real*8  , allocatable   :: temp(:)
+integer                 :: ioerr , i , size_of_array
+
+allocate( temp(300) )
+
+OPEN(unit=3,file='atomic_mass.dat',status='old')
+do 
+    read(3,*,IOSTAT=ioerr) i , temp(i)  
+    if(ioerr < 0) EXIT
+end do    
+CLOSE(3)
+
+size_of_array = i
+
+allocate( Atomic_Mass(size_of_array) )
+
+Atomic_Mass = temp(1:size_of_array)
+
+deallocate( temp )
+
+end subroutine Read_Atomic_Mass
+! 
+!
+!
+end module Semi_Empirical_Parms

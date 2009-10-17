@@ -1,7 +1,7 @@
  module Slater_Type_Orbitals
 
     use type_m
-    use EHT_parameters
+    use Semi_Empirical_Parms
     use Structure_Builder
 
     implicit real*8      (a-h,o-y)

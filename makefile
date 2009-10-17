@@ -2,7 +2,7 @@
 
 SUFFIX=.f
 
-FC=/usr/opt/intel/fce/10.0.023/bin/ifort 
+FC=/usr/opt/intel/Compiler/11.1/046/bin/intel64/ifort 
 FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
@@ -23,9 +23,9 @@ INCS = $(INCS_MKL)
 # general rules
 #-----------------------------------------------------------------------
 
-SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o babel.o structure.o \
+SOURCE = constants_m.o type_m.o allocation_m.o util.o babel.o EHT_input.o structure.o \
 		 pbc.o overlap_D.o STO.o QCModel_Huckel.o projectors.o FMO.o data_output.o film_STO.o  \
-		 DOS_m.o multip_core.o oscillator.o QOptics.o dynamics.o rk4.o main.o
+		 DOS_m.o multip_core.o oscillator.o QOptics.o dynamics.o rk4.o solvated_M.o main.o
 
 a: $(SOURCE)  
 	rm -f a

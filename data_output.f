@@ -11,9 +11,10 @@
 !
 !
 !
-!---------------------------------------------------
+!===================================================
  subroutine Dump_Populations(system,basis,bra,ket,t)
-!---------------------------------------------------
+!===================================================
+ implicit none
  type(structure) , intent(in) :: system
  type(STO_basis) , intent(in) :: basis(:)
  complex*16      , intent(in) :: bra(:,:) , ket(:,:)
@@ -53,4 +54,48 @@
  end subroutine Dump_Populations 
 !
 !
- end module Data_Output
+!
+!=========================================
+ subroutine Dump_DOS( TDOS , PDOS , SPEC ) 
+!=========================================
+implicit none
+type(f_grid)  , intent(in) :: TDOS
+type(f_grid)  , intent(in) :: PDOS(:)
+type(f_grid)  , intent(in) :: SPEC
+
+! local variables ...
+integer         :: i , nr
+character(12)   :: string
+
+! . save the TDOS ...
+OPEN( unit=3 , file='TDOS.dat' , status='unknown' )
+    do i = 1 , size(TDOS%func)
+        write(3,10) TDOS%grid(i) , TDOS%average(i)
+    end do
+CLOSE(3)
+
+! . save the PDOS ...
+do nr = 1 , size(trj(1)%list_of_residues)
+    string = "PDOS-"//trj(1)%list_of_residues(nr)//".dat"
+    OPEN( unit=3 , file=string , status='unknown' )
+        do i = 1 , size(PDOS(nr)%func)
+            write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i)
+        end do
+    CLOSE(3)
+end do
+
+! . save the peak and broadened specs ...
+OPEN( unit=3 , file='spectrum.dat' , status='unknown' )
+    do i = 1 , size(SPEC%func)
+        write(3,11) SPEC%grid(i) , SPEC%average(i) 
+    end do
+CLOSE(3)
+
+10   FORMAT(2F12.5)
+11   FORMAT(3F13.9)
+
+ end subroutine Dump_DOS
+!
+!
+!
+end module Data_Output

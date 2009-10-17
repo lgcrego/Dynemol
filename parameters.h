@@ -1,7 +1,8 @@
- integer :: initial_state , HOMO_mol  
- logical :: CC , GaussianCube , Survival , POSCAR , SPECTRUM , DP_Moment
- type(real_interval) :: occupied , empty , DOS_range 
- type(integer_interval) :: holes , electrons , rho_range
+ integer 					:: initial_state , HOMO_mol  
+ logical 					:: CC , GaussianCube , Survival , POSCAR , SPECTRUM , DP_Moment
+ type (real_interval) 		:: occupied , empty , DOS_range 
+ type (integer_interval) 	:: holes , electrons , rho_range
+ character (len=4)			:: file_format
 
  parameter (& 
 !--------------------------------------------------------------------
@@ -14,6 +15,10 @@
             SPECTRUM     = .false. ,            & 
 			DP_Moment    = .false. ,            &
 !--------------------------------------------------------------------
+!           READING FILE FORMAT
+!
+            file_format  =  "grmx" ,            & ! <= grmx or vasp
+!--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
             t_i           =  0.d0 ,             &
@@ -22,21 +27,13 @@
             initial_state =  99  ,              & ! <== intial MO
 			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
-!           MOLECULAR DYNAMICS
-!
-            delta_t   =  8.d-4 ,                & ! <= time step of MD
-!--------------------------------------------------------------------
 !           STRUCTURAL  PARAMETERS
 !
             nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
-            T_x        =  20.44568 ,            & ! <== translation parameter
-			T_y        =  22.69200 ,            & ! <== translation parameter
-			T_z        =  50.00000 ,            & ! <== translation parameter
-
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  PARAMETERS
@@ -46,16 +43,16 @@
 !--------------------------------------------------------------------
 !           DOS PARAMETERS
 !
-            sigma       =   0.080d0 ,                            &  !0.01d0
+            sigma       =   0.080d0 ,                            &  !
 
 			DOS_range   =  real_interval( -17.d0 , -6.d0 ) ,     &
 
 !--------------------------------------------------------------------
 !           SPECTRUM  PARAMETERS
 !
-            occupied    =  real_interval( -15.00d0 , -10.01d0 ) , & 
+            occupied    =  real_interval( -13.30d0 , -11.01d0 ) , & 
 
-            empty       =  real_interval( -10.00d0 , -4.00d0 )  , & 
+            empty       =  real_interval( -11.00d0 , -6.00d0 )  , & 
 
 !--------------------------------------------------------------------
 !           Readfield  PARAMETERS

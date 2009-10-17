@@ -4,8 +4,8 @@ module PBC_m
     use Babel_m
     use constants_m
     use Allocation_m
-    use EHT_parameters
     use Structure_Builder 
+    use Semi_Empirical_Parms
 
 contains
 !

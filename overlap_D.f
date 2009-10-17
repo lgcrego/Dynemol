@@ -5,7 +5,7 @@ module Overlap_Builder
     use type_m
     use constants_m
     use PBC_m
-    use EHT_parameters
+    use Semi_Empirical_Parms
     use Structure_Builder 
 
     public :: Overlap_Matrix 

@@ -14,12 +14,14 @@ module Oscillator_m
 !
 !
 !
-!-------------------------------------------------
-subroutine  Optical_Transitions(system, basis, QM)
-!-------------------------------------------------
-type(structure) , intent(in) :: system
-type(STO_basis) , intent(in) :: basis(:)
-type(eigen)     , intent(in) :: QM
+!=============================================================================
+subroutine  Optical_Transitions( system , basis , QM , SPEC , internal_sigma )
+!=============================================================================
+type(structure)                , intent(in)     :: system
+type(STO_basis)                , intent(in)     :: basis(:)
+type(eigen)                    , intent(in)     :: QM
+type(f_grid)                   , intent(inout)  :: SPEC
+real*8          , OPTIONAL     , intent(in)     :: internal_sigma
 
 ! . local variables: transition dipole
 integer                        :: i , j , dim_bra , dim_ket
@@ -27,15 +29,17 @@ real*8           , allocatable :: Transition_Strength(:,:)
 
 ! . local variables: resonance spectrum
 type(transition)               :: Trans_DP
-real*8           , allocatable :: e_grid(:) , peak_ij(:) , spec_peaks(:) , spec_broad(:)
-real*8                         :: gauss_norm , two_sigma2 , step , resonance
+real*8           , allocatable :: peak_ij(:) 
+real*8                         :: gauss_norm , sgm , two_sigma2 , step , resonance
 real*8           , parameter   :: one = 1.d0 , zero = 0.d0
 real*8           , parameter   :: osc_const = 1.65338d-4  ! <== (2/3)*(m_e/h_bar*h_bar) ; unit = 1/( eV * (a_B)^2 ) 
-integer          , parameter   :: npoints = 1500
 
 !-------------------------------------------------------------
 ! . Dipole Transition Matrix <bra|r|ket> = <empty|r|occupied>
 !-------------------------------------------------------------
+
+npoints = size( SPEC%grid )
+
 trans_DP%bra_range = empty
 trans_DP%ket_range = occupied
 
@@ -49,17 +53,22 @@ allocate( Transition_Strength (dim_bra,dim_ket) )
 forall(i=1:dim_bra,j=1:dim_ket)  Transition_Strength(i,j) = sum(Trans_DP%matrix(i,j)%DP**2)
 
 ! . the gaussians are not normalized
-two_sigma2 = 2.d0 * sigma*sigma
+if( present(internal_sigma) ) then 
+    sgm = internal_sigma
+else
+    sgm = sigma
+end if
+two_sigma2 = 2.d0 * sgm*sgm
 
 step = (QM%erg(trans_DP%bra_PTR(dim_bra))-QM%erg(trans_DP%ket_PTR(1))) / float(npoints-1)
 
-ALLOCATE(e_grid(npoints), peak_ij(npoints), spec_peaks(npoints), spec_broad(npoints))
+allocate( peak_ij(npoints) )
 
-forall(k=1:npoints) e_grid(k) = (k-1)*step 
+forall(k=1:npoints) SPEC%grid(k) = (k-1)*step 
 
 ! . the optical spectrum : peaks and broadened lines
-spec_peaks = 0.d0
-spec_broad = 0.d0
+SPEC%peaks = 0.d0
+SPEC%func  = 0.d0
 do i=1,dim_bra
     do j=1,dim_ket 
 
@@ -67,28 +76,21 @@ do i=1,dim_bra
         Transition_Strength(i,j) = osc_const * resonance * Transition_Strength(i,j)
 
         peak_ij = 0.d0
-        where( dabs(e_grid-resonance) < step ) peak_ij = Transition_Strength(i,j)
-        spec_peaks = spec_peaks + peak_ij    
+        where( dabs(SPEC%grid-resonance) < step ) peak_ij = Transition_Strength(i,j)
+        SPEC%peaks = SPEC%peaks + peak_ij    
 
         peak_ij = 0.d0
-        where( ((e_grid-resonance)**2/two_sigma2) < 25.d0 ) &
-        peak_ij = dexp( -(e_grid-resonance)**2 / two_sigma2 )
+        where( ((SPEC%grid-resonance)**2/two_sigma2) < 25.d0 ) &
+        peak_ij = dexp( -(SPEC%grid-resonance)**2 / two_sigma2 )
 
-        spec_broad = spec_broad + Transition_Strength(i,j) * peak_ij
+        SPEC%func = SPEC%func + Transition_Strength(i,j) * peak_ij
 
     end do
 end do
 
-! . save the peak and broadened specs
-OPEN(unit=3,file='spectrum.dat',status='unknown')
-    do i = 1 , npoints
-        write(3,10) e_grid(i) , spec_broad(i) , spec_peaks(i)
-    end do
-10   FORMAT(3F13.9)
-CLOSE(3)
+SPEC%average = SPEC%average + SPEC%func
 
-deallocate(e_grid,peak_ij,spec_peaks,spec_broad)
-deallocate(trans_DP%bra_PTR,trans_DP%ket_PTR,trans_DP%matrix,Transition_Strength)
+deallocate( peak_ij , trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
 
 print*, '>> Optical Spectrum done <<'
 

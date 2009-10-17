@@ -4,7 +4,7 @@ module Multipole_Core
     use constants_m
     use mkl95_precision
     use mkl95_blas
-    use EHT_parameters
+    use Semi_Empirical_Parms
     use Structure_Builder 
 
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
@@ -37,6 +37,7 @@ Print 153
 !size of M matrix
  M_size = sum(atom(system%AtNo)%DOS)
 
+ if( allocated(DP_matrix_AO) ) deallocate( DP_matrix_AO )
  allocate(DP_matrix_AO(M_size,M_size))
 
  CALL Build_DIPOLE_Matrix(system,basis)

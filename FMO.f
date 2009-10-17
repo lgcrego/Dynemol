@@ -7,7 +7,7 @@
     use Allocation_m
     use QCModel_Huckel
     use projectors
-    use EHT_parameters
+    use Semi_Empirical_Parms
     use Overlap_Builder
     use Structure_Builder
 
@@ -202,6 +202,6 @@
 !
 !
 !
-include 'red_pro.f'
+!include 'red_pro.f'
 
  end module FMO_m

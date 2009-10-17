@@ -16,6 +16,8 @@
     allocate( unit_cell%coord    (unit_cell%atoms,3) )
     allocate( unit_cell%k_WH     (unit_cell%atoms)   )
     allocate( unit_cell%fragment (unit_cell%atoms)   )
+    allocate( unit_cell%residue  (unit_cell%atoms)   )
+    allocate( unit_cell%MMSymbol (unit_cell%atoms)   )
  
  end subroutine Allocate_UnitCell
 ! 
@@ -35,6 +37,8 @@
     allocate( System%k_WH         (System_size)   )
     allocate( System%copy_No      (System_size)   )
     allocate( System%fragment     (System_size)   )
+    allocate( System%residue      (System_size)   )
+    allocate( System%MMSymbol     (System_size)   )
  
  end subroutine Allocate_Structures
 !
@@ -60,6 +64,24 @@
 !
 !
 !
+!
+ subroutine DeAllocate_UnitCell(unit_cell)
+
+    type(structure) , intent(inout) :: unit_cell
+
+    deallocate( unit_cell%symbol   )
+    deallocate( unit_cell%AtNo     )
+    deallocate( unit_cell%coord    )
+    deallocate( unit_cell%k_WH     )
+    deallocate( unit_cell%fragment )
+    deallocate( unit_cell%residue  )
+    deallocate( unit_cell%MMSymbol )
+ 
+ end subroutine DeAllocate_UnitCell
+!
+!
+!
+!
  subroutine DeAllocate_Structures(System)
 
     type(structure) , intent(inout) :: System
@@ -71,6 +93,8 @@
     deallocate( System%k_WH         )
     deallocate( System%copy_No      )
     deallocate( System%fragment     )
+    deallocate( System%residue      )
+    deallocate( System%MMSymbol     )
  
  end subroutine DeAllocate_Structures
 !

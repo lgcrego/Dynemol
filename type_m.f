@@ -11,8 +11,10 @@ module type_m
         integer                                         :: molecule
         integer          , dimension(:)   , allocatable :: copy_No
         integer          , dimension(:)   , allocatable :: BasisPointer
-        character(len=2) , dimension(:)   , allocatable :: fragment
+        character(len=1) , dimension(:)   , allocatable :: fragment
         character(len=2) , dimension(:)   , allocatable :: symbol
+        character(len=3) , dimension(:)   , allocatable :: residue
+        character(len=3) , dimension(:)   , allocatable :: MMSymbol
         integer          , dimension(:)   , allocatable :: AtNo
         real*8           , dimension(:,:) , allocatable :: coord
         real*8           , dimension(:)   , allocatable :: k_WH
@@ -52,6 +54,8 @@ module type_m
         real*8           :: z
         character(len=2) :: symbol
         character(len=2) :: fragment
+        character(len=3) :: MMSymbol
+        character(len=3) :: residue 
     end type STO_basis
 
     type eigen
@@ -87,7 +91,12 @@ module type_m
         integer :: inicio
         integer :: fim
     end type integer_interval
-   
+
+
+    type int_pointer
+        integer , pointer :: PTR => null()
+    end type
+
 
     type transition
         type(R3_vector)        , allocatable :: matrix(:,:)
@@ -99,6 +108,15 @@ module type_m
         integer                , allocatable :: ket_PTR(:)
         character(len=8)                     :: flag
     end type transition
+
+
+    type f_grid
+        real*8  , allocatable   :: grid (:)
+        real*8  , allocatable   :: func (:)
+        real*8  , allocatable   :: peaks(:)
+        real*8  , allocatable   :: average(:)
+    end type f_grid
+
 
     include 'parameters.h'    
 
