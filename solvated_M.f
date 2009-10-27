@@ -4,7 +4,7 @@ module Sampling_m
 
     use type_m
     use constants_m
-    use Babel_m                 , only : universe, atomic , molecular , System_Characteristics
+    use Babel_m                 , only : System_Characteristics
     use Allocation_m            , only : Allocate_UnitCell , DeAllocate_UnitCell , DeAllocate_Structures
     use Semi_Empirical_Parms    , only : Define_EH_Parametrization
     use QCModel_Huckel          , only : EigenSystem
@@ -14,7 +14,7 @@ module Sampling_m
     use Multipole_Core          , only : Dipole_Matrix 
     use Data_Output             , only : Dump_DOS
 
-    public :: Solvated_M
+    public :: Solvated_M , DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
 
     private
 
@@ -101,13 +101,14 @@ end subroutine Solvated_M
  type(universe)  , intent(inout)  :: Solvated_System
 
 ! local variables ... 
-integer         :: j  
+integer         :: j , n_residues
 character(72)   :: Characteristics
 
 Unit_Cell%atoms = Solvated_System%N_of_Atoms
+n_residues      = size( trj(1)%list_of_residues )
 
 ! allocating Unit_Cell structure ...
-CALL Allocate_UnitCell(Unit_Cell)
+CALL Allocate_UnitCell( Unit_Cell , n_residues )
 
 ! coordinates and other info from input data ...
 forall( j=1:unit_cell%atoms )
@@ -119,6 +120,10 @@ forall( j=1:unit_cell%atoms )
     unit_cell % MMSymbol (j)   =  Solvated_System % atom(j) % MMSymbol
 end forall
 
+! get list of residues from TRJ(1) ...
+unit_cell%list_of_residues  = trj(1)%list_of_residues
+unit_cell%list_of_fragments = trj(1)%list_of_fragments
+
 ! unit_cell dimensions ...
 unit_cell % T_xyz =  Solvated_System % box
 
@@ -126,7 +131,10 @@ unit_cell % T_xyz =  Solvated_System % box
 CALL Define_EH_Parametrization( Unit_Cell , Characteristics )
 
 ! verify consistency ...
-if( System_Characteristics /= Characteristics ) Pause ">>> Input Parameter Inconsistency <<<"
+if( System_Characteristics /= Characteristics ) then
+    print*, System_Characteristics , Characteristics 
+    Pause ">>> Input Parameter Inconsistency <<<"
+end if
 
 end subroutine Coords_from_TRJ
 !
@@ -419,7 +427,12 @@ integer :: i , N_of_residues
 select case( flag )
 
     case( "alloc" )
-        N_of_residues = size(trj(1)%list_of_residues) 
+
+        if( allocated(trj) ) then
+            N_of_residues = size(trj(1)%list_of_residues) 
+        else
+            N_of_residues = size(unit_cell%list_of_residues)
+        end if
 
         allocate( PDOS(N_of_residues) )
 

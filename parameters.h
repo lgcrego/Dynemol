@@ -3,11 +3,14 @@
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
+ character (len=10)			:: DRIVER
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTIONS
 !
+			DRIVER		 = "q_dynamics",	 	& ! <== q_dynamics , solvated_M
+!			
             GaussianCube = .false. ,            &
 			Survival     = .false. ,            &
             CC           = .false. ,            & 
@@ -17,7 +20,7 @@
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_format  =  "grmx" ,            & ! <= grmx or vasp
+            file_format  =  "xyz"  ,            & ! <= xyz , grmx or vasp
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !

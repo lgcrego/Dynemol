@@ -22,7 +22,7 @@ subroutine Read_Structure
 !=========================
 
 select case( file_format )
-    case( 'xyz' ) 
+    case( 'xyz' )
         CALL Read_from_XYZ( Unit_Cell ) 
     case( 'grmx' ) 
         CALL Read_PDB( trj ) 

@@ -8,60 +8,27 @@
 
     character(len=72) , PUBLIC :: System_Characteristics
 
-    type atomic
-        real*8                        :: xyz(3)
-        real*8                        :: mass
-        real*8                        :: charge
-        integer                       :: AtNo
-        integer                       :: nresid 
-        integer                       :: copy_No
-        character(3)                  :: residue
-        character(3)                  :: Symbol
-        character(3)                  :: MMSymbol
-        character(1)                  :: TorF(3)
-        character(1)                  :: fragment
-    end type atomic
+    interface Symbol_2_AtNo
+        module procedure Sym_2_AtNo_TRJ
+        module procedure Sym_2_AtNo_XYZ
+    end interface
 
-    type molecular
-        type(atomic)    , allocatable :: atom(:) 
-        real*8                        :: CG(3)
-        real*8                        :: radius
-        integer                       :: N_of_Atoms 
-        integer                       :: nresid   
-        integer                       :: copy_No
-        character(3)                  :: residue 
-        character(72)                 :: Solvent_Characteristics
-    end type molecular
-
-    type universe
-        type(atomic)    , allocatable :: atom(:)
-        type(molecular) , allocatable :: solvent(:)
-        type(molecular)               :: dye
-        real*8                        :: box(3)
-        real*8                        :: Surface_Boundary
-        integer                       :: N_of_Atoms
-        integer                       :: N_of_Surface_Atoms
-        integer                       :: N_of_Solvent_Atoms
-        integer                       :: N_of_Solvent_Molecules
-        character(1)    , allocatable :: list_of_fragments(:)
-        character(3)    , allocatable :: list_of_residues(:)
-        character(72)                 :: System_Characteristics
-    end type universe
-
- contains
+contains
 !
 !
 !
 !===================================
- subroutine Read_from_XYZ(unit_cell)
+ subroutine Read_from_XYZ(Unit_Cell)
 !===================================
 
  type(structure) , intent(out) :: unit_cell
 
- character(len=2) :: dumb_char 
  character(len=1) :: fragment
+ character(len=2) :: dumb_char 
+ character(len=3) :: residue
  real*8           :: k_WH
- integer          :: i , j , j1 , j2 , n_kWH , n_fragments , N_of_Configurations
+ integer          :: i , j , j1 , j2 , n_kWH 
+ integer          :: n_residues , N_of_Configurations
 
  OPEN(unit=3,file='xyz.dat',status='old')   
 
@@ -69,16 +36,20 @@
  read(3,*) System_Characteristics
  read(3,*) N_of_Configurations      ! <== No of configurations 
  read(3,*) unit_cell%atoms          ! <== No of atoms in the ORIGINAL supercell
+ read(3,*) n_residues
 
-! allocating arrays
- CALL Allocate_UnitCell(unit_cell)
+! allocating arrays ...
+ CALL Allocate_UnitCell( Unit_Cell , n_residues )
 
-! Acceptor (A) , Donor (D) or Molecule (M)
-! fragment atoms must be packed together
- read(3,*) n_fragments
- do i = 1 , n_fragments
-    read(3,*) j1 , j2 , fragment
-    forall(j=j1:j2) unit_cell%fragment(j) = fragment
+! residues must be packed together ...
+ do i = 1 , n_residues
+    read(3,*) j1 , j2 , residue , fragment
+
+    unit_cell % list_of_residues  (i) = residue
+    unit_cell % list_of_fragments (i) = residue
+
+    forall(j=j1:j2) unit_cell % residue  (j)  = residue
+    forall(j=j1:j2) unit_cell % fragment (j) = fragment
  end do
 
 ! defining the k_WH parameter for the atom 
@@ -89,7 +60,12 @@
     forall(j=j1:j2) unit_cell%k_WH(j) = k_WH
  end do
 
-! reading coordinates
+! read unit_cell dimensions ...
+ read(3,*) unit_cell%T_xyz(1) 
+ read(3,*) unit_cell%T_xyz(2)
+ read(3,*) unit_cell%T_xyz(3)
+
+! reading coordinates ...
  read(3,*) dumb_char
  DO j = 1 , unit_cell%atoms
      read(3,*) unit_cell%symbol(j), (unit_cell%coord(j,i), i=1,3)
@@ -97,12 +73,7 @@
 
  CLOSE(3)
 
-! unit_cell dimensions
- unit_cell%T_xyz(1) = T_x
- unit_cell%T_xyz(2) = T_y
- unit_cell%T_xyz(3) = T_z
-
- print 70, System_Characteristics
+ CALL Symbol_2_AtNo(Unit_Cell)
 
  include 'formats.h'
 
@@ -119,9 +90,10 @@
  real*8            :: x0 , y0 , z0
  real*8            :: a , b , c
  real*8            :: kWH
- integer           :: n_kWH , n_fragments , i , j , j1 , j2 , n , boundary_atom
+ integer           :: n_kWH , n_residues , i , j , j1 , j2 , n , boundary_atom
  integer           :: N_of_atoms , N_of_elements , N_of_cluster_atoms , N_of_Configurations
  character(len=1)  :: TorF , fragment
+ character(len=3)  :: residue
  logical           :: flag
 
  real*8           , allocatable :: xyz(:,:)
@@ -134,16 +106,20 @@
  read(3,*) System_Characteristics
  read(3,*) N_of_Configurations      ! <== No of configurations 
  read(3,*) unit_cell%atoms          ! <== No of atoms in the ORIGINAL supercell
- 
-! allocating arrays
- CALL Allocate_UnitCell(unit_cell)
+ read(3,*) n_residues
 
-! Acceptor (A) , Donor (D) or Molecule (M)
-! fragment atoms must be packed together
- read(3,*) n_fragments
- do i = 1 , n_fragments
-    read(3,*) j1 , j2 , fragment
-    forall(j=j1:j2) unit_cell%fragment(j) = fragment
+! allocating arrays ...
+ CALL Allocate_UnitCell( Unit_Cell , n_residues )
+
+! residues must be packed together ...
+ do i = 1 , n_residues
+    read(3,*) j1 , j2 , residue , fragment
+
+    unit_cell % list_of_residues  (i) = residue
+    unit_cell % list_of_fragments (i) = residue
+
+    forall(j=j1:j2) unit_cell % residue  (j)  = residue
+    forall(j=j1:j2) unit_cell % fragment (j) = fragment
  end do
 
 ! defining the k_WH parameter for the atom 
@@ -479,9 +455,10 @@ end subroutine Read_VASP
 !
 !
 !
-!===========================
- subroutine Symbol_2_AtNo(a)
-!===========================
+!============================
+ subroutine Sym_2_AtNo_TRJ(a)
+!============================
+implicit none
 type(atomic) , intent(inout) :: a(:)
 
 ! local variables ...
@@ -517,7 +494,50 @@ integer :: i
 
  END DO
 
- end subroutine Symbol_2_AtNo
+end subroutine Sym_2_AtNo_TRJ
+!
+!
+!============================
+ subroutine Sym_2_AtNo_XYZ(a)
+!============================
+implicit none
+type(structure) , intent(inout) :: a
+
+! local variables ...
+integer :: i
+
+DO i = 1 , a%atoms
+
+    select case(a%symbol(i))
+        case( 'H') 
+            a%AtNo(i) = 1 
+        case( 'C') 
+            a%AtNo(i) = 6 
+        case( 'N') 
+            a%AtNo(i) = 7 
+        case( 'O') 
+            a%AtNo(i) = 8 
+        case( 'F') 
+            a%AtNo(i) = 9 
+        case( 'AL','Al') 
+            a%AtNo(i) = 13 
+        case( 'S','s') 
+            a%AtNo(i) = 16 
+        case( 'CL','Cl') 
+            a%AtNo(i) = 17 
+        case( 'TI','Ti') 
+            a%AtNo(i) = 22 
+        case( 'MN','Mn') 
+            a%AtNo(i) = 25 
+        case default
+            print*, ' >> unkown atom found ; execution terminated <<' 
+            stop
+    end select
+
+END DO
+
+end subroutine Sym_2_AtNo_XYZ
+
 !
 !
 !

@@ -28,7 +28,7 @@ where( Unit_Cell % residue == "Alq" ) unit_cell % k_WH = 2.d0
 where( Unit_Cell % residue == "ACN" ) unit_cell % k_WH = 1.75
 
 ! to be compared with structure information ...
-Characteristics = "AlQ3-ACN-test"
+Characteristics = "Alq3MD"
 
 end subroutine Define_EH_Parametrization 
 !    

@@ -52,7 +52,7 @@ allocate( Transition_Strength (dim_bra,dim_ket) )
 
 forall(i=1:dim_bra,j=1:dim_ket)  Transition_Strength(i,j) = sum(Trans_DP%matrix(i,j)%DP**2)
 
-! . the gaussians are not normalized
+! . the gaussians are not normalized ...
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
 else
@@ -66,7 +66,7 @@ allocate( peak_ij(npoints) )
 
 forall(k=1:npoints) SPEC%grid(k) = (k-1)*step 
 
-! . the optical spectrum : peaks and broadened lines
+! . the optical spectrum : peaks and broadened lines ...
 SPEC%peaks = 0.d0
 SPEC%func  = 0.d0
 do i=1,dim_bra

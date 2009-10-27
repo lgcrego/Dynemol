@@ -64,7 +64,7 @@ type(f_grid)  , intent(in) :: PDOS(:)
 type(f_grid)  , intent(in) :: SPEC
 
 ! local variables ...
-integer         :: i , nr
+integer         :: i , nr , N_of_residues
 character(12)   :: string
 
 ! . save the TDOS ...
@@ -75,8 +75,9 @@ OPEN( unit=3 , file='TDOS.dat' , status='unknown' )
 CLOSE(3)
 
 ! . save the PDOS ...
-do nr = 1 , size(trj(1)%list_of_residues)
-    string = "PDOS-"//trj(1)%list_of_residues(nr)//".dat"
+N_of_residues = size(unit_cell%list_of_residues)
+do nr = 1 , N_of_residues
+    string = "PDOS-"//Unit_Cell%list_of_residues(nr)//".dat" 
     OPEN( unit=3 , file=string , status='unknown' )
         do i = 1 , size(PDOS(nr)%func)
             write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i)

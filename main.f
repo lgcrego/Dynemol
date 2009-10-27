@@ -1,54 +1,33 @@
- Program qdynamo
+Program qdynamo
 
- use type_m
- use constants_m
- use Sampling_m             , only : Solvated_M
- use FMO_m
- use QCModel_Huckel
- use projectors
- use DOS_m
- use Structure_Builder
- use Multipole_Core
- use Oscillator_m
- use Dynamics_m
- use RK_m
+use type_m
+use constants_m
+use Semi_Empirical_Parms    , only : read_EHT_parameters
+use Structure_Builder       , only : Read_Structure
+use qdynamics_m             , only : qdynamics
+use Sampling_m              , only : Solvated_M
 
- type(eigen)    :: UNI
- type(eigen)    :: FMO
- type(f_grid)   :: TDOS , PDOS , SPEC
+! local variables ...
  
- complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 !========================================================
-!     starting up 
+!                   DRIVER ROUTINE
 !========================================================
  
- CALL read_EHT_parameters
+CALL read_EHT_parameters
 
- CALL Read_Structure
- 
- CALL Solvated_M
+CALL Read_Structure
 
- CALL Generate_Structure(1)
+select case ( driver )
 
- CALL Basis_Builder( Extended_Cell, ExCell_basis )
+    case ( "q_dynamics" )
+        CALL qdynamics
 
- CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
+    case ( "solvated_M" )
+        CALL Solvated_M
 
- CALL Total_DOS( UNI%erg , TDOS )
+end select
 
-! CALL Partial_DOS( Extended_Cell, UNI , PDOS )
+include 'formats.h'
 
- CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
-
- CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
-
- CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
-
-! CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
-
-! CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
-
- include 'formats.h'
-
- END
+END

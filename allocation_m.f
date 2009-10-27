@@ -7,17 +7,20 @@
 !
 !
 !
- subroutine Allocate_UnitCell(unit_cell)
+ subroutine Allocate_UnitCell( unit_cell , n_residues )
+ implicit none
+ type(structure) , intent(inout) :: unit_cell
+ integer         , intent(in)    :: n_residues
 
-    type(structure) , intent(inout) :: unit_cell
-
-    allocate( unit_cell%symbol   (unit_cell%atoms)   )
-    allocate( unit_cell%AtNo     (unit_cell%atoms)   )
-    allocate( unit_cell%coord    (unit_cell%atoms,3) )
-    allocate( unit_cell%k_WH     (unit_cell%atoms)   )
-    allocate( unit_cell%fragment (unit_cell%atoms)   )
-    allocate( unit_cell%residue  (unit_cell%atoms)   )
-    allocate( unit_cell%MMSymbol (unit_cell%atoms)   )
+    allocate( unit_cell % Symbol            (unit_cell%atoms)   )
+    allocate( unit_cell % AtNo              (unit_cell%atoms)   )
+    allocate( unit_cell % coord             (unit_cell%atoms,3) )
+    allocate( unit_cell % k_WH              (unit_cell%atoms)   )
+    allocate( unit_cell % fragment          (unit_cell%atoms)   )
+    allocate( unit_cell % residue           (unit_cell%atoms)   )
+    allocate( unit_cell % MMSymbol          (unit_cell%atoms)   )
+    allocate( unit_cell % list_of_residues  (n_residues)        )
+    allocate( unit_cell % list_of_fragments (n_residues)        )
  
  end subroutine Allocate_UnitCell
 ! 
@@ -31,7 +34,7 @@
     System%atoms = System_Size
 
     allocate( System%BasisPointer (System_Size)   )
-    allocate( System%symbol       (System_Size)   )
+    allocate( System%Symbol       (System_Size)   )
     allocate( System%AtNo         (System_size)   )
     allocate( System%coord        (System_Size,3) )
     allocate( System%k_WH         (System_size)   )
@@ -69,13 +72,15 @@
 
     type(structure) , intent(inout) :: unit_cell
 
-    deallocate( unit_cell%symbol   )
-    deallocate( unit_cell%AtNo     )
-    deallocate( unit_cell%coord    )
-    deallocate( unit_cell%k_WH     )
-    deallocate( unit_cell%fragment )
-    deallocate( unit_cell%residue  )
-    deallocate( unit_cell%MMSymbol )
+    deallocate( unit_cell % symbol            )
+    deallocate( unit_cell % AtNo              )
+    deallocate( unit_cell % coord             )
+    deallocate( unit_cell % k_WH              )
+    deallocate( unit_cell % fragment          )
+    deallocate( unit_cell % residue           )
+    deallocate( unit_cell % MMSymbol          )
+    deallocate( unit_cell % list_of_residues  )
+    deallocate( unit_cell % list_of_fragments )
  
  end subroutine DeAllocate_UnitCell
 !

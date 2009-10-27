@@ -6,23 +6,68 @@ module type_m
     implicit complex*16  (z)
 
     type structure
-        integer                                         :: atoms 
-        integer                                         :: N_of_electrons
-        integer                                         :: molecule
-        integer          , dimension(:)   , allocatable :: copy_No
-        integer          , dimension(:)   , allocatable :: BasisPointer
-        character(len=1) , dimension(:)   , allocatable :: fragment
-        character(len=2) , dimension(:)   , allocatable :: symbol
-        character(len=3) , dimension(:)   , allocatable :: residue
-        character(len=3) , dimension(:)   , allocatable :: MMSymbol
-        integer          , dimension(:)   , allocatable :: AtNo
-        real*8           , dimension(:,:) , allocatable :: coord
-        real*8           , dimension(:)   , allocatable :: k_WH
-        real*8           , dimension(3)                 :: BoxSides
-        real*8           , dimension(3)                 :: Center_of_Mass
-        real*8           , dimension(3)                 :: Center_of_Charge
-        real*8           , dimension(3)                 :: T_xyz
+        integer                    :: atoms 
+        integer                    :: N_of_electrons
+        integer                    :: molecule
+        integer      , allocatable :: copy_No(:)
+        integer      , allocatable :: BasisPointer(:)
+        character(1) , allocatable :: fragment(:)
+        character(2) , allocatable :: symbol(:)
+        character(3) , allocatable :: residue(:)
+        character(1) , allocatable :: list_of_fragments(:)
+        character(3) , allocatable :: list_of_residues(:)
+        character(3) , allocatable :: MMSymbol(:)
+        integer      , allocatable :: AtNo(:)
+        real*8       , allocatable :: coord(:,:)
+        real*8       , allocatable :: k_WH(:)
+        real*8                     :: BoxSides(3)
+        real*8                     :: Center_of_Mass(3)
+        real*8                     :: Center_of_Charge(3)
+        real*8                     :: T_xyz(3)
     end type structure
+
+!-----------------------------------------------------------------------------
+    type atomic
+        real*8                        :: xyz(3)
+        real*8                        :: mass
+        real*8                        :: charge
+        integer                       :: AtNo
+        integer                       :: nresid 
+        integer                       :: copy_No
+        character(3)                  :: residue
+        character(3)                  :: Symbol
+        character(3)                  :: MMSymbol
+        character(1)                  :: TorF(3)
+        character(1)                  :: fragment
+    end type atomic
+
+    type molecular
+        type(atomic)    , allocatable :: atom(:) 
+        real*8                        :: CG(3)
+        real*8                        :: radius
+        integer                       :: N_of_Atoms 
+        integer                       :: nresid   
+        integer                       :: copy_No
+        character(3)                  :: residue 
+        character(72)                 :: Solvent_Characteristics
+    end type molecular
+
+    type universe
+        type(atomic)    , allocatable :: atom(:)
+        type(molecular) , allocatable :: solvent(:)
+        type(molecular)               :: dye
+        real*8                        :: box(3)
+        real*8                        :: Surface_Boundary
+        integer                       :: N_of_Atoms
+        integer                       :: N_of_Surface_Atoms
+        integer                       :: N_of_Solvent_Atoms
+        integer                       :: N_of_Solvent_Molecules
+        character(1)    , allocatable :: list_of_fragments(:)
+        character(3)    , allocatable :: list_of_residues(:)
+        character(72)                 :: System_Characteristics
+    end type universe
+!-----------------------------------------------------------------------------
+
 
     type EHT
         character(len=2) :: symbol
@@ -36,6 +81,7 @@ module type_m
         real*8           :: coef(0:3,2)
         integer          :: DOS 
     end type EHT     
+
 
     type STO_basis
         integer          :: n
@@ -57,6 +103,7 @@ module type_m
         character(len=3) :: MMSymbol
         character(len=3) :: residue 
     end type STO_basis
+
 
     type eigen
         complex*16 , allocatable :: R(:,:)

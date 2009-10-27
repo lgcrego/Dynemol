@@ -1,4 +1,4 @@
- module dynamics_m
+ module Schroedinger_m
 
  use constants_m
  use mkl95_precision
@@ -110,4 +110,4 @@
 
  end subroutine Huckel_dynamics
 
- end module dynamics_m
+ end module Schroedinger_m

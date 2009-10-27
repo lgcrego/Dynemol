@@ -33,7 +33,7 @@ end if
 
 npoints = size(TDOS%grid)
 
-gauss_norm = 1.d0 / (sgm*sqrt2PI)
+gauss_norm = 1.d0  !  1.d0 / (sgm*sqrt2PI)  <== for gauss_norm = 1 the gaussians are not normalized ...
 two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
@@ -97,7 +97,7 @@ end if
 
 npoints = size( PDOS(nr)%grid )
 
-gauss_norm = 1.d0 / (sgm*sqrt2PI)
+gauss_norm = 1.d0 !  / (sgm*sqrt2PI)    <== for gauss_norm = 1 the gaussians are not normalized ...
 two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
