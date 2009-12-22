@@ -25,12 +25,17 @@ implicit none
 ! local variables ...
  integer                        :: nr , N_of_residues
  character(3)                   :: residue
+ logical                        :: FMO_ , DIPOLE_
  type(eigen)                    :: UNI
  type(eigen)                    :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
+
  
 ! preprocessing stuff ...................................
+
+FMO_    = ( spectrum .AND. survival  )
+DIPOLE_ = ( FMO_     .AND. DP_Moment )
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
@@ -43,9 +48,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 ! Quantum Dynamics ...
 
  CALL Generate_Structure(1)
-  
+
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
- 
+
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
  CALL Total_DOS( UNI%erg , TDOS )
@@ -55,13 +60,13 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , residue , nr )            
  end do
 
- CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
+ If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
 
- CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
+ If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
- CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
+ If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
-! CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
+ If( survival ) CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
 ! CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 

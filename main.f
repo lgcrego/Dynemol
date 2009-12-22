@@ -26,6 +26,8 @@ select case ( driver )
     case ( "solvated_M" )
         CALL Solvated_M
 
+    case ( "AlgGenetic" )
+
 end select
 
 include 'formats.h'

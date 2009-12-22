@@ -1,10 +1,14 @@
  module Babel_m
 
-    use type_m
-    use Allocation_m
+    use type_m                  
+    use Allocation_m            , only : Allocate_UnitCell
+    use Semi_Empirical_Parms    , only : Define_EH_Parametrization
 
-    PUBLIC :: Read_from_XYZ , Read_from_Poscar 
+    PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_VASP
+    PUBLIC :: Coords_from_Universe
+
+    type(universe)  , allocatable , public  :: trj(:)
 
     character(len=72) , PUBLIC :: System_Characteristics
 
@@ -13,13 +17,18 @@
         module procedure Sym_2_AtNo_XYZ
     end interface
 
+    interface Identify_Fragments
+        module procedure Identify_Fragments_Structure
+        module procedure Identify_Fragments_Universe
+    end interface
+
 contains
 !
 !
 !
-!===================================
- subroutine Read_from_XYZ(Unit_Cell)
-!===================================
+!=====================================
+ subroutine Read_from_XYZ( Unit_Cell )
+!=====================================
 
  type(structure) , intent(out) :: unit_cell
 
@@ -81,9 +90,144 @@ contains
 !
 !
 !
-!======================================
- subroutine Read_from_Poscar(unit_cell)
-!======================================
+!=====================================
+ subroutine Read_from_PDB( Unit_Cell )
+!=====================================
+ implicit none 
+ type(structure)   , intent(out) :: Unit_Cell
+
+! local variables ...
+integer             :: i , j , ioerr , N_of_atoms , nresidue
+character(len=5)    :: keyword
+type(universe)      :: system        
+
+OPEN(unit=3,file='input.pdb',status='old',iostat=ioerr,err=11)
+read(3,'(a72)') System_Characteristics
+
+! reading unit cell vectors ...
+read(unit=3,fmt=105,iostat=ioerr) keyword
+if ( keyword == "CRYST" ) then
+    backspace 3
+    read(3,fmt=100) system%box(1) , system%box(2) , system%box(3)
+end if
+    
+! scan file for N_of_Atoms ...   
+N_of_atoms = 0
+do
+    read(unit=3,fmt=105,iostat=ioerr) keyword
+    if( keyword == "HETAT" ) then
+        N_of_atoms = N_of_atoms + 1
+    end if
+    if ( keyword == "MASTE" ) exit
+end do
+system%N_of_atoms = N_of_atoms
+        
+allocate( system%atom(system%N_of_atoms) )
+
+!read data ...    
+rewind 3
+do
+    read(unit=3,fmt=105,iostat = ioerr) keyword
+    if( keyword == "HETAT" ) then
+        backspace 3
+        do i = 1 , system%N_of_atoms
+            read(3,115)  system%atom(i)%MMSymbol            ,  &    ! <== atom type
+                         system%atom(i)%residue             ,  &    ! <== residue name
+                         nresidue                           ,  &    ! <== residue sequence number
+                         (system%atom(i)%xyz(j) , j=1,3)    ,  &    ! <== xyz coordinates 
+                         system%atom(i)%Symbol                      ! <== chemical element symbol
+        end do
+    end if
+    if ( keyword == "MASTE" ) exit
+end do
+
+close(3)
+
+! convert residues to upper case ...
+forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%atom(i)%residue )
+
+! preprocessing the universe system ...
+CALL Symbol_2_AtNo      ( system%atom )
+CALL Identify_Residues  ( system      )
+CALL Setting_Fragments  ( system      )
+CALL Identify_Fragments ( system      )
+CALL Sort_Residues      ( system      )
+
+! transfer structure <-- universe 
+CALL Coords_from_Universe( Unit_Cell , system )
+
+deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
+11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
+
+100 format(t10, f6.3, t19, f6.3, t28, f6.3)
+105 format(a5)
+115 FORMAT(t12,a5,t18,a3,t23,i4,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
+
+end subroutine Read_from_PDB
+!
+!
+!
+!=====================================================
+ subroutine Coords_from_Universe( Unit_Cell , System )
+!=====================================================
+ implicit none
+ type(structure) , intent(out)    :: Unit_Cell
+ type(universe)  , intent(inout)  :: System
+
+! local variables ... 
+integer         :: j , n_residues
+character(72)   :: Characteristics
+
+Unit_Cell%atoms = System%N_of_Atoms
+select case( file_type )
+    case( "structure" )
+        n_residues = size( System%list_of_residues )
+    case( "trajectory" )
+        n_residues = size( trj(1)%list_of_residues )
+    end select
+
+! allocating Unit_Cell structure ...
+CALL Allocate_UnitCell( Unit_Cell , n_residues )
+
+! coordinates and other info from input data ...
+forall( j=1:unit_cell%atoms )
+    unit_cell % coord    (j,:) =  System % atom(j) % xyz(:)
+    unit_cell % AtNo     (j)   =  System % atom(j) % AtNo  
+    unit_cell % fragment (j)   =  System % atom(j) % fragment
+    unit_cell % Symbol   (j)   =  System % atom(j) % Symbol
+    unit_cell % residue  (j)   =  System % atom(j) % residue
+    unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
+end forall
+
+! get list of residues ...
+select case( file_type )
+    case( "structure" )
+        unit_cell%list_of_residues  = System%list_of_residues
+        unit_cell%list_of_fragments = System%list_of_fragments
+    case( "trajectory" )
+        unit_cell%list_of_residues  = trj(1)%list_of_residues
+        unit_cell%list_of_fragments = trj(1)%list_of_fragments
+    end select
+
+! unit_cell dimensions ...
+unit_cell % T_xyz =  System % box
+
+! get EH Parms ...
+CALL Define_EH_Parametrization( Unit_Cell , Characteristics )
+
+! verify consistency ...
+if( System_Characteristics /= Characteristics ) then
+    print*, System_Characteristics , Characteristics 
+    Pause ">>> Input Parameter Inconsistency <<<"
+end if
+
+end subroutine Coords_from_Universe
+!
+!
+!
+!========================================
+ subroutine Read_from_Poscar( Unit_Cell )
+!========================================
 
  type(structure) , intent(out) :: unit_cell
 
@@ -303,7 +447,7 @@ do j = 1 , model
         end do
         CALL MMSymbol_2_Symbol( trj(j)%atom )
         CALL Symbol_2_AtNo( trj(j)%atom )
-        CALL Initial_Setting_of_Fragment( trj(j) )
+        CALL Setting_Fragments( trj(j) )
     else
         do
             read(unit = 31, fmt = 35, iostat = inputstatus) keyword
@@ -325,6 +469,9 @@ end do
 close(31)
 
 trj%N_of_atoms = number_of_atoms
+
+! convert residues to upper case ...
+forall( i=1:trj(1)%N_of_atoms ) trj(1)%atom(i)%residue = TO_UPPER_CASE( trj(1)%atom(i)%residue )
 
 ! get list of residues in trj ...
 CALL Identify_Residues( trj(1) )
@@ -625,7 +772,7 @@ end subroutine MMSymbol_2_Symbol
 !
 !
 !==========================================
-subroutine Initial_Setting_of_Fragment( a )
+subroutine Setting_Fragments( a )
 !==========================================
 implicit none
 type(universe)  , intent(inout) :: a
@@ -639,6 +786,7 @@ integer  :: i
 !   Molecule    =   M
 !   Solvent     =   S
 !   Cluster     =   C 
+!   Passivator  =   P 
 !--------------------------------------------
 
  DO i = 1 , size(a%atom)
@@ -646,21 +794,23 @@ integer  :: i
     select case(a%atom(i)%residue)
         case( 'CCC') 
             a%atom(i)%fragment = 'C' 
-        case( 'Alq') 
+        case( 'ALQ') 
             a%atom(i)%fragment = 'M' 
         case( 'ACN') 
             a%atom(i)%fragment = 'S' 
+        case( 'PYR') 
+            a%atom(i)%fragment = 'P' 
     end select
 
  END DO
 
-end subroutine Initial_Setting_of_Fragment
+end subroutine Setting_Fragments
 !
 !
 !
-!=============================================
-subroutine Identify_Fragments( a )
-!=============================================
+!==========================================
+subroutine Identify_Fragments_Universe( a )
+!==========================================
 implicit none
 type(universe)  , intent(inout) :: a
 
@@ -693,7 +843,46 @@ allocate( a%list_of_fragments(counter) )
 a%list_of_fragments = temp(1:counter)
 deallocate( temp )
 
-end subroutine Identify_Fragments
+end subroutine Identify_Fragments_Universe
+!
+!
+!
+!=============================================
+ subroutine Identify_Fragments_Structure ( a )
+!=============================================
+implicit none
+type(structure)  , intent(inout) :: a
+
+! local variables ...
+integer                         :: i , j , counter
+character(3)    , allocatable   :: temp(:)
+logical                         :: flag
+
+allocate( temp(a % atoms) )
+
+temp(1) = a % fragment(1)
+counter = 1
+
+do i = 1 , a % atoms
+
+    flag = .true.
+    do j = 1 , counter
+     flag = flag .AND. ( temp(j) /= a%fragment(i) )
+    end do
+
+    if( flag ) then
+        counter = counter + 1
+        temp(counter) = a%fragment(i)
+    end if
+
+end do
+
+! build list of fragments in a ...
+allocate( a%list_of_fragments(counter) )
+a%list_of_fragments = temp(1:counter)
+deallocate( temp )
+
+end subroutine Identify_Fragments_Structure
 !
 !
 !
@@ -771,6 +960,37 @@ end do
 deallocate( temp%atom )
 
 end subroutine Sort_Residues
+!
+!
+!
+!======================================
+ pure FUNCTION TO_UPPER_CASE ( STRING )
+!======================================
+ implicit none
+ CHARACTER ( LEN = * )              , INTENT(IN)    :: STRING
+ CHARACTER ( LEN = LEN ( STRING ) )                 :: TO_UPPER_CASE
+
+! Local parameters ...
+INTEGER, PARAMETER :: BIG_A = ICHAR ( "A" ), LITTLE_A = ICHAR ( "a" ), LITTLE_Z = ICHAR ( "z" )
+
+! Local scalars ...
+INTEGER :: I, ICHR
+
+! Loop over the characters in the string ...
+DO I = 1,LEN ( STRING )
+
+!   Get the ASCII order for the character to be converted ...
+    ICHR = ICHAR ( STRING(I:I) )
+
+!   Use the order to change the case of the character ...
+    IF ( ( ICHR >= LITTLE_A ) .AND. ( ICHR <= LITTLE_Z ) ) THEN
+        TO_UPPER_CASE(I:I) = CHAR ( ICHR + BIG_A - LITTLE_A )
+    ELSE
+        TO_UPPER_CASE(I:I) = STRING(I:I)
+    END IF
+END DO
+
+END FUNCTION TO_UPPER_CASE
 !
 !
 !

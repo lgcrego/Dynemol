@@ -49,7 +49,7 @@ Print 153
  Print 73, Sparsity  
 
  CALL Center_of_Charge(system)
-
+ 
  if ( DP_Moment ) CALL Dipole_Moment(Extended_Cell, ExCell_basis, L_vec, R_vec)
 
 !----------------------------------------------------------

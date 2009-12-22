@@ -1,13 +1,12 @@
  module Structure_Builder
 
     use type_m
-    use Babel_m
-    use Allocation_m
-    use Semi_Empirical_Parms
+    use Babel_m                   , only : trj , Read_from_XYZ , Read_from_Poscar , Read_from_PDB , Read_PDB , Read_VASP , Identify_Fragments  
+    use Allocation_m              , only : Allocate_Structures
+    use Semi_Empirical_Parms      , only : atom
 
     type(structure)               , public  :: Unit_Cell , Extended_Cell 
     type(STO_basis) , allocatable , public  :: ExCell_basis(:)
-    type(universe)  , allocatable , public  :: trj(:)
 
     public :: Read_Structure , Generate_Structure , Basis_Builder 
 
@@ -21,13 +20,28 @@
 subroutine Read_Structure
 !=========================
 
-select case( file_format )
-    case( 'xyz' )
-        CALL Read_from_XYZ( Unit_Cell ) 
-    case( 'grmx' ) 
-        CALL Read_PDB( trj ) 
-    case( 'vasp' )
-        CALL Read_VASP( trj )
+select case( file_type )
+
+    case( "structure" )
+
+        select case( file_format )
+            case( "xyz" )
+                CALL Read_from_XYZ      ( Unit_Cell ) 
+            case( "pdb" )
+                CALL Read_from_PDB      ( Unit_Cell )
+            case( "vasp" )
+                CALL Read_from_POSCAR   ( Unit_Cell )
+            end select
+
+    case( "trajectory" )
+    
+        select case( file_format ) 
+            case( "pdb" ) 
+                CALL Read_PDB   ( trj ) 
+            case( "vasp" )
+                CALL Read_VASP  ( trj )
+            end select
+
 end select
 
 Print 70, System_Characteristics
@@ -38,15 +52,13 @@ end subroutine Read_Structure
 !
 !
 !
-!
-!
 !======================================
  subroutine Generate_Structure( frame )
 !======================================
 integer , intent(in) :: frame
 
 ! local variables ...
-integer :: copy, N_of_orbitals, N_of_electron, N_of_atom_type, AtNo
+integer :: copy
 
 !----------------------------------------------------------
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
@@ -101,41 +113,14 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
 
  ! . define the DONOR fragment 
  where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
+ CALL Identify_Fragments( Extended_Cell )    
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
  extended_cell%T_xyz(2) = (2*nny+1)*unit_cell%T_xyz(2)
  extended_cell%T_xyz(3) = unit_cell%T_xyz(3)
 
-!------------------------------------------------------------
-
-if( frame == 1 ) then
-
-!   total number of orbitals ...
-     N_of_orbitals = sum(atom(extended_cell%AtNo)%DOS)
-     Print 120 , N_of_orbitals                       
-
-!   total number of electrons ...
-     extended_cell%N_of_electrons = sum(atom(extended_cell%AtNo)%Nvalen)
-     Print 140 , extended_cell%N_of_electrons
-
-!   total number of atoms ...
-     Print 141 , extended_cell%atoms
-
-!   total number of atoms of given type ...
-     do AtNo = 1 , size(atom)
-
-        N_of_atom_type = count(extended_cell%AtNo == AtNo)
+ if( frame == 1 ) CALL diagnosis( Extended_Cell )
     
-        If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
-
-     end do
-
-     print * , ' '
-
-end if
-    
-!------------------------------------------------------------
-
  CALL BoundingBox(unit_cell)
 
  include 'formats.h'
@@ -237,20 +222,58 @@ end if
 !
 !
 !
- end module Structure_Builder
+!=========================
+ subroutine Diagnosis( a )
+!=========================
+ implicit none
+ type(structure)    , intent(inout)    :: a
 
+! local variables ...
+integer :: N_of_orbitals, N_of_electron, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
 
+! total number of orbitals ...
+N_of_orbitals = sum(atom(a%AtNo)%DOS)
+Print 120 , N_of_orbitals                       
 
+! total number of electrons ...
+a%N_of_electrons = sum(atom(a%AtNo)%Nvalen)
+Print 140 , a%N_of_electrons
 
+! total number of atoms ...
+Print 141 , a%atoms
 
+! total number of atoms of given type ...
+do AtNo = 1 , size(atom)
 
+    N_of_atom_type = count( a%AtNo == AtNo )
+   
+    If( N_of_atom_type /= 0 )       Print 121 , atom(AtNo)%symbol , N_of_atom_type
 
+end do
 
+! total number of residues ...
+do residue = 1 , size(Unit_Cell%list_of_residues)
 
+    N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
+   
+    If( N_of_residue_type /= 0 )    Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_type
 
+end do
 
+! total number of fragments ...
+do fragment = 1 , size(a%list_of_fragments)
 
+    N_of_fragment_type = count( a%fragment == a%list_of_fragments(fragment) )
+    
+    If( N_of_fragment_type /= 0 )   Print 123 , a%list_of_fragments(fragment) , N_of_fragment_type
 
+end do
 
+print * , " "
 
+include 'formats.h'
 
+end subroutine diagnosis
+!
+!
+end module Structure_Builder

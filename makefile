@@ -23,7 +23,7 @@ INCS = $(INCS_MKL)
 # general rules
 #-----------------------------------------------------------------------
 
-SOURCE = constants_m.o type_m.o allocation_m.o util.o babel.o EHT_input.o structure.o \
+SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o babel.o structure.o \
 		 pbc.o overlap_D.o STO.o QCModel_Huckel.o projectors.o FMO.o data_output.o film_STO.o  \
 		 DOS_m.o multip_core.o oscillator.o QOptics.o schroedinger.o rk4.o solvated_M.o qdynamics.o main.o
 

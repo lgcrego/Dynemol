@@ -48,6 +48,10 @@
 
 121   FORMAT(1x,A2,' atoms  = ',I4)
 
+122   FORMAT(/,1x,A3,' residues  = ',I4)
+
+123   FORMAT(/,1x,A1,' fragments  = ',I4)
+
 140   FORMAT(/,1x,'Total number of electrons  = ',I6)
 
 141   FORMAT(/,1x,'Total number of atoms  = ',I6,/)

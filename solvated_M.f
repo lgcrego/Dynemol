@@ -4,7 +4,7 @@ module Sampling_m
 
     use type_m
     use constants_m
-    use Babel_m                 , only : System_Characteristics
+    use Babel_m                 , only : System_Characteristics , trj
     use Allocation_m            , only : Allocate_UnitCell , DeAllocate_UnitCell , DeAllocate_Structures
     use Semi_Empirical_Parms    , only : Define_EH_Parametrization
     use QCModel_Huckel          , only : EigenSystem
@@ -31,12 +31,16 @@ integer                         :: i , frame , nr , N_of_residues
 integer         , parameter     :: frame_step = 1
 real*8                          :: internal_sigma
 character(3)                    :: residue
+ logical                        :: FMO_ , DIPOLE_
 type(eigen)                     :: UNI
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(universe)                  :: Solvated_System
 
 ! preprocessing stuff .....................................................
+
+FMO_    = ( spectrum .AND. survival  )
+DIPOLE_ = ( FMO_     .AND. DP_Moment )
 
 if( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 

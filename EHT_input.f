@@ -21,14 +21,17 @@ character(*)    , intent(inout) :: Characteristics
 
 ! defining the k_WH parameter for the system ...
 
-! AlQ3 ...
-where( Unit_Cell % residue == "Alq" ) unit_cell % k_WH = 2.d0
+! TiO2 ...
+where( Unit_Cell % residue == "CCC" ) Unit_Cell % k_WH = 1.75d0
 
-! ACN
-where( Unit_Cell % residue == "ACN" ) unit_cell % k_WH = 1.75
+! PYR ...
+where( Unit_Cell % residue == "PYR" ) unit_cell % k_WH = 1.75d0
+
+! Alq3 ...
+!where( Unit_Cell % residue == "ALQ" ) Unit_Cell % k_WH = 2.0d0
 
 ! to be compared with structure information ...
-Characteristics = "Alq3MD"
+Characteristics = "TiO2-pyridine-small"
 
 end subroutine Define_EH_Parametrization 
 !    

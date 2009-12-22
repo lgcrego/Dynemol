@@ -157,7 +157,7 @@ PDOS(nr)%average = PDOS(nr)%average + PDOS(nr)%func
 
 DEALLOCATE(DOS_partial,list_of_DOS_states)
 
-print*, '>> PDOS done <<'
+print*, '>> ',residue,' PDOS done <<'
 
 end subroutine Partial_DOS
 !

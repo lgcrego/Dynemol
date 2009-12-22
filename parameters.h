@@ -1,26 +1,26 @@
  integer 					:: initial_state , HOMO_mol  
- logical 					:: CC , GaussianCube , Survival , POSCAR , SPECTRUM , DP_Moment
+ logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
- character (len=10)			:: DRIVER
+ character (len=10)			:: DRIVER , file_type
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTIONS
 !
-			DRIVER		 = "q_dynamics",	 	& ! <== q_dynamics , solvated_M
+			DRIVER		 = "q_dynamics",	 	& ! <== q_dynamics , solvated_M , Genetic_Ag
 !			
             GaussianCube = .false. ,            &
 			Survival     = .false. ,            &
-            CC           = .false. ,            & 
-            POSCAR       = .false. ,            & 
             SPECTRUM     = .false. ,            & 
 			DP_Moment    = .false. ,            &
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_format  =  "xyz"  ,            & ! <= xyz , grmx or vasp
+            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
+
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
@@ -36,7 +36,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  PARAMETERS
