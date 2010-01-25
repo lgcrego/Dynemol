@@ -100,7 +100,7 @@ module type_m
         real*8           :: z
         character(len=2) :: symbol
         character(len=2) :: fragment
-        character(len=3) :: MMSymbol
+        character(len=3) :: EHSymbol
         character(len=3) :: residue 
     end type STO_basis
 
@@ -163,6 +163,15 @@ module type_m
         real*8  , allocatable   :: peaks(:)
         real*8  , allocatable   :: average(:)
     end type f_grid
+
+
+    type OPT
+        real*8                      :: DP(3)
+        real*8       , allocatable  :: erg(:)
+        integer      , allocatable  :: key(:,:)
+        integer                     :: GeneSize
+        character(3) , allocatable  :: EHSymbol(:)               
+    end type OPT
 
 
     include 'parameters.h'    

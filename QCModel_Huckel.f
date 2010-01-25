@@ -15,11 +15,12 @@
 !
 !
 !
- subroutine EigenSystem( system, basis, QM )
+ subroutine EigenSystem( system, basis, QM , flag )
 
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  type(eigen)                   , intent(out) :: QM
+ integer          , optional   , intent(inout) :: flag          
 
 ! . local variables 
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
@@ -47,7 +48,8 @@
 
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
- If (info /= 0) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+ If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+ If ( present(flag) ) flag = info
 
  DEALLOCATE(dumb_s)
 
@@ -95,7 +97,7 @@
     end do
  CLOSE(9)   
 
- print*, '>> EigenSystem done <<'
+ If( verbose ) Print*, '>> EigenSystem done <<'
 
  end subroutine EigenSystem
 !

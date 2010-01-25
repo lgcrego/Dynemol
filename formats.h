@@ -64,6 +64,8 @@
 
 155   FORMAT(1x,'========= FINISHING DIPOLE MATRIX ANALYSIS ========',/)
 
+160   FORMAT(/,1x,'Custo : ',I4,' /',I4)
+
 165   FORMAT(1x,'========= ',A20,' =========')
 
 166   FORMAT(1x,'truncation error = ',F8.5)

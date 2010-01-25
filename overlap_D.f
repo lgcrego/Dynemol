@@ -43,13 +43,21 @@ contains
 !----------------------------------------------------------
 !       Overlap Matrix S(a,b) of the system
 
-        Print 53
+        If( verbose ) Print 53
 
-        If( n_unit /= 1 ) then
-            Print 51
-        else
-            Print 54
+        If( verbose ) then
+            If( n_unit /= 1 ) then
+                Print 51
+            else
+                Print 54
+            end If
         end If
+
+!        If( n_unit /= 1 ) then
+!            Print 51
+!        else
+!            Print 54
+!        end If
 
 !       if no PBC pbc_system = system 
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
@@ -59,14 +67,14 @@ contains
         NonZero  = count(S_matrix /= 0.d0)
         Sparsity = float(NonZero)/float((S_size**2))
 
-        Print 69, Sparsity  
-
-        Print 55
-
         CALL Deallocate_Structures(pbc_system)
         If( allocated(pbc_basis) ) deallocate(pbc_basis)
 
-        print*, '>> Overlap done <<'
+        If( verbose ) then
+            Print 69, Sparsity  
+            Print 55
+            print*, '>> Overlap done <<'
+        end If    
 !----------------------------------------------------------
 
  end select

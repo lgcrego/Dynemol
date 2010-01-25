@@ -1,26 +1,27 @@
  integer 					:: initial_state , HOMO_mol  
  logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment
+ logical 					:: verbose
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
- character (len=10)			:: DRIVER , file_type
+ character (len=11)			:: DRIVER , file_type
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTIONS
 !
-			DRIVER		 = "q_dynamics",	 	& ! <== q_dynamics , solvated_M , Genetic_Ag
+			DRIVER		 = "Genetic_Alg",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg
 !			
-            GaussianCube = .false. ,            &
+            GaussianCube = .true. ,            &
 			Survival     = .false. ,            &
             SPECTRUM     = .false. ,            & 
-			DP_Moment    = .false. ,            &
+			DP_Moment    = .true.  ,            &
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
             file_type	 =  "structure"  ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
-
+			
 !--------------------------------------------------------------------
 !           INITIAL  CONDITIONS
 !
@@ -74,7 +75,10 @@
 !
             start_2P  = 17.000d0 ,              & ! <= start of the train 
             end_2P    = 250.00d0 ,              & ! <= end of the train 
-            delta_2P  = 34.00d0                 & ! <= interval between 2Pi pulses
+            delta_2P  = 34.00d0  ,              & ! <= interval between 2Pi pulses
 !--------------------------------------------------------------------
+!			Environment
+!
+			verbose = ( DRIVER /= "Genetic_Alg" ) 					&
 )
 

@@ -176,7 +176,7 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
             basis(k)%copy_No   =  system%copy_No  (i)
             basis(k)%symbol    =  system%symbol   (i)
             basis(k)%fragment  =  system%fragment (i)
-            basis(k)%MMSymbol  =  system%MMSymbol (i)
+            basis(k)%EHSymbol  =  system%MMSymbol (i)
             basis(k)%residue   =  system%residue  (i)
 
             basis(k)%n         =  atom(AtNo)%Nquant(l)

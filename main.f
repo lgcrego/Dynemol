@@ -6,6 +6,7 @@ use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
 use Sampling_m              , only : Solvated_M
+use GA_driver_m             , only : GA_driver
 
 ! local variables ...
  
@@ -26,7 +27,8 @@ select case ( driver )
     case ( "solvated_M" )
         CALL Solvated_M
 
-    case ( "AlgGenetic" )
+    case ( "Genetic_Alg" )
+        CALL GA_driver
 
 end select
 

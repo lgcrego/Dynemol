@@ -17,45 +17,47 @@ contains
 !
 !
 !
-!----------------------------------------------------
-subroutine Dipole_Matrix(system, basis, L_vec, R_vec)
-!----------------------------------------------------
-type(structure) , intent(inout) :: system
-type(STO_basis) , intent(in)    :: basis(:)
-complex*16      , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+!=====================================================================
+ subroutine Dipole_Matrix( system , basis , L_vec , R_vec , Total_DP )
+!=====================================================================
+type(structure)             , intent(inout) :: system
+type(STO_basis)             , intent(in)    :: basis(:)
+complex*16                  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+real*8          , optional  , intent(out)   :: Total_DP(3) 
 
-! local variables
+! local variables ...
 real*8  :: Sparsity(3)
 integer :: NonZero(3) , M_size
 
-Print 153
+If( verbose ) Print 153
 !----------------------------------------------------------
 !       initialize DIPOLE MATRIX M(i,j)[x,y,z]
 
  CALL Util_Multipoles
 
-!size of M matrix
- M_size = sum(atom(system%AtNo)%DOS)
+! size of M matrix ...
+M_size = sum(atom(system%AtNo)%DOS)
 
- if( allocated(DP_matrix_AO) ) deallocate( DP_matrix_AO )
- allocate(DP_matrix_AO(M_size,M_size))
+If( allocated(DP_matrix_AO) ) deallocate( DP_matrix_AO )
+allocate(DP_matrix_AO(M_size,M_size))
 
- CALL Build_DIPOLE_Matrix(system,basis)
+CALL Build_DIPOLE_Matrix(system,basis)
 
- forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:)%dp(i) /= 0.d0)
+forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:)%dp(i) /= 0.d0)
 
- Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
+Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
- Print 73, Sparsity  
+If( verbose ) Print 73, Sparsity  
 
- CALL Center_of_Charge(system)
+CALL Center_of_Charge(system)
  
- if ( DP_Moment ) CALL Dipole_Moment(Extended_Cell, ExCell_basis, L_vec, R_vec)
+if ( DP_Moment ) CALL Dipole_Moment( Extended_Cell , ExCell_basis , L_vec , R_vec , Total_DP )
 
 !----------------------------------------------------------
- Print*, '>> Dipole Moment done <<'
-
- Print 155
+If( verbose ) then
+    Print*, '>> Dipole Moment done <<'
+    Print 155
+end If
 
  include 'formats.h'
 
@@ -63,17 +65,18 @@ end subroutine Dipole_Matrix
 !
 !
 !
-!----------------------------------------------------
-subroutine Dipole_Moment(system, basis, L_vec, R_vec)
-!----------------------------------------------------
+!=====================================================================
+ subroutine Dipole_Moment( system , basis , L_vec , R_vec , DP_total )
+!=====================================================================
 
-type(structure) , intent(in)  :: system
-type(STO_basis) , intent(in)  :: basis(:)
-complex*16      , intent(in)  :: L_vec(:,:) , R_vec(:,:)
+type(structure)             , intent(in)  :: system
+type(STO_basis)             , intent(in)  :: basis(:)
+complex*16                  , intent(in)  :: L_vec(:,:) , R_vec(:,:)
+real*8          , optional  , intent(out) :: DP_total(3) 
 
-! local variables
+! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
-real*8                        :: Nuclear_DP(3), Electronic_DP(3), Total_DP(3) 
+real*8                        :: Nuclear_DP(3), Electronic_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 complex*16      , allocatable :: a(:,:), b(:,:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
@@ -123,7 +126,9 @@ complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
  
  Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
- Print 154, Total_DP, dsqrt(sum(Total_DP*Total_DP))
+ If( present(DP_total) ) DP_total = Total_DP
+
+ If( verbose ) Print 154, Total_DP, dsqrt(sum(Total_DP*Total_DP))
 
  deallocate(R_vector,a,b)
  deallocate(origin_Dependent)
