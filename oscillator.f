@@ -129,23 +129,23 @@ select case (DP%flag)
         allocate( DP % bra_PTR (dim_bra) )
         allocate( DP % ket_PTR (dim_ket) )
 
-        DP % bra_PTR = (/ (i , i = DP % bra_indx_range % inicio , DP % bra_indx_range % fim) /) 
-        DP % ket_PTR = (/ (i , i = DP % ket_indx_range % inicio , DP % ket_indx_range % fim) /) 
+        DP % bra_PTR = [ (i , i = DP % bra_indx_range % inicio , DP % bra_indx_range % fim) ] 
+        DP % ket_PTR = [ (i , i = DP % ket_indx_range % inicio , DP % ket_indx_range % fim) ] 
   
     case default
 
-        dim_bra = count( (QM%erg >= DP%bra_range%inicio) == (QM%erg <= DP%bra_range%fim) )
-        dim_ket = count( (QM%erg >= DP%ket_range%inicio) == (QM%erg <= DP%ket_range%fim) )
+        dim_bra = count( (QM%erg >= DP%bra_range%inicio) .AND. (QM%erg <= DP%bra_range%fim) )
+        dim_ket = count( (QM%erg >= DP%ket_range%inicio) .AND. (QM%erg <= DP%ket_range%fim) )
 
         allocate(DP%bra_PTR(dim_bra))
         allocate(DP%ket_PTR(dim_ket)) 
         j_bra = 1
         j_ket = 1
         do i  = 1 , size(QM%erg) 
-            if( (QM%erg(i) >= DP%bra_range%inicio) == (QM%erg(i) <= DP%bra_range%fim) ) then
+            if( (QM%erg(i) >= DP%bra_range%inicio) .AND. (QM%erg(i) <= DP%bra_range%fim) ) then
                 DP%bra_PTR(j_bra) = i 
                 j_bra = j_bra + 1
-            else if( (QM%erg(i) >= DP%ket_range%inicio) == (QM%erg(i) <= DP%ket_range%fim) ) then
+            else if( (QM%erg(i) >= DP%ket_range%inicio) .AND. (QM%erg(i) <= DP%ket_range%fim) ) then
                 DP%ket_PTR(j_ket) = i
                 j_ket = j_ket + 1
             end if

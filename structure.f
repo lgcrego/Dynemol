@@ -1,7 +1,8 @@
  module Structure_Builder
 
     use type_m
-    use Babel_m                   , only : trj , Read_from_XYZ , Read_from_Poscar , Read_from_PDB , Read_PDB , Read_VASP , Identify_Fragments  
+    use Babel_m                   , only : Read_from_XYZ , Read_from_Poscar , Read_from_PDB , Read_PDB , Read_VASP  &
+                                         , Identify_Fragments , trj , System_Characteristics
     use Allocation_m              , only : Allocate_Structures
     use Semi_Empirical_Parms      , only : atom
 

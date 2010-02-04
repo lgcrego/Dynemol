@@ -361,7 +361,7 @@ type(universe) , intent(inout) :: system
 integer        :: i , j , N_of_elements , N_of_atoms ,  iptr
 type(universe) :: temp
 
-allocate( temp%atom(1) )
+allocate( temp%atom(1) , temp%solvent(1) )
 
 N_of_atoms = size(system%atom)
 
@@ -383,7 +383,7 @@ do i = 1 , N_of_atoms-1
 
 end do
 
-deallocate( temp%atom )
+deallocate( temp%atom , temp%solvent )
 
 end subroutine Sort_Fragments
 !

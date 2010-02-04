@@ -2,6 +2,7 @@
 
     use type_m
     use constants_m
+    use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms
     use Structure_Builder
     use Slater_Type_Orbitals

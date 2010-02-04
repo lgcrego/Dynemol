@@ -33,15 +33,15 @@
 
     System%atoms = System_Size
 
-    allocate( System%BasisPointer (System_Size)   )
-    allocate( System%Symbol       (System_Size)   )
-    allocate( System%AtNo         (System_size)   )
-    allocate( System%coord        (System_Size,3) )
-    allocate( System%k_WH         (System_size)   )
-    allocate( System%copy_No      (System_size)   )
-    allocate( System%fragment     (System_size)   )
-    allocate( System%residue      (System_size)   )
-    allocate( System%MMSymbol     (System_size)   )
+    allocate( System % BasisPointer (System_Size)   )
+    allocate( System % Symbol       (System_Size)   )
+    allocate( System % AtNo         (System_size)   )
+    allocate( System % coord        (System_Size,3) )
+    allocate( System % k_WH         (System_size)   )
+    allocate( System % copy_No      (System_size)   )
+    allocate( System % fragment     (System_size)   )
+    allocate( System % residue      (System_size)   )
+    allocate( System % MMSymbol     (System_size)   )
  
  end subroutine Allocate_Structures
 !
@@ -91,15 +91,15 @@
 
     type(structure) , intent(inout) :: System
 
-    deallocate( System%BasisPointer )
-    deallocate( System%symbol       )
-    deallocate( System%AtNo         )
-    deallocate( System%coord        )
-    deallocate( System%k_WH         )
-    deallocate( System%copy_No      )
-    deallocate( System%fragment     )
-    deallocate( System%residue      )
-    deallocate( System%MMSymbol     )
+    deallocate( System % BasisPointer )
+    deallocate( System % symbol       )
+    deallocate( System % AtNo         )
+    deallocate( System % coord        )
+    deallocate( System % k_WH         )
+    deallocate( System % copy_No      )
+    deallocate( System % fragment     )
+    deallocate( System % residue      )
+    deallocate( System % MMSymbol     )
  
  end subroutine DeAllocate_Structures
 !
