@@ -153,7 +153,7 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
 
 ! local variables 
- integer :: k , i , l , m
+ integer :: k , i , l , m , AtNo
 
 ! total number of orbitals
  N_of_orbitals = sum(atom(system%AtNo)%DOS)
