@@ -2,6 +2,7 @@ module GA_m
 
     use type_m
     use constants_m
+    use Semi_Empirical_Parms    , only : atom  
     use Structure_Builder       , only : Extended_Cell , Basis_Builder
     use QCModel_Huckel          , only : EigenSystem
     use Multipole_Core          , only : Dipole_Matrix
@@ -11,9 +12,11 @@ module GA_m
     private 
 
     integer , parameter :: Pop_Size       =   40         
-    integer , parameter :: N_generations  =   50         
+    integer , parameter :: N_generations  =   80         
     integer , parameter :: Top_Selection  =   15        
+    real*8  , parameter :: Pop_range      =   1.0d-1        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.3           
+    logical , parameter :: Mutate_Cross   =  .false.        ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -28,20 +31,26 @@ type(OPT)       , intent(in)  :: REF
 real*8                        :: evaluate_cost
 
 ! local variables ...
-real*8   :: chi(10)
+real*8   :: chi(10) , weight(10)
 integer  :: k , HOMO , LUMO
 
 ! general definitions ...
 HOMO = system%N_of_electrons / 2
 LUMO = HOMO + 1
 
-chi(:) = 0.d0
+chi(:) = 0.d0   ;   weight(:) = 1.d0
 
 ! HOMO-LUMO gaps ...
-chi(1) = ( GA%erg(LUMO) - GA%erg(HOMO) ) - 8.0
-                
+chi(1) = ( GA%erg(9) - GA%erg(8) ) - 8.0    ; weight(1) = 1.0
+
+chi(2) = ( GA%erg(9) - GA%erg(7) ) - 8.0    ; weight(1) = 1.0 
+
+chi(3) = ( GA%erg(8) - GA%erg(6) ) - 0.1    ; weight(1) = 5.0 
+
+chi(4) = ( GA%erg(7) - GA%erg(6) ) - 0.1    ; weight(1) = 5.0 
+
 ! Total DIPOLE moment ...
-chi(2) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP ) 
+chi(5) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   
 
 evaluate_cost = sqrt( dot_product(chi,chi) )
 
@@ -82,24 +91,24 @@ gene = 0
 do EHS = 1 , N_of_EHSymbol
 
 !   S , P , D  orbitals ...
-    do  L = 0 , 2
+do  L = 0 , 2
 
-        If( GA%key(L+1,EHS) == 1 ) then
+    If( GA%key(L+1,EHS) == 1 ) then
 
-            gene = gene + GA%key(4,EHS)
-            If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
+        gene = gene + GA%key(4,EHS)
+        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
 
-            gene = gene + GA%key(5,EHS)
-            If( GA%key(5,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = Pop(gene) + basis%zeta(1)
+        gene = gene + GA%key(5,EHS)
+        If( GA%key(5,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = Pop(gene) + basis%zeta(1)
 
-            gene = gene + GA%key(6,EHS)
-            If( GA%key(6,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(2) = Pop(gene) + basis%zeta(2)
+        gene = gene + GA%key(6,EHS)
+        If( GA%key(6,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(2) = Pop(gene) + basis%zeta(2)
 
-            gene = gene + GA%key(7,EHS)
-            If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
+        gene = gene + GA%key(7,EHS)
+        If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
 
-        end If
-    end do
+    end If
+end do
 end do
 
 end subroutine modify_EHT_parameters
@@ -144,7 +153,7 @@ do i = 1 , Pop_size
         CALL random_number( a(i,j) )
         CALL random_number( semente(i,j) )
         pot(i,j) = int(2 * semente(i,j))
-        Pop(i,j) = ((-1)**pot(i,j)) * a(i,j)
+        Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
     end do
 end do
 indx = [ ( i , i=1,Pop_Size ) ]
@@ -155,7 +164,7 @@ deallocate( a , semente , pot )
 
 ! create new basis ...
 allocate( GA_basis  (size(basis)) )
-allocate( GA%erg(size(basis)) )
+allocate( GA%erg    (size(basis)) )
 GA_basis = basis
 
 allocate( custo(Pop_size) )
@@ -190,7 +199,7 @@ do generation = 1 , N_generations
     Old_Pop = Pop
     Pop( 1:Top_Selection , : ) = Old_pop( indx(1:Top_Selection) , : )
         
-    CALL Mutation_and_Crossing( Pop )
+    If( Mutate_Cross) CALL Mutation_and_Crossing( Pop )
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
@@ -202,6 +211,9 @@ end do
 
 ! optimized Huckel parameters are ...
 CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
+
+! saving the optimized parameters ...
+CALL Dump_OPT_parameters( GA_basis )
 
 deallocate( GA%erg , GA_UNI%L , GA_UNI%R , GA_UNI%erg)
 deallocate( Pop , indx , Old_Pop ) 
@@ -287,7 +299,7 @@ implicit none
 integer :: i , j , ioerr , nr , N_of_EHSymbol
 character(1) :: dumb
 
-OPEN(unit=3,file='input-AG.dat',status='old',iostat=ioerr,err=10)
+OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
 nr = 0
 do 
     read(3,*,IOSTAT=ioerr) dumb
@@ -315,13 +327,65 @@ CLOSE(3)
 
 GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N_of_EHSymbol ) ] )
 
-print*, GA%GeneSize
-
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
 11 FORMAT(A3,t17,I1,t25,I1,t33,I1,t41,I1,t49,I1,t61,I1,t73,I1)
 
 end subroutine Read_GA_key
+!
+!
+!
+!==========================================
+ subroutine Dump_OPT_parameters( GA_basis )
+!==========================================
+implicit none
+type(STO_basis) , intent(inout) :: GA_basis(:)
+
+! local variables ...
+integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable   :: indx_EHS(:)
+
+! local parameters ...
+character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
+
+N_of_EHSymbol = size( GA%EHSymbol )
+
+allocate( indx_EHS(N_of_EHSymbol) )
+
+indx_EHS = [ ( minloc(GA_basis%EHSymbol , 1 , GA_basis%EHSymbol == GA%EHSymbol(i)),i=1,N_of_EHSymbol ) ] 
+
+! creating file OPT_eht_parameters.output.dat with the optimized parameters ...
+open( unit=13, file='OPT_eht_parameters.output.dat', status='unknown' )
+
+do n_EHS = 1 , N_of_EHSymbol
+
+    i = indx_EHS(n_EHS)
+
+    AngMax = atom(GA_basis(i)%AtNo)%AngMax 
+
+    do L = 0 , AngMax
+        j = i+L
+        write(13,17)    GA_basis(j)%Symbol          ,   &
+                        GA_basis(j)%EHSymbol        ,   &
+                        GA_basis(j)%AtNo            ,   &
+                   atom(GA_basis(j)%AtNo)%Nvalen    ,   &
+                        GA_basis(j)%Nzeta           ,   &
+                        GA_basis(j)%n               ,   &
+                 Lquant(GA_basis(j)%l)              ,   &
+                        GA_basis(j)%IP              ,   &
+                        GA_basis(j)%zeta(1)         ,   &
+                        GA_basis(j)%zeta(2)         ,   &
+                        GA_basis(j)%coef(1)         ,   &
+                        GA_basis(j)%coef(2)         ,   &
+                        GA_basis(j)%k_WH
+    end do
+
+enddo
+close(13)
+
+17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
+
+end subroutine Dump_OPT_parameters
 !
 !
 !

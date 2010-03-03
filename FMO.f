@@ -21,21 +21,22 @@
 !
 !
 !
-!-------------------------------------------------
+!=================================================
  subroutine FMO_analysis( system, basis, CR, FMO )
-!-------------------------------------------------
+!=================================================
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  complex*16      , allocatable , intent(in)  :: CR(:,:)
  type(eigen)                   , intent(out) :: FMO
 
-! . local variables
+! local variables ...
  type(structure)               :: FMO_system
  type(STO_basis) , allocatable :: FMO_basis(:)
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
  character(len=1)              :: fragment
 
+! electron donor fragment ... 
  fragment = 'D'
 
 ! orbitals to be propagated
@@ -57,12 +58,11 @@
  FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
  FMO_system%copy_No    =  0
 
-
- CALL Basis_Builder( FMO_system, FMO_basis )
+ CALL Basis_Builder( FMO_system , FMO_basis )
  
- CALL eigen_FMO( FMO_system, FMO_basis, wv_FMO, FMO )
+ CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO, FMO )
 
- CALL projector( FMO, CR, basis%fragment, fragment, wv_FMO )
+ CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
 
 ! "entropy" of the FMO states with respect to the system 
  OPEN(unit=9,file='entropy.dat',status='unknown')

@@ -1,21 +1,24 @@
  module Schroedinger_m
 
+ use type_m
  use constants_m
  use mkl95_precision
  use mkl95_blas
- use Allocation_m
- use FMO_m
- use Data_Output
- use Psi_Squared_Cube_Format
+ use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
+ use Babel_m                    , only : trj , Coords_from_Universe
+ use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
+ use FMO_m                      , only : orbital
+ use Data_Output                , only : get_Populations
+ use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 
  public :: Huckel_dynamics
 
  contains
 !
 ! 
-!==================================================
- subroutine Huckel_dynamics(system, basis, UNI, FMO)
-!==================================================
+!===========================================================
+ subroutine Huckel_dynamics(system, basis, UNI, FMO , QDyn )
+!===========================================================
  implicit real*8      (a-h,o-y)
  implicit complex*16  (z)
 
@@ -23,43 +26,44 @@
  type(STO_basis) , intent(in)               :: basis(:)
  type(eigen)     , intent(in)               :: UNI 
  type(eigen)     , intent(in)               :: FMO 
+ real*8          , intent(inout)            :: QDyn(:,:)
 
-! . local variables
- complex*16 , ALLOCATABLE :: zG_L(:,:)     , MO_bra(:,:) 
- complex*16 , ALLOCATABLE :: zG_R(:,:)     , MO_ket(:,:)
- complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:) 
- complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
- complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
+! local variables ...
+real*8     , ALLOCATABLE :: Pops(:,:)
+complex*16 , ALLOCATABLE :: zG_L(:,:)     , MO_bra(:,:) 
+complex*16 , ALLOCATABLE :: zG_R(:,:)     , MO_ket(:,:)
+complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:) 
+complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
+complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
 
- complex*16 , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
+complex*16 , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 
- OPEN(unit=26,file='survival.dat',status='unknown')   
-     
-!========================================================
-!     define the initial states
-!========================================================
+! preprocessing stuff ..........................................................
 
- Print 56 , initial_state     ! <== initial state of the isolated molecule 
+allocate( Pops( n_t , size(system%list_of_fragments)+1 ) ) 
+
+Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
- CALL Allocate_Brackets( size(UNI%L(1,:))    ,      &
+CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
                          zG_L     , zG_R     ,      &
                          MO_bra   , MO_ket   ,      &
                          AO_bra   , AO_ket   ,      &
                          DUAL_bra , DUAL_ket ,      &
                          bra      , ket      , phase)
 
- zG_L = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
- zG_R = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
+zG_L = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
+zG_R = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
+!...............................................................................
 
 !=========================================================
-!             DYNAMIC  QUANTITIES
+!                       Q-DYNAMICS  
 !=========================================================
- t = t_i              
+t = t_i              
 
- t_rate = (t_f - t_i) / float(n_t)
-  
- DO it = 1 , n_t    
+t_rate = (t_f - t_i) / float(n_t)
+
+DO it = 1 , n_t    
 
    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
@@ -85,29 +89,73 @@
    if( GaussianCube ) CALL Gaussian_Cube_Format(bra,ket,it,t)
 
 !--------------------------------------------------------------------------
-! . DUAL representation for efficient calculation of survival probabilities ...
+! DUAL representation for efficient calculation of survival probabilities ...
 
-! . coefs of <k(t)| in DUAL basis
+! coefs of <k(t)| in DUAL basis ...
    CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
 
-! . coefs of |k(t)> in DUAL basis 
+! coefs of |k(t)> in DUAL basis ...
    CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
 
-   if( Survival ) CALL Dump_Populations(system,basis,DUAL_bra,DUAL_ket,t)
+    
+   Pops(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
 
    t = t + t_rate
 
    zG_L = MO_bra       ! <== updating expansion coefficients at t 
    zG_R = MO_ket       ! <== updating expansion coefficients at t
 
- END DO
+END DO
 
-!=============================================== 
+! sum population dynamics over frames ...
+QDyn = QDyn + Pops
 
- CLOSE(26)
+deallocate( Pops )
 
- include 'formats.h'
+include 'formats.h'
 
- end subroutine Huckel_dynamics
+end subroutine Huckel_dynamics
+!
+!
+!
+!=========================================
+ subroutine DeAllocate_QDyn( QDyn , flag )
+!=========================================
+implicit none
+real*8          , allocatable   , intent(inout) :: QDyn(:,:)
+character(*)                    , intent(in)    :: flag
 
- end module Schroedinger_m
+! local variable ...
+integer :: i , N_of_fragments
+
+select case( flag )
+
+    case( "alloc" )
+
+        if( allocated(trj) ) then
+
+            CALL Coords_from_Universe( Unit_Cell, trj(2) )       ! <== use number 2 to avoid verbose
+            CALL Generate_Structure( 2 )
+            N_of_fragments = size( Extended_Cell%list_of_fragments ) 
+
+        else
+
+            CALL Generate_Structure( 2 )
+            N_of_fragments = size( Extended_Cell%list_of_fragments )
+
+        end if
+
+        If( (survival) .AND. (Extended_Cell%list_of_fragments(1) /= "D") ) pause ">>> list_of_fragments(1) /= 'D' <<<"
+
+        allocate( QDyn(n_t,N_of_fragments+1) , source = 0.d0 )
+
+    case( "dealloc" )
+
+        deallocate(QDyn)
+
+end select
+
+end subroutine DeAllocate_QDyn
+!
+!
+end module Schroedinger_m

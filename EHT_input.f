@@ -5,16 +5,22 @@ module Semi_Empirical_Parms
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
 
-    type(EHT)                   , public    , protected :: atom(300)
+    type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
+
+    public :: Define_EH_Parametrization , read_EHT_parameters , Include_OPT_parameters
+
+    private
+
+    type(EHT)   , allocatable   :: EH_atom(:)
 
     contains
 !
 !
 ! 
-!=======================================================================
+!===================================================================
  subroutine Define_EH_Parametrization( Unit_Cell , Characteristics ) 
-!=======================================================================
+!===================================================================
 implicit none
 type(structure) , intent(inout) :: Unit_Cell
 character(*)    , intent(inout) :: Characteristics
@@ -43,9 +49,9 @@ end subroutine Define_EH_Parametrization
 !==============================
  subroutine read_EHT_parameters
 !==============================
-
  implicit none
 
+! local variables ... 
  integer          :: ioerr , i , AtNo , Ang , DOS_sum
  character(len=1) :: spdf
 
@@ -94,6 +100,8 @@ end subroutine Define_EH_Parametrization
 
  end do    
 
+ If( OPT_basis ) CALL read_OPT_parameters
+
  end subroutine read_EHT_parameters
 ! 
 !
@@ -126,7 +134,99 @@ Atomic_Mass = temp(1:size_of_array)
 deallocate( temp )
 
 end subroutine Read_Atomic_Mass
+!    
+!
+!
+!==============================
+ subroutine read_OPT_parameters
+!==============================
+ implicit none
+
+! local variables ... 
+ integer        :: ioerr , nr , i 
+ character(1)   :: spdf
+ character(2)   :: dumb 
+
+OPEN(unit=3,file='OPT_eht_parameters.input.dat',status='old')
+
+! number of lines of OPT_parameters ...
+nr = 0
+do 
+    read(3,*,IOSTAT=ioerr) dumb 
+    if(ioerr < 0) EXIT
+    nr = nr + 1
+end do    
+
+allocate( EH_atom(nr) )
+
+! rewind and read the OPT-EHT_parameters ...
+rewind 3
+do i = 1 , size(EH_atom)
+
+    read(3,17)  EH_atom(i)%Symbol       ,   &
+                EH_atom(i)%EHSymbol     ,   &
+                EH_atom(i)%AtNo         ,   &
+                EH_atom(i)%Nvalen       ,   &
+                EH_atom(i)%Nzeta(0)     ,   &
+                EH_atom(i)%n            ,   &
+                spdf                    ,   &
+                EH_atom(i)%IP(0)        ,   &
+                EH_atom(i)%zeta(0,1)    ,   &
+                EH_atom(i)%zeta(0,2)    ,   &
+                EH_atom(i)%coef(0,1)    ,   &
+                EH_atom(i)%coef(0,2)    ,   &
+                EH_atom(i)%k_WH(0)
+
+    select case (spdf)
+        case('s')
+            EH_atom(i)%l = 0
+        case('p')
+            EH_atom(i)%l = 1
+        case('d') 
+            EH_atom(i)%l = 2
+        case('f')
+            EH_atom(i)%l = 3
+    end select
+
+    EH_atom(i) % DOS      =  atom( EH_atom(i)%AtNo ) % DOS
+    EH_atom(i) % AngMax   =  atom( EH_atom(i)%AtNo ) % AngMax
+
+end do
+
+close(3)
+
+17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
+
+end subroutine read_OPT_parameters
 ! 
+!
+!
+!==========================================
+ subroutine Include_OPT_parameters( basis )
+!==========================================
+implicit none
+type(STO_basis) , intent(inout) :: basis(:)
+
+! local variables ...
+integer :: i
+
+do i = 1 , size(EH_atom)
+
+    where( (basis%EHSymbol == EH_atom(i)%EHSymbol) .AND. (basis%l == EH_atom(i)%l) ) 
+        
+        basis%IP        =  EH_atom(i)%IP    (0)
+        basis%Nzeta     =  EH_atom(i)%Nzeta (0)
+        basis%coef(1)   =  EH_atom(i)%coef  (0,1)
+        basis%coef(2)   =  EH_atom(i)%coef  (0,2)
+        basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
+        basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
+        basis%k_WH      =  EH_atom(i)%k_WH  (0)
+
+    end where
+
+end do
+
+end subroutine Include_OPT_parameters
 !
 !
 end module Semi_Empirical_Parms

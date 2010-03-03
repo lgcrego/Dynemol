@@ -100,6 +100,9 @@
     deallocate( System % fragment     )
     deallocate( System % residue      )
     deallocate( System % MMSymbol     )
+
+    If( allocated(System%list_of_residues ) ) deallocate( System%list_of_residues  )
+    If( allocated(System%list_of_fragments) ) deallocate( System%list_of_fragments )
  
  end subroutine DeAllocate_Structures
 !

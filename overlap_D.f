@@ -53,12 +53,6 @@ contains
             end If
         end If
 
-!        If( n_unit /= 1 ) then
-!            Print 51
-!        else
-!            Print 54
-!        end If
-
 !       if no PBC pbc_system = system 
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
 

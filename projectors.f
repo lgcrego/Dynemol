@@ -14,7 +14,7 @@
 !-----------------------------------------------
  type(STO_basis)  , intent(in) :: basis(:)
  complex*16       , intent(in) :: za(:,:) , zb(:,:)
- character(len=2) , optional   :: fragment
+ character(len=1) , optional   :: fragment
 
 ! local variables
  real*8                                :: pop_Slater

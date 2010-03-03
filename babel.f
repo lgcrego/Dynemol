@@ -372,6 +372,8 @@ do
         read(unit = 31, fmt = 36, iostat = inputstatus) model ! <==
     end if
 end do
+! PDB counting starts at 0 ...
+model = model + 1
 
 ! return to the top of the file ...
 rewind 31
@@ -794,8 +796,6 @@ integer  :: i
     select case(a%atom(i)%residue)
         case( 'CCC') 
             a%atom(i)%fragment = 'C' 
-        case( 'ALQ') 
-            a%atom(i)%fragment = 'M' 
         case( 'ACN') 
             a%atom(i)%fragment = 'S' 
         case( 'PYR') 
@@ -803,6 +803,8 @@ integer  :: i
     end select
 
  END DO
+
+ where( a%atom%residue == donor_residue ) a%atom%fragment = "M"
 
 end subroutine Setting_Fragments
 !
@@ -818,6 +820,8 @@ type(universe)  , intent(inout) :: a
 integer                         :: i , j , counter
 character(3)    , allocatable   :: temp(:)
 logical                         :: flag
+
+If( allocated(a%list_of_fragments) ) deallocate( a%list_of_fragments )
 
 allocate( temp(a%N_of_Atoms) )
 
@@ -857,6 +861,8 @@ type(structure)  , intent(inout) :: a
 integer                         :: i , j , counter
 character(3)    , allocatable   :: temp(:)
 logical                         :: flag
+
+If( allocated(a%list_of_fragments) ) deallocate( a%list_of_fragments )
 
 allocate( temp(a % atoms) )
 

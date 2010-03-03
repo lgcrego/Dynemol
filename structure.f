@@ -1,20 +1,26 @@
  module Structure_Builder
 
     use type_m
-    use Babel_m                   , only : Read_from_XYZ , Read_from_Poscar , Read_from_PDB , Read_PDB , Read_VASP  &
-                                         , Identify_Fragments , trj , System_Characteristics
-    use Allocation_m              , only : Allocate_Structures
-    use Semi_Empirical_Parms      , only : atom
+    use Babel_m                     , only : Read_from_XYZ ,            &
+                                             Read_from_Poscar ,         &
+                                             Read_from_PDB ,            &
+                                             Read_PDB ,                 &
+                                             Read_VASP  ,               &
+                                             Identify_Fragments ,       &
+                                             System_Characteristics ,   & 
+                                             trj
+    use Allocation_m                , only : Allocate_Structures
+    use Semi_Empirical_Parms        , only : atom ,                     &
+                                             Include_OPT_parameters
 
-    type(structure)               , public  :: Unit_Cell , Extended_Cell 
-    type(STO_basis) , allocatable , public  :: ExCell_basis(:)
+    type(structure)                 , public  :: Unit_Cell , Extended_Cell 
+    type(STO_basis) , allocatable   , public  :: ExCell_basis(:)
 
     public :: Read_Structure , Generate_Structure , Basis_Builder 
 
     private
 
  contains
-!
 !
 !
 !=========================
@@ -65,7 +71,7 @@ integer :: copy
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
 !----------------------------------------------------------
 
-If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , extended_cell )
+ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , extended_cell )
 
  k = 0
  copy = 0
@@ -112,8 +118,10 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
 
  END FORALL
 
- ! . define the DONOR fragment 
+! define the DONOR fragment ...
  where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
+
+! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
@@ -152,14 +160,14 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
 
-! local variables 
+! local variables ...
  integer :: k , i , l , m , AtNo
 
-! total number of orbitals
+! total number of orbitals ...
  N_of_orbitals = sum(atom(system%AtNo)%DOS)
 
-! building AO basis  
- allocate(basis(N_of_orbitals))
+! building AO basis ...  
+ allocate( basis(N_of_orbitals) )
  
  k = 1
  do i = 1 , system%atoms
@@ -201,6 +209,8 @@ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(
         end do
     end do
  end do
+
+ If( OPT_basis ) CALL Include_OPT_parameters( basis )
 
  end subroutine Basis_Builder
 !

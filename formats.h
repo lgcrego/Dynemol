@@ -50,7 +50,7 @@
 
 122   FORMAT(/,1x,A3,' residues  = ',I4)
 
-123   FORMAT(/,1x,A1,' fragments  = ',I4)
+123   FORMAT(/,1x,A1,' fragment atoms  = ',I4)
 
 140   FORMAT(/,1x,'Total number of electrons  = ',I6)
 

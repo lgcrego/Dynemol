@@ -71,14 +71,18 @@ module type_m
 
     type EHT
         character(len=2) :: symbol
+        character(len=3) :: EHSymbol
         integer          :: AtNo
         integer          :: Nvalen
         integer          :: Nzeta(0:3)
         integer          :: Nquant(0:3)
         integer          :: AngMax
+        integer          :: n
+        integer          :: l
         real*8           :: IP(0:3)
         real*8           :: zeta(0:3,2)
         real*8           :: coef(0:3,2)
+        real*8           :: k_WH(0:3)
         integer          :: DOS 
     end type EHT     
 

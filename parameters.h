@@ -1,21 +1,23 @@
- integer 					:: initial_state , HOMO_mol  
- logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment
+ integer 					:: initial_state , HOMO_mol , frame_step 
+ logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis
  logical 					:: verbose
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
+ character (len=3)			:: donor_residue
  character (len=4)			:: file_format
  character (len=11)			:: DRIVER , file_type
 
  parameter (& 
 !--------------------------------------------------------------------
-!           ACTIONS
+!           ACTION	flags
 !
-			DRIVER		 = "Genetic_Alg",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg
+			DRIVER		 = "Genetic_Alg",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys
 !			
-            GaussianCube = .true. ,            &
+            GaussianCube = .false. ,            &
 			Survival     = .false. ,            &
             SPECTRUM     = .false. ,            & 
 			DP_Moment    = .true.  ,            &
+			OPT_basis    = .true.   ,            & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
@@ -23,15 +25,21 @@
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 			
 !--------------------------------------------------------------------
-!           INITIAL  CONDITIONS
+!           SAMPLING parameters
+!
+			frame_step    =  1   ,              & ! <== step for avrg_confgs
+!--------------------------------------------------------------------
+!           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
             t_f           =  1.d1 ,             & ! <== final time in PICOseconds
             n_t           =  500   ,            & ! <== number of time steps
             initial_state =  99  ,              & ! <== intial MO
 			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
+            donor_residue = "LIG"  ,            & ! <== residue of the donor group
+
 !--------------------------------------------------------------------
-!           STRUCTURAL  PARAMETERS
+!           STRUCTURAL  parameters
 !
             nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
@@ -40,26 +48,26 @@
             mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
-!           SLATER  PARAMETERS
+!           SLATER  parameters
 !
             n_part     =   1 ,                  & ! <== # of particals in Slater determinant
             nSL        =   1 ,                  & ! <== nSL = (n_part)! = size of Slater wave-function
 !--------------------------------------------------------------------
-!           DOS PARAMETERS
+!           DOS parameters
 !
             sigma       =   0.080d0 ,                            &  !
 
 			DOS_range   =  real_interval( -17.d0 , -6.d0 ) ,     &
 
 !--------------------------------------------------------------------
-!           SPECTRUM  PARAMETERS
+!           SPECTRUM  parameters
 !
             occupied    =  real_interval( -13.30d0 , -11.01d0 ) , & 
 
             empty       =  real_interval( -11.00d0 , -6.00d0 )  , & 
 
 !--------------------------------------------------------------------
-!           Readfield  PARAMETERS
+!           Readfield  parameters
 !
 
 			hole_state	=	864									,	&

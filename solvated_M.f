@@ -1,147 +1,19 @@
-! Program for computing average properties of the system
+! Subroutine from preparing a liquid environment
 
-module Sampling_m
+module Solvated_m
 
     use type_m
     use constants_m
+    use Allocation_m            , only : Allocate_UnitCell
     use Babel_m                 , only : System_Characteristics , trj
-    use Allocation_m            , only : Allocate_UnitCell , DeAllocate_UnitCell , DeAllocate_Structures
+    use Structure_Builder       , only : Unit_Cell
     use Semi_Empirical_Parms    , only : Define_EH_Parametrization
-    use QCModel_Huckel          , only : EigenSystem
-    use Structure_Builder       , only : Generate_Structure , Basis_Builder 
-    use DOS_m
-    use Oscillator_m            , only : Optical_Transitions
-    use Multipole_Core          , only : Dipole_Matrix 
-    use Data_Output             , only : Dump_DOS
 
-    public :: Solvated_M , DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
+    public :: Prepare_Solvated_System , DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
 
     private
 
 contains
-!
-!
-!======================
- subroutine Solvated_M
-!======================
- implicit none
-
-! local variables ...
-integer                         :: i , frame , nr , N_of_residues
-integer         , parameter     :: frame_step = 1
-real*8                          :: internal_sigma
-character(3)                    :: residue
- logical                        :: FMO_ , DIPOLE_
-type(eigen)                     :: UNI
-type(f_grid)                    :: TDOS , SPEC
-type(f_grid)    , allocatable   :: PDOS(:) 
-type(universe)                  :: Solvated_System
-
-! preprocessing stuff .....................................................
-
-FMO_    = ( spectrum .AND. survival  )
-DIPOLE_ = ( FMO_     .AND. DP_Moment )
-
-if( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
-
-internal_sigma = sigma / float( size(trj)/frame_step )
-
-CALL DeAllocate_TDOS( TDOS , flag="alloc" )
-CALL DeAllocate_PDOS( PDOS , flag="alloc" )
-CALL DeAllocate_SPEC( SPEC , flag="alloc" )
-
-N_of_residues = size( trj(1)%list_of_residues )
-!..........................................................................
-
-
-! Average over samples ...
-
-do frame = 1 , size(trj) , frame_step
-
-    CALL Prepare_Solvated_System( Solvated_System , frame )
-
-    CALL Coords_from_TRJ( Unit_Cell , Solvated_System )
-
-    CALL Generate_Structure( frame )
-
-    CALL Basis_Builder( Extended_Cell , ExCell_basis )
-
-    CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
-
-    CALL Total_DOS( UNI%erg , TDOS , internal_sigma )                                             
-
-    do nr = 1 , N_of_residues
-        residue = trj(1)%list_of_residues(nr)
-        CALL Partial_DOS( Extended_Cell , UNI , PDOS , residue , nr , internal_sigma )            
-    end do
-
-    CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
-
-    CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC , internal_sigma )
-
-    CALL DeAllocate_UnitCell    ( Unit_Cell     )
-    CALL DeAllocate_Structures  ( Extended_Cell )
-         DeAllocate             ( ExCell_basis )
-
-end do
-
-CALL Dump_DOS( TDOS , PDOS , SPEC )
-
-CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
-CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
-CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-
-STOP
-
-end subroutine Solvated_M
-!
-!
-!
-!=========================================================
- subroutine Coords_from_TRJ( Unit_Cell , Solvated_System )
-!=========================================================
- implicit none
- type(structure) , intent(out)    :: Unit_Cell
- type(universe)  , intent(inout)  :: Solvated_System
-
-! local variables ... 
-integer         :: j , n_residues
-character(72)   :: Characteristics
-
-Unit_Cell%atoms = Solvated_System%N_of_Atoms
-n_residues      = size( trj(1)%list_of_residues )
-
-! allocating Unit_Cell structure ...
-CALL Allocate_UnitCell( Unit_Cell , n_residues )
-
-! coordinates and other info from input data ...
-forall( j=1:unit_cell%atoms )
-    unit_cell % coord    (j,:) =  Solvated_System % atom(j) % xyz(:)
-    unit_cell % AtNo     (j)   =  Solvated_System % atom(j) % AtNo  
-    unit_cell % fragment (j)   =  Solvated_System % atom(j) % fragment
-    unit_cell % Symbol   (j)   =  Solvated_System % atom(j) % Symbol
-    unit_cell % residue  (j)   =  Solvated_System % atom(j) % residue
-    unit_cell % MMSymbol (j)   =  Solvated_System % atom(j) % MMSymbol
-end forall
-
-! get list of residues from TRJ(1) ...
-unit_cell%list_of_residues  = trj(1)%list_of_residues
-unit_cell%list_of_fragments = trj(1)%list_of_fragments
-
-! unit_cell dimensions ...
-unit_cell % T_xyz =  Solvated_System % box
-
-! get EH Parms ...
-CALL Define_EH_Parametrization( Unit_Cell , Characteristics )
-
-! verify consistency ...
-if( System_Characteristics /= Characteristics ) then
-    print*, System_Characteristics , Characteristics 
-    Pause ">>> Input Parameter Inconsistency <<<"
-end if
-
-end subroutine Coords_from_TRJ
-!
 !
 !
 !=============================================================
@@ -162,6 +34,8 @@ type(int_pointer)   , allocatable               :: nres(:)
 
 ! local parameters ; number of 3D PBC unit-cells ...
 integer , parameter :: PBC_Factor = 27  
+
+If( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 
 ! identify the CG of the fragment ...
 forall( i=1:3 ) Molecule_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%fragment == "M" ) / count(trj(frame)%atom%fragment == "M")
@@ -481,4 +355,4 @@ end select
 end subroutine DeAllocate_SPEC
 !
 !
-end module Sampling_m
+end module Solvated_m
