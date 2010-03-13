@@ -3,7 +3,6 @@
  logical 					:: verbose
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
- character (len=3)			:: donor_residue
  character (len=4)			:: file_format
  character (len=11)			:: DRIVER , file_type
 
@@ -11,17 +10,17 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "Genetic_Alg",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys
+			DRIVER		 = "solvated_M",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
 !			
-            GaussianCube = .false. ,            &
-			Survival     = .false. ,            &
-            SPECTRUM     = .false. ,            & 
-			DP_Moment    = .true.  ,            &
-			OPT_basis    = .true.   ,            & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+            GaussianCube = .false.  ,           &
+			Survival     = .false.  ,           &
+            SPECTRUM     = .false.  ,           & 
+			DP_Moment    = .false.  ,           &
+			OPT_basis    = .false.  ,           & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 			
 !--------------------------------------------------------------------
@@ -36,7 +35,6 @@
             n_t           =  500   ,            & ! <== number of time steps
             initial_state =  99  ,              & ! <== intial MO
 			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
-            donor_residue = "LIG"  ,            & ! <== residue of the donor group
 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
@@ -45,7 +43,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters

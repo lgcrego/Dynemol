@@ -73,12 +73,11 @@ end subroutine Total_DOS
 !
 !
 !===========================================================================
-subroutine  Partial_DOS( system, QM , PDOS , residue , nr , internal_sigma )
+subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
 !===========================================================================
 type(structure)             , intent(in)    :: system
 type(eigen)                 , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
-character(3)                , intent(in)    :: residue
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
@@ -118,7 +117,7 @@ forall( i=1:n_of_DOS_states ) list_of_DOS_states(i) = i1 + i
 atom(:) = 0
 j=1
 do i = 1 , system%atoms
-    if( (system%residue(i) == RESIDUE) ) then
+    if( (system%residue(i) == PDOS(nr)%residue) ) then
         atom(j) = i
         j = j + 1
     end if
@@ -157,7 +156,7 @@ PDOS(nr)%average = PDOS(nr)%average + PDOS(nr)%func
 
 DEALLOCATE(DOS_partial,list_of_DOS_states)
 
-print*, '>> ',residue,' PDOS done <<'
+print*, '>> ',PDOS(nr)%residue,' PDOS done <<'
 
 end subroutine Partial_DOS
 !

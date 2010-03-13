@@ -8,7 +8,7 @@ module Semi_Empirical_Parms
     type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
 
-    public :: Define_EH_Parametrization , read_EHT_parameters , Include_OPT_parameters
+    public :: read_EHT_parameters , Include_OPT_parameters
 
     private
 
@@ -18,34 +18,6 @@ module Semi_Empirical_Parms
 !
 !
 ! 
-!===================================================================
- subroutine Define_EH_Parametrization( Unit_Cell , Characteristics ) 
-!===================================================================
-implicit none
-type(structure) , intent(inout) :: Unit_Cell
-character(*)    , intent(inout) :: Characteristics
-
-! defining the k_WH parameter for the system ...
-
-! Standard parameter ...
-Unit_Cell % k_WH = 1.75d0
-
-! TiO2 ...
-!where( Unit_Cell % residue == "CCC" ) Unit_Cell % k_WH = 1.75d0
-
-! PYR ...
-!where( Unit_Cell % residue == "PYR" ) unit_cell % k_WH = 1.75d0
-
-! Alq3 ...
-!where( Unit_Cell % residue == "ALQ" ) Unit_Cell % k_WH = 2.0d0
-
-! to be compared with structure information ...
-Characteristics = "acetonitrile"
-
-end subroutine Define_EH_Parametrization 
-!    
-!
-!
 !==============================
  subroutine read_EHT_parameters
 !==============================

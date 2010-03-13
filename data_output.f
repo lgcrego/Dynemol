@@ -51,14 +51,13 @@ end do
 !
 !
 !=========================================================================================
- subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_residues , list_of_fragments ) 
+ subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_fragments ) 
 !=========================================================================================
 implicit none
 type(f_grid)  , intent(in)  , optional  :: TDOS
 type(f_grid)  , intent(in)  , optional  :: PDOS(:)
 type(f_grid)  , intent(in)  , optional  :: SPEC
 real*8        , intent(in)  , optional  :: QDyn(:,:)
-character(*)  , intent(in)  , optional  ::list_of_residues(:)
 character(*)  , intent(in)  , optional  ::list_of_fragments(:)
 
 ! local variables ...
@@ -77,9 +76,9 @@ end if
 
 ! . save PDOS ...
 If( present(PDOS) ) then
-    N_of_residues = size( list_of_residues )
+    N_of_residues = size( PDOS )
     do nr = 1 , N_of_residues
-        string = "PDOS-"//list_of_residues(nr)//".dat" 
+        string = "PDOS-"//PDOS(nr)%residue//".dat" 
         OPEN( unit=3 , file=string , status='unknown' )
             do i = 1 , size(PDOS(nr)%func)
                 write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i)

@@ -7,6 +7,7 @@ use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
 use Sampling_m              , only : Avrg_Confgs
 use GA_driver_m             , only : GA_driver
+use diagnostic_m            , only : diagnostic
 
 ! local variables ...
  
@@ -29,6 +30,9 @@ select case ( driver )
 
     case ( "Genetic_Alg" )
         CALL GA_driver
+
+    case ( "diagnostic" )
+        CALL diagnostic
 
 end select
 

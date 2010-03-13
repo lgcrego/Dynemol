@@ -149,6 +149,8 @@ type(structure) , intent(inout) :: a
 real*8 , allocatable :: Qi_Ri(:,:) 
 real*8               :: total_valence
 
+! sum_i = (q_i * vec{r}_i) / sum_i q_i
+
  allocate(Qi_Ri(a%atoms,3))
 
  forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = atom(a%AtNo(i))%Nvalen * a%coord(i,j)

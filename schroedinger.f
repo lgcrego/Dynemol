@@ -118,12 +118,13 @@ end subroutine Huckel_dynamics
 !
 !
 !
-!=========================================
- subroutine DeAllocate_QDyn( QDyn , flag )
-!=========================================
+!==========================================================
+ subroutine DeAllocate_QDyn( QDyn , QDyn_fragments , flag )
+!==========================================================
 implicit none
-real*8          , allocatable   , intent(inout) :: QDyn(:,:)
-character(*)                    , intent(in)    :: flag
+real*8          , optional      , allocatable   , intent(inout) :: QDyn(:,:)
+character(1)    , optional      , allocatable   , intent(inout) :: QDyn_fragments(:)
+character(*)                                    , intent(in)    :: flag
 
 ! local variable ...
 integer :: i , N_of_fragments
@@ -134,24 +135,28 @@ select case( flag )
 
         if( allocated(trj) ) then
 
-            CALL Coords_from_Universe( Unit_Cell, trj(2) )       ! <== use number 2 to avoid verbose
+            CALL Coords_from_Universe( Unit_Cell, trj(2) )          ! <== use number 2 to avoid verbose
             CALL Generate_Structure( 2 )
             N_of_fragments = size( Extended_Cell%list_of_fragments ) 
 
         else
 
-            CALL Generate_Structure( 2 )
+            CALL Generate_Structure( 2 )                            ! <== use number 2 to avoid verbose
             N_of_fragments = size( Extended_Cell%list_of_fragments )
 
         end if
 
         If( (survival) .AND. (Extended_Cell%list_of_fragments(1) /= "D") ) pause ">>> list_of_fragments(1) /= 'D' <<<"
 
-        allocate( QDyn(n_t,N_of_fragments+1) , source = 0.d0 )
+        allocate( QDyn_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
+        allocate( QDyn          (n_t,N_of_fragments+1)                      , source = 0.d0                              )
+
+        ! cleaning the mess ...
+        CALL DeAllocate_Structures( Extended_Cell )
 
     case( "dealloc" )
 
-        deallocate(QDyn)
+        deallocate(QDyn , QDyn_fragments)
 
 end select
 

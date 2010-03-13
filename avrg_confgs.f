@@ -44,8 +44,7 @@ integer                         :: i , frame , nr , N_of_residues
 real*8                          :: internal_sigma
 real*8          , allocatable   :: QDyn(:,:)
 character(3)                    :: residue
-character(3)    , allocatable   :: list_of_residues(:) 
-character(1)    , allocatable   :: list_of_fragments(:)
+character(1)    , allocatable   :: QDyn_fragments(:)
 logical                         :: FMO_ , DIPOLE_
 type(eigen)                     :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
@@ -62,12 +61,9 @@ internal_sigma = sigma / float( size(trj)/frame_step )
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )
-CALL DeAllocate_QDyn( QDyn , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
-
-allocate( list_of_residues ( size(Unit_Cell     % list_of_residues ) ) , source = Unit_Cell     % list_of_residues  )
-allocate( list_of_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
 
 !..........................................................................
 
@@ -98,8 +94,7 @@ do frame = 1 , size(trj) , frame_step
     CALL Total_DOS( UNI%erg , TDOS , internal_sigma )                                             
 
     do nr = 1 , N_of_residues
-        residue = trj(1)%list_of_residues(nr)
-        CALL Partial_DOS( Extended_Cell , UNI , PDOS , residue , nr , internal_sigma )            
+        CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr , internal_sigma )            
     end do
 
     If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
@@ -119,12 +114,12 @@ end do
 ! average over configurations ...
 If( file_type == "trajectory" ) QDyn = QDyn / size(trj)
 
-CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_residues , list_of_fragments )
+CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
 
-CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
-CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
-CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
+CALL DeAllocate_TDOS( flag="dealloc" )
+CALL DeAllocate_PDOS( flag="dealloc" )
+CALL DeAllocate_SPEC( flag="dealloc" )
+CALL DeAllocate_QDyn( flag="dealloc" )
 
 end subroutine Avrg_Confgs
 

@@ -1,3 +1,11 @@
+40   FORMAT(/,"======================   Opitimizing  Parameters  ==========================")
+
+41   FORMAT(/,"MMsymbol    |   s   |   p   |   d   |   IP  |   zeta1   |   zeta2   |   k_WH")
+
+42   FORMAT(A3,t17,I1,t25,I1,t33,I1,t41,I1,t49,I1,t61,I1,t73,I1)
+
+43   FORMAT(/,"============================================================================")
+
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
                1x,'# of unit cells = ',I2) 

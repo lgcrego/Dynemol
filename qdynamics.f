@@ -30,8 +30,7 @@ implicit none
  integer                        :: nr , N_of_residues
  real*8          , allocatable  :: QDyn(:,:)
  character(3)                   :: residue
- character(3)    , allocatable  :: list_of_residues(:) 
- character(1)    , allocatable  :: list_of_fragments(:)
+ character(1)    , allocatable  :: QDyn_fragments(:)
  logical                        :: FMO_ , DIPOLE_
  type(eigen)                    :: UNI
  type(eigen)                    :: FMO
@@ -51,9 +50,6 @@ CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
-allocate( list_of_residues ( size(Unit_Cell     % list_of_residues ) ) , source = Unit_Cell     % list_of_residues  )
-allocate( list_of_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
-
 !.........................................................
 
 ! Quantum Dynamics ...
@@ -67,8 +63,7 @@ allocate( list_of_fragments( size(Extended_Cell % list_of_fragments) ) , source 
  CALL Total_DOS( UNI%erg , TDOS )
 
  do nr = 1 , N_of_residues
-    residue = Unit_Cell % list_of_residues(nr)
-    CALL Partial_DOS( Extended_Cell , UNI , PDOS , residue , nr )            
+    CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
  If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
@@ -81,12 +76,12 @@ allocate( list_of_fragments( size(Extended_Cell % list_of_fragments) ) , source 
 
 ! CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
-CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_residues , list_of_fragments )
+CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
 
-CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
-CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
-CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
+CALL DeAllocate_TDOS( flag="dealloc" )
+CALL DeAllocate_PDOS( flag="dealloc" )
+CALL DeAllocate_SPEC( flag="dealloc" )
+CALL DeAllocate_QDyn( flag="dealloc" )
 
 include 'formats.h'
 

@@ -11,12 +11,12 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   40         
-    integer , parameter :: N_generations  =   80         
-    integer , parameter :: Top_Selection  =   15        
-    real*8  , parameter :: Pop_range      =   1.0d-1        ! <== range of variation of parameters
+    integer , parameter :: Pop_Size       =   20         
+    integer , parameter :: N_generations  =   20         
+    integer , parameter :: Top_Selection  =   4            ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   1.5d0        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.3           
-    logical , parameter :: Mutate_Cross   =  .false.        ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    logical , parameter :: Mutate_Cross   =  .true.        ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -31,7 +31,8 @@ type(OPT)       , intent(in)  :: REF
 real*8                        :: evaluate_cost
 
 ! local variables ...
-real*8   :: chi(10) , weight(10)
+real*8   :: chi(20) , weight(20)
+real*8   :: middle_gap
 integer  :: k , HOMO , LUMO
 
 ! general definitions ...
@@ -40,17 +41,9 @@ LUMO = HOMO + 1
 
 chi(:) = 0.d0   ;   weight(:) = 1.d0
 
-! HOMO-LUMO gaps ...
-chi(1) = ( GA%erg(9) - GA%erg(8) ) - 8.0    ; weight(1) = 1.0
-
-chi(2) = ( GA%erg(9) - GA%erg(7) ) - 8.0    ; weight(1) = 1.0 
-
-chi(3) = ( GA%erg(8) - GA%erg(6) ) - 0.1    ; weight(1) = 5.0 
-
-chi(4) = ( GA%erg(7) - GA%erg(6) ) - 0.1    ; weight(1) = 5.0 
-
-! Total DIPOLE moment ...
-chi(5) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   
+! TiO2 - O2 vacant defect states in the gap ...
+middle_gap = -12.d0
+forall( k=1:4) chi(k) = abs( GA%erg(504+k) - middle_gap )
 
 evaluate_cost = sqrt( dot_product(chi,chi) )
 
@@ -128,37 +121,27 @@ type(STO_basis) , allocatable   , intent(out) :: GA_basis(:)
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,:) , pot(:,:) , Custo(:) 
 real*8                          :: GA_DP(3)
 integer         , allocatable   :: indx(:)
-integer                         :: i , j , l , generation , info 
+integer                         :: i , j , l , generation , info , Pop_start
 type(eigen)                     :: GA_UNI
 
 ! reading input-GA key ...
 CALL Read_GA_key
 
 !-----------------------------------------------
-!           SETTING-UP populations
+!        SETTING-UP initial populations
 !-----------------------------------------------
 
 ! Initial Populations ...
 allocate( Pop     (Pop_Size , GA%GeneSize) )
 allocate( Old_Pop (Pop_Size , GA%GeneSize) )
-allocate( a       (Pop_Size , GA%GeneSize) )
-allocate( semente (Pop_Size , GA%GeneSize) )
-allocate( pot     (Pop_Size , GA%GeneSize) )
 allocate( indx    (Pop_Size)               )
 
 CALL random_seed
-        
-do i = 1 , Pop_size
-    do j = 1 , GA%GeneSize
-        CALL random_number( a(i,j) )
-        CALL random_number( semente(i,j) )
-        pot(i,j) = int(2 * semente(i,j))
-        Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
-    end do
-end do
-indx = [ ( i , i=1,Pop_Size ) ]
 
-deallocate( a , semente , pot )
+Pop_start = 1
+CALL generate_RND_Pop( Pop_start , Pop )       
+
+indx = [ ( i , i=1,Pop_Size ) ]
 
 !-----------------------------------------------
 
@@ -171,7 +154,7 @@ allocate( custo(Pop_size) )
 
 do generation = 1 , N_generations
 
-    do i = 1 , Pop_Size
+    do i = Pop_start , Pop_Size
 
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
 
@@ -183,23 +166,29 @@ do generation = 1 , N_generations
             continue
         end if
 
-        CALL Dipole_Matrix( Extended_Cell, GA_basis, GA_UNI%L, GA_UNI%R, GA_DP )
+        If( DP_Moment ) CALL Dipole_Matrix( Extended_Cell, GA_basis, GA_UNI%L, GA_UNI%R, GA_DP )
 
-        GA%erg  =  GA_UNI%erg
-        GA%DP   =  GA_DP
-                
-!       evaluate population cost ...
-        custo(i) = evaluate_cost( system , REF )
+!       gather data and evaluate population cost ...
+        GA%erg   =  GA_UNI%erg
+        GA%DP    =  GA_DP
+        custo(i) =  evaluate_cost( system , REF )
 
     end do
 
 !   evolve populations ...    
     CALL sort2(custo,indx)
-        
+
     Old_Pop = Pop
-    Pop( 1:Top_Selection , : ) = Old_pop( indx(1:Top_Selection) , : )
-        
-    If( Mutate_Cross) CALL Mutation_and_Crossing( Pop )
+    Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+
+    Pop_start = Top_Selection + 1
+
+!   Mutation_&_Crossing preserves the top-selections ...
+    If( Mutate_Cross) then
+        CALL Mutation_and_Crossing( Pop )
+    else
+        CALL generate_RND_Pop( Pop_start , Pop )       
+    end If
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
@@ -221,6 +210,47 @@ deallocate( Pop , indx , Old_Pop )
 include 'formats.h'
 
 end subroutine Genetic_Algorithm
+!
+!
+!
+!==============================================
+ subroutine generate_RND_Pop( Pop_start , Pop )
+!==============================================
+implicit none
+integer               , intent(in)    :: Pop_start
+real*8  , allocatable , intent(inout) :: Pop(:,:) 
+
+! local variables ...
+integer               :: i , j
+real*8  , allocatable :: a(:,:) , seed(:,:) , pot(:,:) 
+
+!-----------------------------------------------
+!           SETTING-UP populations
+!-----------------------------------------------
+
+allocate( a    (Pop_Size , GA%GeneSize) )
+allocate( seed (Pop_Size , GA%GeneSize) )
+allocate( pot  (Pop_Size , GA%GeneSize) )
+
+CALL random_seed
+        
+do i = Pop_start , Pop_size
+    do j = 1 , GA%GeneSize
+
+        CALL random_number( a   (i,j) )
+        CALL random_number( seed(i,j) )
+
+        pot(i,j) = int( 2*seed(i,j) )
+        Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
+
+    end do
+end do
+
+deallocate( a , seed , pot )
+
+!-----------------------------------------------
+
+end subroutine generate_RND_Pop
 !
 !
 !
@@ -250,7 +280,7 @@ end do
 allocate( p(Ponto_Cruzamento) )
 do i = 1 , Ponto_cruzamento
     call random_number( rp )
-    p(i) = int(GA%GeneSize*rp) + 1
+    p(i) = min( int(GA%GeneSize*rp) + 1 , GA%GeneSize-1 )
 end do
 
 ! Crossing ...
@@ -264,7 +294,7 @@ do i = 1 , 2
 end do
 
 ! Mutation ...
-pt = N_crossings * GA%GeneSize * Mutation_rate 
+pt = 2*int( N_crossings * GA%GeneSize * Mutation_rate )
 allocate( ma(pt) )
 
 do i = 1 , pt
@@ -317,19 +347,25 @@ allocate( GA%key      (7 , N_of_EHSymbol) )
 rewind 3
 read(3,*) dumb
 
+Print 40 
+Print 41
 do j = 1 , N_of_EHSymbol
 
-    read(3,11) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+    read(3,42)  GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+
+    write(*,42) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
 end do
 
 CLOSE(3)
 
+Print 43
+
 GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N_of_EHSymbol ) ] )
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
-11 FORMAT(A3,t17,I1,t25,I1,t33,I1,t41,I1,t49,I1,t61,I1,t73,I1)
+include 'formats.h'
 
 end subroutine Read_GA_key
 !
@@ -347,12 +383,14 @@ integer , allocatable   :: indx_EHS(:)
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
+integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
 
 N_of_EHSymbol = size( GA%EHSymbol )
 
 allocate( indx_EHS(N_of_EHSymbol) )
 
-indx_EHS = [ ( minloc(GA_basis%EHSymbol , 1 , GA_basis%EHSymbol == GA%EHSymbol(i)),i=1,N_of_EHSymbol ) ] 
+! locate position of the first appearance of EHS-atoms in GA_basis
+indx_EHS = [ ( minloc(GA_basis%EHSymbol , 1 , GA_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
 ! creating file OPT_eht_parameters.output.dat with the optimized parameters ...
 open( unit=13, file='OPT_eht_parameters.output.dat', status='unknown' )
@@ -361,10 +399,12 @@ do n_EHS = 1 , N_of_EHSymbol
 
     i = indx_EHS(n_EHS)
 
-    AngMax = atom(GA_basis(i)%AtNo)%AngMax 
+    AngMax = atom(GA_basis(i)%AtNo)%AngMax
 
     do L = 0 , AngMax
-        j = i+L
+
+        j = (i-1) + DOS(L)
+    
         write(13,17)    GA_basis(j)%Symbol          ,   &
                         GA_basis(j)%EHSymbol        ,   &
                         GA_basis(j)%AtNo            ,   &

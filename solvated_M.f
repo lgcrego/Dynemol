@@ -7,7 +7,6 @@ module Solvated_m
     use Allocation_m            , only : Allocate_UnitCell
     use Babel_m                 , only : System_Characteristics , trj
     use Structure_Builder       , only : Unit_Cell
-    use Semi_Empirical_Parms    , only : Define_EH_Parametrization
 
     public :: Prepare_Solvated_System , DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
 
@@ -57,7 +56,7 @@ solvation_radius = minval( trj(frame)%box ) * two / three
 
 allocate( distance(solvent_PBC_size) )
 
-! distance of solvent CG from Molecule CG ...
+! distance of [solvent molecule CG] with [Molecule CG] at the origin ...
 forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CG**2) )
 
 where( distance > solvation_radius ) solvent_PBC%nresid = 0
@@ -161,6 +160,7 @@ end do
 end do
 end do
 
+!  nresidue[atomic] => nresidue[molecule]
 allocate( nres(trj_PBC_size) )
 
 forall( i=1:trj_PBC_size )  nres(i)%PTR => trj_PBC(i)%nresid
@@ -267,8 +267,8 @@ end subroutine Sort_Fragments
  subroutine DeAllocate_TDOS( TDOS , flag )
 !=========================================
 implicit none
-type(f_grid)    , intent(inout) :: TDOS
-character(*)    , intent(in)    :: flag
+type(f_grid)    , optional  , intent(inout) :: TDOS
+character(*)                , intent(in)    :: flag
 
 ! local parameter ...
 integer , parameter   :: npoints = 1500
@@ -293,8 +293,8 @@ end subroutine DeAllocate_TDOS
  subroutine DeAllocate_PDOS( PDOS , flag )
 !=========================================
 implicit none
-type(f_grid)    , allocatable   , intent(inout) :: PDOS(:)
-character(*)                    , intent(in)    :: flag
+type(f_grid)    , optional  , allocatable   , intent(inout) :: PDOS(:)
+character(*)                                , intent(in)    :: flag
 
 ! local parameter ...
 integer , parameter   :: npoints = 1500
@@ -318,6 +318,13 @@ select case( flag )
             allocate( PDOS(i)%grid(npoints) )
             allocate( PDOS(i)%func(npoints) )
             allocate( PDOS(i)%average(npoints) , source = 0.d0)
+
+            if( allocated(trj) ) then
+                PDOS(i) % residue = trj(1) % list_of_residues(i) 
+            else
+                PDOS(i) % residue = unit_cell % list_of_residues(i)
+            end if
+            
         end do
 
     case( "dealloc" )
@@ -333,8 +340,8 @@ end subroutine DeAllocate_PDOS
  subroutine DeAllocate_SPEC( SPEC , flag )
 !=========================================
 implicit none
-type(f_grid)    , intent(inout) :: SPEC
-character(*)    , intent(in)    :: flag
+type(f_grid)    , optional  ,  intent(inout) :: SPEC
+character(*)                , intent(in)     :: flag
 
 ! local parameter ...
 integer , parameter   :: npoints = 1500

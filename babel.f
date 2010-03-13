@@ -2,7 +2,7 @@
 
     use type_m                  
     use Allocation_m            , only : Allocate_UnitCell
-    use Semi_Empirical_Parms    , only : Define_EH_Parametrization
+    use tuning_m                , only : Setting_fragments
 
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_VASP
@@ -102,7 +102,7 @@ character(len=5)    :: keyword
 type(universe)      :: system        
 
 OPEN(unit=3,file='input.pdb',status='old',iostat=ioerr,err=11)
-read(3,'(a72)') System_Characteristics
+read(unit = 3, fmt = 43) System_Characteristics
 
 ! reading unit cell vectors ...
 read(unit=3,fmt=105,iostat=ioerr) keyword
@@ -159,6 +159,7 @@ CALL Coords_from_Universe( Unit_Cell , system )
 deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
 
+43  format(10x,a72)
 100 format(t10, f6.3, t19, f6.3, t28, f6.3)
 105 format(a5)
 115 FORMAT(t12,a5,t18,a3,t23,i4,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
@@ -176,7 +177,6 @@ end subroutine Read_from_PDB
 
 ! local variables ... 
 integer         :: j , n_residues
-character(72)   :: Characteristics
 
 Unit_Cell%atoms = System%N_of_Atoms
 select case( file_type )
@@ -212,14 +212,8 @@ select case( file_type )
 ! unit_cell dimensions ...
 unit_cell % T_xyz =  System % box
 
-! get EH Parms ...
-CALL Define_EH_Parametrization( Unit_Cell , Characteristics )
-
-! verify consistency ...
-if( System_Characteristics /= Characteristics ) then
-    print*, System_Characteristics , Characteristics 
-    Pause ">>> Input Parameter Inconsistency <<<"
-end if
+! standard Wolfgang-Helmholtz parameter ...
+Unit_Cell % k_WH = 1.75d0
 
 end subroutine Coords_from_Universe
 !
@@ -447,6 +441,10 @@ do j = 1 , model
             read(unit = 31, fmt = 33, iostat = inputstatus)     &
             trj(j)%atom(i)%MMSymbol , trj(j)%atom(i)%residue , trj(j)%atom(i)%nresid , ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
+
+        ! convert residues to upper case ...
+        forall( i=1:number_of_atoms ) trj(j)%atom(i)%residue = TO_UPPER_CASE( trj(j)%atom(i)%residue )
+
         CALL MMSymbol_2_Symbol( trj(j)%atom )
         CALL Symbol_2_AtNo( trj(j)%atom )
         CALL Setting_Fragments( trj(j) )
@@ -686,7 +684,6 @@ DO i = 1 , a%atoms
 END DO
 
 end subroutine Sym_2_AtNo_XYZ
-
 !
 !
 !
@@ -770,43 +767,6 @@ character(len=1)    :: element
  END DO
 
 end subroutine MMSymbol_2_Symbol
-!
-!
-!
-!==========================================
-subroutine Setting_Fragments( a )
-!==========================================
-implicit none
-type(universe)  , intent(inout) :: a
-
-! local variables ...
-integer  :: i 
-
-! ---------- Table of fragments -------------
-!   Acceptor    =   A       
-!   Donor       =   D 
-!   Molecule    =   M
-!   Solvent     =   S
-!   Cluster     =   C 
-!   Passivator  =   P 
-!--------------------------------------------
-
- DO i = 1 , size(a%atom)
-
-    select case(a%atom(i)%residue)
-        case( 'CCC') 
-            a%atom(i)%fragment = 'C' 
-        case( 'ACN') 
-            a%atom(i)%fragment = 'S' 
-        case( 'PYR') 
-            a%atom(i)%fragment = 'P' 
-    end select
-
- END DO
-
- where( a%atom%residue == donor_residue ) a%atom%fragment = "M"
-
-end subroutine Setting_Fragments
 !
 !
 !

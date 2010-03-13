@@ -43,8 +43,9 @@ module type_m
 
     type molecular
         type(atomic)    , allocatable :: atom(:) 
-        real*8                        :: CG(3)
         real*8                        :: radius
+        real*8                        :: CG(3)
+        real*8                        :: DP(3)
         integer                       :: N_of_Atoms 
         integer                       :: nresid   
         integer                       :: copy_No
@@ -162,10 +163,12 @@ module type_m
 
 
     type f_grid
-        real*8  , allocatable   :: grid (:)
-        real*8  , allocatable   :: func (:)
-        real*8  , allocatable   :: peaks(:)
-        real*8  , allocatable   :: average(:)
+        real*8       , allocatable   :: grid (:)
+        real*8       , allocatable   :: func (:)
+        real*8       , allocatable   :: peaks(:)
+        real*8       , allocatable   :: average(:)
+        character(1)                 :: fragment
+        character(3)                 :: residue
     end type f_grid
 
 
