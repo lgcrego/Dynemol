@@ -16,7 +16,7 @@ module GA_m
     integer , parameter :: Top_Selection  =   4            ! <== top selection < Pop_Size
     real*8  , parameter :: Pop_range      =   1.5d0        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.3           
-    logical , parameter :: Mutate_Cross   =  .true.        ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 

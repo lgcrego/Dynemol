@@ -167,6 +167,11 @@ end do
 
 close(3)
 
+Print 45
+Print*, EH_atom%EHSymbol
+
+include 'formats.h'
+
 17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
 
 end subroutine read_OPT_parameters

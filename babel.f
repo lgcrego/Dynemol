@@ -2,7 +2,7 @@
 
     use type_m                  
     use Allocation_m            , only : Allocate_UnitCell
-    use tuning_m                , only : Setting_fragments
+    use tuning_m                , only : Setting_fragments , ad_hoc_tuning
 
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_VASP
@@ -23,6 +23,67 @@
     end interface
 
 contains
+!
+!
+!
+!=============================================================
+ subroutine Coords_from_Universe( Unit_Cell , System , frame )
+!=============================================================
+ implicit none
+ type(structure)            , intent(out)   :: Unit_Cell
+ type(universe)             , intent(inout) :: System
+ integer        , optional  , intent(in)    :: frame
+
+! local variables ... 
+integer         :: j , n_residues
+
+Unit_Cell%atoms = System%N_of_Atoms
+select case( file_type )
+    case( "structure" )
+        n_residues = size( System%list_of_residues )
+    case( "trajectory" )
+        n_residues = size( trj(1)%list_of_residues )
+    end select
+
+! allocating Unit_Cell structure ...
+CALL Allocate_UnitCell( Unit_Cell , n_residues )
+
+! coordinates and other info from input data ...
+forall( j=1:unit_cell%atoms )
+    unit_cell % coord    (j,:) =  System % atom(j) % xyz(:)
+    unit_cell % AtNo     (j)   =  System % atom(j) % AtNo  
+    unit_cell % fragment (j)   =  System % atom(j) % fragment
+    unit_cell % Symbol   (j)   =  System % atom(j) % Symbol
+    unit_cell % residue  (j)   =  System % atom(j) % residue
+    unit_cell % nr       (j)   =  System % atom(j) % nresid 
+    unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
+end forall
+
+unit_cell%N_of_Solvent_Molecules = System%N_of_Solvent_Molecules
+
+! get list of residues ...
+select case( file_type )
+    case( "structure" )
+        unit_cell%list_of_residues  = System%list_of_residues
+        unit_cell%list_of_fragments = System%list_of_fragments
+    case( "trajectory" )
+        unit_cell%list_of_residues  = trj(1)%list_of_residues
+        unit_cell%list_of_fragments = trj(1)%list_of_fragments
+    end select
+
+! sort the nr indices ...
+CALL Sort_nr( unit_cell )
+
+! unit_cell dimensions ...
+unit_cell % T_xyz =  System % box
+
+! standard Wolfgang-Helmholtz parameter ...
+Unit_Cell % k_WH = 1.75d0
+
+! use ad hoc tuning of parameters ...
+If( ad_hoc ) CALL ad_hoc_tuning( unit_cell , frame )
+
+end subroutine Coords_from_Universe
 !
 !
 !
@@ -123,6 +184,7 @@ end do
 system%N_of_atoms = N_of_atoms
         
 allocate( system%atom(system%N_of_atoms) )
+CALL Initialize_System( system )
 
 !read data ...    
 rewind 3
@@ -165,57 +227,6 @@ deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 115 FORMAT(t12,a5,t18,a3,t23,i4,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
 
 end subroutine Read_from_PDB
-!
-!
-!
-!=====================================================
- subroutine Coords_from_Universe( Unit_Cell , System )
-!=====================================================
- implicit none
- type(structure) , intent(out)    :: Unit_Cell
- type(universe)  , intent(inout)  :: System
-
-! local variables ... 
-integer         :: j , n_residues
-
-Unit_Cell%atoms = System%N_of_Atoms
-select case( file_type )
-    case( "structure" )
-        n_residues = size( System%list_of_residues )
-    case( "trajectory" )
-        n_residues = size( trj(1)%list_of_residues )
-    end select
-
-! allocating Unit_Cell structure ...
-CALL Allocate_UnitCell( Unit_Cell , n_residues )
-
-! coordinates and other info from input data ...
-forall( j=1:unit_cell%atoms )
-    unit_cell % coord    (j,:) =  System % atom(j) % xyz(:)
-    unit_cell % AtNo     (j)   =  System % atom(j) % AtNo  
-    unit_cell % fragment (j)   =  System % atom(j) % fragment
-    unit_cell % Symbol   (j)   =  System % atom(j) % Symbol
-    unit_cell % residue  (j)   =  System % atom(j) % residue
-    unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
-end forall
-
-! get list of residues ...
-select case( file_type )
-    case( "structure" )
-        unit_cell%list_of_residues  = System%list_of_residues
-        unit_cell%list_of_fragments = System%list_of_fragments
-    case( "trajectory" )
-        unit_cell%list_of_residues  = trj(1)%list_of_residues
-        unit_cell%list_of_fragments = trj(1)%list_of_fragments
-    end select
-
-! unit_cell dimensions ...
-unit_cell % T_xyz =  System % box
-
-! standard Wolfgang-Helmholtz parameter ...
-Unit_Cell % k_WH = 1.75d0
-
-end subroutine Coords_from_Universe
 !
 !
 !
@@ -436,6 +447,7 @@ do j = 1 , model
         end do
     
         allocate( trj(j)%atom(number_of_atoms) )
+        CALL Initialize_System( trj(j) )
     
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 33, iostat = inputstatus)     &
@@ -459,6 +471,7 @@ do j = 1 , model
         end do
     
         allocate( trj(j)%atom(number_of_atoms) )
+        CALL Initialize_System( trj(j) )
     
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 37, iostat = inputstatus) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
@@ -572,6 +585,7 @@ do j = 1 , model
         read(unit = 13, fmt = 21, iostat = inputstatus) idx
 
         allocate( trj(j)%atom(atoms) )
+        CALL Initialize_System( trj(j) )
 
         do i = 1 , atoms
             read(unit = 13, fmt = 22, iostat = inputstatus) trj(j)%atom(i)%Atno, ( trj(j)%atom(i)%xyz(k) , k=1,3 )
@@ -581,6 +595,7 @@ do j = 1 , model
         read(unit = 13, fmt = 21, iostat = inputstatus) idx
 
         allocate( trj(j)%atom(atoms) )
+        CALL Initialize_System( trj(j) )
 
         do i = 1 , atoms
             read(unit = 13, fmt = 23, iostat = inputstatus) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
@@ -929,6 +944,48 @@ end subroutine Sort_Residues
 !
 !
 !
+!=======================
+ subroutine Sort_nr( a )
+!=======================
+ implicit none
+ type(structure)  , intent(inout)  :: a
+
+! local variables ... 
+integer                 :: i ,  j , size_nr_list , last_nr
+integer , allocatable   :: nr_list(:) , indx(:)
+
+last_nr = 0
+
+! pack => sort => reset a%nr ...
+do i = 1 , size(a%list_of_residues)
+
+    size_nr_list = count( a%residue == a%list_of_residues(i) ) 
+    allocate( nr_list(size_nr_list) )
+    allocate( indx   (size_nr_list) )
+
+    nr_list = pack( a%nr , a%residue == a%list_of_residues(i) , nr_list ) 
+
+    indx(1) = last_nr + 1
+    do j = 2 , size_nr_list
+        If( nr_list(j) == nr_list(j-1) ) then
+            indx(j) = indx(j-1)
+        else
+            indx(j) = indx(j-1) + 1
+        end If
+    end do
+
+    a%nr = unpack( indx , a%residue == a%list_of_residues(i) , a%nr )
+
+    last_nr = maxval( indx )
+            
+    deallocate( nr_list , indx )
+
+end do
+
+end subroutine Sort_nr
+!
+!
+!
 !======================================
  pure FUNCTION TO_UPPER_CASE ( STRING )
 !======================================
@@ -987,6 +1044,39 @@ do i = 1 , trj%N_of_Solvent_Molecules
 end do
 
 end subroutine Center_of_Gravity
+!
+!
+!
+!================================
+subroutine Initialize_System( a )
+!================================
+implicit none
+type(universe)  :: a
 
+! local variables ...
+integer :: i
+
+forall( i=1:3 ) 
+    a % atom % xyz(i)  = 0.d0
+    a % atom % TorF(i) = "X"
+end forall
+
+a % atom % mass     = 0.d0
+a % atom % charge   = 0.d0
+a % atom % AtNo     = 0
+a % atom % nresid   = 0
+a % atom % residue  = "XXX"
+a % atom % Symbol   = "XXX"
+a % atom % MMsymbol = "XXX"
+a % atom % fragment = "X"
+
+a % N_of_Surface_Atoms      = 0
+a % N_of_Solvent_Atoms      = 0
+a % N_of_Solvent_Molecules  = 0
+
+end subroutine Initialize_System
+!
+!
+!
 end module Babel_m
 

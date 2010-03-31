@@ -3,9 +3,27 @@ module tuning_m
     use type_m
     use constants_m
 
-    public :: Setting_Fragments
+    public :: Setting_Fragments , ad_hoc_tuning
 
     contains
+!
+!
+!
+!==========================================
+ subroutine ad_hoc_tuning( system , frame )
+!==========================================
+implicit none
+type(structure)             , intent(inout) :: system
+integer         , optional  , intent(in)    :: frame
+
+
+where( system % residue == "ALQ" ) system % k_WH = 2.d0
+
+If( present(frame) .AND. (frame ==1 ) )Print 46
+
+include 'formats.h'
+
+end subroutine ad_hoc_tuning
 !
 !
 !

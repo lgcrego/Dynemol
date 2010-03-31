@@ -8,7 +8,8 @@ module type_m
     type structure
         integer                    :: atoms 
         integer                    :: N_of_electrons
-        integer                    :: molecule
+        integer                    :: N_of_Solvent_Molecules
+        integer      , allocatable :: nr(:)
         integer      , allocatable :: copy_No(:)
         integer      , allocatable :: BasisPointer(:)
         character(1) , allocatable :: fragment(:)
@@ -93,6 +94,7 @@ module type_m
         integer          :: l
         integer          :: m
         integer          :: atom
+        integer          :: nr
         integer          :: copy_No
         integer          :: AtNo
         integer          :: Nzeta
@@ -104,7 +106,7 @@ module type_m
         real*8           :: y
         real*8           :: z
         character(len=2) :: symbol
-        character(len=2) :: fragment
+        character(len=1) :: fragment
         character(len=3) :: EHSymbol
         character(len=3) :: residue 
     end type STO_basis

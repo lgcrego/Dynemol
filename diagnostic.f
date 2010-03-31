@@ -78,9 +78,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 
- CALL DeAllocate_TDOS( flag="dealloc" )
- CALL DeAllocate_PDOS( flag="dealloc" )
- CALL DeAllocate_SPEC( flag="dealloc" )
+CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
+CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
+CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
 
  include 'formats.h'
 

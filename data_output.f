@@ -65,7 +65,7 @@ integer         :: i , nr , nf , N_of_residues , N_of_fragments
 real*8          :: t , t_rate
 character(12)   :: string
 
-! . save TDOS ...
+! save TDOS ...
 If( present(TDOS) ) then
     OPEN( unit=3 , file='TDOS.dat' , status='unknown' )
         do i = 1 , size(TDOS%func)
@@ -74,7 +74,7 @@ If( present(TDOS) ) then
     CLOSE(3)
 end if
 
-! . save PDOS ...
+! save PDOS ...
 If( present(PDOS) ) then
     N_of_residues = size( PDOS )
     do nr = 1 , N_of_residues
@@ -87,7 +87,7 @@ If( present(PDOS) ) then
     end do
 end if
 
-! . save peak and broadened specs ...
+! save peak and broadened specs ...
 If( spectrum ) then
     OPEN( unit=3 , file='spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
@@ -96,7 +96,7 @@ If( spectrum ) then
     CLOSE(3)
 end if
 
-! . save time-dependent populations ...
+! save time-dependent populations ...
 If( survival ) then
     t_rate = (t_f - t_i) / float(n_t)
     N_of_fragments = size( list_of_fragments )

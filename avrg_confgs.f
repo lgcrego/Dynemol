@@ -27,6 +27,8 @@ module Sampling_m
                                      DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
 
+    use dipole_potential_m  , only : Solvent_Molecule_DP
+
     public :: Avrg_Confgs 
 
     private
@@ -50,6 +52,9 @@ type(eigen)                     :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(universe)                  :: Solvated_System
+
+integer:: j
+real*8 :: pot
 
 ! preprocessing stuff .....................................................
 
@@ -77,15 +82,17 @@ do frame = 1 , size(trj) , frame_step
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
-            CALL Coords_from_Universe( Unit_Cell , Solvated_System )
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
 
         case( "solid_sys" )
 
-            CALL Coords_from_Universe( Unit_Cell , trj(frame) )
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
     end select
 
     CALL Generate_Structure( frame )
+
+    CALL Solvent_Molecule_DP( Extended_Cell )
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
@@ -108,7 +115,7 @@ do frame = 1 , size(trj) , frame_step
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
          DeAllocate             ( ExCell_basis )
-
+print*, frame
 end do
 
 ! average over configurations ...
@@ -116,10 +123,10 @@ If( file_type == "trajectory" ) QDyn = QDyn / size(trj)
 
 CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
 
-CALL DeAllocate_TDOS( flag="dealloc" )
-CALL DeAllocate_PDOS( flag="dealloc" )
-CALL DeAllocate_SPEC( flag="dealloc" )
-CALL DeAllocate_QDyn( flag="dealloc" )
+CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
+CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
+CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
+CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="dealloc" )
 
 end subroutine Avrg_Confgs
 

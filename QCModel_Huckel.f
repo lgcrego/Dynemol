@@ -7,6 +7,7 @@
     use Semi_Empirical_Parms
     use Structure_Builder
     use Overlap_Builder
+    use dipole_potential_m        , only : DP_phi
 
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
@@ -103,12 +104,14 @@
 !
 !
 !
+!====================================
  pure function Huckel(i,j,S_ij,basis)
-
+!====================================
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
+! local variables ... 
  real*8  :: k_eff , k_WH , Huckel
 
 !----------------------------------------------------------
@@ -126,6 +129,8 @@
  huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
 
  IF(i == j) huckel = basis(i)%IP
+
+ huckel = huckel + S_ij*DP_phi(i,j,basis)
    
  end function Huckel
 !

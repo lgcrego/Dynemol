@@ -6,6 +6,10 @@
 
 43   FORMAT(/,"============================================================================")
 
+45   FORMAT(/,">>>  Reading Optmized EHT Parameters")
+
+46   FORMAT(/,">>>  Using Ad Hoc tuning ")
+
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
                1x,'# of unit cells = ',I2) 
@@ -14,7 +18,7 @@
 
 52    FORMAT(/,1x,'>>> Hamiltonian  ',I4,'    /     ','time =',F8.4)  
 
-53    FORMAT(1x,'========= STARTING  S_matrix  =========')
+53    FORMAT(/,1x,'========= STARTING  S_matrix  =========')
 
 54    FORMAT(1x,' >>> no PBC')
 
@@ -38,7 +42,7 @@
 
 69    FORMAT(1x,'Sparsity of OVERLAP Mtrx = ',F10.5)
 
-70    FORMAT(1x,'>>> System Characteristics: ',A72)
+70    FORMAT(/,'>>> System Characteristics: ',A72)
 
 73    FORMAT(1x,'Sparsity of DIPOLE Mtrx =',3F7.4)
 

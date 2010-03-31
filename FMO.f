@@ -62,17 +62,24 @@
  
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO, FMO )
 
- CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
+ ! wv_FMO needed only for time-propagation of wv_FMO state ...
+ If( Survival ) then
+     
+     CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
 
-! "entropy" of the FMO states with respect to the system 
- OPEN(unit=9,file='entropy.dat',status='unknown')
- do i = 1 , size(FMO_basis)
-     entropy = - sum( cdabs(FMO%L(:,i))*dlog(cdabs(FMO%L(:,i))) ) 
-     write(9,*) FMO%erg(i) , entropy
- end do
- CLOSE(9)   
+    ! "entropy" of the FMO states with respect to the system 
+    OPEN(unit=9,file='entropy.dat',status='unknown')
+    do i = 1 , size(FMO_basis)
+        entropy = - sum( cdabs(FMO%L(:,i))*dlog(cdabs(FMO%L(:,i))) ) 
+        write(9,*) FMO%erg(i) , entropy
+    end do
+    CLOSE(9)   
 
- DeAllocate( FMO_basis , wv_FMO)
+    DeAllocate( wv_FMO )
+
+ end IF
+
+ DeAllocate( FMO_basis )
 
  do i = 0 , n_part
     Print 59, orbital(i) , FMO%erg(orbital(i))
@@ -92,7 +99,7 @@
 !----------------------------------------------------------------
  type(eigen)                             , intent(inout) :: FMO
  complex*16       , ALLOCATABLE , target , intent(in)    :: CR(:,:)
- character(len=2)                        , intent(in)    :: basis_fragment(:)
+ character(len=1)                        , intent(in)    :: basis_fragment(:)
  character(len=1)                        , intent(in)    :: fragment
  real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
 
@@ -113,7 +120,7 @@
 
 ! . the fragment basis MUST correspond to a contiguous window ... 
  CR_FMO => CR(p1:p2,:)
- 
+
 !-----------------------------------------------------------------------------
 !    writes the isolated molecule wavefunction |k> in the MO basis 
 !    the isolated orbitals are stored in the ROWS of wv_FMO

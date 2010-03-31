@@ -8,7 +8,7 @@
                                              Read_VASP  ,               &
                                              Identify_Fragments ,       &
                                              System_Characteristics ,   & 
-                                             trj
+                                             trj 
     use Allocation_m                , only : Allocate_Structures
     use Semi_Empirical_Parms        , only : atom ,                     &
                                              Include_OPT_parameters
@@ -65,7 +65,7 @@ end subroutine Read_Structure
 integer , intent(in) :: frame
 
 ! local variables ...
-integer :: copy
+integer :: copy , nr_sum
 
 !----------------------------------------------------------
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
@@ -73,16 +73,18 @@ integer :: copy
 
  If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , extended_cell )
 
- k = 0
- copy = 0
+ k      =  0
+ copy   =  0
+ nr_sum =  0
 
  DO ix = -nnx , nnx 
  DO iy = -nny , nny
 
-
      If( (ix /= 0) .OR. (iy /= 0) ) THEN 
 
-        copy = copy + 1
+        copy    =  copy   + 1
+        nr_sum  =  nr_sum + maxval( unit_cell%nr )
+
         FORALL( n=1:unit_cell%atoms )
 
             extended_cell % coord    (k+n,1) =  unit_cell % coord    (n,1) + ix * unit_cell%T_xyz(1)
@@ -93,12 +95,14 @@ integer :: copy
             extended_cell % fragment (k+n)   =  unit_cell % fragment (n)
             extended_cell % Symbol   (k+n)   =  unit_cell % Symbol   (n)
             extended_cell % MMSymbol (k+n)   =  unit_cell % MMSymbol (n)
+            extended_cell % nr       (k+n)   =  unit_cell % nr       (n)   + nr_sum
             extended_cell % residue  (k+n)   =  unit_cell % residue  (n)
             extended_cell % copy_No  (k+n)   =  copy
         
         END FORALL
 
-        k = k + unit_cell%atoms
+        k      =  k      + unit_cell%atoms
+        nr_sum =  nr_sum + maxval( unit_cell%nr )
 
      END IF
 
@@ -114,6 +118,7 @@ integer :: copy
     extended_cell % symbol   (k+n)      =  unit_cell % Symbol   (n)
     extended_cell % MMSymbol (k+n)      =  unit_cell % MMSymbol (n)
     extended_cell % residue  (k+n)      =  unit_cell % residue  (n)
+    extended_cell % nr       (k+n)      =  unit_cell % nr       (n)
     extended_cell % copy_No  (k+n)      =  0
 
  END FORALL
@@ -123,6 +128,8 @@ integer :: copy
 
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
+
+ extended_cell % N_of_Solvent_Molecules = (2*nnx+1) * (2*nny+1) * unit_cell % N_of_Solvent_Molecules
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
  extended_cell%T_xyz(2) = (2*nny+1)*unit_cell%T_xyz(2)
@@ -180,29 +187,30 @@ integer :: copy
 
         do m = -l , +l
 
-            basis(k)%atom      =  i
-            basis(k)%AtNo      =  AtNo
-            basis(k)%copy_No   =  system%copy_No  (i)
-            basis(k)%symbol    =  system%symbol   (i)
-            basis(k)%fragment  =  system%fragment (i)
-            basis(k)%EHSymbol  =  system%MMSymbol (i)
-            basis(k)%residue   =  system%residue  (i)
+            basis(k) % atom      =  i
+            basis(k) % AtNo      =  AtNo
+            basis(k) % nr        =  system % nr       (i)
+            basis(k) % copy_No   =  system % copy_No  (i)
+            basis(k) % symbol    =  system % symbol   (i)
+            basis(k) % fragment  =  system % fragment (i)
+            basis(k) % EHSymbol  =  system % MMSymbol (i)
+            basis(k) % residue   =  system % residue  (i)
 
-            basis(k)%n         =  atom(AtNo)%Nquant(l)
-            basis(k)%l         =  l
-            basis(k)%m         =  m
+            basis(k) % n         =  atom(AtNo) % Nquant(l)
+            basis(k) % l         =  l
+            basis(k) % m         =  m
 
-            basis(k)%IP        =  atom(AtNo)%IP    (l)
-            basis(k)%Nzeta     =  atom(AtNo)%Nzeta (l)
-            basis(k)%coef(1)   =  atom(AtNo)%coef  (l,1)
-            basis(k)%coef(2)   =  atom(AtNo)%coef  (l,2)
-            basis(k)%zeta(1)   =  atom(AtNo)%zeta  (l,1)
-            basis(k)%zeta(2)   =  atom(AtNo)%zeta  (l,2)
-            basis(k)%k_WH      =  system%k_WH(i)
+            basis(k) % IP        =  atom(AtNo) % IP    (l)
+            basis(k) % Nzeta     =  atom(AtNo) % Nzeta (l)
+            basis(k) % coef(1)   =  atom(AtNo) % coef  (l,1)
+            basis(k) % coef(2)   =  atom(AtNo) % coef  (l,2)
+            basis(k) % zeta(1)   =  atom(AtNo) % zeta  (l,1)
+            basis(k) % zeta(2)   =  atom(AtNo) % zeta  (l,2)
+            basis(k) % k_WH      =  system % k_WH(i)
 
-            basis(k)%x         =  system%coord (i,1)
-            basis(k)%y         =  system%coord (i,2)
-            basis(k)%z         =  system%coord (i,3)
+            basis(k) % x         =  system % coord (i,1)
+            basis(k) % y         =  system % coord (i,2)
+            basis(k) % z         =  system % coord (i,3)
 
             k = k + 1
 

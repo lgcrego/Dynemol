@@ -1,10 +1,11 @@
  integer 					:: initial_state , HOMO_mol , frame_step 
- logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis
+ logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
  logical 					:: verbose
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
  character (len=11)			:: DRIVER , file_type
+ logical , parameter 		:: T_ = .true. , F_ = .false. 
 
  parameter (& 
 !--------------------------------------------------------------------
@@ -12,11 +13,12 @@
 !
 			DRIVER		 = "solvated_M",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
 !			
-            GaussianCube = .false.  ,           &
-			Survival     = .false.  ,           &
-            SPECTRUM     = .false.  ,           & 
-			DP_Moment    = .false.  ,           &
-			OPT_basis    = .false.  ,           & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+            GaussianCube = F_ ,                 &
+			Survival     = F_ ,                 &
+            SPECTRUM     = T_ ,                 & 
+			DP_Moment    = F_ ,                 &
+			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			ad_hoc       = T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
@@ -60,7 +62,7 @@
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
 !
-            occupied    =  real_interval( -13.30d0 , -11.01d0 ) , & 
+            occupied    =  real_interval( -14.50d0 , -11.01d0 ) , & 
 
             empty       =  real_interval( -11.00d0 , -6.00d0 )  , & 
 

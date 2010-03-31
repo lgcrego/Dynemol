@@ -87,9 +87,9 @@ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(508,:) , UNI%R(:,508) , 508 
 
 CALL Dump_stuff( TDOS , PDOS , SPEC )
 
-CALL DeAllocate_TDOS( flag="dealloc" )
-CALL DeAllocate_PDOS( flag="dealloc" )
-CALL DeAllocate_SPEC( flag="dealloc" )
+CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
+CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
+CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
 
 include 'formats.h'
 
