@@ -10,16 +10,19 @@
     implicit real*8      (a-h,o-y)
     implicit complex*16  (z)
 
-    public :: Gaussian_Cube_Format
+    public :: Gaussian_Cube_Format 
 
     private
+
+    real*8 , parameter :: fringe = 8.d0
 
  contains   
 !
 !
 !
- subroutine  Gaussian_Cube_Format(bra,ket,it,t)
-
+!======================================================
+ subroutine  Gaussian_Cube_Format( bra , ket , it , t )
+!======================================================
  complex*16 , intent(in) :: bra(:), ket(:)
  real*8     , intent(in) :: t
  integer    , intent(in) :: it 
@@ -41,6 +44,9 @@
  f_name = 'shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
+! bounding box for isosurfaces ... 
+ CALL BoundingBox( unit_cell ) 
+
 !! ATTENTION !! must have (n_step+1)mod(6) = 0
  nx_steps = 60 
  ny_steps = 71 
@@ -55,9 +61,9 @@
  forall(i=1:unit_cell%atoms,j=1:3) xyz(i,j) = unit_cell%coord(i,j) - unit_cell%Center_of_Mass(j)
 
 ! initial corner of the volume Box 
- a = minval(xyz(:,1)) - 2.0
- b = minval(xyz(:,2)) - 2.0
- c = minval(xyz(:,3)) - 2.0     
+ a = minval(xyz(:,1)) - fringe / two
+ b = minval(xyz(:,2)) - fringe / two
+ c = minval(xyz(:,3)) - fringe / two
 
 !  start writing Gaussian cube files 
  write(4,*) System_Characteristics
@@ -163,6 +169,23 @@
  include 'formats.h'
 
  end subroutine Gaussian_Cube_Format
+!
+!
+!
+!===========================
+ subroutine BoundingBox( a )
+!===========================
+ type(structure) :: a
+
+!  size of the box
+ forall(i=1:3) &
+ a%BoxSides(i) = maxval(a%coord(:,i)) - minval(a%coord(:,i)) + fringe
+
+!  find the center of mass
+ forall(i=1:3) &
+ a%Center_of_Mass(i) = sum(a%coord(:,i)) / a%atoms
+
+end subroutine BoundingBox
 !
 !
 end module Psi_squared_cube_format

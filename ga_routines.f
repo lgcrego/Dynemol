@@ -11,12 +11,12 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   20         
-    integer , parameter :: N_generations  =   20         
-    integer , parameter :: Top_Selection  =   4            ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   1.5d0        ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.3           
-    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    integer , parameter :: Pop_Size       =   150         
+    integer , parameter :: N_generations  =   1000         
+    integer , parameter :: Top_Selection  =   20           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.05d0       ! <== range of variation of parameters
+    real*8  , parameter :: Mutation_rate  =   0.4           
+    logical , parameter :: Mutate_Cross   =   F_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -41,9 +41,24 @@ LUMO = HOMO + 1
 
 chi(:) = 0.d0   ;   weight(:) = 1.d0
 
-! TiO2 - O2 vacant defect states in the gap ...
-middle_gap = -12.d0
-forall( k=1:4) chi(k) = abs( GA%erg(504+k) - middle_gap )
+!============================================================
+! IODIDES ...
+! HOMO-LUMO gaps ...
+chi(1) = ( GA%erg(8) - GA%erg(7) ) - 2.5633    ; weight(1) = 2.0d0
+
+chi(2) = ( GA%erg(8) - GA%erg(6) ) - 2.5633    ; weight(1) = 2.0d0
+
+chi(3) = ( GA%erg(7) - GA%erg(6) ) - 0.0000    ; weight(1) = 1.0d0
+
+chi(4) = ( GA%erg(8) - GA%erg(5) ) - 3.8477    ; weight(2) = 1.0d0 
+
+chi(5) = ( GA%erg(7) - GA%erg(5) ) - 1.2844    ; weight(3) = 1.0d0 
+
+chi(6) = ( GA%erg(6) - GA%erg(5) ) - 1.2844    ; weight(3) = 1.0d0 
+
+! Total DIPOLE moment ...
+chi(7) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(4) = 5.d0
+!============================================================
 
 evaluate_cost = sqrt( dot_product(chi,chi) )
 

@@ -649,8 +649,10 @@ integer :: i
             a(i)%AtNo = 22 
         case( 'MN','Mn') 
             a(i)%AtNo = 25 
+        case( 'I' ) 
+            a(i)%AtNo = 53 
         case default
-            print*, ' >> unkown atom found ; execution terminated <<' 
+            print*, ' >> unknown atom found ; execution terminated <<' 
             stop
     end select
 
@@ -691,8 +693,10 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 22 
         case( 'MN','Mn') 
             a%AtNo(i) = 25 
+        case( 'I' ) 
+            a%AtNo(i) = 53 
         case default
-            print*, ' >> unkown atom found ; execution terminated <<' 
+            print*, ' >> unknown atom found ; execution terminated <<' 
             stop
     end select
 
@@ -733,8 +737,10 @@ integer :: i
             a(i)%Symbol = 'Ti '
         case( 25) 
             a(i)%Symbol = 'Mn'
+        case( 53) 
+            a(i)%Symbol = 'I'
         case default
-            print*, ' >> unkown atom found ; execution terminated <<' 
+            print*, ' >> unknown atom found ; execution terminated <<' 
             stop
     end select
 

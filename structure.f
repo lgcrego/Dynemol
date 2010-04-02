@@ -137,8 +137,6 @@ integer :: copy , nr_sum
 
  if( frame == 1 ) CALL diagnosis( Extended_Cell )
     
- CALL BoundingBox(unit_cell)
-
  include 'formats.h'
 
  end subroutine generate_structure
@@ -222,22 +220,6 @@ integer :: copy , nr_sum
 
  end subroutine Basis_Builder
 !
-!
-!
-!
- subroutine BoundingBox(a)
-
- type(structure) :: a
-
-!  size of the box
- forall(i=1:3) &
- a%BoxSides(i) = maxval(a%coord(:,i)) - minval(a%coord(:,i)) + 4.0
-
-!  find the center of mass
- forall(i=1:3) &
- a%Center_of_Mass(i) = sum(a%coord(:,i)) / a%atoms
-
- end subroutine BoundingBox
 !
 !
 !
