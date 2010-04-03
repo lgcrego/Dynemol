@@ -5,6 +5,8 @@ module dipole_potential_m
     use mkl95_precision
     use mkl95_blas
     use Semi_Empirical_Parms    , only : atom
+    use DP_FMO_m                , only : DP_FMO_analysis
+    use Multipole_Core          , only : Util_Multipoles
 
     public :: Solvent_Molecule_DP , DP_phi
 
@@ -28,11 +30,14 @@ type(structure) , intent(inout) :: a
 
 ! local variables ...
 integer              :: i , j , nr , last_nr , first_nr , i1 , i2 , nr_atoms
-real*8 , allocatable :: temp1(:,:) , temp2(:,:) , Qi_Ri(:,:) 
 real*8               :: total_valence , norm , vector(3)
+real*8 , allocatable :: Q_center(:,:) , DP_FMO(:,:) , Qi_Ri(:,:) 
 
 ! local parameter ...
 real*8 , parameter   :: DP_value = 3.84d0   ! <== Debye
+
+! initialize multipole routines ...
+CALL Util_Multipoles
 
 ! garbage collection before restart calculations ...
 If( allocated(Center_of_Charge) ) deallocate(Center_of_Charge)
@@ -46,17 +51,17 @@ last_nr  = maxval( a%nr , a%fragment == "S" )
 ! consistency check ...
 If( a%N_of_Solvent_Molecules /= (last_nr - first_nr + 1) ) pause ">>> N_of_Solvent_Molecules /= 'S' count <<<"
 
-allocate(temp1 (last_nr,3) , source = 0.d0)
-allocate(temp2 (last_nr,3) , source = 0.d0)
-allocate(Qi_Ri (a%atoms,3) , source = 0.d0)
+allocate(Q_center (last_nr,3) , source = 0.d0)
+allocate(DP_FMO   (last_nr,3) , source = 0.d0)
+allocate(Qi_Ri    (a%atoms,3) , source = 0.d0)
 
 do nr = first_nr , last_nr 
 
-    ! No of atoms of nr tag ...
+    ! No of atoms with tag nr ...
     nr_atoms = count( a%nr == nr ) 
 
     ! position of nr residue in structure ...
-    i1 = minloc( a%nr , 1 , a%nr == nr   ) 
+    i1 = minloc( a%nr , 1 , a%nr == nr ) 
     i2 = (i1-1) + nr_atoms 
 
     !-----------------------------------------------------------------------------------------------
@@ -66,17 +71,18 @@ do nr = first_nr , last_nr
 
     total_valence = sum( [ (atom(a%AtNo(i))%Nvalen , i=i1,i2) ] )
 
-    forall(j=1:3) temp1(nr,j) = sum( Qi_Ri(i1:i2,j) ) / total_valence
+    forall(j=1:3) Q_center(nr,j) = sum( Qi_Ri(i1:i2,j) ) / total_valence
     !-----------------------------------------------------------------------------------------------
 
     !-----------------------------------------------------------------------------------------------
     ! calculate the dipole vector ...
 
-    forall( j=1:3 ) vector(j) = (a%coord(i1+1,j) - a%coord(i1,j))  
+    CALL DP_FMO_analysis( a , Q_center(nr,:) , DP_FMO(nr,:) , nr ) 
 
-    norm = sqrt( dot_product(vector,vector) )
-
-    temp2(nr,:) = vector(:) / norm
+! for mechanical calculation of DP_FMO ...    
+!    forall( j=1:3 ) vector(j) = (a%coord(i1+1,j) - a%coord(i1,j))  
+!    norm = sqrt( dot_product(vector,vector) )
+!    DP_FMO(nr,:) = ( vector(:) / norm ) * DP_value
 
     !-----------------------------------------------------------------------------------------------
 
@@ -88,15 +94,15 @@ allocate( nr_Solvent_Mol    ( last_nr-first_nr+1 )     )
 
 forall( j=1:3 ) 
 
-    Center_of_Charge( : , j ) = temp1( first_nr:last_nr , j ) 
-    DP_Solvent_Mol  ( : , j ) = temp2( first_nr:last_nr , j ) * DP_value * DP_potential_factor
+    Center_of_Charge( : , j ) = Q_center( first_nr:last_nr , j ) 
+    DP_Solvent_Mol  ( : , j ) = DP_FMO  ( first_nr:last_nr , j ) * DP_potential_factor
 
 end forall
 
 ! save list of nr indices for use in DP_phi ...
 nr_Solvent_Mol = [ ( i , i=first_nr,last_nr ) ]
 
-deallocate( temp1 , temp2 , Qi_Ri )
+deallocate( Q_center , DP_FMO , Qi_Ri )
 
 end subroutine solvent_molecule_DP
 !

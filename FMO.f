@@ -27,7 +27,7 @@
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  complex*16      , allocatable , intent(in)  :: CR(:,:)
- type(eigen)                   , intent(out) :: FMO
+ type(C_eigen)                 , intent(out) :: FMO
 
 ! local variables ...
  type(structure)               :: FMO_system
@@ -97,7 +97,7 @@
 !----------------------------------------------------------------
  subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
 !----------------------------------------------------------------
- type(eigen)                             , intent(inout) :: FMO
+ type(C_eigen)                           , intent(inout) :: FMO
  complex*16       , ALLOCATABLE , target , intent(in)    :: CR(:,:)
  character(len=1)                        , intent(in)    :: basis_fragment(:)
  character(len=1)                        , intent(in)    :: fragment
@@ -161,7 +161,7 @@
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  real*8          , ALLOCATABLE , intent(out) :: wv_FMO(:,:)
- type(eigen)                   , intent(out) :: FMO       
+ type(C_eigen)                 , intent(out) :: FMO       
 
  integer               :: N_of_molecule_electrons, i, j
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) 

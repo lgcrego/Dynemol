@@ -19,7 +19,7 @@ subroutine  Optical_Transitions( system , basis , QM , SPEC , internal_sigma )
 !=============================================================================
 type(structure)                , intent(in)     :: system
 type(STO_basis)                , intent(in)     :: basis(:)
-type(eigen)                    , intent(in)     :: QM
+type(C_eigen)                  , intent(in)     :: QM
 type(f_grid)                   , intent(inout)  :: SPEC
 real*8          , OPTIONAL     , intent(in)     :: internal_sigma
 
@@ -104,7 +104,7 @@ subroutine  Transition_Dipole_Builder(system, basis, QM, DP)
 !------------------------------------------------------------
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
-type(eigen)     , intent(in)    :: QM
+type(C_eigen)   , intent(in)    :: QM
 type(transition), intent(inout) :: DP
 
 ! . local variables

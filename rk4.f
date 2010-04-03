@@ -17,8 +17,8 @@ module RK_m
 !----------------------------------------------------
  type(structure) , intent(in) :: system
  type(STO_basis) , intent(in) :: basis(:)
- type(eigen)     , intent(in) :: QM
- type(eigen)     , intent(in) :: FMO
+ type(C_eigen)   , intent(in) :: QM
+ type(C_eigen)   , intent(in) :: FMO
 
 ! . local variables ...
  integer                    :: nstp , n_OK , n_BAD , dim_f

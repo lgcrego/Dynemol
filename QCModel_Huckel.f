@@ -16,17 +16,18 @@
 !
 !
 !
+!==================================================
  subroutine EigenSystem( system, basis, QM , flag )
-
- type(structure)               , intent(in)  :: system
- type(STO_basis)               , intent(in)  :: basis(:)
- type(eigen)                   , intent(out) :: QM
+!==================================================
+ type(structure)               , intent(in)    :: system
+ type(STO_basis)               , intent(in)    :: basis(:)
+ type(C_eigen)                 , intent(out)   :: QM
  integer          , optional   , intent(inout) :: flag          
 
 ! . local variables 
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
  real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
-
+! . local parameters
  real*8  , parameter   :: one = 1.d0 , zero = 0.d0
  
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -37,6 +38,7 @@
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
 
+! clone S_matrix because SYGVD will destroy it ... 
  dumb_s = S_matrix
  
  do j = 1 , size(basis)

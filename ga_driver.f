@@ -26,8 +26,8 @@ implicit none
  real*8                         :: DP(3)
  character(3)                   :: residue
  logical                        :: DIPOLE_
- type(eigen)                    :: UNI
- type(eigen)                    :: FMO
+ type(C_eigen)                  :: UNI
+ type(C_eigen)                  :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(OPT)                      :: REF
@@ -53,7 +53,7 @@ CALL Generate_Structure(1)
 CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
 ! setting up constraints ...
-!CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
+CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
 allocate( REF%erg(size(UNI%erg)) )
 REF%erg = UNI%erg

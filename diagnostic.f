@@ -28,8 +28,8 @@ implicit none
  integer                        :: i , nr , N_of_residues
  character(3)                   :: residue
  logical                        :: FMO_ , DIPOLE_
- type(eigen)                    :: UNI
- type(eigen)                    :: FMO
+ type(C_eigen)                  :: UNI
+ type(C_eigen)                  :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 

@@ -76,7 +76,7 @@ end subroutine Total_DOS
 subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
 !===========================================================================
 type(structure)             , intent(in)    :: system
-type(eigen)                 , intent(in)    :: QM
+type(C_eigen)               , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma

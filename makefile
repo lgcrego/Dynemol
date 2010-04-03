@@ -26,8 +26,8 @@ INCS = $(INCS_MKL)
 #-----------------------------------------------------------------------
 
 SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o tuning.o babel.o structure.o \
-		 pbc.o overlap_D.o STO.o dipole_phi.o QCModel_Huckel.o projectors.o FMO.o data_output.o film_STO.o \
-		 DOS_m.o multip_core.o oscillator.o QOptics.o ga_routines.o solvated_M.o schroedinger.o rk4.o \
+		 pbc.o overlap_D.o STO.o multip_core.o DP_FMO.o dipole_phi.o QCModel_Huckel.o projectors.o FMO.o data_output.o \
+		 film_STO.o DOS_m.o oscillator.o QOptics.o ga_routines.o solvated_M.o schroedinger.o rk4.o \
 		 diagnostic.o qdynamics.o ga_driver.o avrg_confgs.o main.o
 
 a: $(SOURCE)  

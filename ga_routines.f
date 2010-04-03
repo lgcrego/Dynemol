@@ -44,6 +44,7 @@ chi(:) = 0.d0   ;   weight(:) = 1.d0
 !============================================================
 ! IODIDES ...
 ! HOMO-LUMO gaps ...
+
 chi(1) = ( GA%erg(8) - GA%erg(7) ) - 2.5633    ; weight(1) = 2.0d0
 
 chi(2) = ( GA%erg(8) - GA%erg(6) ) - 2.5633    ; weight(1) = 2.0d0
@@ -137,7 +138,7 @@ real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,
 real*8                          :: GA_DP(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , j , l , generation , info , Pop_start
-type(eigen)                     :: GA_UNI
+type(C_eigen)                   :: GA_UNI
 
 ! reading input-GA key ...
 CALL Read_GA_key

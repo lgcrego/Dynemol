@@ -48,7 +48,7 @@ real*8          , allocatable   :: QDyn(:,:)
 character(3)                    :: residue
 character(1)    , allocatable   :: QDyn_fragments(:)
 logical                         :: FMO_ , DIPOLE_
-type(eigen)                     :: UNI , FMO
+type(C_eigen)                   :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(universe)                  :: Solvated_System
@@ -92,9 +92,9 @@ do frame = 1 , size(trj) , frame_step
 
     CALL Generate_Structure( frame )
 
-    CALL Solvent_Molecule_DP( Extended_Cell )
-
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
+
+    CALL Solvent_Molecule_DP( Extended_Cell )
 
     CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

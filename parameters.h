@@ -28,7 +28,7 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1   ,              & ! <== step for avrg_confgs
+			frame_step    =  50   ,              & ! <== step for avrg_confgs
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !

@@ -112,11 +112,18 @@ module type_m
     end type STO_basis
 
 
-    type eigen
+    type C_eigen
         complex*16 , allocatable :: R(:,:)
         complex*16 , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
-    end type eigen
+    end type C_eigen
+
+
+    type R_eigen
+        real*8     , allocatable :: R(:,:)
+        real*8     , allocatable :: L(:,:)
+        real*8     , allocatable :: erg(:)
+    end type R_eigen
 
 
     type spin_orbital

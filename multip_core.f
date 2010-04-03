@@ -9,7 +9,13 @@ module Multipole_Core
 
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
-    public :: Dipole_Matrix , Center_of_Charge
+    public :: Dipole_Matrix 
+    public :: Center_of_Charge
+    public :: rotationmultipoles
+    public :: multipole_messages
+    public :: multipoles1c
+    public :: multipoles2c
+    public :: Util_Multipoles
 
     private
 
@@ -81,6 +87,7 @@ real*8          , allocatable :: R_vector(:,:)
 complex*16      , allocatable :: a(:,:), b(:,:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
+! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
 complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 

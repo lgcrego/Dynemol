@@ -116,8 +116,8 @@ subroutine RK_setup( system , basis , QM , FMO , rho , dim_rho )
 !---------------------------------------------------------------
  type(structure)                    , intent(in)    :: system
  type(STO_basis)                    , intent(in)    :: basis(:)
- type(eigen)                        , intent(in)    :: QM
- type(eigen)                        , intent(in)    :: FMO
+ type(C_eigen)                      , intent(in)    :: QM
+ type(C_eigen)                      , intent(in)    :: FMO
  complex*16         , allocatable   , intent(out)   :: rho(:,:)
  integer                            , intent(out)   :: dim_rho
 

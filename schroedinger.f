@@ -24,8 +24,8 @@
 
  type(structure) , intent(in)               :: system
  type(STO_basis) , intent(in)               :: basis(:)
- type(eigen)     , intent(in)               :: UNI 
- type(eigen)     , intent(in)               :: FMO 
+ type(C_eigen)   , intent(in)               :: UNI 
+ type(C_eigen)   , intent(in)               :: FMO 
  real*8          , intent(inout)            :: QDyn(:,:)
 
 ! local variables ...
