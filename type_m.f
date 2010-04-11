@@ -36,7 +36,7 @@ module type_m
         integer                       :: nresid 
         integer                       :: copy_No
         character(3)                  :: residue
-        character(3)                  :: Symbol
+        character(2)                  :: Symbol
         character(3)                  :: MMSymbol
         character(1)                  :: TorF(3)
         character(1)                  :: fragment

@@ -1,6 +1,6 @@
  integer 					:: initial_state , HOMO_mol , frame_step 
  logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
- logical 					:: verbose
+ logical 					:: verbose , DP_field_
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
@@ -11,11 +11,11 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "solvated_M",	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
+			DRIVER		 = "solid_sys"   ,	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
 !			
             GaussianCube = F_ ,                 &
 			Survival     = F_ ,                 &
-            SPECTRUM     = T_ ,                 & 
+            SPECTRUM     = F_ ,                 & 
 			DP_Moment    = F_ ,                 &
 			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       = T_ ,                 & ! <== ad hoc tuning of parameters
@@ -24,20 +24,22 @@
 !
             file_type	 =  "trajectory" ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
-			
+!--------------------------------------------------------------------
+!           POTENTIALS
+!
+			DP_field_    =  T_  ,               & ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  50   ,              & ! <== step for avrg_confgs
+			frame_step    =  1  ,               & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
             t_f           =  1.d1 ,             & ! <== final time in PICOseconds
-            n_t           =  500   ,            & ! <== number of time steps
+            n_t           =  500  ,             & ! <== number of time steps
             initial_state =  99  ,              & ! <== intial MO
 			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
-
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !

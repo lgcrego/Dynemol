@@ -14,6 +14,7 @@ module diagnostic_m
  use Oscillator_m               , only : Optical_Transitions
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff
+ use dipole_potential_m         , only : Solvent_Molecule_DP
 
  contains
 !
@@ -53,6 +54,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
+ If( DP_field_ )CALL Solvent_Molecule_DP( Extended_Cell )
+
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
  CALL Total_DOS( UNI%erg , TDOS )
@@ -67,10 +70,6 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- do i = 1 , 4
-     print*, UNI%erg(504+i) + 12.d0
- enddo
-
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(505,:) , UNI%R(:,505) , 505 , 0.d0 )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(506,:) , UNI%R(:,506) , 506 , 0.d0 )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(507,:) , UNI%R(:,507) , 507 , 0.d0 )
@@ -78,9 +77,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 
-CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
-CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
-CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
+ CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
+ CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
+ CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
 
  include 'formats.h'
 

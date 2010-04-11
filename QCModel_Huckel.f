@@ -40,14 +40,28 @@
 
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_s = S_matrix
- 
- do j = 1 , size(basis)
-   do i = 1 , j
-     
-     h(i,j) = huckel(i,j,S_matrix(i,j),basis)
 
-   end do
- end do  
+ If( DP_field_ ) then
+ 
+    do j = 1 , size(basis)
+        do i = 1 , j
+     
+            h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
+
+        end do
+    end do  
+
+ else
+
+    do j = 1 , size(basis)
+        do i = 1 , j
+     
+            h(i,j) = huckel(i,j,S_matrix(i,j),basis)
+
+        end do
+    end do  
+
+ end If
 
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
@@ -109,12 +123,14 @@
 !====================================
  pure function Huckel(i,j,S_ij,basis)
 !====================================
+ implicit none
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8  :: k_eff , k_WH , Huckel
+ real*8  :: Huckel
+ real*8  :: k_eff , k_WH , c1 , c2 , c3
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
@@ -132,9 +148,41 @@
 
  IF(i == j) huckel = basis(i)%IP
 
- huckel = huckel + S_ij*DP_phi(i,j,basis)
-   
  end function Huckel
+!
+!
+!================================================
+ pure function Huckel_with_FIELDS(i,j,S_ij,basis)
+!================================================
+ implicit none
+ integer         , intent(in) :: i , j
+ real*8          , intent(in) :: S_ij
+ type(STO_basis) , intent(in) :: basis(:)
+
+! local variables ... 
+ real*8  :: Huckel_with_FIELDS
+ real*8  :: k_eff , k_WH , c1 , c2 , c3
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+ 
+ c1 = basis(i)%IP - basis(j)%IP
+ c2 = basis(i)%IP + basis(j)%IP
+
+ c3 = (c1/c2)*(c1/c2)
+
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+
+ k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+
+ huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+
+ IF(i == j) huckel_with_FIELDS = basis(i)%IP
+
+ huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+   
+ end function Huckel_with_FIELDS
+!
 !
 !
  end module QCModel_Huckel

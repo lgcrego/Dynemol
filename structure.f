@@ -231,6 +231,7 @@ integer :: copy , nr_sum
 
 ! local variables ...
 integer :: N_of_orbitals, N_of_electron, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
+integer :: first_nr , last_nr , N_of_residue_members 
 
 ! total number of orbitals ...
 N_of_orbitals = sum(atom(a%AtNo)%DOS)
@@ -257,8 +258,12 @@ do residue = 1 , size(Unit_Cell%list_of_residues)
 
     N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
    
-    If( N_of_residue_type /= 0 )    Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_type
+!   finding positions of residues in structure and number of residue members ...
+    first_nr = minval( a%nr , a%residue ==  Unit_Cell%list_of_residues(residue) )
+    last_nr  = maxval( a%nr , a%residue ==  Unit_Cell%list_of_residues(residue) )
+    N_of_residue_members = last_nr - first_nr + 1
 
+    If( N_of_residue_type /= 0 )    Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
 end do
 
 ! total number of fragments ...

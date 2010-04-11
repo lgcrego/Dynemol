@@ -167,8 +167,8 @@ end do
 
 close(3)
 
-Print 45
-Print*, EH_atom%EHSymbol
+Print 44
+Print 45 , EH_atom%EHSymbol
 
 include 'formats.h'
 

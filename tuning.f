@@ -5,21 +5,69 @@ module tuning_m
 
     public :: Setting_Fragments , ad_hoc_tuning
 
+    private
+
+    logical , save  :: ad_hoc_verbose_ = T_
+
     contains
 !
 !
 !
-!==========================================
- subroutine ad_hoc_tuning( system , frame )
-!==========================================
+!=========================================
+ subroutine ad_hoc_tuning( struct , univ )
+!=========================================
 implicit none
-type(structure)             , intent(inout) :: system
-integer         , optional  , intent(in)    :: frame
+type(structure) , optional  , intent(inout) :: struct
+type(universe)  , optional  , intent(inout) :: univ
+
+! local variables ...
+integer :: i , ioerr
+
+! edit structure  .....................................................
+
+If( present(struct) ) then
+
+    where( struct % residue == "ALQ" ) struct % k_WH = 2.d0
+
+    where( struct % residue == "ION" ) struct % fragment = "S"
+
+end If
 
 
-where( system % residue == "ALQ" ) system % k_WH = 2.d0
+! edit structure  .....................................................
 
-If( present(frame) .AND. (frame ==1 ) )Print 46
+If( present(univ) ) then
+
+    !===================================
+    !       charge of the atoms ...
+    !===================================
+
+    OPEN(unit=33,file='charge.dat',status='old',iostat=ioerr,err=11)
+    do i = 1 , count(univ % atom % residue =="CCC")
+        read(33,*,iostat=ioerr) univ%atom(i)%charge
+    end do
+    close(33)
+
+11  if( ioerr > 0 ) stop 'charge.dat file not found; terminating execution'
+
+    !===================================
+    !      define MM atom types ...
+    !===================================
+
+    where( univ % atom % charge ==  2.1960d0 ) univ % atom % MMSymbol = "TiB"
+    where( univ % atom % charge ==  1.6470d0 ) univ % atom % MMSymbol = "TiD"
+    where( univ % atom % charge == -1.098d0  ) univ % atom % MMSymbol = "OB" 
+    where( univ % atom % charge == -0.8235d0 ) univ % atom % MMSymbol = "O2c"
+    where( univ % atom % charge == -1.647d0  ) univ % atom % MMSymbol = "O3c" 
+
+end if
+
+!......................................................................
+
+If( ad_hoc_verbose_ ) then
+    Print 46
+    ad_hoc_verbose_ = F_
+end If
 
 include 'formats.h'
 
@@ -47,13 +95,15 @@ integer  :: i
 !--------------------------------------------
 
  DO i = 1 , size(a%atom)
-
+ 
     select case(a%atom(i)%residue)
         case( 'CCC') 
             a%atom(i)%fragment = 'C' 
         case( 'ALQ') 
             a%atom(i)%fragment = 'M' 
         case( 'ACN') 
+            a%atom(i)%fragment = 'S' 
+        case( 'ION') 
             a%atom(i)%fragment = 'S' 
         case( 'PYR') 
             a%atom(i)%fragment = 'P' 

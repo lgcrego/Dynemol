@@ -53,15 +53,12 @@ type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(universe)                  :: Solvated_System
 
-integer:: j
-real*8 :: pot
-
 ! preprocessing stuff .....................................................
 
 FMO_    = ( spectrum .OR. survival  )
 DIPOLE_ = ( spectrum .OR. DP_Moment )
 
-internal_sigma = sigma / float( size(trj)/frame_step )      
+internal_sigma = sigma / ( float(size(trj))/float(frame_step) )      
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
@@ -71,7 +68,6 @@ CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
 N_of_residues = size( Unit_Cell%list_of_residues )
 
 !..........................................................................
-
 
 ! Average over samples : Quantum Dynamics & All that Jazz ...
 
@@ -94,7 +90,7 @@ do frame = 1 , size(trj) , frame_step
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-    CALL Solvent_Molecule_DP( Extended_Cell )
+    If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
 
     CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

@@ -81,7 +81,7 @@ unit_cell % T_xyz =  System % box
 Unit_Cell % k_WH = 1.75d0
 
 ! use ad hoc tuning of parameters ...
-If( ad_hoc ) CALL ad_hoc_tuning( unit_cell , frame )
+If( ad_hoc ) CALL ad_hoc_tuning( unit_cell )
 
 end subroutine Coords_from_Universe
 !
@@ -90,7 +90,7 @@ end subroutine Coords_from_Universe
 !=====================================
  subroutine Read_from_XYZ( Unit_Cell )
 !=====================================
-
+ implicit none
  type(structure) , intent(out) :: unit_cell
 
  character(len=1) :: fragment
@@ -158,55 +158,63 @@ end subroutine Coords_from_Universe
  type(structure)   , intent(out) :: Unit_Cell
 
 ! local variables ...
-integer             :: i , j , ioerr , N_of_atoms , nresidue
-character(len=5)    :: keyword
+integer             :: i , j , N_of_atoms , nresidue
+integer             :: file_err , io_err
+character(len=6)    :: keyword
 type(universe)      :: system        
 
-OPEN(unit=3,file='input.pdb',status='old',iostat=ioerr,err=11)
-read(unit = 3, fmt = 43) System_Characteristics
+OPEN(unit=3 , file='input.pdb',status='old' , iostat=file_err , err=11)
+
+!-------------------------------------------------------------------------------------------
+read(unit=3 , fmt = 43 , iostat=io_err , err=12) System_Characteristics
 
 ! reading unit cell vectors ...
-read(unit=3,fmt=105,iostat=ioerr) keyword
-if ( keyword == "CRYST" ) then
+read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
+if ( keyword == "CRYST1" ) then
     backspace 3
-    read(3,fmt=100) system%box(1) , system%box(2) , system%box(3)
+    read(3 , fmt=100 , iostat=io_err , err=12) system%box(1) , system%box(2) , system%box(3)
 end if
-    
+
 ! scan file for N_of_Atoms ...   
 N_of_atoms = 0
 do
-    read(unit=3,fmt=105,iostat=ioerr) keyword
-    if( keyword == "HETAT" ) then
-        N_of_atoms = N_of_atoms + 1
-    end if
-    if ( keyword == "MASTE" ) exit
+    read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
+    if ( keyword == "MASTER" ) exit
+    N_of_atoms = N_of_atoms + 1
 end do
 system%N_of_atoms = N_of_atoms
-        
+       
 allocate( system%atom(system%N_of_atoms) )
 CALL Initialize_System( system )
 
 !read data ...    
 rewind 3
 do
-    read(unit=3,fmt=105,iostat = ioerr) keyword
-    if( keyword == "HETAT" ) then
-        backspace 3
+    read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
+    if( keyword == "CRYST1" ) then
         do i = 1 , system%N_of_atoms
-            read(3,115)  system%atom(i)%MMSymbol            ,  &    ! <== atom type
+            read(3 , 115 , iostat=io_err , err=12)             &
+                         system%atom(i)%MMSymbol            ,  &    ! <== atom type
                          system%atom(i)%residue             ,  &    ! <== residue name
-                         nresidue                           ,  &    ! <== residue sequence number
-                         (system%atom(i)%xyz(j) , j=1,3)    ,  &    ! <== xyz coordinates 
+                         system%atom(i)%nresid              ,  &    ! <== residue sequence number
+                        (system%atom(i)%xyz(j) , j=1,3)     ,  &    ! <== xyz coordinates 
                          system%atom(i)%Symbol                      ! <== chemical element symbol
         end do
     end if
-    if ( keyword == "MASTE" ) exit
+    if ( keyword == "MASTER" ) exit
 end do
+!-------------------------------------------------------------------------------------------
 
 close(3)
 
+! use ad hoc tuning of parameters ...
+If( ad_hoc ) CALL ad_hoc_tuning( univ=system )
+
 ! convert residues to upper case ...
 forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%atom(i)%residue )
+
+! for use if atomic Symbols are not included in input.pdb ...
+If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%atom )
 
 ! preprocessing the universe system ...
 CALL Symbol_2_AtNo      ( system%atom )
@@ -219,11 +227,12 @@ CALL Sort_Residues      ( system      )
 CALL Coords_from_Universe( Unit_Cell , system )
 
 deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
-11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
+11 if( file_err > 0 ) stop "input.pdb file not found; terminating execution"
+12 if( io_err   > 0 ) stop "problems reading input.pdb; check IO_file_formats"
 
-43  format(10x,a72)
+43  format(a72)
 100 format(t10, f6.3, t19, f6.3, t28, f6.3)
-105 format(a5)
+105 format(a6)
 115 FORMAT(t12,a5,t18,a3,t23,i4,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
 
 end subroutine Read_from_PDB
@@ -233,12 +242,13 @@ end subroutine Read_from_PDB
 !========================================
  subroutine Read_from_Poscar( Unit_Cell )
 !========================================
-
+ implicit none
  type(structure) , intent(out) :: unit_cell
 
+! local variables ... 
  real*8            :: x0 , y0 , z0
  real*8            :: a , b , c
- real*8            :: kWH
+ real*8            :: k_WH
  integer           :: n_kWH , n_residues , i , j , j1 , j2 , n , boundary_atom
  integer           :: N_of_atoms , N_of_elements , N_of_cluster_atoms , N_of_Configurations
  character(len=1)  :: TorF , fragment
@@ -352,33 +362,27 @@ end subroutine Read_from_PDB
 !========================
  subroutine Read_PDB(trj)
 !========================
+implicit none
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ...
-integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , n , m
-real*8                          :: time_1 , time_2 , delta_t 
-character(4)                    :: keyword
-character(1)                    :: test
+integer      :: i , j , k  , n , m , openstatus , inputstatus , model , number_of_atoms
+real*8       :: time_1 , time_2 , delta_t 
+character(4) :: keyword
+character(1) :: test
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) stop " *** Cannot open the file *** "
 
+read(unit = 31, fmt = 43, iostat = inputstatus) System_Characteristics
+
 ! find the number of model frames ...
+model = 0
 do
     read(unit = 31, fmt = 35, iostat = inputstatus) keyword
-    if ( inputstatus /= 0 ) exit
-        
-    if ( keyword == 'info' ) then
-        backspace 31
-        read(unit = 31, fmt = 43, iostat = inputstatus) System_Characteristics
-    end if
-    if ( keyword == 'MODE' ) then
-        backspace 31
-        read(unit = 31, fmt = 36, iostat = inputstatus) model ! <==
-    end if
+    if ( inputstatus /= 0  ) exit
+    if ( keyword == 'MODE' ) model = model + 1
 end do
-! PDB counting starts at 0 ...
-model = model + 1
 
 ! return to the top of the file ...
 rewind 31
@@ -389,6 +393,7 @@ do
     if ( keyword == 'MODE' ) then
         exit
     else
+        ! reading the time ...
         if ( keyword == 'TITL' ) then
             backspace 31
             do 
@@ -411,6 +416,7 @@ do
         backspace 31
         read(unit = 31, fmt = 32, iostat = inputstatus) number_of_atoms ! <==
     else
+        ! reading the time ...
         if ( keyword == 'TITL' ) then
             backspace 31
             do 
@@ -453,6 +459,9 @@ do j = 1 , model
             read(unit = 31, fmt = 33, iostat = inputstatus)     &
             trj(j)%atom(i)%MMSymbol , trj(j)%atom(i)%residue , trj(j)%atom(i)%nresid , ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
+
+        ! use ad hoc tuning of parameters ...
+        If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
 
         ! convert residues to upper case ...
         forall( i=1:number_of_atoms ) trj(j)%atom(i)%residue = TO_UPPER_CASE( trj(j)%atom(i)%residue )
@@ -522,7 +531,6 @@ end do
 ! Formats ...
 32 format(5x, i6)
 33 format(13x, a3, t18, a3, t24, i3, t33, f6.3, t41, f6.3, t49, f6.3)
-34 format(2x, a1, t10, a1, t18, i2, t27, f10.6, t42, f10.6, t59, f10.6)
 35 format(a4)
 36 format(7x, i7)
 37 format(32x, f6.3, t41, f6.3, t49, f6.3)
@@ -531,7 +539,7 @@ end do
 40 format(6x, 3f9.3)
 41 format(f10.5)
 42 format(a1)
-43 format(10x,a72)
+43 format(a72)
 
 end subroutine Read_PDB
 !
@@ -539,12 +547,13 @@ end subroutine Read_PDB
 !=========================
  subroutine Read_VASP(trj)
 !=========================
+implicit none
 type(universe)  , allocatable   , intent(out) :: trj(:)
 
 ! local variables ....
 character(1)                    :: idx
 real*8          , allocatable   :: distance_ligation(:,:) , distance_T(:)
-integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2
+integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2 , model
 
 open(unit = 13, file = 'VASP.trj', status = 'old', action = 'read', iostat = openstatus)
 if( openstatus > 0 ) stop '*** Cannot open the file ***'
@@ -709,6 +718,7 @@ end subroutine Sym_2_AtNo_XYZ
 !===========================
  subroutine AtNo_2_Symbol(a)
 !===========================
+implicit none
 type(atomic) , intent(inout) :: a(:)
 
 ! local variables ...
@@ -753,17 +763,19 @@ integer :: i
 !===============================
  subroutine MMSymbol_2_Symbol(a)
 !===============================
+implicit none
 type(atomic) , intent(inout) :: a(:)
 
 ! local variables ...
 integer             :: i
-character(len=1)    :: element
+character(len=1)    :: element1
+character(len=2)    :: element2
 
  DO i = 1 , size(a)
 
-    write( element,'(A1)' ) adjustl( a(i)%MMSymbol )
+    write( element1,'(A1)' ) adjustl( a(i)%MMSymbol )
 
-    select case( element )
+    select case( element1 )
         case( 'C' ) 
             a(i)%Symbol = 'C' 
         case( 'N' ) 
@@ -772,9 +784,13 @@ character(len=1)    :: element
             a(i)%Symbol = 'O' 
         case( 'H' ) 
             a(i)%Symbol = 'H' 
+        case( 'I' ) 
+            a(i)%Symbol = 'I' 
     end select
 
-    select case( adjustl( a(i)%MMSymbol) )
+    write( element2,'(A2)' ) adjustl( a(i)%MMSymbol )
+
+    select case( element2 )
         case( 'YC' ) 
             a(i)%Symbol = 'C' 
         case( 'YN' ) 
@@ -1072,7 +1088,7 @@ a % atom % charge   = 0.d0
 a % atom % AtNo     = 0
 a % atom % nresid   = 0
 a % atom % residue  = "XXX"
-a % atom % Symbol   = "XXX"
+a % atom % Symbol   = "XX"
 a % atom % MMsymbol = "XXX"
 a % atom % fragment = "X"
 

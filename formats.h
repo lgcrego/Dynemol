@@ -1,14 +1,16 @@
-40   FORMAT(/,"======================   Opitimizing  Parameters  ==========================")
+40    FORMAT(/,"======================   Opitimizing  Parameters  ==========================")
 
-41   FORMAT(/,"MMsymbol    |   s   |   p   |   d   |   IP  |   zeta1   |   zeta2   |   k_WH")
+41    FORMAT(/,"MMsymbol    |   s   |   p   |   d   |   IP  |   zeta1   |   zeta2   |   k_WH")
 
-42   FORMAT(A3,t17,I1,t25,I1,t33,I1,t41,I1,t49,I1,t61,I1,t73,I1)
+42    FORMAT(A3,t17,I1,t25,I1,t33,I1,t41,I1,t49,I1,t61,I1,t73,I1)
 
-43   FORMAT(/,"============================================================================")
+43    FORMAT(/,"============================================================================")
 
-45   FORMAT(/,">>>  Reading Optmized EHT Parameters")
+44    FORMAT(/,">>>  Reading Optmized EHT Parameters")
 
-46   FORMAT(/,">>>  Using Ad Hoc tuning ")
+45    FORMAT(A4)
+
+46    FORMAT(/,">>>  Using Ad Hoc tuning ")
 
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
@@ -60,7 +62,7 @@
 
 121   FORMAT(1x,A2,' atoms  = ',I4)
 
-122   FORMAT(/,1x,A3,' residues  = ',I4)
+122   FORMAT(/,1x,A3,' residues / atoms  = ',I4,' / ',I4)
 
 123   FORMAT(/,1x,A1,' fragment atoms  = ',I4)
 
@@ -72,9 +74,11 @@
 
 154   FORMAT(1x,'DIPOLE Vector = (',3F8.4,') ==> ',F7.4,' Debye')
 
+155   FORMAT(1x,'========= FINISHING DIPOLE MATRIX ANALYSIS ========',/)
+
 156   FORMAT(1x,' >>> no DIPOLE')
 
-155   FORMAT(1x,'========= FINISHING DIPOLE MATRIX ANALYSIS ========',/)
+157   FORMAT(1x,'N_of_Solvent_Molecules in DP_field = ',I4/)
 
 160   FORMAT(/,1x,'Custo : ',I4,' /',I4)
 

@@ -49,7 +49,7 @@ first_nr = minval( a%nr , a%fragment == "S" )
 last_nr  = maxval( a%nr , a%fragment == "S" )
 
 ! consistency check ...
-If( a%N_of_Solvent_Molecules /= (last_nr - first_nr + 1) ) pause ">>> N_of_Solvent_Molecules /= 'S' count <<<"
+Print 157 , (last_nr - first_nr + 1)
 
 allocate(Q_center (last_nr,3) , source = 0.d0)
 allocate(DP_FMO   (last_nr,3) , source = 0.d0)
@@ -103,6 +103,8 @@ end forall
 nr_Solvent_Mol = [ ( i , i=first_nr,last_nr ) ]
 
 deallocate( Q_center , DP_FMO , Qi_Ri )
+
+include 'formats.h'
 
 end subroutine solvent_molecule_DP
 !
