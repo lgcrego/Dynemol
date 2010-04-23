@@ -1,85 +1,144 @@
- module DP_FMO_m
+module GA_QCModel_m
 
+    use type_m
+    use constants_m
     use type_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use Allocation_m            , only : Allocate_Structures
-    use Semi_Empirical_Parms    , only : atom ,                 &
-                                         Include_OPT_parameters
+    use Semi_Empirical_Parms    , only : element => atom  
+    use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
-    use Structure_Builder       , only : Basis_Builder
     use Multipole_Core          , only : rotationmultipoles ,   &
                                          multipole_messages ,   &
                                          multipoles1c ,         &
-                                         multipoles2c
+                                         multipoles2c ,         &
+                                         Center_of_Charge
 
-    public :: DP_FMO_analysis
+    public ::  GA_eigen , GA_DP_Analysis , Mulliken
 
-    private
+    private 
+
+    interface Mulliken
+        module procedure R_Mulliken
+        module procedure C_Mulliken
+    end interface
 
     type(R3_vector) , allocatable :: DP_matrix_AO(:,:)
 
- contains
+contains
 !
 !
-!
-!=============================================================
- subroutine DP_FMO_analysis( system , Q_center , DP_FMO , nr )
-!=============================================================
- type(structure) , intent(in)    :: system
- real*8          , intent(in)    :: Q_center(3)
- real*8          , intent(inout) :: DP_FMO(3)
- integer         , intent(in)    :: nr 
+!======================================================================
+ pure function R_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol )
+!======================================================================
+implicit none
+type(R_eigen)               , intent(in) :: GA
+type(STO_basis)             , intent(in) :: basis(:)
+integer                     , intent(in) :: MO
+integer         , optional  , intent(in) :: atom
+integer         , optional  , intent(in) :: AO_ang
+character(len=*), optional  , intent(in) :: EHSymbol
 
 ! local variables ...
- type(structure)                 :: FMO_system
- type(STO_basis) , allocatable   :: FMO_basis(:)
- type(R_eigen)                   :: FMO
+real*8                :: R_Mulliken
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  
 
-! FMO_system = solvent molecule with residue # nr ...
+allocate( mask  (size(basis)) , source=.false. )
+allocate( mask_1(size(basis)) , source=.false. )
+allocate( mask_2(size(basis)) , source=.false. )
+allocate( mask_3(size(basis)) , source=.false. )
 
- FMO_system%atoms = count( system%nr == nr )
+!====================================================
+IF( .NOT. present(atom) ) then
+    mask_1 = .true.
+else
+    where( basis%atom == atom ) mask_1 = .true.
+end IF
+!====================================================
+IF( .NOT. present(AO_ang) ) then
+    mask_2 = .true.
+else
+    where( basis%l == AO_ang ) mask_2 = .true.
+end IF
+!====================================================
+IF( .NOT. present(EHSymbol) ) then
+    mask_3 = .true.
+else
+    where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
+end IF
+!====================================================
 
- CALL Allocate_Structures( FMO_system%atoms , FMO_system )
+! the total mask ...
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
- forall(i=1:3)
- FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%nr == nr ) 
- end forall
- FMO_system%AtNo       =  pack( system%AtNo      , system%nr == nr ) 
- FMO_system%k_WH       =  pack( system%k_WH      , system%nr == nr )
- FMO_system%symbol     =  pack( system%Symbol    , system%nr == nr )
- FMO_system%fragment   =  pack( system%fragment  , system%nr == nr )
- FMO_system%nr         =  pack( system%nr        , system%nr == nr )
- FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%nr == nr )
- FMO_system%copy_No    =  0
+! perform the population analysis ...
+R_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
- FMO_system%N_of_electrons = sum( atom(FMO_system%AtNo(:))%Nvalen )
+deallocate( mask , mask_1 , mask_2 , mask_3 )
 
- CALL Basis_Builder( FMO_system , FMO_basis )
-
- If( OPT_basis ) CALL Include_OPT_parameters( FMO_basis )
-
- CALL DP_eigen_FMO( FMO_system , FMO_basis , FMO )
-
- CALL Build_DIPOLE_Matrix( FMO_system , FMO_basis )
-
- CALL Dipole_Moment( FMO_system , FMO_basis , FMO%L , FMO%R , Q_center , DP_FMO )
-
- DeAllocate( FMO_basis )
- DeAllocate( DP_matrix_AO )
- DeAllocate( FMO%L , FMO%R , FMO%erg )
-
- end subroutine DP_FMO_analysis
+end function R_Mulliken
 !
 !
 !
-!================================================
- subroutine  DP_eigen_FMO( system , basis , FMO )
-!================================================
- type(structure) , intent(in)  :: system
- type(STO_basis) , intent(in)  :: basis(:)
- type(R_eigen)   , intent(out) :: FMO       
+!======================================================================
+ pure function C_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol )
+!======================================================================
+implicit none
+type(C_eigen)               , intent(in) :: GA
+type(STO_basis)             , intent(in) :: basis(:)
+integer                     , intent(in) :: MO
+integer         , optional  , intent(in) :: atom
+integer         , optional  , intent(in) :: AO_ang
+character(len=*), optional  , intent(in) :: EHSymbol
+
+! local variables ...
+real*8                :: C_Mulliken
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  
+
+allocate( mask  (size(basis)) , source=.false. )
+allocate( mask_1(size(basis)) , source=.false. )
+allocate( mask_2(size(basis)) , source=.false. )
+allocate( mask_3(size(basis)) , source=.false. )
+
+!====================================================
+IF( .NOT. present(atom) ) then
+    mask_1 = .true.
+else
+    where( basis%atom == atom ) mask_1 = .true.
+end IF
+!====================================================
+IF( .NOT. present(AO_ang) ) then
+    mask_2 = .true.
+else
+    where( basis%l == AO_ang ) mask_2 = .true.
+end IF
+!====================================================
+IF( .NOT. present(EHSymbol) ) then
+    mask_3 = .true.
+else
+    where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
+end IF
+!====================================================
+
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
+
+! perform the population analysis ...
+C_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
+
+deallocate( mask , mask_1 , mask_2 , mask_3 )
+
+end function C_Mulliken
+!
+!
+!
+!===================================================
+ subroutine  GA_eigen( system , basis , FMO , flag )
+!===================================================
+ type(structure)              , intent(in)    :: system
+ type(STO_basis)              , intent(in)    :: basis(:)
+ type(R_eigen)                , intent(out)   :: FMO       
+ integer         , optional   , intent(inout) :: flag 
 
 ! local variables ... 
  integer               :: i , j
@@ -95,7 +154,7 @@
 
 !-----------------------------------------------------------------------
 
- CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
+ CALL Overlap_Matrix( system, basis, S_FMO )
 
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO
@@ -103,7 +162,7 @@
  DO j = 1 , size(basis)
    DO i = 1 , j 
 
-      h_FMO(i,j) = huckel_Molecule( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
+      h_FMO(i,j) = Huckel_bare( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
  
    END DO
  END DO
@@ -113,6 +172,7 @@
  CALL SYGVD(h_FMO,dumb_S,FMO%erg,1,'V','U',info)
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
+ If ( present(flag) ) flag = info
 
  DEALLOCATE(dumb_S)
 
@@ -153,8 +213,24 @@
 !----------------------------------------------------------
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
- end subroutine DP_eigen_FMO
+ end subroutine GA_eigen
 !
+!
+!
+!======================================================================
+ subroutine GA_DP_Analysis( system , basis , L_vec , R_vec , Total_DP )
+!======================================================================
+implicit none
+type(structure) , intent(inout) :: system
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+real*8          , intent(out)   :: Total_DP(3)
+
+CALL Build_Dipole_Matrix( system , basis )
+
+CALL Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
+
+end subroutine GA_DP_Analysis
 !
 !
 !
@@ -195,8 +271,8 @@ do ia = 1 , system%atoms
 
     If(Rab*a_Bohr > cutoff_Angs) goto 10
 
-    do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
-    do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
+    do jb = 1 , element(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
+    do ja = 1 , element(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
 
         na = basis(a)%n ;   la = basis(a)%l ;   ma = basis(a)%m
         nb = basis(b)%n ;   lb = basis(b)%l ;   mb = basis(b)%m
@@ -248,15 +324,14 @@ end subroutine Build_DIPOLE_Matrix
 !
 !
 !
-!========================================================================================
- subroutine Dipole_Moment( system , basis , L_vec , R_vec , Center_of_Charge , Total_DP )
-!========================================================================================
-
-type(structure) , intent(in)  :: system
-type(STO_basis) , intent(in)  :: basis(:)
-real*8          , intent(in)  :: L_vec(:,:) , R_vec(:,:)
-real*8          , intent(in)  :: Center_of_Charge(3)
-real*8          , intent(out) :: Total_DP(3)
+!=====================================================================
+ subroutine Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
+!=====================================================================
+implicit none
+type(structure) , intent(inout) :: system
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+real*8          , intent(out)   :: Total_DP(3)
 
 ! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
@@ -269,13 +344,14 @@ type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 real*8          , parameter   :: Debye_unit = 4.803204d0
 real*8          , parameter   :: one = 1.d0 , zero = 0.d0
 
+CALL Center_of_Charge(system)
 
 ! atomic positions measured from the Center of Charge ...
 allocate(R_vector(system%atoms,3))
-forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Center_of_Charge(xyz)
+forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - system%Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
-forall(xyz=1:3) Nuclear_DP(xyz) = sum( atom( system%AtNo(:) )%Nvalen * R_vector(:,xyz) )
+forall(xyz=1:3) Nuclear_DP(xyz) = sum( element( system%AtNo(:) )%Nvalen * R_vector(:,xyz) )
 
 ! Electronic dipole 
 n_basis      =  size(basis)
@@ -312,23 +388,24 @@ forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Inde
  
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
-deallocate(R_vector,a,b)
-deallocate(origin_Dependent)
-deallocate(origin_Independent)
+deallocate( R_vector , a , b   )
+deallocate( origin_Dependent   )
+deallocate( origin_Independent )
+deallocate( DP_matrix_AO       )
 
 end subroutine Dipole_Moment
 !
 !
 !
-!=====================================================
- pure function Huckel_Molecule( i , j , S_ij , basis )
-!=====================================================
+!=================================================
+ pure function Huckel_bare( i , j , S_ij , basis )
+!=================================================
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8  :: k_eff , k_WH , Huckel_Molecule
+ real*8  :: k_eff , k_WH , Huckel_bare
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
@@ -342,11 +419,13 @@ end subroutine Dipole_Moment
 
  k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
 
- huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+ Huckel_bare = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
 
- IF(i == j) huckel_Molecule = basis(i)%IP
+ IF(i == j) Huckel_bare = basis(i)%IP
 
- end function Huckel_Molecule
+ end function Huckel_bare
 !
 !
-end module DP_FMO_m
+!
+!
+end module GA_QCModel_m

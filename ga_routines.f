@@ -2,31 +2,34 @@ module GA_m
 
     use type_m
     use constants_m
-    use Semi_Empirical_Parms    , only : atom  
-    use Structure_Builder       , only : Extended_Cell , Basis_Builder
-    use QCModel_Huckel          , only : EigenSystem
-    use Multipole_Core          , only : Dipole_Matrix
+    use type_m
+    use Semi_Empirical_Parms    , only : element => atom 
+    use Structure_Builder       , only : Extended_Cell 
+    use GA_QCModel_m            , only : GA_eigen ,         &
+                                         GA_DP_Analysis ,   &
+                                         Mulliken
 
-    public :: Genetic_Algorithm
+    public :: Genetic_Algorithm , Mulliken
 
     private 
 
-    integer , parameter :: Pop_Size       =   150         
-    integer , parameter :: N_generations  =   1000         
-    integer , parameter :: Top_Selection  =   20           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.05d0       ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.4           
-    logical , parameter :: Mutate_Cross   =   F_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    integer , parameter :: Pop_Size       =   250         
+    integer , parameter :: N_generations  =   600         
+    integer , parameter :: Top_Selection  =   150           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.60d0       ! <== range of variation of parameters
+    real*8  , parameter :: Mutation_rate  =   0.1           
+    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
 contains
 
-!===============================================
- function evaluate_cost( system , REF )
-!===============================================
+!==============================================
+ function evaluate_cost( GA_UNI , basis , REF )
+!==============================================
 implicit none
-type(structure) , intent(in)  :: system
+type(R_eigen)   , intent(in)  :: GA_UNI
+type(STO_basis) , intent(in)  :: basis(:)
 type(OPT)       , intent(in)  :: REF
 real*8                        :: evaluate_cost
 
@@ -36,31 +39,36 @@ real*8   :: middle_gap
 integer  :: k , HOMO , LUMO
 
 ! general definitions ...
-HOMO = system%N_of_electrons / 2
-LUMO = HOMO + 1
-
 chi(:) = 0.d0   ;   weight(:) = 1.d0
 
 !============================================================
 ! IODIDES ...
 ! HOMO-LUMO gaps ...
 
-chi(1) = ( GA%erg(8) - GA%erg(7) ) - 2.5633    ; weight(1) = 2.0d0
+chi(1) = ( GA%erg(12) - GA%erg(11) ) - 2.6515d0    ; weight(1) = 6.0d0
 
-chi(2) = ( GA%erg(8) - GA%erg(6) ) - 2.5633    ; weight(1) = 2.0d0
+chi(2) = ( GA%erg(12) - GA%erg(10) ) - 2.6515d0    ; weight(2) = 6.0d0
 
-chi(3) = ( GA%erg(7) - GA%erg(6) ) - 0.0000    ; weight(1) = 1.0d0
+chi(3) = ( GA%erg(10) - GA%erg(11) ) - 0.0000d0    ; weight(3) = 35.0d0
 
-chi(4) = ( GA%erg(8) - GA%erg(5) ) - 3.8477    ; weight(2) = 1.0d0 
+chi(4) = ( GA%erg(11) - GA%erg(09) ) - 0.3584d0    ; weight(4) = 10.0d0 
 
-chi(5) = ( GA%erg(7) - GA%erg(5) ) - 1.2844    ; weight(3) = 1.0d0 
+chi(5) = ( GA%erg(10) - GA%erg(09) ) - 0.3584d0    ; weight(5) = 10.0d0 
 
-chi(6) = ( GA%erg(6) - GA%erg(5) ) - 1.2844    ; weight(3) = 1.0d0 
+! Population analysis ...
+chi(6) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ic") - 0.1d0     ; weight(6) = 1.0d0
+chi(7) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ix") - 0.9d0     ; weight(7) = 1.0d0
+
+chi(8)  =  Mulliken(GA_UNI,basis,MO=12,atom=1) - 0.1d0     ; weight(8)  = 0.0d0
+chi(9)  =  Mulliken(GA_UNI,basis,MO=12,atom=2) - 0.45d0     ; weight(9)  = 0.0d0
+chi(10) =  Mulliken(GA_UNI,basis,MO=12,atom=3) - 0.45d0     ; weight(10) = 0.0d0
 
 ! Total DIPOLE moment ...
-chi(7) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(4) = 5.d0
+chi(11) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(11) = 8.d0
 !============================================================
 
+! apply weight on chi and evaluate cost ...
+chi = chi * weight
 evaluate_cost = sqrt( dot_product(chi,chi) )
 
 end function evaluate_cost
@@ -138,7 +146,7 @@ real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,
 real*8                          :: GA_DP(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , j , l , generation , info , Pop_start
-type(C_eigen)                   :: GA_UNI
+type(R_eigen)                   :: GA_UNI
 
 ! reading input-GA key ...
 CALL Read_GA_key
@@ -175,19 +183,19 @@ do generation = 1 , N_generations
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
 
         info = 0
-        CALL EigenSystem( Extended_Cell, GA_basis, GA_UNI , info )
-                
+        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
+
         If (info /= 0) then 
             custo(i) = 1.d14
             continue
         end if
 
-        If( DP_Moment ) CALL Dipole_Matrix( Extended_Cell, GA_basis, GA_UNI%L, GA_UNI%R, GA_DP )
+        If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
 
 !       gather data and evaluate population cost ...
         GA%erg   =  GA_UNI%erg
         GA%DP    =  GA_DP
-        custo(i) =  evaluate_cost( system , REF )
+        custo(i) =  evaluate_cost( GA_UNI , GA_basis , REF )
 
     end do
 
@@ -220,7 +228,7 @@ CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
 ! saving the optimized parameters ...
 CALL Dump_OPT_parameters( GA_basis )
 
-deallocate( GA%erg , GA_UNI%L , GA_UNI%R , GA_UNI%erg)
+deallocate( GA%erg , GA_UNI%L , GA_UNI%R , GA_UNI%erg )
 deallocate( Pop , indx , Old_Pop ) 
 
 include 'formats.h'
@@ -415,7 +423,7 @@ do n_EHS = 1 , N_of_EHSymbol
 
     i = indx_EHS(n_EHS)
 
-    AngMax = atom(GA_basis(i)%AtNo)%AngMax
+    AngMax = element(GA_basis(i)%AtNo)%AngMax
 
     do L = 0 , AngMax
 
@@ -424,7 +432,7 @@ do n_EHS = 1 , N_of_EHSymbol
         write(13,17)    GA_basis(j)%Symbol          ,   &
                         GA_basis(j)%EHSymbol        ,   &
                         GA_basis(j)%AtNo            ,   &
-                   atom(GA_basis(j)%AtNo)%Nvalen    ,   &
+                element(GA_basis(j)%AtNo)%Nvalen    ,   &
                         GA_basis(j)%Nzeta           ,   &
                         GA_basis(j)%n               ,   &
                  Lquant(GA_basis(j)%l)              ,   &
@@ -501,6 +509,7 @@ real*8   :: rra
       goto 10
 
 end subroutine sort2
+!
 !
 !
 end module GA_m

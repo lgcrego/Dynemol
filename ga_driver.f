@@ -4,7 +4,8 @@ module GA_driver_m
  use constants_m
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use QCModel_Huckel             , only : EigenSystem
- use GA_m                       , only : Genetic_Algorithm
+ use GA_m                       , only : Genetic_Algorithm 
+ use GA_QCModel_m               , only : Mulliken
  use DOS_m
  use Structure_Builder          , only : Generate_Structure , Basis_Builder
  use Multipole_Core             , only : Dipole_Matrix
@@ -27,7 +28,6 @@ implicit none
  character(3)                   :: residue
  logical                        :: DIPOLE_
  type(C_eigen)                  :: UNI
- type(C_eigen)                  :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(OPT)                      :: REF
@@ -73,21 +73,27 @@ end do
 
 If( DIPOLE_ ) CALL Dipole_Matrix( Extended_Cell, GA_basis, UNI%L, UNI%R, DP )  
 
-Print 154, DP, sqrt( dot_product(DP,DP) )
-
-Print*, UNI%erg(8) - UNI%erg(7)
-Print*, UNI%erg(7) - UNI%erg(6)
-Print*, UNI%erg(8) - UNI%erg(5)
-Print*, UNI%erg(7) - UNI%erg(5)
-Print*, " " 
-Print*, UNI%erg
-
 If( spectrum ) CALL Optical_Transitions( Extended_Cell, GA_basis, UNI , SPEC )
 
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(5,:) , UNI%R(:,5) , 5 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(6,:) , UNI%R(:,6) , 6 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(7,:) , UNI%R(:,7) , 7 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(8,:) , UNI%R(:,8) , 8 , 0.d0 )
+!----------------------------------------------
+! print zone ...
+Print 154, DP, sqrt( dot_product(DP,DP) )
+Print*, " " 
+Print*, UNI%erg(12) - UNI%erg(11)
+Print*, UNI%erg(12) - UNI%erg(10)
+Print*, UNI%erg(11) - UNI%erg(10)
+Print*, UNI%erg(11) - UNI%erg(09)
+Print*, " " 
+Print*, "12-Ic"     , Mulliken(UNI,ExCell_basis,MO=12,EHSymbol="Ic")
+Print*, "12-Ix"     , Mulliken(UNI,ExCell_basis,MO=12,EHSymbol="Ix")
+Print*, "12-atom1"  , Mulliken(UNI,ExCell_basis,MO=12,atom=1)
+Print*, "12-all"    , Mulliken(UNI,ExCell_basis,MO=12)
+
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(11,:) , UNI%R(:,11) , 11 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(12,:) , UNI%R(:,12) , 12 , 0.d0 )
+!----------------------------------------------
 
 CALL Dump_stuff( TDOS , PDOS , SPEC )
 

@@ -11,23 +11,23 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "solid_sys"   ,	 	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
+			DRIVER		 = "Genetic_Alg"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
 !			
-            GaussianCube = F_ ,                 &
+            GaussianCube = T_ ,                 &
 			Survival     = F_ ,                 &
             SPECTRUM     = F_ ,                 & 
-			DP_Moment    = F_ ,                 &
-			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-			ad_hoc       = T_ ,                 & ! <== ad hoc tuning of parameters
+			DP_Moment    = T_ ,                 &
+			OPT_basis    = F_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
+            file_type	 =  "structure"  ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-			DP_field_    =  T_  ,               & ! <== use dipole potential for solvent molecules
+			DP_field_    =  F_  ,               & ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !

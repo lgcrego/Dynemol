@@ -34,6 +34,9 @@ select case ( driver )
     case ( "diagnostic" )
         CALL diagnostic
 
+    case default
+        Print*, " >>> Check your driver options <<< "
+
 end select
 
 include 'formats.h'

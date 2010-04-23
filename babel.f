@@ -372,7 +372,7 @@ character(4) :: keyword
 character(1) :: test
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
-if (openstatus > 0) stop " *** Cannot open the file *** "
+if (openstatus > 0) stop " *** Cannot open the file frames.pdb *** "
 
 read(unit = 31, fmt = 43, iostat = inputstatus) System_Characteristics
 
@@ -556,7 +556,7 @@ real*8          , allocatable   :: distance_ligation(:,:) , distance_T(:)
 integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2 , model
 
 open(unit = 13, file = 'VASP.trj', status = 'old', action = 'read', iostat = openstatus)
-if( openstatus > 0 ) stop '*** Cannot open the file ***'
+if( openstatus > 0 ) stop '*** Cannot open the file VASP.trj ***'
 
 ! read the number of models ...
 model = 0
