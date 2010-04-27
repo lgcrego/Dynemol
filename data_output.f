@@ -42,8 +42,8 @@ end do
 
 ! total population ...
 
- Populations(nf+1) = pop_Slater(basis,bra,ket)
-
+ Populations(N_of_fragments+1) = pop_Slater(basis,bra,ket)
+ 
 ! ---------------------------------------------------- 
 
  end function get_Populations 

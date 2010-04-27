@@ -38,6 +38,8 @@ select case( file_type )
                 CALL Read_from_PDB      ( Unit_Cell )
             case( "vasp" )
                 CALL Read_from_POSCAR   ( Unit_Cell )
+            case default
+                print*, ">>> check file type selection <<< : " , file_format
             end select
 
     case( "trajectory" )
@@ -47,7 +49,12 @@ select case( file_type )
                 CALL Read_PDB   ( trj ) 
             case( "vasp" )
                 CALL Read_VASP  ( trj )
+            case default
+                print*, ">>> check file type selection <<< : " , file_format
             end select
+
+    case default
+        print*, ">>> check file type selection <<< : " , file_type
 
 end select
 

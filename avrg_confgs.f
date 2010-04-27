@@ -115,7 +115,7 @@ print*, frame
 end do
 
 ! average over configurations ...
-If( file_type == "trajectory" ) QDyn = QDyn / size(trj)
+If( file_type == "trajectory" ) QDyn = QDyn / ( float(size(trj))/float(frame_step) )
 
 CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
 

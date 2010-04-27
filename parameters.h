@@ -11,19 +11,19 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "Genetic_Alg"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
+			DRIVER		 = "solid_sys"      ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
 !			
-            GaussianCube = T_ ,                 &
-			Survival     = F_ ,                 &
+            GaussianCube = F_ ,                 &
+			Survival     = T_ ,                 &
             SPECTRUM     = F_ ,                 & 
-			DP_Moment    = T_ ,                 &
+			DP_Moment    = F_ ,                 &
 			OPT_basis    = F_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure"  ,      & ! <= structure or trajectory
-            file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
+            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
+            file_format  =  "vasp" ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -31,15 +31,15 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1  ,               & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  1237 ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.d1 ,             & ! <== final time in PICOseconds
+            t_f           =  1.d-1 ,             & ! <== final time in PICOseconds
             n_t           =  500  ,             & ! <== number of time steps
-            initial_state =  99  ,              & ! <== intial MO
-			HOMO_mol      =  96  ,              & ! <== HOMO of the molecule 
+            initial_state =  22  ,              & ! <== intial MO
+			HOMO_mol      =  21  ,              & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
@@ -47,7 +47,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters

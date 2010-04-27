@@ -72,7 +72,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
-! If( survival ) CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO , QDyn )
+ If( survival ) CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO , QDyn )
 
 ! CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 

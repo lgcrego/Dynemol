@@ -59,13 +59,13 @@ allocate( distance(solvent_PBC_size) )
 ! distance of [solvent molecule CG] with [Molecule CG] at the origin ...
 forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CG**2) )
 
-where( distance > solvation_radius ) solvent_PBC%nresid = 0
+where( distance > solvation_radius ) solvent_PBC%nr = 0
 
-forall( i=1:system_PBC_size ) system_PBC(i)%nresid = nres(i)%PTR
+forall( i=1:system_PBC_size ) system_PBC(i)%nr = nres(i)%PTR
 
 allocate( mask(system_PBC_size) )
 
-mask = (system_PBC%nresid /= 0 .AND. system_PBC%fragment == "S") .OR. (system_PBC%copy_No == 0 .AND. system_PBC%fragment /= "S") 
+mask = (system_PBC%nr /= 0 .AND. system_PBC%fragment == "S") .OR. (system_PBC%copy_No == 0 .AND. system_PBC%fragment /= "S") 
 
 ! define the solvation cell ...
 system_size = count(mask)
@@ -78,7 +78,7 @@ CALL move_alloc( from=system , to=Solvated_System%atom )
 CALL Sort_Fragments( Solvated_System )
 
 Solvated_System%N_of_Atoms              =  system_size
-Solvated_System%N_of_Solvent_Molecules  =  count( solvent_PBC%nresid /= 0 )
+Solvated_System%N_of_Solvent_Molecules  =  count( solvent_PBC%nr /= 0 )
 Solvated_System%System_Characteristics  =  trj(frame)%System_Characteristics
 Solvated_System%box                     =  trj(frame)%box
 
@@ -136,7 +136,7 @@ do i = -1,+1
         solvent_PBC(molecule+n) % CG(2)    =  trj % solvent(n) % CG(2) + j * trj % box(2)
         solvent_PBC(molecule+n) % CG(3)    =  trj % solvent(n) % CG(3) + k * trj % box(3)
  
-        solvent_PBC(molecule+n) % nresid   =  trj % solvent(n) % nresid + nresid
+        solvent_PBC(molecule+n) % nr       =  trj % solvent(n) % nr + nresid
         solvent_PBC(molecule+n) % copy_No  =  i + j*tres + k*nove  
 
     end forall
@@ -147,14 +147,14 @@ do i = -1,+1
         trj_PBC(atom+n) % xyz(2)   =  trj % atom(n) % xyz(2) + j * trj % box(2)
         trj_PBC(atom+n) % xyz(3)   =  trj % atom(n) % xyz(3) + k * trj % box(3)
 
-        trj_PBC(atom+n) % nresid   =  trj % atom(n) % nresid + nresid
+        trj_PBC(atom+n) % nr       =  trj % atom(n) % nr + nresid
         trj_PBC(atom+n) % copy_No  =  i + j*tres + k*nove  
 
     end forall
 
     atom     =  atom     + trj % N_of_atoms
     molecule =  molecule + trj % N_of_Solvent_Molecules
-    nresid   =  nresid   + trj % atom(trj%N_of_Atoms)%nresid
+    nresid   =  nresid   + trj % atom(trj%N_of_Atoms)%nr
 
 end do
 end do
@@ -163,11 +163,11 @@ end do
 !  nresidue[atomic] => nresidue[molecule]
 allocate( nres(trj_PBC_size) )
 
-forall( i=1:trj_PBC_size )  nres(i)%PTR => trj_PBC(i)%nresid
+forall( i=1:trj_PBC_size )  nres(i)%PTR => trj_PBC(i)%nr
 
 do j = 1 , solvent_PBC_size
 
-    forall( i=1:trj_PBC_size , trj_PBC(i)%nresid == solvent_PBC(j)%nresid ) nres(i)%PTR => solvent_PBC(j)%nresid
+    forall( i=1:trj_PBC_size , trj_PBC(i)%nr == solvent_PBC(j)%nr ) nres(i)%PTR => solvent_PBC(j)%nr
 
 end do
 
@@ -201,7 +201,7 @@ do i = 1 , sys%N_of_atoms
                         ' '                             ,  &    ! <== alternate location indicator
                         sys%atom(i)%residue             ,  &    ! <== residue name
                         ' '                             ,  &    ! <== chain identifier
-                        sys%atom(i)%nresid              ,  &    ! <== residue sequence number
+                        sys%atom(i)%nr                  ,  &    ! <== residue sequence number
                         ' '                             ,  &    ! <== code for insertion of residues
                         ( sys%atom(i)%xyz(k) , k=1,3 )  ,  &    ! <== xyz coordinates 
                         1.00                            ,  &    ! <== occupancy

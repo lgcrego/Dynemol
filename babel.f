@@ -55,7 +55,7 @@ forall( j=1:unit_cell%atoms )
     unit_cell % fragment (j)   =  System % atom(j) % fragment
     unit_cell % Symbol   (j)   =  System % atom(j) % Symbol
     unit_cell % residue  (j)   =  System % atom(j) % residue
-    unit_cell % nr       (j)   =  System % atom(j) % nresid 
+    unit_cell % nr       (j)   =  System % atom(j) % nr
     unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
 end forall
 
@@ -196,7 +196,7 @@ do
             read(3 , 115 , iostat=io_err , err=12)             &
                          system%atom(i)%MMSymbol            ,  &    ! <== atom type
                          system%atom(i)%residue             ,  &    ! <== residue name
-                         system%atom(i)%nresid              ,  &    ! <== residue sequence number
+                         system%atom(i)%nr                  ,  &    ! <== residue sequence number
                         (system%atom(i)%xyz(j) , j=1,3)     ,  &    ! <== xyz coordinates 
                          system%atom(i)%Symbol                      ! <== chemical element symbol
         end do
@@ -457,7 +457,7 @@ do j = 1 , model
     
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 33, iostat = inputstatus)     &
-            trj(j)%atom(i)%MMSymbol , trj(j)%atom(i)%residue , trj(j)%atom(i)%nresid , ( trj(j)%atom(i)%xyz(k) , k=1,3 )
+            trj(j)%atom(i)%MMSymbol , trj(j)%atom(i)%residue , trj(j)%atom(i)%nr , ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
 
         ! use ad hoc tuning of parameters ...
@@ -506,7 +506,7 @@ forall(i = 2:model )
     trj(i)%atom%AtNo         =  trj(1)%atom%AtNo    
     trj(i)%atom%MMSymbol     =  trj(1)%atom%MMSymbol
     trj(i)%atom%residue      =  trj(1)%atom%residue
-    trj(i)%atom%nresid       =  trj(1)%atom%nresid
+    trj(i)%atom%nr           =  trj(1)%atom%nr    
     trj(i)%atom%Symbol       =  trj(1)%atom%Symbol
     trj(i)%atom%fragment     =  trj(1)%atom%fragment
 end forall
@@ -517,8 +517,8 @@ do i = 1 , size(trj)
 end do
 
 ! Information about the Solvent System ...
-trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nresid, trj(1) % atom % fragment == 'S' )         &
-                            - minval( trj(1) % atom % nresid, trj(1) % atom % fragment == 'S' ) + 1
+trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' )         &
+                            - minval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' ) + 1
 
 do i = 1 , size(trj)
     allocate( trj(i)%solvent(trj(i)%N_of_Solvent_Molecules) )
@@ -544,6 +544,7 @@ end do
 end subroutine Read_PDB
 !
 !
+!
 !=========================
  subroutine Read_VASP(trj)
 !=========================
@@ -553,7 +554,10 @@ type(universe)  , allocatable   , intent(out) :: trj(:)
 ! local variables ....
 character(1)                    :: idx
 real*8          , allocatable   :: distance_ligation(:,:) , distance_T(:)
-integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2 , model
+integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2 , model 
+integer                         :: j1 , j2 , n_residues 
+character(1)                    :: fragment
+character(3)                    :: residue
 
 open(unit = 13, file = 'VASP.trj', status = 'old', action = 'read', iostat = openstatus)
 if( openstatus > 0 ) stop '*** Cannot open the file VASP.trj ***'
@@ -570,10 +574,12 @@ end do
 
 model = model - 1
 
-rewind 13
-
 ! read the number the atoms ...
-read(unit = 13, fmt = 21, iostat = inputstatus) idx
+rewind 13
+do
+    read(unit = 13, fmt = 21, iostat = inputstatus) idx
+    if( idx == '$' ) exit
+end do
 atoms = 0
 do
     read(unit = 13, fmt = 21, iostat = inputstatus) idx
@@ -584,17 +590,32 @@ do
     end if
 end do
 
-rewind 13
-
-! read the system ...
+! prepare to read the system ...
 allocate( trj(model) )
+allocate( trj(1)%atom(atoms) )
+CALL Initialize_System( trj(1) )
 
+! start reading the structure characteristics ...
+ rewind 13
+ read(13,*) System_Characteristics
+ trj(1) % System_Characteristics = System_Characteristics
+
+! residues must be packed together ...
+ read(13,*) n_residues
+ do i = 1 , n_residues
+    read(13,*) j1 , j2 , residue , fragment
+    forall(j=j1:j2) trj(1) % atom(j) % residue  = residue
+    forall(j=j1:j2) trj(1) % atom(j) % fragment = fragment
+ end do
+
+! read PBC vectors ... 
+read(13,*) trj(1)%box(1) , trj(1)%box(2) , trj(1)%box(3)
+
+! read coordinate from the frames ...
 do j = 1 , model
+
     if( j == 1 ) then
         read(unit = 13, fmt = 21, iostat = inputstatus) idx
-
-        allocate( trj(j)%atom(atoms) )
-        CALL Initialize_System( trj(j) )
 
         do i = 1 , atoms
             read(unit = 13, fmt = 22, iostat = inputstatus) trj(j)%atom(i)%Atno, ( trj(j)%atom(i)%xyz(k) , k=1,3 )
@@ -610,12 +631,36 @@ do j = 1 , model
             read(unit = 13, fmt = 23, iostat = inputstatus) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
     end if
+
+    ! use ad hoc tuning of parameters ...
+    If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
+
 end do
 
-forall(i=2:model)
-    trj(i)%atom%Atno = trj(1)%atom%Atno
-    trj(i)%atom%Symbol = trj(1)%atom%Symbol
+trj(1)%N_of_atoms = atoms
+
+! convert residues to upper case ...
+forall( i=1:trj(1)%N_of_atoms ) trj(1)%atom(i)%residue = TO_UPPER_CASE( trj(1)%atom(i)%residue )
+
+! get list of residues in trj ...
+CALL Identify_Residues( trj(1) )
+
+! get list of fragments in trj ...
+CALL Identify_Fragments( trj(1) )
+
+! Copy information from trj(1) to trj(:) ...
+forall(i = 2:model )
+    trj(i) % N_of_atoms      = trj(1) % N_of_atoms
+    trj(i) % atom % Atno     = trj(1) % atom % Atno
+    trj(i) % atom % Symbol   = trj(1) % atom % Symbol
+    trj(i) % atom % fragment = trj(1) % atom % fragment
+    trj(i) % atom % residue  = trj(1) % atom % residue
 end forall
+
+! SORT and GROUP residues ...
+do i = 1 , size(trj)
+    CALL Sort_Residues( trj(i) )
+end do
 
 ! formats ...
 21 format(a1)
@@ -640,6 +685,8 @@ integer :: i
     select case(a(i)%symbol)
         case( 'H') 
             a(i)%AtNo = 1 
+        case( 'LI','Li') 
+            a(i)%AtNo = 3 
         case( 'C') 
             a(i)%AtNo = 6 
         case( 'N') 
@@ -684,6 +731,8 @@ DO i = 1 , a%atoms
     select case(a%symbol(i))
         case( 'H') 
             a%AtNo(i) = 1 
+        case( 'LI','Li') 
+            a%AtNo(i) = 3 
         case( 'C') 
             a%AtNo(i) = 6 
         case( 'N') 
@@ -729,6 +778,8 @@ integer :: i
     select case(a(i)%Atno)
         case( 1) 
             a(i)%Symbol = 'H'
+        case( 3) 
+            a(i)%Symbol = 'Li'
         case( 6) 
             a(i)%Symbol = 'C'
         case( 7) 
@@ -791,6 +842,8 @@ character(len=2)    :: element2
     write( element2,'(A2)' ) adjustl( a(i)%MMSymbol )
 
     select case( element2 )
+        case( 'Ix','Ic' )
+            a(i)%Symbol = 'I' 
         case( 'YC' ) 
             a(i)%Symbol = 'C' 
         case( 'YN' ) 
@@ -1058,7 +1111,7 @@ do i = 1 , trj%N_of_Solvent_Molecules
 
     forall( j=1:3 ) trj%solvent(i)%CG(j) = sum( trj%atom(n:n+mol_atoms)%xyz(j) ) / trj%solvent(i)%N_of_Atoms
 
-    trj % solvent(i) % nresid  = trj % atom(n) % nresid
+    trj % solvent(i) % nr      = trj % atom(n) % nr    
     trj % solvent(i) % residue = trj % atom(n) % residue
 
     n = n + mol_atoms
@@ -1086,7 +1139,7 @@ end forall
 a % atom % mass     = 0.d0
 a % atom % charge   = 0.d0
 a % atom % AtNo     = 0
-a % atom % nresid   = 0
+a % atom % nr       = 0
 a % atom % residue  = "XXX"
 a % atom % Symbol   = "XX"
 a % atom % MMsymbol = "XXX"

@@ -33,7 +33,7 @@ module type_m
         real*8                        :: mass
         real*8                        :: charge
         integer                       :: AtNo
-        integer                       :: nresid 
+        integer                       :: nr
         integer                       :: copy_No
         character(3)                  :: residue
         character(2)                  :: Symbol
@@ -48,7 +48,7 @@ module type_m
         real*8                        :: CG(3)
         real*8                        :: DP(3)
         integer                       :: N_of_Atoms 
-        integer                       :: nresid   
+        integer                       :: nr
         integer                       :: copy_No
         character(3)                  :: residue 
         character(72)                 :: Solvent_Characteristics

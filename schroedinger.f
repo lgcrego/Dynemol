@@ -146,6 +146,7 @@ select case( flag )
 
         end if
 
+        ! for the sake of having the donor survival probability in the first column at output ...
         If( (survival) .AND. (Extended_Cell%list_of_fragments(1) /= "D") ) pause ">>> list_of_fragments(1) /= 'D' <<<"
 
         allocate( QDyn_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )

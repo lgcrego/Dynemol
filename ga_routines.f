@@ -15,9 +15,9 @@ module GA_m
 
     integer , parameter :: Pop_Size       =   250         
     integer , parameter :: N_generations  =   600         
-    integer , parameter :: Top_Selection  =   150           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.60d0       ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.1           
+    integer , parameter :: Top_Selection  =   50           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.50d0       ! <== range of variation of parameters
+    real*8  , parameter :: Mutation_rate  =   0.4           
     logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
@@ -39,32 +39,32 @@ real*8   :: middle_gap
 integer  :: k , HOMO , LUMO
 
 ! general definitions ...
-chi(:) = 0.d0   ;   weight(:) = 1.d0
+chi(:) = 0.d0   ;   weight(:) = 0.d0
 
 !============================================================
 ! IODIDES ...
 ! HOMO-LUMO gaps ...
 
-chi(1) = ( GA%erg(12) - GA%erg(11) ) - 2.6515d0    ; weight(1) = 6.0d0
+chi(1) = ( GA%erg(12) - GA%erg(11) ) - 2.6515d0    ; weight(1) = 4.0d0
 
-chi(2) = ( GA%erg(12) - GA%erg(10) ) - 2.6515d0    ; weight(2) = 6.0d0
+chi(2) = ( GA%erg(12) - GA%erg(10) ) - 2.6515d0    ; weight(2) = 4.0d0
 
-chi(3) = ( GA%erg(10) - GA%erg(11) ) - 0.0000d0    ; weight(3) = 35.0d0
+chi(3) = ( GA%erg(10) - GA%erg(11) ) - 0.0000d0    ; weight(3) = 10.0d0
 
-chi(4) = ( GA%erg(11) - GA%erg(09) ) - 0.3584d0    ; weight(4) = 10.0d0 
+chi(4) = ( GA%erg(11) - GA%erg(09) ) - 0.3584d0    ; weight(4) = 6.0d0 
 
-chi(5) = ( GA%erg(10) - GA%erg(09) ) - 0.3584d0    ; weight(5) = 10.0d0 
+chi(5) = ( GA%erg(10) - GA%erg(09) ) - 0.3584d0    ; weight(5) = 6.0d0 
 
 ! Population analysis ...
-chi(6) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ic") - 0.1d0     ; weight(6) = 1.0d0
-chi(7) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ix") - 0.9d0     ; weight(7) = 1.0d0
+chi(6) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ic") - 0.1d0     ; weight(6) = 9.0d0
+chi(7) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ix") - 0.9d0     ; weight(7) = 9.0d0
 
 chi(8)  =  Mulliken(GA_UNI,basis,MO=12,atom=1) - 0.1d0     ; weight(8)  = 0.0d0
 chi(9)  =  Mulliken(GA_UNI,basis,MO=12,atom=2) - 0.45d0     ; weight(9)  = 0.0d0
 chi(10) =  Mulliken(GA_UNI,basis,MO=12,atom=3) - 0.45d0     ; weight(10) = 0.0d0
 
 ! Total DIPOLE moment ...
-chi(11) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(11) = 8.d0
+chi(11) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(11) = 10.d0
 !============================================================
 
 ! apply weight on chi and evaluate cost ...
