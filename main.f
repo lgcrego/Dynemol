@@ -8,6 +8,7 @@ use qdynamics_m             , only : qdynamics
 use Sampling_m              , only : Avrg_Confgs
 use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
+use TimeSlice_m             , only : Time_Slice
 
 ! local variables ...
  
@@ -25,6 +26,9 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
+    case ( "eigen_slice" , "chebyshev" )
+        CALL Time_Slice
+
     case ( "solvated_M" , "solid_sys" )
         CALL Avrg_Confgs
 
@@ -35,7 +39,7 @@ select case ( driver )
         CALL diagnostic
 
     case default
-        Print*, " >>> Check your driver options <<< "
+        Print*, " >>> Check your driver options <<< :" , driver
 
 end select
 

@@ -80,6 +80,7 @@
  end IF
 
  DeAllocate( FMO_basis )
+ CALL DeAllocate_Structures( FMO_system )
 
  do i = 0 , n_part
     Print 59, orbital(i) , FMO%erg(orbital(i))

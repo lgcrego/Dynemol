@@ -51,18 +51,19 @@ end do
 !
 !
 !=========================================================================================
- subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_fragments ) 
+ subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_fragments , t_rate ) 
 !=========================================================================================
 implicit none
-type(f_grid)  , intent(in)  , optional  :: TDOS
-type(f_grid)  , intent(in)  , optional  :: PDOS(:)
-type(f_grid)  , intent(in)  , optional  :: SPEC
-real*8        , intent(in)  , optional  :: QDyn(:,:)
-character(*)  , intent(in)  , optional  ::list_of_fragments(:)
+type(f_grid)  , intent(in)     , optional  :: TDOS
+type(f_grid)  , intent(in)     , optional  :: PDOS(:)
+type(f_grid)  , intent(in)     , optional  :: SPEC
+real*8        , intent(in)     , optional  :: QDyn(:,:)
+character(*)  , intent(in)     , optional  ::list_of_fragments(:)
+real*8        , intent(inout)  , optional  :: t_rate
 
 ! local variables ...
 integer         :: i , nr , nf , N_of_residues , N_of_fragments
-real*8          :: t , t_rate
+real*8          :: t 
 character(12)   :: string
 
 ! save TDOS ...
@@ -98,11 +99,11 @@ end if
 
 ! save time-dependent populations ...
 If( survival ) then
-    t_rate = (t_f - t_i) / float(n_t)
+    If( .NOT. present(t_rate) ) t_rate = (t_f - t_i) / float(n_t)
     N_of_fragments = size( list_of_fragments )
     OPEN( unit=3 , file="survival.dat" , status="unknown" )
     write(3,12) "#" , list_of_fragments , "total"
-    do i = 1 , n_t
+    do i = 1 , size(QDyn(:,1))
         t = t_rate * (i-1)
         write(3,13) t , ( QDyn(i,nf) , nf=1,N_of_fragments+1 )
     end do

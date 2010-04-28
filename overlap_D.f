@@ -5,7 +5,7 @@ module Overlap_Builder
     use type_m
     use constants_m
     use PBC_m
-    use Semi_Empirical_Parms
+    use Semi_Empirical_Parms    , only  : atom
     use Structure_Builder 
 
     public :: Overlap_Matrix 
@@ -31,7 +31,7 @@ contains
 
  CALL util_overlap     
 
- S_size = sum(atom(system%AtNo)%DOS)  ;  Allocate(S_matrix(S_size,S_size))
+ S_size = sum(atom(system%AtNo)%DOS)    ;   Allocate(S_matrix(S_size,S_size))
 
  select case (purpose)
 

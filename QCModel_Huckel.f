@@ -16,9 +16,9 @@
 !
 !
 !
-!==================================================
- subroutine EigenSystem( system, basis, QM , flag )
-!==================================================
+!====================================================
+ subroutine EigenSystem( system , basis , QM , flag )
+!====================================================
  type(structure)               , intent(in)    :: system
  type(STO_basis)               , intent(in)    :: basis(:)
  type(C_eigen)                 , intent(out)   :: QM

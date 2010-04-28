@@ -157,7 +157,7 @@ select case( flag )
 
     case( "dealloc" )
 
-        deallocate(QDyn , QDyn_fragments)
+        deallocate( QDyn , QDyn_fragments )
 
 end select
 

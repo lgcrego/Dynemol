@@ -1,4 +1,5 @@
  integer 					:: initial_state , HOMO_mol , frame_step 
+ real*8						:: MD_dt
  logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
  logical 					:: verbose , DP_field_
  type (real_interval) 		:: occupied , empty , DOS_range 
@@ -11,7 +12,7 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "solid_sys"      ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic
+			DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice
 !			
             GaussianCube = F_ ,                 &
 			Survival     = T_ ,                 &
@@ -31,13 +32,15 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1237 ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  5    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.d-1 ,             & ! <== final time in PICOseconds
+            t_f           =  1.d-1 ,            & ! <== final time in PICOseconds
             n_t           =  500  ,             & ! <== number of time steps
+			MD_dt		  =  8.d-4 ,			& ! <== time step of MD simulation in PICOseconds
+
             initial_state =  22  ,              & ! <== intial MO
 			HOMO_mol      =  21  ,              & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
@@ -47,7 +50,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters
