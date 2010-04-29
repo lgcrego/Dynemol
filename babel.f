@@ -249,7 +249,7 @@ end subroutine Read_from_PDB
  real*8            :: x0 , y0 , z0
  real*8            :: a , b , c
  real*8            :: k_WH
- integer           :: n_kWH , n_residues , i , j , j1 , j2 , n , boundary_atom
+ integer           :: n_kWH , n_residues , i , j , j1 , j2 , n , boundary_atom , openstatus
  integer           :: N_of_atoms , N_of_elements , N_of_cluster_atoms , N_of_Configurations
  character(len=1)  :: TorF , fragment
  character(len=3)  :: residue
@@ -259,7 +259,8 @@ end subroutine Read_from_PDB
  integer          , allocatable :: atom_No(:)
  character(len=2) , allocatable :: element(:) , symbol(:)
 
- OPEN(unit=3,file='poscar.in',status='old')
+ open(unit = 3, file = 'poscar.in', status = 'old', action = 'read', iostat = openstatus)
+ if (openstatus > 0) stop " *** Cannot open the file poscar.in *** "
 
 ! start reading the structure characteristics
  read(3,*) System_Characteristics
