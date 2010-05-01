@@ -26,6 +26,7 @@ contains
 !=====================================================================
  subroutine Dipole_Matrix( system , basis , L_vec , R_vec , Total_DP )
 !=====================================================================
+implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
 complex*16                  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
@@ -33,7 +34,7 @@ real*8          , optional  , intent(out)   :: Total_DP(3)
 
 ! local variables ...
 real*8  :: Sparsity(3)
-integer :: NonZero(3) , M_size
+integer :: NonZero(3) , M_size , i
 
 If( verbose ) Print 153
 !----------------------------------------------------------
@@ -74,7 +75,7 @@ end subroutine Dipole_Matrix
 !=====================================================================
  subroutine Dipole_Moment( system , basis , L_vec , R_vec , DP_total )
 !=====================================================================
-
+implicit none
 type(structure)             , intent(in)  :: system
 type(STO_basis)             , intent(in)  :: basis(:)
 complex*16                  , intent(in)  :: L_vec(:,:) , R_vec(:,:)
@@ -147,14 +148,16 @@ end subroutine Dipole_Moment
 !
 !
 !
-!-----------------------------
+!=============================
 subroutine Center_of_Charge(a)
-!-----------------------------
+!=============================
+implicit none
 type(structure) , intent(inout) :: a
 
 ! local variables
 real*8 , allocatable :: Qi_Ri(:,:) 
 real*8               :: total_valence
+integer              :: i , j
 
 ! sum_i = (q_i * vec{r}_i) / sum_i q_i
 
@@ -172,11 +175,10 @@ end subroutine Center_of_Charge
 !
 !
 !
-!--------------------------------------------
+!============================================
 subroutine Build_DIPOLE_Matrix(system, basis)
-!--------------------------------------------
-implicit real*8 (a-h,o-z)
-
+!============================================
+implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 
@@ -186,7 +188,7 @@ integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb 
 integer :: na , la , ma 
 integer :: nb , lb , mb
-integer :: lmult
+integer :: lmult , i , j
 
 real*8  , parameter :: tol = 1.d-10 
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
@@ -262,20 +264,20 @@ end subroutine Build_DIPOLE_Matrix
 !
 !
 !
-!
+!=======================================================================
 subroutine RotationMultipoles(system,ia,ib,xab,yab,zab,Rab,lmult,rl,rl2)
-
-implicit real*8 (a-h,o-z)
-
+!=======================================================================
+implicit none
 type(structure)            , intent(in)  :: system
 integer                    , intent(in)  :: ia , ib
 real*8                     , intent(out) :: xab, yab, zab, Rab
 integer                    , intent(in)  :: lmult
 real*8  , dimension(:,:,:) , intent(out) :: rl , rl2
 
-real*8  :: xa, ya, za, xb, yb, zb
+! local variables ...
+real*8  :: xa, ya, za, xb, yb, zb , xy , sinal , cosal , sinbet , cosbet , singa , cosga
 integer :: AtNo_a , AtNo_b
-integer :: la_max , lb_max
+integer :: la_max , lb_max , lmax
 
 real*8  , parameter :: tol = 1.d-10
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)

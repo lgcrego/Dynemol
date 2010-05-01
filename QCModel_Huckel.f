@@ -9,9 +9,6 @@
     use Overlap_Builder
     use dipole_potential_m        , only : DP_phi
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
  contains
 !
 !
@@ -19,21 +16,24 @@
 !====================================================
  subroutine EigenSystem( system , basis , QM , flag )
 !====================================================
+ implicit none
  type(structure)               , intent(in)    :: system
  type(STO_basis)               , intent(in)    :: basis(:)
  type(C_eigen)                 , intent(out)   :: QM
  integer          , optional   , intent(inout) :: flag          
 
-! . local variables 
+! local variables ...
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
  real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
-! . local parameters
+ integer               :: i , j , info
+
+! local parameters ...
  real*8  , parameter   :: one = 1.d0 , zero = 0.d0
  
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
  CALL Overlap_Matrix(system,basis,S_matrix)
-
+ 
  ALLOCATE(QM%erg(size(basis))) 
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))

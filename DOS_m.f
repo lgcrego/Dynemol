@@ -6,9 +6,6 @@ module DOS_m
     use Overlap_Builder
     use Semi_Empirical_Parms , the_chemical_atom => atom
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
  contains
 !
 !
@@ -16,14 +13,15 @@ module DOS_m
 !===================================================
 subroutine  Total_DOS( erg , TDOS , internal_sigma )
 !===================================================
+implicit none
 real*8        , ALLOCATABLE , intent(in)    :: erg(:)
 type(f_grid)                , intent(inout) :: TDOS
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
-! . local variables
+! local variables ...
 real*8  , allocatable :: DOS_partial(:) , erg_MO(:)
-real*8                :: gauss_norm , sgm , two_sigma2
-integer               :: i1 , i2 , n_of_DOS_states
+real*8                :: gauss_norm , sgm , two_sigma2 , step
+integer               :: i1 , i2 , n_of_DOS_states , npoints, k ,j 
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -75,17 +73,18 @@ end subroutine Total_DOS
 !===========================================================================
 subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
 !===========================================================================
+implicit none
 type(structure)             , intent(in)    :: system
 type(C_eigen)               , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
-! . local variables
-real*8                :: gauss_norm , sgm , two_sigma2 , projection
+! local variables ...
+real*8                :: gauss_norm , sgm , two_sigma2 , projection , step , erg_MO
 real*8  , allocatable :: DOS_partial(:) 
 integer , allocatable :: list_of_DOS_states(:)
-integer               :: i , j , i1 , i2 , n_of_atoms , ioerr
+    integer               :: i , j , i1 , i2 , n_of_atoms , ioerr , npoints , k , l , n_of_DOS_states , n
 integer               :: atom(system%atoms) 
 
 if( present(internal_sigma) ) then 

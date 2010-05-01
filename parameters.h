@@ -32,7 +32,7 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  5    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  25   ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !

@@ -4,9 +4,6 @@
     use Semi_Empirical_Parms
     use Structure_Builder
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
     public :: STO_parameters
     public :: s_orb , p_orb , d_x2y2 , d_z2 , d_xyz  
 
@@ -20,13 +17,14 @@
 !
 !
 !
-!
+!========================
  pure function s_orb(r,k)
-
+!========================
+ implicit none
  real*8  , intent(in) :: r
  integer , intent(in) :: k
 
- real*8  :: a , b , coef
+ real*8  :: a , b , coef , s_orb
  integer :: n , i
 
  real*8 , parameter :: harm = 0.282094792d0    !! <== normalization constant for ang. orbitals
@@ -51,12 +49,14 @@
 !
 !
 !
+!==========================
  pure function p_orb(r,x,k)
-
+!==========================
+ implicit none
  real*8  , intent(in) :: r , x
  integer , intent(in) :: k
 
- real*8  :: a , b , coef
+ real*8  :: a , b , coef , p_orb
  integer :: i , n 
 
  real*8 , parameter :: harm = 0.488602512d0    !! <== normalization constant for ang. orbitals     
@@ -81,11 +81,16 @@
 !
 !
 !
+!===============================
  pure function d_x2y2(r,x1,x2,k)
-
+!===============================
+ implicit none
  real*8  , intent(in) :: r , x1 , x2
  integer , intent(in) :: k
 
+ integer            :: n , i  
+ real*8             :: d_x2y2
+ real*8             :: b , a1 , a2 , orb1 , orb2 , coef
  real*8 , parameter :: harm = -0.546274215d0   !! <== normalization constant for ang. orbitals 
 
  n = atom(k)%Nquant(2)
@@ -117,11 +122,15 @@
 !
 !
 !
+!================================
  pure function d_z2(r,x1,x2,x3,k)
-
+!================================
+ implicit none
  real*8  , intent(in) :: r , x1 , x2 , x3
  integer , intent(in) :: k
 
+ integer            :: n , i
+ real*8             :: d_z2 , b , a1 , a2 , coef , orb1 , orb2
  real*8 , parameter :: harm = -0.315391565d0   !! <== normalization constant for ang. orbitals 
  real*8 , parameter :: two = 2.d0  
 
@@ -154,11 +163,15 @@
 !
 !
 !
+!==============================
  pure function d_xyz(r,x1,x2,k)
-
+!==============================
+ implicit none
  real*8  , intent(in) :: r , x1 , x2
  integer , intent(in) :: k
 
+ integer            :: i , n 
+ real*8             :: d_xyz , b , a1 , a2 , orb1 , orb2 , coef
  real*8 , parameter ::  harm = 1.092548431d0    !! <== normalization constant for ang. orbitals 
 
  n = atom(k)%Nquant(2)

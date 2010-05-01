@@ -19,16 +19,16 @@
 !===========================================================
  subroutine Huckel_dynamics(system, basis, UNI, FMO , QDyn )
 !===========================================================
- implicit real*8      (a-h,o-y)
- implicit complex*16  (z)
-
- type(structure) , intent(in)               :: system
- type(STO_basis) , intent(in)               :: basis(:)
- type(C_eigen)   , intent(in)               :: UNI 
- type(C_eigen)   , intent(in)               :: FMO 
- real*8          , intent(inout)            :: QDyn(:,:)
+ implicit none
+ type(structure) , intent(in)       :: system
+ type(STO_basis) , intent(in)       :: basis(:)
+ type(C_eigen)   , intent(in)       :: UNI 
+ type(C_eigen)   , intent(in)       :: FMO 
+ real*8          , intent(inout)    :: QDyn(:,:)
 
 ! local variables ...
+integer                  :: it , j
+real*8                   :: t , t_rate
 real*8     , ALLOCATABLE :: Pops(:,:)
 complex*16 , ALLOCATABLE :: zG_L(:,:)     , MO_bra(:,:) 
 complex*16 , ALLOCATABLE :: zG_R(:,:)     , MO_ket(:,:)
@@ -127,7 +127,8 @@ character(1)    , optional      , allocatable   , intent(inout) :: QDyn_fragment
 character(*)                                    , intent(in)    :: flag
 
 ! local variable ...
-integer :: i , N_of_fragments
+integer      :: i , N_of_fragments
+character(1) :: first_in_line
 
 select case( flag )
 
@@ -147,7 +148,9 @@ select case( flag )
         end if
 
         ! for the sake of having the donor survival probability in the first column at output ...
-        If( (survival) .AND. (Extended_Cell%list_of_fragments(1) /= "D") ) pause ">>> list_of_fragments(1) /= 'D' <<<"
+        first_in_line = Extended_Cell%list_of_fragments(1)
+        where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
+        Extended_Cell%list_of_fragments(1) = "D"
 
         allocate( QDyn_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
         allocate( QDyn          (n_t,N_of_fragments+1)                      , source = 0.d0                              )

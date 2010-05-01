@@ -7,9 +7,6 @@
     use Structure_Builder
     use Slater_Type_Orbitals
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
     public :: Gaussian_Cube_Format 
 
     private
@@ -23,15 +20,16 @@
 !======================================================
  subroutine  Gaussian_Cube_Format( bra , ket , it , t )
 !======================================================
+ implicit none
  complex*16 , intent(in) :: bra(:), ket(:)
  real*8     , intent(in) :: t
  integer    , intent(in) :: it 
 
-
+! local variables ...
  complex*16 , allocatable :: Psi_bra(:) , Psi_ket(:)
  real*8     , allocatable :: xyz(:,:)
- real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2
- integer                  :: AtNo
+ real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2 , dx , dy , dz , a , b , c , r , SlaterOrbital
+ integer                  :: AtNo , nx_steps , ny_steps , nz_steps , i , j , ix , iy , iz , k 
  character(len=4)         :: string 
  character(len=15)        :: f_name
 
@@ -175,7 +173,11 @@
 !===========================
  subroutine BoundingBox( a )
 !===========================
+ implicit none
  type(structure) :: a
+
+! local variables ...
+ integer :: i
 
 !  size of the box
  forall(i=1:3) &

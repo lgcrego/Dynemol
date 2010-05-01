@@ -27,6 +27,7 @@
 !=============================================================
  subroutine DP_FMO_analysis( system , Q_center , DP_FMO , nr )
 !=============================================================
+ implicit none
  type(structure) , intent(in)    :: system
  real*8          , intent(in)    :: Q_center(3)
  real*8          , intent(inout) :: DP_FMO(3)
@@ -36,6 +37,7 @@
  type(structure)                 :: FMO_system
  type(STO_basis) , allocatable   :: FMO_basis(:)
  type(R_eigen)                   :: FMO
+ integer                         :: i
 
 ! FMO_system = solvent molecule with residue # nr ...
 
@@ -50,6 +52,7 @@
  FMO_system%k_WH       =  pack( system%k_WH      , system%nr == nr )
  FMO_system%symbol     =  pack( system%Symbol    , system%nr == nr )
  FMO_system%fragment   =  pack( system%fragment  , system%nr == nr )
+ FMO_system%residue    =  pack( system%residue   , system%nr == nr )
  FMO_system%nr         =  pack( system%nr        , system%nr == nr )
  FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%nr == nr )
  FMO_system%copy_No    =  0
@@ -77,12 +80,13 @@
 !================================================
  subroutine  DP_eigen_FMO( system , basis , FMO )
 !================================================
+ implicit none
  type(structure) , intent(in)  :: system
  type(STO_basis) , intent(in)  :: basis(:)
  type(R_eigen)   , intent(out) :: FMO       
 
 ! local variables ... 
- integer               :: i , j
+ integer               :: i , j , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
 
 ! local parameters ... 
@@ -161,14 +165,14 @@
 !================================================
  subroutine Build_DIPOLE_Matrix( system , basis )
 !================================================
-implicit real*8 (a-h,o-z)
+implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
 real*8  :: expa, expb, xab , yab , zab , Rab 
 integer :: AtNo_a , AtNo_b
-integer :: a , b , ia , ib , ja , jb 
+integer :: a , b , ia , ib , ja , jb , i , j
 integer :: na , la , ma 
 integer :: nb , lb , mb
 integer :: lmult
@@ -251,7 +255,7 @@ end subroutine Build_DIPOLE_Matrix
 !========================================================================================
  subroutine Dipole_Moment( system , basis , L_vec , R_vec , Center_of_Charge , Total_DP )
 !========================================================================================
-
+implicit none
 type(structure) , intent(in)  :: system
 type(STO_basis) , intent(in)  :: basis(:)
 real*8          , intent(in)  :: L_vec(:,:) , R_vec(:,:)
@@ -323,12 +327,13 @@ end subroutine Dipole_Moment
 !=====================================================
  pure function Huckel_Molecule( i , j , S_ij , basis )
 !=====================================================
+ implicit none
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8  :: k_eff , k_WH , Huckel_Molecule
+ real*8  :: k_eff , k_WH , Huckel_Molecule , c1 , c2 , c3
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN

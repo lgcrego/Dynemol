@@ -24,6 +24,7 @@
 !=================================================
  subroutine FMO_analysis( system, basis, CR, FMO )
 !=================================================
+ implicit none
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  complex*16      , allocatable , intent(in)  :: CR(:,:)
@@ -34,6 +35,7 @@
  type(STO_basis) , allocatable :: FMO_basis(:)
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
+ integer                       :: i
  character(len=1)              :: fragment
 
 ! electron donor fragment ... 
@@ -56,6 +58,9 @@
  FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
  FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
  FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
+ FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
+ FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
+ FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
  FMO_system%copy_No    =  0
 
  CALL Basis_Builder( FMO_system , FMO_basis )
@@ -98,13 +103,14 @@
 !----------------------------------------------------------------
  subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
 !----------------------------------------------------------------
+ implicit none
  type(C_eigen)                           , intent(inout) :: FMO
  complex*16       , ALLOCATABLE , target , intent(in)    :: CR(:,:)
  character(len=1)                        , intent(in)    :: basis_fragment(:)
  character(len=1)                        , intent(in)    :: fragment
  real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
 
-! local variables 
+! local variables ...
  complex*16 , pointer  :: CR_FMO(:,:) => null()
  integer               :: ALL_size , FMO_size , i , j , p1 , p2
  real*8                :: check
@@ -159,12 +165,14 @@
 !---------------------------------------------------
  subroutine  eigen_FMO( system, basis, wv_FMO, FMO )
 !---------------------------------------------------
+ implicit none
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  real*8          , ALLOCATABLE , intent(out) :: wv_FMO(:,:)
  type(C_eigen)                 , intent(out) :: FMO       
 
- integer               :: N_of_molecule_electrons, i, j
+! local variables ... 
+ integer               :: N_of_molecule_electrons, i, j , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) 
 
  ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  FMO%erg(size(basis)) )

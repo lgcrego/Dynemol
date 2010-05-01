@@ -26,6 +26,7 @@
 !=========================
 subroutine Read_Structure
 !=========================
+implicit none
 
 select case( file_type )
 
@@ -69,10 +70,11 @@ end subroutine Read_Structure
 !======================================
  subroutine Generate_Structure( frame )
 !======================================
+implicit none
 integer , intent(in) :: frame
 
 ! local variables ...
-integer :: copy , nr_sum
+integer :: copy , nr_sum , ix , iy , k , n
 
 !----------------------------------------------------------
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
@@ -132,6 +134,7 @@ integer :: copy , nr_sum
 
 ! define the DONOR fragment ...
  where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
+ where( (extended_cell%fragment == 'D') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
 
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
@@ -143,7 +146,7 @@ integer :: copy , nr_sum
  extended_cell%T_xyz(3) = unit_cell%T_xyz(3)
 
  if( frame == 1 ) CALL diagnosis( Extended_Cell )
-    
+
  include 'formats.h'
 
  end subroutine generate_structure
@@ -169,11 +172,12 @@ integer :: copy , nr_sum
 !==========================================
  subroutine Basis_Builder( system , basis )
 !==========================================
+ implicit none
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
 
 ! local variables ...
- integer :: k , i , l , m , AtNo
+ integer :: k , i , l , m , AtNo , N_of_orbitals
 
 ! total number of orbitals ...
  N_of_orbitals = sum(atom(system%AtNo)%DOS)
@@ -265,9 +269,9 @@ do residue = 1 , size(Unit_Cell%list_of_residues)
 
     N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
    
-!   finding positions of residues in structure and number of residue members ...
-    first_nr = minval( a%nr , a%residue ==  Unit_Cell%list_of_residues(residue) )
-    last_nr  = maxval( a%nr , a%residue ==  Unit_Cell%list_of_residues(residue) )
+!   finding positions of residues in structure and number of residue members ; for continuous blocks ...
+    first_nr = minval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
+    last_nr  = maxval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
     N_of_residue_members = last_nr - first_nr + 1
 
     If( N_of_residue_type /= 0 )    Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type

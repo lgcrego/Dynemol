@@ -16,18 +16,20 @@ contains
 !
 !
 !
- subroutine Overlap_Matrix( system, basis, S_matrix , purpose)
-
+!================================================================
+ subroutine Overlap_Matrix( system , basis , S_matrix , purpose )
+!================================================================
+ implicit none
  type(structure)                , intent(in)  :: system
  type(STO_basis)                , intent(in)  :: basis(:)
  real*8           , allocatable , intent(out) :: S_matrix(:,:)
  character(len=*) , optional    , intent(in)  :: purpose             
 
- integer :: NonZero , S_size
- real*8  :: Sparsity
-
+! local variables ... 
  type(structure)               :: pbc_system
  type(STO_basis) , allocatable :: pbc_basis(:)
+ integer                       :: NonZero , S_size
+ real*8                        :: Sparsity
 
  CALL util_overlap     
 
@@ -79,29 +81,32 @@ contains
 !
 !
 !
+!================================================================================
 subroutine Build_OVERLAP_Matrix( b_system, b_basis, a_system, a_basis, S_matrix )
-
+!================================================================================
 use util_m , factorial => fact
-
-implicit real*8 (a-h,o-z)
-
+implicit none
 type(structure)            , intent(in)                  :: b_system
 type(STO_basis)            , intent(in)                  :: b_basis(:)
 type(structure) , optional , intent(in)                  :: a_system
 type(STO_basis) , optional , intent(in)                  :: a_basis(:)
 real*8                     , intent(inout) , allocatable :: S_matrix(:,:)
 
-real*8  :: expa, expb, Rab , aux
+! local variables ...
+real*8  :: expa, expb, Rab , aux , anor
 real*8  :: sux(0:10)
 integer :: AtNo_a , AtNo_b
 integer :: la_max , lb_max
 integer :: a , b , ia , ib , ja , jb
 integer :: na , la , ma 
 integer :: nb , lb , mb
+integer :: msup , i , j , k , m 
 
+! local parameters ....
 integer , parameter :: mxn = 15 , mxl = 5
 real*8  , parameter :: cutoff_Angs = 10.d0
 
+! local arrays ...
 real*8  , dimension(0:mxl)                   :: solvec 
 real*8  , dimension(0:mxl)                   :: solnorm , sol_partial
 real*8  , dimension(-mxl:mxl,-mxl:mxl,0:mxl) :: rl , rl2
@@ -177,21 +182,23 @@ end subroutine Build_OVERLAP_Matrix
 !
 !
 !
-!
+!=====================================================================
 subroutine RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
-
-implicit real*8 (a-h,o-z)
-
+!=====================================================================
+implicit none
 type(structure)            , intent(in)  :: b_system
 type(structure)            , intent(in)  :: a_system
 integer                    , intent(in)  :: ia , ib
 real*8                     , intent(out) :: Rab
 real*8  , dimension(:,:,:) , intent(out) :: rl , rl2
 
-real*8  :: xaq, yaq, zaq, xbq, ybq, zbq
+! local variables ...
+real*8  :: xaq, yaq, zaq, xbq, ybq, zbq, xa, ya, za, xb, yb, zb, xab, yab, zab, xy
+real*8  :: sinal, cosal, sinbet, cosbet, singa, cosga
 integer :: AtNo_a , AtNo_b
-integer :: la_max , lb_max
+integer :: la_max , lb_max , lmax
 
+! local parameters ...
 real*8  , parameter :: tol = 1.d-10
 integer , parameter :: mxn = 15 , mxl = 5
 

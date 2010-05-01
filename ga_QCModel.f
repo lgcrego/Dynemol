@@ -135,13 +135,14 @@ end function C_Mulliken
 !===================================================
  subroutine  GA_eigen( system , basis , FMO , flag )
 !===================================================
+ implicit none
  type(structure)              , intent(in)    :: system
  type(STO_basis)              , intent(in)    :: basis(:)
  type(R_eigen)                , intent(out)   :: FMO       
  integer         , optional   , intent(inout) :: flag 
 
 ! local variables ... 
- integer               :: i , j
+ integer               :: i , j , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
 
 ! local parameters ... 
@@ -237,7 +238,7 @@ end subroutine GA_DP_Analysis
 !================================================
  subroutine Build_DIPOLE_Matrix( system , basis )
 !================================================
-implicit real*8 (a-h,o-z)
+implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 
@@ -247,7 +248,7 @@ integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb 
 integer :: na , la , ma 
 integer :: nb , lb , mb
-integer :: lmult
+integer :: lmult , i , j
 
 real*8  , parameter :: tol = 1.d-10 
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
@@ -400,12 +401,13 @@ end subroutine Dipole_Moment
 !=================================================
  pure function Huckel_bare( i , j , S_ij , basis )
 !=================================================
+ implicit none
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8  :: k_eff , k_WH , Huckel_bare
+ real*8  :: k_eff , k_WH , Huckel_bare , c1 , c2 , c3
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN

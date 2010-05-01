@@ -85,6 +85,7 @@ real*8          , intent(in)    :: Pop(:)
 
 ! local variables ...
 integer :: L , gene , EHS , N_of_EHSymbol 
+integer :: indx(size(basis)) , k , i
 
 ! -----------------------------------------------
 !       changing basis: editting functions ...
@@ -101,6 +102,8 @@ integer :: L , gene , EHS , N_of_EHSymbol
 !                 7 - k_WH
 ! -----------------------------------------------
 
+indx = [ ( i , i=1,size(basis) ) ]
+
 N_of_EHSymbol = size(GA%EHSymbol)
 
 gene = 0
@@ -112,15 +115,40 @@ do  L = 0 , 2
 
     If( GA%key(L+1,EHS) == 1 ) then
 
+        ! changes VSIP ...
         gene = gene + GA%key(4,EHS)
         If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
 
         gene = gene + GA%key(5,EHS)
-        If( GA%key(5,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = Pop(gene) + basis%zeta(1)
+        ! single STO orbitals ...
+        If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
+        where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = Pop(gene) + basis%zeta(1)
 
-        gene = gene + GA%key(6,EHS)
-        If( GA%key(6,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(2) = Pop(gene) + basis%zeta(2)
+        ! double STO orbitals ...
+        If( (GA%key(5,EHS) == 1) .AND. (Ga%key(6,EHS) ==1) ) then
 
+            ! finds the first EHT atom ...
+            k = minloc( indx , dim=1 , MASK = (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
+
+            ! changes zeta(1)-coef(1)   ;   zeta(2)-coef(2) constant ...
+            GA_basis(k)%zeta(1) = Pop(gene) + basis(k)%zeta(1)
+            CALL normalization( basis , GA_basis(k)%zeta , GA_basis(k)%coef , GA_basis(k)%n , k , 1 , 2 )
+            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
+                GA_basis % zeta(1) = basis(k) % zeta(1) 
+                GA_basis % coef(1) = basis(k) % coef(1)
+            end where
+
+            ! zeta(1)-coef(1) constants ;   changes zeta(2)-coef(2) ...
+            GA_basis(k)%zeta(2) = Pop(gene) + basis(k)%zeta(2)
+            CALL normalization( basis , GA_basis(k)%zeta , GA_basis(k)%coef , GA_basis(k)%n , k , 2 , 1 )
+            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
+                GA_basis % zeta(2) = basis(k) % zeta(2) 
+                GA_basis % coef(2) = basis(k) % coef(2)
+            end where
+
+        End If
+
+        ! changes k_WH ...
         gene = gene + GA%key(7,EHS)
         If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
 
@@ -450,6 +478,46 @@ close(13)
 17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
 
 end subroutine Dump_OPT_parameters
+!
+!
+!
+!===============================================================
+ subroutine normalization( basis , zeta , coef , n , k , i , j )
+!===============================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(inout) :: zeta(:)
+real*8          , intent(inout) :: coef(:)
+integer         , intent(in)    :: n
+integer         , intent(in)    :: k
+integer         , intent(in)    :: i
+integer         , intent(in)    :: j
+
+! local variables ...
+real*8  :: zeta_tmp(size(zeta)) , coef_tmp(size(coef))
+real*8  :: alpha , prod , soma
+
+zeta_tmp = zeta
+coef_tmp = coef
+
+prod = zeta_tmp(1) * zeta_tmp(2)
+soma = zeta_tmp(1) + zeta_tmp(2)
+
+alpha = ( four*prod )**n + two*sqrt( prod )
+alpha = alpha / soma**(two*n + 1)
+
+coef_tmp(i) = - coef_tmp(j)*alpha + sqrt( 1.d0 + coef_tmp(j)*coef_tmp(j)*(alpha*alpha - 1.d0) )
+
+! if coef > 1 go back to original non-optimized STO parameters ...
+If( coef_tmp(i) >= 1.d0 ) then
+    zeta(i) = basis(k)%zeta(i)
+    coef(i) = basis(k)%coef(i)
+else
+    zeta(i) = zeta_tmp(i)
+    coef(i) = coef_tmp(i)
+end If
+
+end subroutine normalization
 !
 !
 !

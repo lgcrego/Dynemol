@@ -15,14 +15,14 @@
  function get_Populations(system,basis,bra,ket) result(Populations)
 !==================================================================
  implicit none
- type(structure) , intent(in)       :: system
- type(STO_basis) , intent(in)       :: basis(:)
- complex*16      , intent(in)       :: bra(:,:) , ket(:,:)
- real*8                             :: Populations( size(system%list_of_fragments)+1 )
+ type(structure) , intent(in)  :: system
+ type(STO_basis) , intent(in)  :: basis(:)
+ complex*16      , intent(in)  :: bra(:,:) , ket(:,:)
+ real*8                        :: Populations( size(system%list_of_fragments)+1 )
 
 ! local variables ...
 integer             :: nf , N_of_fragments
-character(len=1)    :: fragment
+character(len=1)    :: fragment 
 
 !----------------------------------------------------------
 !              get time-dependent Populations

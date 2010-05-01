@@ -2,9 +2,6 @@ module Semi_Empirical_Parms
 
     use type_m
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
     type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
 

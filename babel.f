@@ -553,12 +553,11 @@ implicit none
 type(universe)  , allocatable   , intent(out) :: trj(:)
 
 ! local variables ....
-character(1)                    :: idx
-real*8          , allocatable   :: distance_ligation(:,:) , distance_T(:)
-integer                         :: openstatus , inputstatus , atoms , i , j , k , ligation , indx1 , indx2 , model 
-integer                         :: j1 , j2 , n_residues 
-character(1)                    :: fragment
-character(3)                    :: residue
+character(1)  :: idx
+integer       :: openstatus , inputstatus , atoms , i , j , k , indx1 , indx2 , model 
+integer       :: j1 , j2 , n_residues 
+character(1)  :: fragment
+character(3)  :: residue
 
 open(unit = 13, file = 'VASP.trj', status = 'old', action = 'read', iostat = openstatus)
 if( openstatus > 0 ) stop '*** Cannot open the file VASP.trj ***'
@@ -652,6 +651,7 @@ CALL Identify_Fragments( trj(1) )
 ! Copy information from trj(1) to trj(:) ...
 forall(i = 2:model )
     trj(i) % N_of_atoms      = trj(1) % N_of_atoms
+    trj(i) % box             = trj(1) % box
     trj(i) % atom % Atno     = trj(1) % atom % Atno
     trj(i) % atom % Symbol   = trj(1) % atom % Symbol
     trj(i) % atom % fragment = trj(1) % atom % fragment
