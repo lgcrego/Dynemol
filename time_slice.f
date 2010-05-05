@@ -82,7 +82,7 @@ do frame = 1 , size(trj) , frame_step
 
         case( "eigen_slice" )
 
-            If( .NOT. done ) CALL preprocess( Extended_Cell , ExCell_basis )
+            If( .NOT. done ) CALL preprocess( Extended_Cell , ExCell_basis , QDyn )
 
             CALL Huckel_Slice_Dynamics( Extended_Cell , ExCell_basis , QDyn )
 
@@ -133,8 +133,6 @@ complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 CALL EigenSystem( system , basis, UNI )
 
-IF( t == t_i ) phase = one
-
 phase(:) = exp(- zi * UNI%erg(:) * t_rate / h_bar)
 
 forall( j=1:n_part )   
@@ -150,9 +148,6 @@ CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
 CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
 
 QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
-
-t  = t  + t_rate
-it = it + 1
 
 zG_L = MO_bra       ! <== updating expansion coefficients at t 
 zG_R = MO_ket       ! <== updating expansion coefficients at t
@@ -176,6 +171,9 @@ IF( GaussianCube ) then
 end IF    
 !------------------------------------------------------------------------
 
+t  = t  + t_rate
+it = it + 1
+
 include 'formats.h'
 
 end subroutine Huckel_Slice_Dynamics
@@ -192,15 +190,19 @@ end subroutine preprocess_Chebyshev
 !
 !
 !
-!====================================================
- subroutine preprocess_Huckel_Slice( system , basis )
-!====================================================
+!==========================================================
+ subroutine preprocess_Huckel_Slice( system , basis , QDyn)
+!==========================================================
 implicit none
-type(structure)               , intent(in)  :: system
-type(STO_basis)               , intent(in)  :: basis(:)
+type(structure)  , intent(in)    :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+real*8           , intent(inout) :: QDyn(:,:)
 
 !local variables ...
 type(C_eigen) :: UNI , FMO
+
+! local parameters ...
+complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 CALL EigenSystem( system , basis, UNI )
 
@@ -216,6 +218,15 @@ t      =  t_i
 t_rate =  MD_dt * frame_step
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
+
+! DUAL representation for efficient calculation of survival probabilities ...
+! coefs of <k(t)| in DUAL basis ...
+CALL gemm(UNI%L,ZG_L,DUAL_bra,'T','N',one,zero)
+
+! coefs of |k(t)> in DUAL basis ...
+CALL gemm(UNI%R,ZG_R,DUAL_ket,'N','N',one,zero)
+
+QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
 
 done = .true. 
 

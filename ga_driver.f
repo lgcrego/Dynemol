@@ -84,10 +84,24 @@ Print*, UNI%erg(12) - UNI%erg(10)
 Print*, UNI%erg(11) - UNI%erg(10)
 Print*, UNI%erg(11) - UNI%erg(09)
 Print*, " " 
-Print*, "12-Ic"     , Mulliken(UNI,ExCell_basis,MO=12,EHSymbol="Ic")
-Print*, "12-Ix"     , Mulliken(UNI,ExCell_basis,MO=12,EHSymbol="Ix")
-Print*, "12-atom1"  , Mulliken(UNI,ExCell_basis,MO=12,atom=1)
-Print*, "12-all"    , Mulliken(UNI,ExCell_basis,MO=12)
+! Population analysis ...
+print*, "09-Ix-l=1", Mulliken(UNI,GA_basis,MO=09,atom=1,AO_ang=1) 
+print*, "09-Ic-l=0", Mulliken(UNI,GA_basis,MO=09,atom=2,AO_ang=0)
+print*, "09-Ix-l=1", Mulliken(UNI,GA_basis,MO=09,atom=3,AO_ang=1)
+Print*, " " 
+print*, "10-Ix-l=1", Mulliken(UNI,GA_basis,MO=10,atom=1,AO_ang=1) 
+print*, "10-Ic-l=1", Mulliken(UNI,GA_basis,MO=10,atom=2,AO_ang=1)
+print*, "10-Ix-l=1", Mulliken(UNI,Ga_basis,MO=10,atom=3,AO_ang=1)
+ Print*, " " 
+print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=1,AO_ang=1)
+print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=2,AO_ang=1)
+print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=3,AO_ang=1)
+Print*, " " 
+print*, "12-Ix-l=0", Mulliken(UNI,GA_basis,MO=12,atom=1,AO_ang=0)
+print*, "12-Ix-l=1", Mulliken(UNI,GA_basis,MO=12,atom=1,AO_ang=1)
+print*, "12-Ic-l=1", Mulliken(UNI,GA_basis,MO=12,atom=2,AO_ang=1)
+print*, "12-Ix-l=0", Mulliken(UNI,GA_basis,MO=12,atom=3,AO_ang=0)
+print*, "12-Ix-l=1", Mulliken(UNI,GA_basis,MO=12,atom=3,AO_ang=1)
 
 If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
 If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )

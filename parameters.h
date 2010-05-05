@@ -12,19 +12,19 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice
+			DRIVER		 = "Genetic_Alg"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice
 !			
-            GaussianCube = F_ ,                 &
-			Survival     = T_ ,                 &
+            GaussianCube = T_ ,                 &
+			Survival     = F_ ,                 &
             SPECTRUM     = F_ ,                 & 
-			DP_Moment    = F_ ,                 &
-			OPT_basis    = F_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			DP_Moment    = T_ ,                 &
+			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
-            file_format  =  "vasp" ,            & ! <= xyz , pdb or vasp
+            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !

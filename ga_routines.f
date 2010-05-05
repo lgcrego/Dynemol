@@ -13,12 +13,12 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   250         
-    integer , parameter :: N_generations  =   600         
-    integer , parameter :: Top_Selection  =   50           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.50d0       ! <== range of variation of parameters
+    integer , parameter :: Pop_Size       =   800         
+    integer , parameter :: N_generations  =   1200        
+    integer , parameter :: Top_Selection  =   100          ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.1d0        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.4           
-    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    logical , parameter :: Mutate_Cross   =   F_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -56,15 +56,26 @@ chi(4) = ( GA%erg(11) - GA%erg(09) ) - 0.3584d0    ; weight(4) = 6.0d0
 chi(5) = ( GA%erg(10) - GA%erg(09) ) - 0.3584d0    ; weight(5) = 6.0d0 
 
 ! Population analysis ...
-chi(6) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ic") - 0.1d0     ; weight(6) = 9.0d0
-chi(7) =  Mulliken(GA_UNI,basis,MO=12,EHSymbol="Ix") - 0.9d0     ; weight(7) = 9.0d0
+chi(6) =  Mulliken(GA_UNI,basis,MO=09,atom=1,AO_ang=1) - 0.43d0      ; weight(6)  = 6.0d0
+chi(7) =  Mulliken(GA_UNI,basis,MO=09,atom=2,AO_ang=0) - 0.14d0      ; weight(7)  = 6.0d0
+chi(8) =  Mulliken(GA_UNI,basis,MO=09,atom=3,AO_ang=1) - 0.43d0      ; weight(8)  = 6.0d0
 
-chi(8)  =  Mulliken(GA_UNI,basis,MO=12,atom=1) - 0.1d0     ; weight(8)  = 0.0d0
-chi(9)  =  Mulliken(GA_UNI,basis,MO=12,atom=2) - 0.45d0     ; weight(9)  = 0.0d0
-chi(10) =  Mulliken(GA_UNI,basis,MO=12,atom=3) - 0.45d0     ; weight(10) = 0.0d0
+chi(09) =  Mulliken(GA_UNI,basis,MO=10,atom=1,AO_ang=1) - 0.33d0     ; weight(09) = 6.0d0
+chi(10) =  Mulliken(GA_UNI,basis,MO=10,atom=2,AO_ang=1) - 0.33d0     ; weight(10) = 6.0d0
+chi(11) =  Mulliken(GA_UNI,basis,MO=10,atom=3,AO_ang=1) - 0.33d0     ; weight(11) = 6.0d0
+
+chi(12) =  Mulliken(GA_UNI,basis,MO=11,atom=1,AO_ang=1) - 0.33d0     ; weight(12) = 6.0d0
+chi(13) =  Mulliken(GA_UNI,basis,MO=11,atom=2,AO_ang=1) - 0.33d0     ; weight(13) = 6.0d0
+chi(14) =  Mulliken(GA_UNI,basis,MO=11,atom=3,AO_ang=1) - 0.33d0     ; weight(14) = 6.0d0
+
+chi(15) =  Mulliken(GA_UNI,basis,MO=12,atom=1,AO_ang=0) - 0.04d0     ; weight(15) = 6.0d0
+chi(16) =  Mulliken(GA_UNI,basis,MO=12,atom=1,AO_ang=1) - 0.22d0     ; weight(16) = 6.0d0
+chi(17) =  Mulliken(GA_UNI,basis,MO=12,atom=2,AO_ang=1) - 0.48d0     ; weight(17) = 6.0d0
+chi(18) =  Mulliken(GA_UNI,basis,MO=12,atom=3,AO_ang=0) - 0.04d0     ; weight(18) = 6.0d0
+chi(19) =  Mulliken(GA_UNI,basis,MO=12,atom=3,AO_ang=1) - 0.22d0     ; weight(19) = 6.0d0
 
 ! Total DIPOLE moment ...
-chi(11) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )   ; weight(11) = 10.d0
+chi(20) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )     ; weight(20) = 35.d0
 !============================================================
 
 ! apply weight on chi and evaluate cost ...
@@ -86,6 +97,7 @@ real*8          , intent(in)    :: Pop(:)
 ! local variables ...
 integer :: L , gene , EHS , N_of_EHSymbol 
 integer :: indx(size(basis)) , k , i
+real*8  :: zeta(2) , coef(2)
 
 ! -----------------------------------------------
 !       changing basis: editting functions ...
@@ -117,12 +129,12 @@ do  L = 0 , 2
 
         ! changes VSIP ...
         gene = gene + GA%key(4,EHS)
-        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
+        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene)/2.d0 + basis%IP
 
-        gene = gene + GA%key(5,EHS)
         ! single STO orbitals ...
+        gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
         If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
-        where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = Pop(gene) + basis%zeta(1)
+        where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = abs( Pop(gene) + basis%zeta(1) )
 
         ! double STO orbitals ...
         If( (GA%key(5,EHS) == 1) .AND. (Ga%key(6,EHS) ==1) ) then
@@ -130,20 +142,18 @@ do  L = 0 , 2
             ! finds the first EHT atom ...
             k = minloc( indx , dim=1 , MASK = (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
 
-            ! changes zeta(1)-coef(1)   ;   zeta(2)-coef(2) constant ...
-            GA_basis(k)%zeta(1) = Pop(gene) + basis(k)%zeta(1)
-            CALL normalization( basis , GA_basis(k)%zeta , GA_basis(k)%coef , GA_basis(k)%n , k , 1 , 2 )
+            ! calculate  coef(1)[ zeta(1) , zeta(2) , coef(2) ] ...
+            gene    = gene + 1
+            zeta(1) = abs( Pop(gene) + basis(k)%zeta(1) )
+            gene    = gene + 1
+            zeta(2) = abs( Pop(gene) + basis(k)%zeta(2) )
+            coef(2) = abs( Pop(gene) )
+            CALL normalization( basis , zeta , coef , GA_basis(k)%n , k , 1 , 2 )
             where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
-                GA_basis % zeta(1) = basis(k) % zeta(1) 
-                GA_basis % coef(1) = basis(k) % coef(1)
-            end where
-
-            ! zeta(1)-coef(1) constants ;   changes zeta(2)-coef(2) ...
-            GA_basis(k)%zeta(2) = Pop(gene) + basis(k)%zeta(2)
-            CALL normalization( basis , GA_basis(k)%zeta , GA_basis(k)%coef , GA_basis(k)%n , k , 2 , 1 )
-            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
-                GA_basis % zeta(2) = basis(k) % zeta(2) 
-                GA_basis % coef(2) = basis(k) % coef(2)
+                GA_basis % zeta(1) = zeta(1) 
+                GA_basis % zeta(2) = zeta(2) 
+                GA_basis % coef(1) = coef(1)
+                GA_basis % coef(2) = coef(2)
             end where
 
         End If
@@ -153,6 +163,7 @@ do  L = 0 , 2
         If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
 
     end If
+
 end do
 end do
 
@@ -503,17 +514,18 @@ coef_tmp = coef
 prod = zeta_tmp(1) * zeta_tmp(2)
 soma = zeta_tmp(1) + zeta_tmp(2)
 
-alpha = ( four*prod )**n + two*sqrt( prod )
+alpha = ( four*prod )**n * two*sqrt( prod )
 alpha = alpha / soma**(two*n + 1)
 
 coef_tmp(i) = - coef_tmp(j)*alpha + sqrt( 1.d0 + coef_tmp(j)*coef_tmp(j)*(alpha*alpha - 1.d0) )
 
 ! if coef > 1 go back to original non-optimized STO parameters ...
 If( coef_tmp(i) >= 1.d0 ) then
-    zeta(i) = basis(k)%zeta(i)
-    coef(i) = basis(k)%coef(i)
+    zeta(1) = basis(k)%zeta(1)
+    zeta(2) = basis(k)%zeta(2)
+    coef(1) = basis(k)%coef(1)
+    coef(2) = basis(k)%coef(2)
 else
-    zeta(i) = zeta_tmp(i)
     coef(i) = coef_tmp(i)
 end If
 

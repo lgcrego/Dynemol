@@ -10,7 +10,7 @@
     private
 
 !   sto = 2^(n+1/2) / sqrt((2*n)!) 
-    real*8  , parameter , dimension(5) :: sto = [2.0d0 , 1.1547005d0 , 0.42163702d0 , 0.112687234d0 , 0.23756555d0] 
+    real*8  , parameter , dimension(6) :: sto = [2.0d0 , 1.1547005d0 , 0.42163702d0 , 0.112687234d0 , 0.023756555d0 , 0.004135485d0] 
 
  contains   
 !
@@ -24,7 +24,7 @@
  real*8  , intent(in) :: r
  integer , intent(in) :: k
 
- real*8  :: a , b , coef , s_orb
+ real*8  :: a1 , a2 , b , coef , orb_1 , orb_2 , s_orb
  integer :: n , i
 
  real*8 , parameter :: harm = 0.282094792d0    !! <== normalization constant for ang. orbitals
@@ -34,16 +34,25 @@
  b = 1.d0 
  do i=1,n-1 
     b=b*r 
- end do                         !! <==   b = r^(n-1)
+ end do                           !! <==   b = r^(n-1)
 
- a = 1.d0
+ a1 = 1.d0
  do i=1,n 
-    a=a*atom(k)%zeta(0,1)
+    a1=a1*atom(k)%zeta(0,1)
  end do 
- a=a*dsqrt(atom(k)%zeta(0,1))   !! <==   a = eta^(n+1/2)
+ a1=a1*dsqrt(atom(k)%zeta(0,1))   !! <==   a1 = eta_1^(n+1/2)
 
- coef  = atom(k)%coef(0,1) * sto(n) * a * harm  
- s_orb = coef * b * dexp(-atom(k)%zeta(0,1)*r)
+ a2 = 1.d0
+ do i=1,n 
+    a2=a2*atom(k)%zeta(0,2)
+ end do 
+ a2=a2*dsqrt(atom(k)%zeta(0,2))   !! <==   a2 = eta_2^(n+1/2)
+
+ coef  = sto(n) * harm  
+ orb_1 = atom(k)%coef(0,1) * a1 * dexp(-atom(k)%zeta(0,1)*r)
+ orb_2 = atom(k)%coef(0,2) * a2 * dexp(-atom(k)%zeta(0,2)*r)
+
+ s_orb = coef * b * ( orb_1 + orb_2 )
 
  end function s_orb
 !
@@ -56,7 +65,7 @@
  real*8  , intent(in) :: r , x
  integer , intent(in) :: k
 
- real*8  :: a , b , coef , p_orb
+ real*8  :: a1 , a2 , b , coef , orb_1 , orb_2 , p_orb
  integer :: i , n 
 
  real*8 , parameter :: harm = 0.488602512d0    !! <== normalization constant for ang. orbitals     
@@ -68,14 +77,23 @@
     b=b*r 
  end do                           !! <==   b = r^(n-2)
 
- a = 1.d0
+ a1 = 1.d0
  do i=1,n 
-    a=a*atom(k)%zeta(1,1) 
+    a1=a1*atom(k)%zeta(1,1) 
  end do 
- a=a*dsqrt(atom(k)%zeta(1,1))     !! <==   a = eta^(n+1/2)
+ a1=a1*dsqrt(atom(k)%zeta(1,1))     !! <==   a1 = eta_1^(n+1/2)
 
- coef  = atom(k)%coef(1,1) * sto(n) * a * harm
- p_orb = coef * b * x * dexp(-atom(k)%zeta(1,1)*r)
+ a2 = 1.d0
+ do i=1,n 
+    a2=a2*atom(k)%zeta(1,2) 
+ end do 
+ a2=a2*dsqrt(atom(k)%zeta(1,2))     !! <==   a2 = eta_2^(n+1/2)
+
+ coef  = sto(n) * harm
+ orb_1 = atom(k)%coef(1,1) * a1 * dexp(-atom(k)%zeta(1,1)*r)
+ orb_2 = atom(k)%coef(1,2) * a2 * dexp(-atom(k)%zeta(1,2)*r)
+
+ p_orb = coef * b * x * ( orb_1 + orb_2 )
 
  end function p_orb
 !
