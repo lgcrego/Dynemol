@@ -90,6 +90,7 @@ module type_m
 
 
     type STO_basis
+        integer          :: indx
         integer          :: n
         integer          :: l
         integer          :: m

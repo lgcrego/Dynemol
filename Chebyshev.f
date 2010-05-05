@@ -20,18 +20,18 @@ module Chebyshev_m
     integer     , parameter :: step_max  = 2300
     complex*16  , parameter :: z0        = ( 0.0d0 , 0.0d0 )
 
+    real*8 , save :: tau_init , time_init
+
 contains
 !
-!=================================================================================
-subroutine Chebyshev( system , basis , MO , ind , time_init , tau_init , P1 , P2 )
-!=================================================================================
+!=========================================================
+subroutine Chebyshev( system , basis , MO , it , P1 , P2 )
+!=========================================================
 implicit none
 type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)
 complex*16                      , intent(inout) :: MO(:)
-integer                         , intent(inout) :: ind
-real*8                          , intent(inout) :: time_init
-real*8                          , intent(inout) :: tau_init
+integer                         , intent(inout) :: it 
 integer                         , intent(inout) :: P1
 integer                         , intent(inout) :: P2
 
@@ -57,7 +57,7 @@ allocate( Psi_T    ( N         ) )
 allocate( C_k      ( order     ) )
 allocate( A_r      ( N         ) )
 
-if( ind == 1 ) time_init = 0.0d0
+if( it  == 1 ) time_init = 0.0d0
 
 ! defined some constants of evolution...
 inv    = ( 2.0d0 * h_bar ) / E_range
@@ -67,14 +67,14 @@ time_t = time_init
 norm_parameter = real( dot_product(Psi_T,matmul(S_matrix,Psi_T)) )
 
 ! file of data of the propagation...
-if( ind == 1 ) then
+if( it  == 1 ) then
     open(unit=11, file='population.dat', action='write', status='unknown')
     write(11,*), 0.0d0 , 1.0d0
 else
     open(unit=11, file='population.dat', action='write', status='old', position='append')
 end if
 
-if( ind == 1 ) then
+if( it  == 1 ) then
     tau = E_range * delta_t / (2.0d0*h_bar)
     do
 
@@ -189,7 +189,7 @@ do
 
 30  time_t = time_t + tau * inv
 
-    if( time_t >= MD_dt*frame_step*ind ) exit
+    if( time_t >= MD_dt*frame_step*it  ) exit
     
     counter = counter + 1
 
@@ -202,7 +202,7 @@ print*, "Evolution time = ", time_t*1.0d3 , "fs"
 if( time_t >= t_f ) stop
 
 MO        = Psi_T
-ind       = ind + 1
+it        = it  + 1
 time_init = time_t
 
 deallocate( Psi_T , C_k , C_Psi , A_r , Hamiltonian , S_matrix )

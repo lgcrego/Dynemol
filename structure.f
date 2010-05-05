@@ -221,6 +221,8 @@ integer :: copy , nr_sum , ix , iy , k , n
             basis(k) % y         =  system % coord (i,2)
             basis(k) % z         =  system % coord (i,3)
 
+            basis(k) % indx      = k
+
             k = k + 1
 
         end do

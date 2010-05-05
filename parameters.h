@@ -12,19 +12,19 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "Genetic_Alg"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice
+			DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
 !			
-            GaussianCube = T_ ,                 &
-			Survival     = F_ ,                 &
+            GaussianCube = F_ ,                 &
+			Survival     = T_ ,                 &
             SPECTRUM     = F_ ,                 & 
-			DP_Moment    = T_ ,                 &
-			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			DP_Moment    = F_ ,                 &
+			OPT_basis    = F_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure"  ,      & ! <= structure or trajectory
-            file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
+            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
+            file_format  =  "vasp" ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -32,12 +32,12 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  25   ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  5    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.d-1 ,            & ! <== final time in PICOseconds
+            t_f           =  1.d-2 ,            & ! <== final time in PICOseconds
             n_t           =  500  ,             & ! <== number of time steps
 			MD_dt		  =  8.d-4 ,			& ! <== time step of MD simulation in PICOseconds
 

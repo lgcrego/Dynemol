@@ -25,9 +25,8 @@ module TimeSlice_m
                                              get_Populations
     use dipole_potential_m          , only : Solvent_Molecule_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Chebyshev_m
+    use Chebyshev_m                 , only : Chebyshev
 
-    use Overlap_Builder
 
     public :: Time_Slice
 
@@ -56,11 +55,10 @@ contains
 implicit none
 
 ! local variables ...
-integer                     :: frame , P1 , P2 , ind
+integer                     :: frame , P1 , P2 
 real*8       , allocatable  :: QDyn(:,:) , QDyn_temp(:,:)
 complex*16   , allocatable  :: MO(:)
 character(1) , allocatable  :: QDyn_fragments(:)
-real*8                      :: time_init , tau_init
 
 CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
 
@@ -73,10 +71,6 @@ do frame = 1 , size(trj) , frame_step
 
     CALL Generate_Structure( frame )
    
-!    CALL Coords_from_Universe( Unit_Cell , trj(2) , 2 )
-
-!    CALL Generate_Structure( 2 )
-
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
@@ -85,12 +79,9 @@ do frame = 1 , size(trj) , frame_step
 
         case( "chebyshev" )
 
-            if( frame == 1 ) then
-                CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , P1 , P2 )
-                ind = 1
-            end if
+            if( .NOT. done ) CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , P1 , P2 )
     
-            CALL Chebyshev( Extended_Cell , ExCell_basis , MO , ind , time_init , tau_init , P1 , P2 )
+            CALL Chebyshev( Extended_Cell , ExCell_basis , MO , it , P1 , P2 )
 
         case( "eigen_slice" )
 
@@ -141,6 +132,7 @@ type(C_eigen) :: UNI
 ! local parameters ...
 complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
+!------------------------------------------------------------------------
 ! Q-DYNAMICS ... 
 
 CALL EigenSystem( system , basis, UNI )
@@ -163,11 +155,11 @@ CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
 
 QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
 
-t  = t  + t_rate
-it = it + 1
-
 zG_L = MO_bra       ! <== updating expansion coefficients at t 
 zG_R = MO_ket       ! <== updating expansion coefficients at t
+
+t  = t  + t_rate
+it = it + 1
 
 !------------------------------------------------------------------------
 ! . LOCAL representation for film STO production ...
@@ -205,31 +197,30 @@ integer                         , intent(inout) :: P1
 integer                         , intent(inout) :: P2
 
 !local variables ...
-type(C_eigen)                   :: UNI , FMO
-real*8          , allocatable   :: State_FMO(:)
 integer                         :: i , li , N
+real*8          , allocatable   :: wv_FMO(:)
+type(C_eigen)                   :: UNI , FMO
+
+! local parameter ...
 complex*16      , parameter     :: z0 = ( 0.0d0 , 0.0d0 )
 
 CALL EigenSystem( system , basis, UNI )
 
-CALL FMO_analysis( system , basis, UNI%R, FMO , State_FMO )
+CALL FMO_analysis( system , basis, UNI%R, FMO , wv_FMO )
 
-li = 0
-do i = 1 , size(basis)
-    li = li + 1
-    if( basis(i)%fragment == 'D' ) exit
-end do
-
-allocate( MO ( size(UNI%erg) ) )
-
-N  = size(State_FMO)
+li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
+N  = size(wv_FMO)
 P1 = li
 P2 = li + N
 
-MO            = z0
-MO(li:li+N-1) = dcmplx(State_FMO(:))
+allocate( MO(size(basis)) , source=z0 )
+MO(li:li+N-1) = cmplx( wv_FMO(:) )
 
-deallocate( State_FMO )
+deallocate( wv_FMO )
+
+it =  1
+
+done = .true. 
 
 end subroutine preprocess_Chebyshev
 !
