@@ -25,6 +25,9 @@ module TimeSlice_m
                                              get_Populations
     use dipole_potential_m          , only : Solvent_Molecule_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
+    use Chebyshev_m
+
+    use Overlap_Builder
 
     public :: Time_Slice
 
@@ -53,9 +56,11 @@ contains
 implicit none
 
 ! local variables ...
-integer                      :: frame 
-real*8       , allocatable   :: QDyn(:,:) , QDyn_temp(:,:)
-character(1) , allocatable   :: QDyn_fragments(:)
+integer                     :: frame , P1 , P2 , ind
+real*8       , allocatable  :: QDyn(:,:) , QDyn_temp(:,:)
+complex*16   , allocatable  :: MO(:)
+character(1) , allocatable  :: QDyn_fragments(:)
+real*8                      :: time_init , tau_init
 
 CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
 
@@ -67,6 +72,10 @@ do frame = 1 , size(trj) , frame_step
     CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
     CALL Generate_Structure( frame )
+   
+!    CALL Coords_from_Universe( Unit_Cell , trj(2) , 2 )
+
+!    CALL Generate_Structure( 2 )
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
@@ -76,9 +85,12 @@ do frame = 1 , size(trj) , frame_step
 
         case( "chebyshev" )
 
-             CALL preprocess( Extended_Cell )
-
-!            CALL Chebyshev( Unit_Cell , Solvated_System , frame )
+            if( frame == 1 ) then
+                CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , P1 , P2 )
+                ind = 1
+            end if
+    
+            CALL Chebyshev( Extended_Cell , ExCell_basis , MO , ind , time_init , tau_init , P1 , P2 )
 
         case( "eigen_slice" )
 
@@ -88,11 +100,11 @@ do frame = 1 , size(trj) , frame_step
 
     end select
 
-    CALL DeAllocate_UnitCell    ( Unit_Cell     )
-    CALL DeAllocate_Structures  ( Extended_Cell )
-    DeAllocate                  ( ExCell_basis )
+    CALL DeAllocate_UnitCell   ( Unit_Cell     )
+    CALL DeAllocate_Structures ( Extended_Cell )
+    DeAllocate                 ( ExCell_basis  )
 
-    IF( t >= t_f ) exit
+    if( t >= t_f ) exit
 
 print*, frame
 end do
@@ -135,6 +147,8 @@ CALL EigenSystem( system , basis, UNI )
 
 phase(:) = exp(- zi * UNI%erg(:) * t_rate / h_bar)
 
+IF( t == t_i ) phase = one
+
 forall( j=1:n_part )   
     MO_bra(:,j) = conjg(phase(:)) * zG_L(:,j) 
     MO_ket(:,j) =       phase(:)  * zG_R(:,j) 
@@ -148,6 +162,9 @@ CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
 CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
 
 QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
+
+t  = t  + t_rate
+it = it + 1
 
 zG_L = MO_bra       ! <== updating expansion coefficients at t 
 zG_R = MO_ket       ! <== updating expansion coefficients at t
@@ -171,37 +188,63 @@ IF( GaussianCube ) then
 end IF    
 !------------------------------------------------------------------------
 
-t  = t  + t_rate
-it = it + 1
-
 include 'formats.h'
 
 end subroutine Huckel_Slice_Dynamics
 !
 !
 !
-!=========================================================
- subroutine preprocess_Chebyshev( system )
-!=========================================================
+!================================================================
+ subroutine preprocess_Chebyshev( system , basis , MO , P1 , P2 )
+!================================================================
 implicit none
-type(structure)               , intent(in)  :: system
+type(structure)                 , intent(in)    :: system
+type(STO_basis)                 , intent(in)    :: basis(:)
+complex*16      , allocatable   , intent(inout) :: MO(:)
+integer                         , intent(inout) :: P1
+integer                         , intent(inout) :: P2
+
+!local variables ...
+type(C_eigen)                   :: UNI , FMO
+real*8          , allocatable   :: State_FMO(:)
+integer                         :: i , li , N
+complex*16      , parameter     :: z0 = ( 0.0d0 , 0.0d0 )
+
+CALL EigenSystem( system , basis, UNI )
+
+CALL FMO_analysis( system , basis, UNI%R, FMO , State_FMO )
+
+li = 0
+do i = 1 , size(basis)
+    li = li + 1
+    if( basis(i)%fragment == 'D' ) exit
+end do
+
+allocate( MO ( size(UNI%erg) ) )
+
+N  = size(State_FMO)
+P1 = li
+P2 = li + N
+
+MO            = z0
+MO(li:li+N-1) = dcmplx(State_FMO(:))
+
+deallocate( State_FMO )
 
 end subroutine preprocess_Chebyshev
 !
 !
 !
-!==========================================================
- subroutine preprocess_Huckel_Slice( system , basis , QDyn)
-!==========================================================
+!===========================================================
+ subroutine preprocess_Huckel_Slice( system , basis , Qdyn )
+!===========================================================
 implicit none
-type(structure)  , intent(in)    :: system
-type(STO_basis)  , intent(in)    :: basis(:)
-real*8           , intent(inout) :: QDyn(:,:)
+type(structure) , intent(in)    :: system
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(inout) :: QDyn(:,:)
 
 !local variables ...
 type(C_eigen) :: UNI , FMO
-
-! local parameters ...
 complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 CALL EigenSystem( system , basis, UNI )
@@ -227,6 +270,9 @@ CALL gemm(UNI%L,ZG_L,DUAL_bra,'T','N',one,zero)
 CALL gemm(UNI%R,ZG_R,DUAL_ket,'N','N',one,zero)
 
 QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
+
+t  = t  + t_rate
+it = it + 1
 
 done = .true. 
 

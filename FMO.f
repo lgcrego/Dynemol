@@ -21,14 +21,15 @@
 !
 !
 !
-!=================================================
- subroutine FMO_analysis( system, basis, CR, FMO )
-!=================================================
+!======================================================
+ subroutine FMO_analysis( system, basis, CR, FMO , MO )
+!======================================================
  implicit none
- type(structure)               , intent(in)  :: system
- type(STO_basis)               , intent(in)  :: basis(:)
- complex*16      , allocatable , intent(in)  :: CR(:,:)
- type(C_eigen)                 , intent(out) :: FMO
+ type(structure)                                , intent(in)    :: system
+ type(STO_basis)                                , intent(in)    :: basis(:)
+ complex*16                     , allocatable   , intent(in)    :: CR(:,:)
+ type(C_eigen)                                  , intent(out)   :: FMO
+ real*8             , optional  , allocatable   , intent(inout) :: MO(:)
 
 ! local variables ...
  type(structure)               :: FMO_system
@@ -66,6 +67,11 @@
  CALL Basis_Builder( FMO_system , FMO_basis )
  
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO, FMO )
+
+ if( present(MO) ) then
+     allocate( MO (size( wv_FMO(orbital(1),:) ) ) )
+     MO(:) = wv_FMO(orbital(1),:)
+ end if
 
  ! wv_FMO needed only for time-propagation of wv_FMO state ...
  If( Survival ) then
