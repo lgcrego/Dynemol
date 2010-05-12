@@ -44,13 +44,12 @@ contains
 ! local variables ...
 integer                         :: i , frame , nr , N_of_residues
 real*8                          :: internal_sigma
-real*8          , allocatable   :: QDyn(:,:)
 character(3)                    :: residue
-character(1)    , allocatable   :: QDyn_fragments(:)
 logical                         :: FMO_ , DIPOLE_
 type(C_eigen)                   :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
+type(f_time)                    :: QDyn
 type(universe)                  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -63,7 +62,7 @@ internal_sigma = sigma / ( float(size(trj))/float(frame_step) )
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )
-CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
@@ -115,14 +114,14 @@ print*, frame
 end do
 
 ! average over configurations ...
-If( file_type == "trajectory" ) QDyn = QDyn / ( float(size(trj))/float(frame_step) )
+If( file_type == "trajectory" ) QDyn%dyn = QDyn%dyn / ( float(size(trj))/float(frame_step) )
 
-CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
+CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn )
 
 CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
 CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
 CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="dealloc" )
+CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
 end subroutine Avrg_Confgs
 

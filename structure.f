@@ -240,11 +240,19 @@ integer :: copy , nr_sum , ix , iy , k , n
  subroutine Diagnosis( a )
 !=========================
  implicit none
- type(structure)    , intent(inout)    :: a
+ type(structure) , intent(inout) :: a
 
 ! local variables ...
 integer :: N_of_orbitals, N_of_electron, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
 integer :: first_nr , last_nr , N_of_residue_members 
+integer :: i
+
+
+do i = 1 , a%atoms
+write(19,*) a%MMSymbol(i) ,' ', a%nr(i) ,' ', a%residue(i) ,' ', a%fragment(i)
+end do
+
+
 
 ! total number of orbitals ...
 N_of_orbitals = sum(atom(a%AtNo)%DOS)
@@ -274,9 +282,11 @@ do residue = 1 , size(Unit_Cell%list_of_residues)
 !   finding positions of residues in structure and number of residue members ; for continuous blocks ...
     first_nr = minval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
     last_nr  = maxval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
+
     N_of_residue_members = last_nr - first_nr + 1
 
     If( N_of_residue_type /= 0 )    Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
+
 end do
 
 ! total number of fragments ...
@@ -288,11 +298,41 @@ do fragment = 1 , size(a%list_of_fragments)
 
 end do
 
-print * , " "
+! dumping information about structure ...
+CALL dump_diagnosis( a )
+
+Print 47
 
 include 'formats.h'
 
 end subroutine diagnosis
+!
+!
+!
+!==============================
+ subroutine dump_diagnosis( a )
+!==============================
+implicit none
+type(structure) , intent(inout) :: a
+
+! local variables ...
+integer :: i , j
+
+OPEN( unit=3 , file='structure.log' , status='unknown' )
+
+write(3,*) System_Characteristics
+
+do i = 1 , a%atoms
+
+    write(3,100) i , a%Symbol(i) , a%MMSymbol(i) , a%nr(i) , a%residue(i) , a%fragment(i) , (a%coord(i,j) , j=1,3) 
+
+end do
+
+close(3)
+
+100 format(I7,A6,A7,I5,A7,A4,3F10.4)
+
+end subroutine dump_diagnosis
 !
 !
 end module Structure_Builder

@@ -8,10 +8,12 @@
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : orbital
- use Data_Output                , only : get_Populations
+ use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 
- public :: Huckel_dynamics
+ public :: Huckel_dynamics , DeAllocate_QDyn
+
+ private
 
  contains
 !
@@ -24,7 +26,7 @@
  type(STO_basis) , intent(in)       :: basis(:)
  type(C_eigen)   , intent(in)       :: UNI 
  type(C_eigen)   , intent(in)       :: FMO 
- real*8          , intent(inout)    :: QDyn(:,:)
+ type(f_time)    , intent(inout)    :: QDyn
 
 ! local variables ...
 integer                  :: it , j
@@ -36,12 +38,9 @@ complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:)
 complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
 complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
 
-complex*16 , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
-
-
 ! preprocessing stuff ..........................................................
 
-allocate( Pops( n_t , size(system%list_of_fragments)+1 ) ) 
+allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 ) ) 
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
@@ -67,7 +66,7 @@ DO it = 1 , n_t
 
    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-   If( t == t_i ) phase = one
+   If( t == t_i ) phase = C_one
 
    forall(j=1:n_part)   
       MO_bra(:,j) = conjg(phase(:)) * zG_L(:,j) 
@@ -78,10 +77,10 @@ DO it = 1 , n_t
 ! . LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
-   CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',C_one,C_zero)
 
 ! coefs of |k(t)> in AO basis 
-   CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',C_one,C_zero)
 
    bra(:) = AO_bra(:,1)
    ket(:) = AO_ket(:,1)
@@ -92,13 +91,13 @@ DO it = 1 , n_t
 ! DUAL representation for efficient calculation of survival probabilities ...
 
 ! coefs of <k(t)| in DUAL basis ...
-   CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
+   CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
 
 ! coefs of |k(t)> in DUAL basis ...
-   CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
+   CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
     
-   Pops(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
+   Pops(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
    t = t + t_rate
 
@@ -108,7 +107,7 @@ DO it = 1 , n_t
 END DO
 
 ! sum population dynamics over frames ...
-QDyn = QDyn + Pops
+QDyn%dyn = QDyn%dyn + Pops
 
 deallocate( Pops )
 
@@ -118,13 +117,12 @@ end subroutine Huckel_dynamics
 !
 !
 !
-!==========================================================
- subroutine DeAllocate_QDyn( QDyn , QDyn_fragments , flag )
-!==========================================================
+!=========================================
+ subroutine DeAllocate_QDyn( QDyn , flag )
+!=========================================
 implicit none
-real*8          , optional      , allocatable   , intent(inout) :: QDyn(:,:)
-character(1)    , optional      , allocatable   , intent(inout) :: QDyn_fragments(:)
-character(*)                                    , intent(in)    :: flag
+type(f_time)  , intent(inout) :: QDyn
+character(*)  , intent(in)    :: flag
 
 ! local variable ...
 integer      :: i , N_of_fragments
@@ -152,15 +150,16 @@ select case( flag )
         where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
         Extended_Cell%list_of_fragments(1) = "D"
 
-        allocate( QDyn_fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
-        allocate( QDyn          (n_t,N_of_fragments+1)                      , source = 0.d0                              )
+        ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
+        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
+        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 )                , source = 0.d0                              )
 
         ! cleaning the mess ...
         CALL DeAllocate_Structures( Extended_Cell )
 
     case( "dealloc" )
 
-        deallocate( QDyn , QDyn_fragments )
+        deallocate( QDyn%dyn , QDyn%fragments )
 
 end select
 

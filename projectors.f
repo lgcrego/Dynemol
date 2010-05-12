@@ -9,29 +9,33 @@
 !
 !
 !
-!-----------------------------------------------
+!-----------------------------------------
  function pop_Slater(basis,za,zb,fragment)
-!-----------------------------------------------
+!-----------------------------------------
  type(STO_basis)  , intent(in) :: basis(:)
- complex*16       , intent(in) :: za(:,:) , zb(:,:)
+ complex*16       , intent(in) :: za(:) , zb(:)
  character(len=1) , optional   :: fragment
 
 ! local variables
- real*8                                :: pop_Slater
- complex*16 , dimension(size(za(1,:))) :: pop
- integer                               :: n , i 
+ real*8       :: pop_Slater
+ complex*16   :: pop 
+ integer      :: n , i 
 
-! . projection of | k(t) >  onto the atom k_atom 
+! projection of | k(t) >  onto the atom k_atom ...
 
- pop(:) = (0.d0,0.d0)
+ pop = C_zero
 
  if( present(fragment) ) then
-    forall(n=1:n_part , i=1:size(basis) , basis(i)%fragment == fragment)  pop(n) = pop(n) + za(i,n)*zb(i,n)
+    
+    pop = sum( za*zb , DIM = 1 , mask = basis%fragment == fragment )
+
  else
-    forall(n=1:n_part , i=1:size(basis))  pop(n) = pop(n) + za(i,n)*zb(i,n)
+
+    pop = sum( za(:) * zb(:) )
+
  end if
 
- pop_Slater = real(sum(pop))
+ pop_Slater = pop
 
  end function
 

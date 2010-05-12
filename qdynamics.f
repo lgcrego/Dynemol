@@ -17,6 +17,10 @@ module qdynamics_m
  use RK_m
  use Data_Output            , only : Dump_stuff
 
+ public :: qdynamics
+
+ private
+
  contains
 !
 !
@@ -28,14 +32,13 @@ implicit none
 
 ! local variables ...
  integer                        :: nr , N_of_residues
- real*8          , allocatable  :: QDyn(:,:)
  character(3)                   :: residue
- character(1)    , allocatable  :: QDyn_fragments(:)
  logical                        :: FMO_ , DIPOLE_
  type(C_eigen)                  :: UNI
  type(C_eigen)                  :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
+ type(f_time)                   :: QDyn
 
  
 ! preprocessing stuff ...................................
@@ -76,12 +79,12 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
 ! CALL RK4_dynamics( Extended_Cell, ExCell_basis, UNI, FMO )
 
-CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn , QDyn_fragments )
+CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn )
 
 CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
 CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
 CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="dealloc" )
+CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
 include 'formats.h'
 

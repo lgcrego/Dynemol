@@ -181,6 +181,11 @@ module type_m
         character(3)                 :: residue
     end type f_grid
 
+    type f_time
+        real*8       , allocatable   :: dyn(:,:)
+        character(1) , allocatable   :: fragments(:)
+        character(3) , allocatable   :: residues(:)
+    end type f_time
 
     type OPT
         real*8                      :: DP(3)

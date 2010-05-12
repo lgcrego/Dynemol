@@ -12,7 +12,7 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-			DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
+			DRIVER		 = "chebyshev"     ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
 !			
             GaussianCube = F_ ,                 &
 			Survival     = T_ ,                 &
@@ -32,12 +32,12 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  5    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  3    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.d-2 ,            & ! <== final time in PICOseconds
+            t_f           =  4.d-2 ,            & ! <== final time in PICOseconds
             n_t           =  500  ,             & ! <== number of time steps
 			MD_dt		  =  8.d-4 ,			& ! <== time step of MD simulation in PICOseconds
 

@@ -27,7 +27,7 @@
  implicit none
  type(structure)                                , intent(in)    :: system
  type(STO_basis)                                , intent(in)    :: basis(:)
- complex*16                     , allocatable   , intent(in)    :: CR(:,:)
+ complex*16         , optional  , allocatable   , intent(in)    :: CR(:,:)
  type(C_eigen)                                  , intent(out)   :: FMO
  real*8             , optional  , allocatable   , intent(inout) :: MO(:)
 
@@ -68,9 +68,17 @@
  
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO, FMO )
 
+! get wv_FMO orbital in local representation and leave subroutine ... 
  if( present(MO) ) then
-     allocate( MO (size( wv_FMO(orbital(1),:) ) ) )
-     MO(:) = wv_FMO(orbital(1),:)
+
+    allocate( MO(size(FMO_basis)) )
+    MO(:) = wv_FMO(orbital(1),:)
+
+    print*, ''
+    print*, '>> FMO analysis done <<'
+
+    return
+
  end if
 
  ! wv_FMO needed only for time-propagation of wv_FMO state ...

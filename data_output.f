@@ -3,7 +3,7 @@
     use type_m
     use projectors
 
-    public :: get_Populations , Dump_stuff
+    public :: Populations , Dump_stuff
 
     private
 
@@ -11,55 +11,59 @@
 !
 !
 !
-!==================================================================
- function get_Populations(system,basis,bra,ket) result(Populations)
-!==================================================================
+!==============================================================
+ function Populations( QDyn_fragments , basis , bra , ket , t )  
+!==============================================================
  implicit none
- type(structure) , intent(in)  :: system
+ character(1)    , intent(in)  :: QDyn_fragments(:)
  type(STO_basis) , intent(in)  :: basis(:)
  complex*16      , intent(in)  :: bra(:,:) , ket(:,:)
- real*8                        :: Populations( size(system%list_of_fragments)+1 )
+ real*8          , intent(in)  :: t
+ real*8                        :: Populations( 0:size(QDyn_fragments)+1 )
 
 ! local variables ...
-integer             :: nf , N_of_fragments
+integer             :: n , nf , N_of_fragments
 character(len=1)    :: fragment 
 
 !----------------------------------------------------------
 !              get time-dependent Populations
 !----------------------------------------------------------
 
+! time of population ...
+Populations(0) = t
+
 ! partial populations ...
+N_of_fragments = size( QDyn_fragments )
 
-N_of_fragments = size( system % list_of_fragments )
+do n = 1 , n_part
 
-do nf = 1 , N_of_fragments
+    do nf = 1 , N_of_fragments
 
-    fragment = system % list_of_fragments (nf)
+        fragment = QDyn_fragments (nf)
 
-    Populations(nf) = pop_Slater(basis,bra,ket,fragment)
+        Populations(nf) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment )
+
+    end do
+
+    ! total population ...
+    Populations(N_of_fragments+1) = pop_Slater( basis , bra(:,n) , ket(:,n) )
 
 end do
 
-! total population ...
+!---------------------------------------------------- 
 
- Populations(N_of_fragments+1) = pop_Slater(basis,bra,ket)
- 
-! ---------------------------------------------------- 
-
- end function get_Populations 
+end function Populations 
 !
 !
 !
-!=========================================================================================
- subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn , list_of_fragments , t_rate ) 
-!=========================================================================================
+!======================================================================
+ subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn ) 
+!======================================================================
 implicit none
 type(f_grid)  , intent(in)     , optional  :: TDOS
 type(f_grid)  , intent(in)     , optional  :: PDOS(:)
 type(f_grid)  , intent(in)     , optional  :: SPEC
-real*8        , intent(in)     , optional  :: QDyn(:,:)
-character(*)  , intent(in)     , optional  ::list_of_fragments(:)
-real*8        , intent(inout)  , optional  :: t_rate
+type(f_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
 integer         :: i , nr , nf , N_of_residues , N_of_fragments
@@ -99,13 +103,11 @@ end if
 
 ! save time-dependent populations ...
 If( survival ) then
-    If( .NOT. present(t_rate) ) t_rate = (t_f - t_i) / float(n_t)
-    N_of_fragments = size( list_of_fragments )
+    N_of_fragments = size( QDyn%fragments )
     OPEN( unit=3 , file="survival.dat" , status="unknown" )
-    write(3,12) "#" , list_of_fragments , "total"
-    do i = 1 , size(QDyn(:,1))
-        t = t_rate * (i-1)
-        write(3,13) t , ( QDyn(i,nf) , nf=1,N_of_fragments+1 )
+    write(3,12) "#" , QDyn%fragments , "total"
+    do i = 1 , size(QDyn%dyn(:,1))
+        write(3,13) ( QDyn%dyn(i,nf) , nf=0,N_of_fragments+1 )
     end do
     CLOSE(3)
 end if

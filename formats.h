@@ -12,6 +12,8 @@
 
 46    FORMAT(/,">>>  Using Ad Hoc tuning ")
 
+47    FORMAT(/,">>>  Saving structure.log ",/)
+
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
                1x,'# of unit cells = ',I2) 
@@ -78,7 +80,7 @@
 
 156   FORMAT(1x,' >>> no DIPOLE')
 
-157   FORMAT(1x,'N_of_Solvent_Molecules in DP_field = ',I4/)
+157   FORMAT(/,1x,'N_of_Solvent_Molecules in DP_field = ',I4/)
 
 160   FORMAT(/,1x,'Custo : ',I4,' /',I4)
 
@@ -97,5 +99,7 @@
 184   FORMAT(1x,'step to try = ',F7.4)
 
 185   FORMAT(1x,'truncation error = ',F10.7)
+
+186   FORMAT(1x,'time = ',F9.5,' fs')
 
 

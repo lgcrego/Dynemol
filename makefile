@@ -25,7 +25,7 @@ INCS = $(INCS_MKL)
 # general rules
 #-----------------------------------------------------------------------
 
-SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o tuning.o babel.o structure.o \
+SOURCE = constants_m.o type_m.o allocation_m.o util.o EHT_input.o tuning.o babel_routines.o babel.o structure.o \
 		 pbc.o overlap_D.o STO.o multip_core.o DP_FMO.o dipole_phi.o QCModel_Huckel.o projectors.o FMO.o data_output.o \
 		 film_STO.o DOS_m.o oscillator.o QOptics.o ga_QCModel.o ga_routines.o solvated_M.o schroedinger.o rk4.o \
 		 diagnostic.o qdynamics.o Chebyshev.o time_slice.o ga_driver.o avrg_confgs.o main.o

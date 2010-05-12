@@ -1,12 +1,13 @@
 module Chebyshev_m
 
-    use type_m
+    use type_m              , g_time => f_time  
     use constants_m
-    use Overlap_Builder
-    use QCmodel_Huckel
     use mkl95_blas
     use mkl95_lapack
     use ifport
+    use Overlap_Builder     , only : Overlap_Matrix
+    use QCmodel_Huckel      , only : Huckel 
+    use Data_Output         , only : Populations
 
     public  :: Chebyshev
 
@@ -16,281 +17,187 @@ module Chebyshev_m
     real*8      , parameter :: delta_t   = 2.5d0
     real*8      , parameter :: E_range   = 2.0d0
     real*8      , parameter :: error     = 5.0d-6
-    real*8      , parameter :: norm      = 1.0d-4
-    integer     , parameter :: step_max  = 2300
-    complex*16  , parameter :: z0        = ( 0.0d0 , 0.0d0 )
+    real*8      , parameter :: norm_error= 1.0d-4
 
-    real*8 , save :: tau_init , time_init
+! module variables ...
+    integer , save :: it = 1
+    real*8  , save :: save_tau 
 
 contains
 !
 !=========================================================
-subroutine Chebyshev( system , basis , MO , it , P1 , P2 )
+ subroutine Chebyshev( system , basis , Psi_t , QDyn , t )
 !=========================================================
 implicit none
-type(structure)                 , intent(in)    :: system
-type(STO_basis)                 , intent(in)    :: basis(:)
-complex*16                      , intent(inout) :: MO(:)
-integer                         , intent(inout) :: it 
-integer                         , intent(inout) :: P1
-integer                         , intent(inout) :: P2
+type(structure)  , intent(in)    :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+complex*16       , intent(inout) :: Psi_t(:)
+type(g_time)     , intent(inout) :: QDyn
+real*8           , intent(inout) :: t
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi(:,:)
-complex*16  , allocatable   :: Psi_temp(:)
-complex*16  , allocatable   :: Psi_T(:)
-complex*16  , allocatable   :: C_k(:)
-complex*16  , allocatable   :: A_r(:)
-real*8      , allocatable   :: Hamiltonian(:,:)
-real*8      , allocatable   :: S_matrix(:,:)
-real*8                      :: tau , inv , ab , time_t , norm_parameter
-integer                     :: i   , j   , K  , info   , counter        , N
+complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:,:) , DUAL_ket(:,:)
+real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:)
+real*8                      :: tau , inv , norm_ref , norm_test
+integer                     :: i , j , k_ref , N
+logical                     :: OK
 
-! calcula of S_matrix, H, H' and the state to be propagate...
-CALL INIT( system , basis , Hamiltonian , S_matrix )
+! building  S_matrix  and  H'= S_inv * H ...
+CALL Build_Hprime( system , basis , H_prime , S_matrix )
 
-N = size(ExCell_basis)
+N = size(basis)
 
-allocate( C_Psi    ( N , order ) )
-allocate( Psi_temp ( N         ) )
-allocate( Psi_T    ( N         ) )
-allocate( C_k      ( order     ) )
-allocate( A_r      ( N         ) )
+allocate( C_Psi    (N , order ) , source=C_zero )
+allocate( C_k      (order     ) , source=C_zero )
+allocate( Psi_temp (N         ) , source=C_zero )
+allocate( Dual_bra (N , n_part) , source=C_zero )
+allocate( Dual_ket (N , n_part) , source=C_zero )
 
-if( it  == 1 ) time_init = 0.0d0
+if( it == 1 ) t = t_i
 
-! defined some constants of evolution...
-inv    = ( 2.0d0 * h_bar ) / E_range
-Psi_T  = MO
-time_t = time_init
+norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
 
-norm_parameter = real( dot_product(Psi_T,matmul(S_matrix,Psi_T)) )
+! constants of evolution ...
+inv = ( two * h_bar ) / E_range
+tau = merge( E_range * delta_t / (two*h_bar) , save_tau * 1.15d0 , it == 1 )
 
-! file of data of the propagation...
-if( it  == 1 ) then
-    open(unit=11, file='population.dat', action='write', status='unknown')
-    write(11,*), 0.0d0 , 1.0d0
-else
-    open(unit=11, file='population.dat', action='write', status='old', position='append')
-end if
-
-if( it  == 1 ) then
-    tau = E_range * delta_t / (2.0d0*h_bar)
-    do
-
-        C_k(1) = dbesjn(0,tau)
-        do j = 2 , order
-            C_k(j) = 2.0d0 * (-zi)**(j-1) * dbesjn(j-1,tau)
-        end do
-
-        CALL Convergence( Psi_T , K , C_k , Hamiltonian , S_matrix , N , norm_parameter , info )
-
-        if( info == 0 ) then
-            A_r = matmul(S_matrix,Psi_T)
-            write(11,*), time_t + tau*inv , real( dot_product( Psi_T(P1:P2) , A_r(P1:P2) ) )
-            tau_init = tau
-            exit
-        end if
-
-        tau = tau * 0.9825d0
-
-        if( tau == 0.0d0 ) then
-            print'("***** tau = 0.0d0 *****")'
-            stop
-        end if
-
-    end do
-else
-    tau = tau_init * 1.15d0
-    do
-
-        C_k(1) = dbesjn(0,tau)
-        do j = 2 , order
-            C_k(j) = 2.0d0 * (-zi)**(j-1) * dbesjn(j-1,tau)
-        end do
-
-        CALL Convergence( Psi_T , K , C_k , Hamiltonian , S_matrix , N , norm_parameter , info )
-
-        if( info == 0 ) then
-            A_r = matmul(S_matrix,Psi_T)
-            write(11,*), time_t + tau*inv , real( dot_product( Psi_T(P1:P2) , A_r(P1:P2) ) )
-            tau_init = tau
-            exit
-        end if
-
-        tau = tau * 0.9825d0
-
-        if( tau == 0.0d0 ) then
-            print'("***** tau = 0.0d0 *****")'
-            stop
-        end if
-
-    end do
-end if
-
-counter  = 1
-
+! first convergence: best tau-parameter for k_ref ...
 do
+    CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
 
-    if( counter >= step_max .AND. tau /= tau_init ) then
-        counter = 0
-        tau = tau_init
-        C_k(1) = dbesjn(0,tau)
-        do j = 2 , order
-            C_k(j) = 2.0d0 * (-zi)**(j-1) * dbesjn(j-1,tau)
-        end do
+    if( OK ) then
+        save_tau = tau
+        exit
+    else            
+        tau = tau * 0.8d0
     end if
-    
-    C_Psi = z0
+end do
 
-    C_Psi(:,1) = Psi_T(:)
+! proceed evolution with best tau ...
+C_k = coefficient(tau,order)
+do
+    C_Psi(:,1) = Psi_t(:)
 
-    C_Psi(:,2) = matmul(Hamiltonian,C_Psi(:,1))
+    C_Psi(:,2) = matmul(H_prime,C_Psi(:,1))
 
-    do j = 3 , K
-        C_Psi(:,j) = 2.0d0 * matmul(Hamiltonian,C_Psi(:,j-1)) - C_Psi(:,j-2)
+    do j = 3 , k_ref
+        C_Psi(:,j) = two * matmul(H_prime,C_Psi(:,j-1)) - C_Psi(:,j-2)
     end do
 
     forall(j=1:N) Psi_temp(j) = sum( C_k(:) * C_Psi(j,:) )
 
-!   convergence criteria...
-    ab = sqrt( (sqrt( abs(dot_product(Psi_temp(:),matmul(S_matrix,Psi_temp(:)))**2) ) - norm_parameter)**2 )
-
-    if( ab < norm ) then
-
-        Psi_T(:) = Psi_temp(:)
-        A_r = matmul(S_matrix,Psi_T)
-        write(11,*), time_t + tau*inv , real( dot_product( Psi_T(P1:P2) , A_r(P1:P2) ) )
-        Psi_temp = 0.0d0
-        goto 30
-
+!   convergence criteria ...
+    norm_test = dot_product( Psi_temp(:) , matmul(S_matrix , Psi_temp(:)) )
+    if( abs( norm_test - norm_ref ) < norm_error ) then
+        Psi_t(:) = Psi_temp(:)
     else
-
         do
             tau = tau * 0.975d0
-            print*, "reallocate tau"
-            if( tau == 0.0d0 ) then
-                print*, "***** tau = 0.0d0 ****"
-                stop
-            end if
-            C_k(1) = dbesjn(0,tau)
-            do j = 2 , order
-                C_k(j) = 2.0d0 * (-zi)**(j-1) * dbesjn(j-1,tau)
-            end do
-            CALL Convergence( Psi_T , K , C_k , Hamiltonian , S_matrix , N , norm_parameter , info )
-            if( info == 0 ) then
-                A_r = matmul(S_matrix,Psi_T)
-                write(11,*), time_t + tau*inv , real( dot_product( Psi_T(P1:P2) , A_r(P1:P2) ) )
-                goto 30
-            end if
+            print*, "rescaling tau" , tau 
+            CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
+            if( OK ) exit
         end do
-
     end if
 
-30  time_t = time_t + tau * inv
+    t = t + (tau * inv)
 
-    if( time_t >= MD_dt*frame_step*it  ) exit
-    
-    counter = counter + 1
+    if( t >= MD_dt*frame_step*it  ) exit
 
 end do
 
-close(11)
+! prepare DUAL basis for local properties ...
+DUAL_bra(:,1) = conjg(Psi_t)
+DUAL_ket(:,1) = matmul(S_matrix,Psi_t)
 
-print*, "Evolution time = ", time_t*1.0d3 , "fs"
+! save populations(time) ...
+QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
-if( time_t >= t_f ) stop
+! clean and exit ...
+it = it  + 1
 
-MO        = Psi_T
-it        = it  + 1
-time_init = time_t
+deallocate( C_k , C_Psi , H_prime , S_matrix , DUAL_bra , DUAL_ket )
 
-deallocate( Psi_T , C_k , C_Psi , A_r , Hamiltonian , S_matrix )
+Print 186, t
+
+include 'formats.h'
 
 end subroutine Chebyshev
 !
 !
 !
-!======================================================================================
-subroutine Convergence( Psi , K , C_k , Hamiltonian , S_m , N , norm_parameter , info )
-!======================================================================================
+!==============================================================================
+subroutine Convergence( Psi , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
+!==============================================================================
 implicit none
 complex*16  , intent(inout) :: Psi(:)
-integer     , intent(inout) :: K
-complex*16  , intent(in)    :: C_k(:)
-real*8      , intent(in)    :: Hamiltonian(:,:)
-real*8      , intent(in)    :: S_m(:,:)
-integer     , intent(in)    :: N
-real*8      , intent(in)    :: norm_parameter
-integer     , intent(inout) :: info
+integer     , intent(inout) :: k_ref
+real*8      , intent(in)    :: tau
+real*8      , intent(in)    :: H_prime(:,:)
+real*8      , intent(in)    :: S_matrix(:,:)
+real*8      , intent(in)    :: norm_ref
+logical     , intent(inout) :: OK
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:,:)
-complex*16  , allocatable   :: Temp(:)
-real*8                      :: aa , bc
-integer                     :: j , l
+integer                     :: j , l , k , N  
+real*8                      :: norm_temp
+complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:,:) , C_k(:)
 
-allocate( C_Psi    ( N , order ) )
-allocate( Psi_temp ( N , 2     ) )
-allocate( Temp     ( N         ) )
+N = size(Psi)
 
-info = 1
+allocate( C_Psi    ( N , order ) , source=C_zero )
+allocate( C_k      ( order     ) , source=C_zero )
+allocate( Psi_temp ( N , 2     ) , source=C_zero )
+
+OK = .false.
+
+! get C_k coefficients ...
+C_k = coefficient(tau,order)
 
 C_Psi(:,1) = Psi(:)
-C_Psi(:,2) = matmul(Hamiltonian,C_Psi(:,1))
+C_Psi(:,2) = matmul( H_prime , C_Psi(:,1) )
+forall( j=1:N ) Psi_temp(j,1) = sum( C_k(1:2) * C_Psi(j,1:2) )
 
-forall(j=1:N) Psi_temp(j,1) = sum( C_k(:) * C_Psi(j,:) )
-
-K = 2
-K = K + 1
-
+k = 3
 do
+    C_Psi(:,k) = two * matmul( H_prime , C_Psi(:,k-1) ) - C_Psi(:,k-2)
 
-    C_Psi(:,K) = 2.0d0*matmul(Hamiltonian,C_Psi(:,j-1)) - C_Psi(:,K-2)
-
-    forall(j=1:N) Psi_temp(j,2) = Psi_temp(j,1) + C_k(K) * C_Psi(j,K)
-
-    l = 0
-    do j = 1 , N
-        aa = abs(sqrt( (Psi_temp(j,2) - Psi_temp(j,1))**2 )**2)
-        if(  aa <= error ) l = l + 1
-    end do
+    forall( j=1:N ) Psi_temp(j,2) = Psi_temp(j,1) + C_k(k)*C_Psi(j,k)
 
 !   convergence criteria...
+    l = count( abs(Psi_temp(:,2)-Psi_temp(:,1)) <= error )
     if( l == N ) then
-        bc = sqrt( (sqrt( abs(dot_product(Psi_temp(:,2),matmul(S_m,Psi_temp(:,2)))**2) ) - norm_parameter)**2 )
-        if( bc < norm ) then
+
+        norm_temp = dot_product( Psi_temp(:,2) , matmul(S_matrix , Psi_temp(:,2)) )
+        if( abs( norm_temp - norm_ref ) < norm_error ) then
             Psi(:) = Psi_temp(:,2)
-            info = 0
+            OK = .true.
             exit
         end if
 
     end if
 
-    K = K + 1
+    Psi_temp(:,1) =  Psi_temp(:,2)
+    k             =  k + 1
 
-    if( K == order+1 ) then
-        exit
-    end if
-
-    Psi_temp(:,1) = Psi_temp(:,2)
-
+    if( k == order+1 ) exit
 end do
 
-deallocate( C_Psi , Psi_temp , Temp )
+k_ref = k
+ 
+deallocate( C_Psi , Psi_temp , C_k )
 
 end subroutine Convergence
 !
 !
 !
-!========================================
-subroutine INIT( system , basis , H , S )
-!========================================
+!======================================================
+subroutine Build_Hprime( system , basis , H_prime , S )
+!======================================================
 implicit none
-type(structure)                 , intent(in)    :: system
-type(STO_basis)                 , intent(in)    :: basis(:)
-real*8          , allocatable   , intent(inout) :: H(:,:)
-real*8          , allocatable   , intent(inout) :: S(:,:)
+type(structure)                 , intent(in)  :: system
+type(STO_basis)                 , intent(in)  :: basis(:)
+real*8          , allocatable   , intent(out) :: H_prime(:,:)
+real*8          , allocatable   , intent(out) :: S(:,:)
 
 ! local variables...
 real*8  , allocatable   :: Hamiltonian(:,:)
@@ -303,27 +210,24 @@ allocate( Hamiltonian ( size(basis) , size(basis) ) )
 
 do j = 1 , size(basis)
     do i = 1 , j
-        Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
-    end do
-end do
 
-do j = 1 , size(basis) - 1
-    do i = j + 1 , size(basis)
-        Hamiltonian(i,j) = Hamiltonian(j,i)
+        Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
+        Hamiltonian(j,i) = Hamiltonian(i,j)
+
     end do
 end do
 
 ! compute S_inverse...
 CALL Invertion_Matrix( S , S_inv , size(basis) )
 
-! compute H'...
-allocate( H ( size(basis) , size(basis) ) )
+! allocate and compute H' = S_inv * H ...
+allocate( H_prime ( size(basis) , size(basis) ) )
 
-H = matmul(S_inv,Hamiltonian)
+H_prime = matmul(S_inv,Hamiltonian)
 
-deallocate( S_inv )
+deallocate( S_inv , Hamiltonian )
 
-end subroutine INIT
+end subroutine Build_Hprime
 !
 !
 !
@@ -331,9 +235,9 @@ end subroutine INIT
 subroutine Invertion_Matrix( matrix , matrix_inv , N )
 !=====================================================
 implicit none
-real*8                  , intent(in)    :: matrix(:,:)
-real*8  , allocatable   , intent(inout) :: matrix_inv(:,:)
-integer                 , intent(in)    :: N
+real*8                  , intent(in)  :: matrix(:,:)
+real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
+integer                 , intent(in)  :: N
 
 ! local variables...
 real*8  , allocatable   :: work(:)
@@ -369,5 +273,30 @@ do i = 2 , N
 end do
 
 end subroutine Invertion_Matrix
+!
+!
+!
+!==================================
+ function coefficient(tau , k_max ) 
+!==================================
+implicit none
+complex*16  , dimension(k_max)  :: coefficient
+real*8      , intent(in)        :: tau
+integer     , intent(in)        :: k_max
 
+!local variables ...
+integer :: k
+
+!local parameters ...
+complex*16  , parameter :: zi_k(0:3) = [ zi , C_one , -zi , -C_one ]
+
+coefficient(1) = dbesjn(0,tau)
+do k = 2 , k_max
+   coefficient(k) = two * zi_k(mod(k,4)) * dbesjn(k-1,tau)
+end do
+
+end function coefficient
+!
+!
+!
 end module Chebyshev_m

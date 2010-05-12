@@ -13,6 +13,10 @@ module GA_driver_m
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
 
+ public :: GA_driver
+
+ private
+
  contains
 !
 !

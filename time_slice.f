@@ -22,7 +22,7 @@ module TimeSlice_m
                                              ExCell_basis
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Data_Output                 , only : Dump_stuff ,                   &
-                                             get_Populations
+                                             Populations
     use dipole_potential_m          , only : Solvent_Molecule_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
     use Chebyshev_m                 , only : Chebyshev
@@ -33,7 +33,7 @@ module TimeSlice_m
     private
 
     ! module variables ...
-    integer :: it
+    integer :: it = 1
     real*8  :: t , t_rate
     logical :: done = .false.
 
@@ -55,12 +55,12 @@ contains
 implicit none
 
 ! local variables ...
-integer                     :: frame , P1 , P2 
-real*8       , allocatable  :: QDyn(:,:) , QDyn_temp(:,:)
+integer                     :: frame
+real*8       , allocatable  :: QDyn_temp(:,:)
 complex*16   , allocatable  :: MO(:)
-character(1) , allocatable  :: QDyn_fragments(:)
+type(f_time)                :: QDyn
 
-CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
@@ -79,9 +79,9 @@ do frame = 1 , size(trj) , frame_step
 
         case( "chebyshev" )
 
-            if( .NOT. done ) CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , P1 , P2 )
+            if( .NOT. done ) CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO )
     
-            CALL Chebyshev( Extended_Cell , ExCell_basis , MO , it , P1 , P2 )
+            CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t )
 
         case( "eigen_slice" )
 
@@ -97,21 +97,30 @@ do frame = 1 , size(trj) , frame_step
 
     if( t >= t_f ) exit
 
-print*, frame
+    it = it + 1
+
+    print*, frame
 end do
 
 ! prepare data for survival probability ...
-allocate( QDyn_temp(it-1,size(QDyn_fragments)+1) )
-QDyn_temp(:,:) = QDyn(1:it-1,:)
-CALL move_alloc( from=QDyn_temp , to=QDyn )
+allocate( QDyn_temp( it , 0:size(QDyn%fragments)+1 ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 ) )
+CALL move_alloc( from=QDyn_temp , to=QDyn%dyn )
 
-CALL Dump_stuff( QDyn=QDyn , list_of_fragments=QDyn_fragments , t_rate=t_rate)
+CALL Dump_stuff( QDyn=QDyn )
 
-! turn off the ligths ...
+! final procedures ...
+CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
-CALL DeAllocate_QDyn( QDyn , QDyn_fragments , flag="dealloc" )
+select case ( DRIVER )
 
-deallocate(zG_L , zG_R , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase , bra , ket )
+    case( "chebyshev" )
+
+
+    case( "eigen_slice" )
+
+        deallocate(zG_L , zG_R , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase , bra , ket )
+
+end select
 
 end subroutine Time_Slice
 !
@@ -123,14 +132,11 @@ end subroutine Time_Slice
 implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(inout) :: QDyn(:,:)
+type(f_time)    , intent(inout) :: QDyn
 
 ! local variables ...
 integer       :: j
 type(C_eigen) :: UNI 
-
-! local parameters ...
-complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
 !------------------------------------------------------------------------
 ! Q-DYNAMICS ... 
@@ -139,7 +145,7 @@ CALL EigenSystem( system , basis, UNI )
 
 phase(:) = exp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-IF( t == t_i ) phase = one
+IF( t == t_i ) phase = C_one
 
 forall( j=1:n_part )   
     MO_bra(:,j) = conjg(phase(:)) * zG_L(:,j) 
@@ -148,18 +154,17 @@ end forall
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 ! coefs of <k(t)| in DUAL basis ...
-CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',one,zero)
+CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
 
 ! coefs of |k(t)> in DUAL basis ...
-CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',one,zero)
+CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
-QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
+QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 zG_L = MO_bra       ! <== updating expansion coefficients at t 
 zG_R = MO_ket       ! <== updating expansion coefficients at t
 
 t  = t  + t_rate
-it = it + 1
 
 !------------------------------------------------------------------------
 ! . LOCAL representation for film STO production ...
@@ -167,10 +172,10 @@ it = it + 1
 IF( GaussianCube ) then
 
     ! coefs of <k(t)| in AO basis 
-    CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',one,zero)
+    CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',C_one,C_zero)
 
     ! coefs of |k(t)> in AO basis 
-    CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',one,zero)
+    CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',C_one,C_zero)
 
     bra(:) = AO_bra(:,1)
     ket(:) = AO_ket(:,1)
@@ -186,39 +191,29 @@ end subroutine Huckel_Slice_Dynamics
 !
 !
 !
-!================================================================
- subroutine preprocess_Chebyshev( system , basis , MO , P1 , P2 )
-!================================================================
+!======================================================
+ subroutine preprocess_Chebyshev( system , basis , MO )
+!======================================================
 implicit none
 type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)
 complex*16      , allocatable   , intent(inout) :: MO(:)
-integer                         , intent(inout) :: P1
-integer                         , intent(inout) :: P2
 
 !local variables ...
-integer                         :: i , li , N
+integer                         :: i , li , N 
 real*8          , allocatable   :: wv_FMO(:)
-type(C_eigen)                   :: UNI , FMO
+type(C_eigen)                   :: FMO
 
-! local parameter ...
-complex*16      , parameter     :: z0 = ( 0.0d0 , 0.0d0 )
 
-CALL EigenSystem( system , basis, UNI )
-
-CALL FMO_analysis( system , basis, UNI%R, FMO , wv_FMO )
+CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO )
 
 li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
 N  = size(wv_FMO)
-P1 = li
-P2 = li + N
 
-allocate( MO(size(basis)) , source=z0 )
+allocate( MO(size(basis)) , source=C_zero )
 MO(li:li+N-1) = cmplx( wv_FMO(:) )
 
 deallocate( wv_FMO )
-
-it =  1
 
 done = .true. 
 
@@ -232,11 +227,11 @@ end subroutine preprocess_Chebyshev
 implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(inout) :: QDyn(:,:)
+type(f_time)    , intent(inout) :: QDyn
 
 !local variables ...
 type(C_eigen) :: UNI , FMO
-complex*16 , parameter :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
+
 
 CALL EigenSystem( system , basis, UNI )
 
@@ -247,7 +242,6 @@ CALL Allocate_Brackets( size(basis) , zG_L , zG_R , MO_bra , MO_ket , AO_bra , A
 zG_L = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
 zG_R = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0 
 
-it     =  1
 t      =  t_i              
 t_rate =  MD_dt * frame_step
 
@@ -255,15 +249,14 @@ Print 56 , initial_state     ! <== initial state of the isolated molecule
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 ! coefs of <k(t)| in DUAL basis ...
-CALL gemm(UNI%L,ZG_L,DUAL_bra,'T','N',one,zero)
+CALL gemm(UNI%L,ZG_L,DUAL_bra,'T','N',C_one,C_zero)
 
 ! coefs of |k(t)> in DUAL basis ...
-CALL gemm(UNI%R,ZG_R,DUAL_ket,'N','N',one,zero)
+CALL gemm(UNI%R,ZG_R,DUAL_ket,'N','N',C_one,C_zero)
 
-QDyn(it,:) = get_Populations(system,basis,DUAL_bra,DUAL_ket)
+QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
-t  = t  + t_rate
-it = it + 1
+t = t + t_rate
 
 done = .true. 
 

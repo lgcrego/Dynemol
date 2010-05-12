@@ -16,6 +16,10 @@ module diagnostic_m
  use Data_Output                , only : Dump_stuff
  use dipole_potential_m         , only : Solvent_Molecule_DP
 
+ public :: diagnostic
+
+ private
+
  contains
 !
 !
