@@ -20,14 +20,14 @@ MODULE constants_m
     REAL*8     , PARAMETER :: low_prec=1.d-7
     REAL*8     , PARAMETER :: high_prec=1.d-14
 
-    complex*16 , parameter :: zi=(0.d0,1.d0)
+    complex*16 , parameter :: zi = (0.d0,1.d0)
 
     complex*16 , PARAMETER :: C_zero = (0.d0,0.d0)
-    real*8     , PARAMETER :: D_zero = (0.d0,0.d0)
-    integer    , PARAMETER :: I_zero = (0.d0,0.d0)
+    real*8     , PARAMETER :: D_zero =  0.d0
+    integer    , PARAMETER :: I_zero =  0
 
     complex*16 , PARAMETER :: C_one = (1.d0,0.d0)
-    real*8     , PARAMETER :: D_one = (1.d0,0.d0)
-    integer    , PARAMETER :: I_one = (1.d0,0.d0)
+    real*8     , PARAMETER :: D_one =  1.d0
+    integer    , PARAMETER :: I_one =  1
 
 END MODULE constants_m
