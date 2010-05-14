@@ -217,9 +217,6 @@ forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%a
 ! for use if atomic Symbols are not included in input.pdb ...
 If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%atom )
 
-! get list of residues ...
-CALL Identify_Residues( system )
-
 ! preprocessing the universe system ...
 CALL Symbol_2_AtNo      ( system%atom )
 CALL Identify_Residues  ( system      )
