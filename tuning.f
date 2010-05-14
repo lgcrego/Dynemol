@@ -27,9 +27,9 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    where( struct % residue == "ALQ" ) struct % k_WH = 2.d0
-
-    where( struct % residue == "ION" ) struct % fragment = "S"
+    struct % MMSymbol(3733) = "Ix"
+    struct % MMSymbol(3734) = "Ic"
+    struct % MMSymbol(3735) = "Ix" 
 
 end If
 
@@ -53,6 +53,10 @@ If( present(univ) ) then
     !===================================
     !      define MM atom types ...
     !===================================
+
+    univ % atom(3733) % MMSymbol = "Ix"
+    univ % atom(3734) % MMSymbol = "Ic"
+    univ % atom(3735) % MMSymbol = "Ix"
 
     where( univ % atom % charge ==  2.1960d0 ) univ % atom % MMSymbol = "TiB"
     where( univ % atom % charge ==  1.6470d0 ) univ % atom % MMSymbol = "TiD"
@@ -104,7 +108,7 @@ integer  :: i
         case( 'ACN') 
             a%atom(i)%fragment = 'S' 
         case( 'ION') 
-            a%atom(i)%fragment = 'S' 
+            a%atom(i)%fragment = 'I' 
         case( 'PYR') 
             a%atom(i)%fragment = 'P' 
         case default
