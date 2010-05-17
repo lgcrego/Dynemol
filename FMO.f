@@ -4,12 +4,12 @@
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use Allocation_m
-    use QCModel_Huckel
-    use projectors
-    use Semi_Empirical_Parms
-    use Overlap_Builder
-    use Structure_Builder
+    use Allocation_m                , only : Allocate_Structures ,      &
+                                             Deallocate_Structures
+    use QCModel_Huckel              , only : Huckel
+    use Semi_Empirical_Parms        , only : atom
+    use Overlap_Builder             , only : Overlap_Matrix
+    use Structure_Builder           , only : Basis_Builder
 
     integer , public , protected :: spin(0:n_part) , orbital(0:n_part)
 

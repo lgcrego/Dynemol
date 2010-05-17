@@ -4,8 +4,16 @@
     use Allocation_m            , only : Allocate_UnitCell
     use tuning_m                , only : Setting_fragments , ad_hoc_tuning
 
-    PUBLIC :: Symbol_2_AtNo , Identify_Fragments , AtNo_2_Symbol , MMSymbol_2_Symbol , Identify_Residues , &
-              Pack_residues , Sort_nr , Center_of_Gravity , Initialize_System , TO_UPPER_CASE
+    PUBLIC :: Symbol_2_AtNo ,       &
+              Identify_Fragments ,  &
+              AtNo_2_Symbol ,       &
+              MMSymbol_2_Symbol ,   &
+              Identify_Residues ,   &
+              Pack_residues ,       &
+              Sort_nr ,             &
+              Center_of_Gravity ,   &
+              Initialize_System ,   &
+              TO_UPPER_CASE
 
     private
 

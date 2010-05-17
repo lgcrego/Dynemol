@@ -1,19 +1,65 @@
  module Data_Output
 
     use type_m
-    use projectors
+    use projectors      , only : Pop_Slater
 
     public :: Populations , Dump_stuff
 
     private
 
+    interface Populations
+        module procedure Populations_mtx
+        module procedure Populations_vct
+    end interface
+
  contains
 !
 !
 !
-!==============================================================
- function Populations( QDyn_fragments , basis , bra , ket , t )  
-!==============================================================
+!========================================================================================
+ function Populations_vct( QDyn_fragments , basis , bra , ket , t )  result(Populations)
+!========================================================================================
+ implicit none
+ character(1)    , intent(in)  :: QDyn_fragments(:)
+ type(STO_basis) , intent(in)  :: basis(:)
+ complex*16      , intent(in)  :: bra(:) , ket(:)
+ real*8          , intent(in)  :: t
+ real*8                        :: Populations( 0:size(QDyn_fragments)+1 )
+
+! local variables ...
+integer             :: nf , N_of_fragments
+character(len=1)    :: fragment 
+
+!----------------------------------------------------------
+!              get time-dependent Populations
+!----------------------------------------------------------
+
+! time of population ...
+Populations(0) = t
+
+! partial populations ...
+N_of_fragments = size( QDyn_fragments )
+
+do nf = 1 , N_of_fragments
+
+    fragment = QDyn_fragments (nf)
+
+    Populations(nf) = pop_Slater( basis , bra(:) , ket(:) , fragment )
+
+end do
+
+! total population ...
+Populations(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
+
+!---------------------------------------------------- 
+
+end function Populations_vct
+!
+!
+!
+!========================================================================================
+ function Populations_mtx( QDyn_fragments , basis , bra , ket , t )  result(Populations)
+!========================================================================================
  implicit none
  character(1)    , intent(in)  :: QDyn_fragments(:)
  type(STO_basis) , intent(in)  :: basis(:)
@@ -52,7 +98,7 @@ end do
 
 !---------------------------------------------------- 
 
-end function Populations 
+end function Populations_mtx 
 !
 !
 !

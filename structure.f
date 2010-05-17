@@ -248,12 +248,6 @@ integer :: first_nr , last_nr , N_of_residue_members
 integer :: i
 
 
-do i = 1 , a%atoms
-write(19,*) a%MMSymbol(i) ,' ', a%nr(i) ,' ', a%residue(i) ,' ', a%fragment(i)
-end do
-
-
-
 ! total number of orbitals ...
 N_of_orbitals = sum(atom(a%AtNo)%DOS)
 Print 120 , N_of_orbitals                       

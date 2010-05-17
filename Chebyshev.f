@@ -6,24 +6,73 @@ module Chebyshev_m
     use mkl95_lapack
     use ifport
     use Overlap_Builder     , only : Overlap_Matrix
+    use FMO_m               , only : FMO_analysis                   
     use QCmodel_Huckel      , only : Huckel 
     use Data_Output         , only : Populations
 
-    public  :: Chebyshev
+    public  :: Chebyshev , preprocess_Chebyshev
 
     private
 
+! module parameters ...
     integer     , parameter :: order     = 15
     real*8      , parameter :: delta_t   = 2.5d0
     real*8      , parameter :: E_range   = 2.0d0
-    real*8      , parameter :: error     = 5.0d-6
-    real*8      , parameter :: norm_error= 1.0d-4
+    real*8      , parameter :: error     = 1.0d-6
+    real*8      , parameter :: norm_error= 1.0d-6
 
 ! module variables ...
     integer , save :: it = 1
     real*8  , save :: save_tau 
 
 contains
+!
+!
+!
+!=============================================================
+ subroutine preprocess_Chebyshev( system , basis , MO , QDyn )
+!=============================================================
+implicit none
+type(structure)                 , intent(in)    :: system
+type(STO_basis)                 , intent(in)    :: basis(:)
+complex*16      , allocatable   , intent(out)   :: MO(:)
+type(g_time)                    , intent(inout) :: QDyn
+
+!local variables ...
+integer                         :: li , N 
+real*8          , allocatable   :: wv_FMO(:) 
+real*8          , allocatable   :: S_matrix(:,:)
+complex*16      , allocatable   :: DUAL_bra(:) , DUAL_ket(:)
+type(C_eigen)                   :: FMO
+
+! prepare  DONOR  state ...
+CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO )
+
+! place the  DONOR  state in structure Hilbert space ...
+li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
+N  = size(wv_FMO)
+allocate( MO(size(basis)) , source=C_zero )
+MO(li:li+N-1) = cmplx( wv_FMO(:) )
+deallocate( wv_FMO )
+
+! prepare DUAL basis for local properties ...
+allocate( Dual_bra (size(basis)), source=C_zero )
+allocate( Dual_ket (size(basis)), source=C_zero )
+CALL Overlap_Matrix( system , basis , S_matrix )
+DUAL_bra(:) = conjg( MO )
+DUAL_ket(:) = matmul( S_matrix , MO )
+
+! save populations(time=t_i) ...
+QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+
+! clean and exit ...
+it = it  + 1
+
+deallocate( DUAL_ket , S_matrix , DUAL_bra )
+
+end subroutine preprocess_Chebyshev
+!
+!
 !
 !=========================================================
  subroutine Chebyshev( system , basis , Psi_t , QDyn , t )
@@ -33,34 +82,32 @@ type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 complex*16       , intent(inout) :: Psi_t(:)
 type(g_time)     , intent(inout) :: QDyn
-real*8           , intent(inout) :: t
+real*8           , intent(out)   :: t
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:,:) , DUAL_ket(:,:)
+complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
 real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:)
 real*8                      :: tau , inv , norm_ref , norm_test
 integer                     :: i , j , k_ref , N
 logical                     :: OK
-
+print*, "1"
 ! building  S_matrix  and  H'= S_inv * H ...
 CALL Build_Hprime( system , basis , H_prime , S_matrix )
-
+print*, "2"
 N = size(basis)
 
 allocate( C_Psi    (N , order ) , source=C_zero )
 allocate( C_k      (order     ) , source=C_zero )
 allocate( Psi_temp (N         ) , source=C_zero )
-allocate( Dual_bra (N , n_part) , source=C_zero )
-allocate( Dual_ket (N , n_part) , source=C_zero )
-
-if( it == 1 ) t = t_i
+allocate( Dual_bra (N         ) , source=C_zero )
+allocate( Dual_ket (N         ) , source=C_zero )
 
 norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
 
 ! constants of evolution ...
 inv = ( two * h_bar ) / E_range
-tau = merge( E_range * delta_t / (two*h_bar) , save_tau * 1.15d0 , it == 1 )
-
+tau = merge( E_range * delta_t / (two*h_bar) , save_tau * 1.15d0 , it == 2 )
+print*, "3"
 ! first convergence: best tau-parameter for k_ref ...
 do
     CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
@@ -72,7 +119,7 @@ do
         tau = tau * 0.8d0
     end if
 end do
-
+print*, "4"
 ! proceed evolution with best tau ...
 C_k = coefficient(tau,order)
 do
@@ -101,13 +148,13 @@ do
 
     t = t + (tau * inv)
 
-    if( t >= MD_dt*frame_step*it  ) exit
+    if( t >= MD_dt*frame_step*(it-1)  ) exit
 
 end do
-
+print*, "5"
 ! prepare DUAL basis for local properties ...
-DUAL_bra(:,1) = conjg(Psi_t)
-DUAL_ket(:,1) = matmul(S_matrix,Psi_t)
+DUAL_bra(:) = conjg(Psi_t)
+DUAL_ket(:) = matmul(S_matrix,Psi_t)
 
 ! save populations(time) ...
 QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
@@ -125,9 +172,9 @@ end subroutine Chebyshev
 !
 !
 !
-!==============================================================================
+!===============================================================================
 subroutine Convergence( Psi , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
-!==============================================================================
+!===============================================================================
 implicit none
 complex*16  , intent(inout) :: Psi(:)
 integer     , intent(inout) :: k_ref

@@ -4,10 +4,8 @@
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use Semi_Empirical_Parms
-    use Structure_Builder
-    use Overlap_Builder
-    use dipole_potential_m        , only : DP_phi
+    use Overlap_Builder             , only : Overlap_Matrix
+    use dipole_potential_m          , only : DP_phi
 
  contains
 !
@@ -27,13 +25,10 @@
  real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
  integer               :: i , j , info
 
-! local parameters ...
- real*8  , parameter   :: one = 1.d0 , zero = 0.d0
- 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
  CALL Overlap_Matrix(system,basis,S_matrix)
- 
+
  ALLOCATE(QM%erg(size(basis))) 
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
@@ -86,7 +81,7 @@
 
  ALLOCATE(Rv(size(basis),size(basis)))
 
-    CALL gemm(S_matrix,Lv,Rv,'N','N',one,zero)  
+    CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)  
 
  DEALLOCATE( S_matrix )
 
