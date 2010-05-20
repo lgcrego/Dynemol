@@ -12,7 +12,7 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 = "chebyshev"     ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
+            DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
 !			
             GaussianCube = F_ ,                 &
 			Survival     = T_ ,                 &
@@ -46,11 +46,11 @@
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-            nnx = 1    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
+            nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters

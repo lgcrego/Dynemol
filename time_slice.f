@@ -18,8 +18,6 @@ module TimeSlice_m
     use Data_Output                 , only : Dump_stuff 
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev
-    use Eigen_Slice_m               , only : Huckel_Slice_Dynamics ,        &
-                                             Preprocess_Huckel_Slice
 
     public :: Time_Slice
 

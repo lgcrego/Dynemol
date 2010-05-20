@@ -90,10 +90,10 @@ real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:)
 real*8                      :: tau , inv , norm_ref , norm_test
 integer                     :: i , j , k_ref , N
 logical                     :: OK
-print*, "1"
+
 ! building  S_matrix  and  H'= S_inv * H ...
 CALL Build_Hprime( system , basis , H_prime , S_matrix )
-print*, "2"
+
 N = size(basis)
 
 allocate( C_Psi    (N , order ) , source=C_zero )
@@ -107,7 +107,7 @@ norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
 ! constants of evolution ...
 inv = ( two * h_bar ) / E_range
 tau = merge( E_range * delta_t / (two*h_bar) , save_tau * 1.15d0 , it == 2 )
-print*, "3"
+
 ! first convergence: best tau-parameter for k_ref ...
 do
     CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
@@ -119,7 +119,7 @@ do
         tau = tau * 0.8d0
     end if
 end do
-print*, "4"
+
 ! proceed evolution with best tau ...
 C_k = coefficient(tau,order)
 do
@@ -151,7 +151,7 @@ do
     if( t >= MD_dt*frame_step*(it-1)  ) exit
 
 end do
-print*, "5"
+
 ! prepare DUAL basis for local properties ...
 DUAL_bra(:) = conjg(Psi_t)
 DUAL_ket(:) = matmul(S_matrix,Psi_t)

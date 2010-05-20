@@ -1,30 +1,28 @@
  module Data_Output
 
     use type_m
-    use projectors      , only : Pop_Slater
 
     public :: Populations , Dump_stuff
 
     private
 
     interface Populations
-        module procedure Populations_mtx
-        module procedure Populations_vct
-    end interface
+        module procedure Populations_vct , Populations_mtx
+    end interface Populations
 
  contains
 !
 !
 !
-!========================================================================================
- function Populations_vct( QDyn_fragments , basis , bra , ket , t )  result(Populations)
-!========================================================================================
+!==================================================================
+ function Populations_vct( QDyn_fragments , basis , bra , ket , t )
+!==================================================================
  implicit none
- character(1)    , intent(in)  :: QDyn_fragments(:)
+ character(*)    , intent(in)  :: QDyn_fragments(:)
  type(STO_basis) , intent(in)  :: basis(:)
  complex*16      , intent(in)  :: bra(:) , ket(:)
  real*8          , intent(in)  :: t
- real*8                        :: Populations( 0:size(QDyn_fragments)+1 )
+ real*8                        :: Populations_vct( 0:size(QDyn_fragments)+1 )
 
 ! local variables ...
 integer             :: nf , N_of_fragments
@@ -35,7 +33,7 @@ character(len=1)    :: fragment
 !----------------------------------------------------------
 
 ! time of population ...
-Populations(0) = t
+Populations_vct(0) = t
 
 ! partial populations ...
 N_of_fragments = size( QDyn_fragments )
@@ -44,12 +42,12 @@ do nf = 1 , N_of_fragments
 
     fragment = QDyn_fragments (nf)
 
-    Populations(nf) = pop_Slater( basis , bra(:) , ket(:) , fragment )
+    Populations_vct(nf) = pop_Slater( basis , bra(:) , ket(:) , fragment )
 
 end do
 
 ! total population ...
-Populations(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
+Populations_vct(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
 
 !---------------------------------------------------- 
 
@@ -57,26 +55,27 @@ end function Populations_vct
 !
 !
 !
-!========================================================================================
- function Populations_mtx( QDyn_fragments , basis , bra , ket , t )  result(Populations)
-!========================================================================================
+!==================================================================
+ function Populations_mtx( QDyn_fragments , basis , bra , ket , t )
+!==================================================================
  implicit none
- character(1)    , intent(in)  :: QDyn_fragments(:)
+ character(*)    , intent(in)  :: QDyn_fragments(:)
  type(STO_basis) , intent(in)  :: basis(:)
  complex*16      , intent(in)  :: bra(:,:) , ket(:,:)
  real*8          , intent(in)  :: t
- real*8                        :: Populations( 0:size(QDyn_fragments)+1 )
+ real*8                        :: Populations_mtx( 0:size(QDyn_fragments)+1 )
 
 ! local variables ...
 integer             :: n , nf , N_of_fragments
 character(len=1)    :: fragment 
+
 
 !----------------------------------------------------------
 !              get time-dependent Populations
 !----------------------------------------------------------
 
 ! time of population ...
-Populations(0) = t
+Populations_mtx(0) = t
 
 ! partial populations ...
 N_of_fragments = size( QDyn_fragments )
@@ -87,12 +86,12 @@ do n = 1 , n_part
 
         fragment = QDyn_fragments (nf)
 
-        Populations(nf) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment )
+        Populations_mtx(nf) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment )
 
     end do
 
     ! total population ...
-    Populations(N_of_fragments+1) = pop_Slater( basis , bra(:,n) , ket(:,n) )
+    Populations_mtx(N_of_fragments+1) = pop_Slater( basis , bra(:,n) , ket(:,n) )
 
 end do
 
@@ -163,8 +162,33 @@ end if
 12   FORMAT(10A9)
 13   FORMAT(10F9.4)
 
- end subroutine Dump_stuff
+end subroutine Dump_stuff
 !
+!
+!
+!=================================================
+ function pop_Slater( basis , za , zb , fragment )
+!=================================================
+implicit none
+type(STO_basis)              , intent(in) :: basis(:)
+complex*16                   , intent(in) :: za(:) , zb(:)
+character(*)     , optional  , intent(in) :: fragment
+
+! local variables
+real*8       :: pop_Slater
+complex*16   :: pop 
+
+pop = C_zero
+
+if( present(fragment) ) then
+    pop = sum( za(:) * zb(:) , mask = basis%fragment == fragment )
+else
+    pop = sum( za(:) * zb(:) )
+end if
+
+pop_Slater = real( pop )
+
+end function
 !
 !
 end module Data_Output
