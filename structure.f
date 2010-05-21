@@ -312,6 +312,7 @@ type(structure) , intent(inout) :: a
 ! local variables ...
 integer :: i , j
 
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPEN( unit=3 , file='structure.log' , status='unknown' )
 
 write(3,*) System_Characteristics
@@ -325,6 +326,43 @@ end do
 close(3)
 
 100 format(I7,A6,A7,I5,A7,A4,3F10.4)
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN(unit=4,file='structure.pdb',status='unknown')
+write(4,6) 'COMPND' , System_Characteristics
+
+write(4,1) 'CRYST1' , a%T_xyz(1) , a%T_xyz(2) , a%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+
+do i = 1 , a%atoms
+
+            write(4,2)  'HETATM'                        ,  &    ! <== non-standard atom
+                        i                               ,  &    ! <== global number
+                        a%Symbol(i)                     ,  &    ! <== atom type
+                        ' '                             ,  &    ! <== alternate location indicator
+                        a%residue(i)                    ,  &    ! <== residue name
+                        ' '                             ,  &    ! <== chain identifier
+                        a%nr(i)                         ,  &    ! <== residue sequence number
+                        ' '                             ,  &    ! <== code for insertion of residues
+                        ( a%coord(i,j) , j=1,3 )        ,  &    ! <== xyz coordinates
+                        1.00                            ,  &    ! <== occupancy
+                        0.00                            ,  &    ! <== temperature factor
+                        ' '                             ,  &    ! <== segment identifier
+                        ' '                             ,  &    ! <== here only for tabulation purposes
+                        a%Symbol(i)                             ! <== chemical element symbol
+
+end do
+
+write(4,3) 'MASTER', 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , a%atoms , 0 , a%atoms , 0
+write(4,*) 'END'
+
+close(4)
+
+1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
+2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2)
+3 FORMAT(a6,i9,11i5)
+6 FORMAT(a6,a72)
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine dump_diagnosis
 !
