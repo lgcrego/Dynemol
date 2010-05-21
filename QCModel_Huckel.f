@@ -192,17 +192,17 @@ real*8      , intent(inout) :: Lv(:,:)
 complex*16  , intent(in)    :: CR(:,:)
 
 ! local parameters ...
-integer , parameter    :: n_check = 10
+integer , parameter    :: n_check = 5  ! <== has to be odd !
 
 ! local variables ...
 integer                :: J , K , N , indx
 real*8                 :: big , signal
 real*8                 :: norm(n_check)
-real*8  , allocatable  :: dumb(:,:) , old_Rv(:,:) , MO_ovlp(:,:)
+real*8  , allocatable  :: temp(:,:) , old_Rv(:,:) , MO_ovlp(:,:)
 
 N = size( CR(:,1) )
 
-allocate( dumb    (N,N) )
+allocate( temp    (N,N) )
 allocate( old_Rv  (N,N) )
 allocate( MO_ovlp (N,N) )
 
@@ -217,8 +217,8 @@ DO J = 1 , N
     DO K = 1 , n_check
          
         indx = J - (n_check/2) + K - 1
-             
-        IF( indx == 0 ) indx = 1
+      
+        IF( indx <= 0 ) indx = 1
         IF( indx >= N ) indx = N
              
         norm(K) = MO_ovlp(J,indx)
@@ -227,7 +227,7 @@ DO J = 1 , N
 
     big  = abs(norm(1))  
     indx = J - n_check / 2
-      
+
     DO K = 2 , n_check
         IF( abs(norm(K)) > big ) then
             big  =  abs(norm(K))
@@ -240,13 +240,13 @@ DO J = 1 , N
 
     signal = sign( 1.d0 , MO_ovlp(J,indx) )
       
-    dumb(:,indx) = signal * Lv(:,indx)
+    temp(:,indx) = signal * Lv(:,indx)
 
 END DO
 
-Lv = dumb
+Lv = temp
 
-deallocate( dumb , old_Rv , MO_ovlp )
+deallocate( temp , old_Rv , MO_ovlp )
 
 end subroutine phase_locking
 !
