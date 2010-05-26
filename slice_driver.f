@@ -18,6 +18,7 @@ module EigenSlice_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
+    use Dipole_potential_m          , only : Solvent_Molecule_DP                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
 

@@ -15,6 +15,7 @@ module TimeSlice_m
                                              Basis_Builder ,                &
                                              ExCell_basis
     use Schroedinger_m              , only : DeAllocate_QDyn
+    use Dipole_potential_m          , only : Solvent_Molecule_DP     
     use Data_Output                 , only : Dump_stuff 
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev
