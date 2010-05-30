@@ -119,7 +119,7 @@ character(12)   :: string
 If( present(TDOS) ) then
     OPEN( unit=3 , file='TDOS.dat' , status='unknown' )
         do i = 1 , size(TDOS%func)
-            write(3,10) TDOS%grid(i) , TDOS%average(i)
+            write(3,10) TDOS%grid(i) , TDOS%average(i) , TDOS%peaks(i) , TDOS%occupation(i)
         end do
     CLOSE(3)
 end if
@@ -131,7 +131,7 @@ If( present(PDOS) ) then
         string = "PDOS-"//PDOS(nr)%residue//".dat" 
         OPEN( unit=3 , file=string , status='unknown' )
             do i = 1 , size(PDOS(nr)%func)
-                write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i)
+                write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i) , PDOS(nr)%peaks(i) , PDOS(nr)%occupation(i)
             end do
         CLOSE(3)
     end do
@@ -157,7 +157,7 @@ If( survival ) then
     CLOSE(3)
 end if
 
-10   FORMAT(2F12.5)
+10   FORMAT(4F12.5)
 11   FORMAT(3F13.9)
 12   FORMAT(10A9)
 13   FORMAT(10F9.4)

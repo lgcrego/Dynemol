@@ -276,12 +276,14 @@ integer , parameter   :: npoints = 1500
 select case( flag )
 
     case( "alloc" )
-        allocate( TDOS%grid(npoints) )
-        allocate( TDOS%func(npoints) )
-        allocate( TDOS%average(npoints) , source = 0.d0)
+        allocate( TDOS%grid       (npoints) , source = 0.d0 )
+        allocate( TDOS%func       (npoints) , source = 0.d0 )
+        allocate( TDOS%peaks      (npoints) , source = 0.d0 )
+        allocate( TDOS%occupation (npoints) , source = 0.d0 )
+        allocate( TDOS%average    (npoints) , source = 0.d0 )
 
     case( "dealloc" )
-        deallocate( TDOS%grid , TDOS%func , TDOS%average )
+        deallocate( TDOS%grid , TDOS%func , TDOS%peaks , TDOS%occupation , TDOS%average )
 
 end select
 
@@ -315,9 +317,11 @@ select case( flag )
         allocate( PDOS(N_of_residues) )
 
         do i = 1 , N_of_residues
-            allocate( PDOS(i)%grid(npoints) )
-            allocate( PDOS(i)%func(npoints) )
-            allocate( PDOS(i)%average(npoints) , source = 0.d0)
+            allocate( PDOS(i)%grid       (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%func       (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%peaks      (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%occupation (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%average    (npoints) , source = 0.d0 )
 
             if( allocated(trj) ) then
                 PDOS(i) % residue = trj(1) % list_of_residues(i) 
