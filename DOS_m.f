@@ -36,7 +36,7 @@ two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
 ! states in the range [DOS_range%inicio,DOS_range%fim]
-i1 = maxloc(erg , 1 , erg <= DOS_range%inicio) 
+i1 = maxloc(erg , 1 , erg <  DOS_range%inicio) + 1
 i2 = maxloc(erg , 1 , erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1
@@ -76,6 +76,7 @@ do k = 2 , npoints
     TDOS%occupation(k) = TDOS%occupation(k-1) + two*TDOS%peaks(k) 
 end do
 sub_occupation  = two * (i1 - 1)
+
 TDOS%occupation = sub_occupation + TDOS%occupation
 
 DEALLOCATE( peaks , DOS_partial )
@@ -119,7 +120,7 @@ allocate( peaks      (npoints) )
 allocate( DOS_partial(npoints) )
 
 ! number of states in the range [DOS_range%inicio,DOS_range%fim] ...
-i1 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%inicio) 
+i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) + 1
 i2 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1
