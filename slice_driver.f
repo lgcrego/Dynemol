@@ -26,6 +26,12 @@ module EigenSlice_m
 
     private
 
+    ! module variables ...
+    Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket , phase
+    type(f_time)                              :: QDyn
+    type(C_eigen)                             :: UNI , FMO
+
 contains
 !
 !
@@ -35,78 +41,33 @@ contains
 implicit none
 
 ! local variables ...
-integer                     :: j , it , frame 
-real*8                      :: t 
-real*8                      :: t_rate = MD_dt * frame_step
-real*8       , allocatable  :: QDyn_temp(:,:)
-type(f_time)                :: QDyn
-type(C_eigen)               :: UNI , FMO
+integer                :: j , it , frame 
+real*8                 :: t 
+real*8                 :: t_rate = MD_dt * frame_step
+real*8  , allocatable  :: QDyn_temp(:,:)
 
-! more local variables ...
-complex*16 , ALLOCATABLE :: zG_L(:,:)     , MO_bra(:,:) 
-complex*16 , ALLOCATABLE :: zG_R(:,:)     , MO_ket(:,:)
-complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:) 
-complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
-complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
 
-! preprocessing stuff .....................................................
 it = 1
-
-CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
-
-CALL Coords_from_Universe   ( Unit_Cell , trj(1) , 1 )
-
-CALL Generate_Structure     ( 1 )
-
-CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
-
-If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
-
-CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
-
-CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI%R , FMO )
-
-Print 56 , initial_state     ! <== initial state of the isolated molecule 
- 
-CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
-                         zG_L     , zG_R     ,      &
-                         MO_bra   , MO_ket   ,      &
-                         AO_bra   , AO_ket   ,      &
-                         DUAL_bra , DUAL_ket ,      &
-                         bra      , ket      , phase)
-
-zG_L = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-zG_R = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-
-! DUAL representation for efficient calculation of survival probabilities ...
-
-! coefs of <k(t)| in DUAL basis ...
-CALL gemm(UNI%L,zG_L,DUAL_bra,'T','N',C_one,C_zero)
-
-! coefs of |k(t)> in DUAL basis ...
-CALL gemm(UNI%R,zG_R,DUAL_ket,'N','N',C_one,C_zero)
-
-! save populations(time) ...
-bra(:) = DUAL_bra(:,1)
-ket(:) = DUAL_ket(:,1)
-
-QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
+t  = t_i
+CALL Preprocess(it)
 
 !..........................................................................
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
+
 it = 2
-t  = t_i
 
 do frame = (1 + frame_step) , size(trj) , frame_step
 
-    ! propagate until from t -> (t + t_rate) with UNI%erg(t) ...
-    t  =  t + t_rate 
+    t = t + t_rate 
+
+    ! propagate t -> (t + t_rate) with UNI%erg(t) ...
+    !============================================================================
 
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-    forall(j=1:n_part)   
-        MO_bra(:,j) = conjg(phase(:)) * zG_L(:,j) 
-        MO_ket(:,j) =       phase(:)  * zG_R(:,j) 
+    forall( j=1:n_part )   
+        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j) 
+        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
@@ -116,20 +77,20 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     ! coefs of |k(t)> in DUAL basis ...
     CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
-    ! save populations(time) ...
+    ! save populations(t + t_rate) ...
     bra(:) = DUAL_bra(:,1)
     ket(:) = DUAL_ket(:,1)
 
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
-
-    zG_L = MO_bra       ! <== updating expansion coefficients at t 
-    zG_R = MO_ket       ! <== updating expansion coefficients at t
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
     if( t >= t_f ) exit
+
+    !============================================================================
+    ! build new UNI(t + t_rate) ...
 
     CALL Coords_from_Universe   ( Unit_Cell , trj(frame) , frame )
 
@@ -142,15 +103,16 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-    ! coefs of <k(t)| in DUAL basis ...
-    CALL gemm(UNI%R,DUAL_bra,zG_L,'T','N',C_one,C_zero)
-
-    ! coefs of |k(t)> in DUAL basis ...
-    CALL gemm(UNI%L,DUAL_ket,zG_R,'N','N',C_one,C_zero)
+    ! project back to MO_basis with UNI(t + t_rate)
+    CALL gemm(UNI%R,DUAL_bra,MO_bra,'T','N',C_one,C_zero)
+    CALL gemm(UNI%L,DUAL_ket,MO_ket,'N','N',C_one,C_zero)
 
     it = it + 1
 
+    !============================================================================
+
     print*, frame 
+
 end do
 
 ! prepare data for survival probability ...
@@ -162,11 +124,67 @@ CALL Dump_stuff( QDyn=QDyn )
 ! final procedures ...
 CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
-deallocate( zG_L , zG_R , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
+deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
 
 include 'formats.h'
 
 end subroutine Eigen_Slice
+!
+!
+!
+!=========================
+ subroutine Preprocess(it)
+!=========================
+implicit none
+integer , intent(in) :: it
+
+! preprocessing stuff .....................................................
+
+CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
+
+CALL Coords_from_Universe   ( Unit_Cell , trj(1) , 1 )
+
+CALL Generate_Structure     ( 1 )
+
+CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+
+If( DP_field_ ) &
+CALL Solvent_Molecule_DP    ( Extended_Cell )
+
+CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+
+CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI%R , FMO )
+
+Print 56 , initial_state     ! <== initial state of the isolated molecule 
+ 
+CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
+                         MO_bra   , MO_ket   ,      &
+                         AO_bra   , AO_ket   ,      &
+                         DUAL_bra , DUAL_ket ,      &
+                         bra      , ket      , phase)
+
+MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+
+! DUAL representation for efficient calculation of survival probabilities ...
+
+! coefs of <k(t)| in DUAL basis ...
+CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
+
+! coefs of |k(t)> in DUAL basis ...
+CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
+
+! save populations ...
+bra(:) = DUAL_bra(:,1)
+ket(:) = DUAL_ket(:,1)
+
+QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
+
+!..........................................................................
+
+include 'formats.h'
+
+end subroutine Preprocess
 !
 !
 !

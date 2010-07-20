@@ -53,17 +53,15 @@
 !
 !
 !
- subroutine Allocate_BracKets(Basis_Size, zG_L, zG_R, zGtL, zGtR, AO_bra, AO_ket, DUAL_bra, DUAL_ket, bra, ket, phase)
+ subroutine Allocate_BracKets(Basis_Size, MO_bra, MO_ket, AO_bra, AO_ket, DUAL_bra, DUAL_ket, bra, ket, phase)
 
     integer                  , intent(in)  :: Basis_Size
-    complex*16 , ALLOCATABLE , intent(out) :: zG_L     (:,:) , zGtL     (:,:) 
-    complex*16 , ALLOCATABLE , intent(out) :: zG_R     (:,:) , zGtR     (:,:)
+    complex*16 , ALLOCATABLE , intent(out) :: MO_bra   (:,:) , MO_ket   (:,:)
     complex*16 , ALLOCATABLE , intent(out) :: AO_bra   (:,:) , AO_ket   (:,:) 
     complex*16 , ALLOCATABLE , intent(out) :: DUAL_ket (:,:) , DUAL_bra (:,:) 
     complex*16 , ALLOCATABLE , intent(out) :: phase(:) , bra(:) , ket(:)
 
-    allocate( zG_L     (Basis_Size,n_part) , zG_R     (Basis_Size,n_part) )
-    allocate( zGtL     (Basis_Size,n_part) , zGtR     (Basis_Size,n_part) )
+    allocate( MO_bra   (Basis_Size,n_part) , MO_ket   (Basis_Size,n_part) )
     allocate( AO_bra   (Basis_Size,n_part) , AO_ket   (Basis_Size,n_part) )
     allocate( DUAL_bra (Basis_Size,n_part) , DUAL_ket (Basis_Size,n_part) )
     allocate( bra      (Basis_Size)        , ket      (Basis_Size)        )

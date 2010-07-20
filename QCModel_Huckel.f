@@ -81,7 +81,7 @@
  DEALLOCATE(h)
 
  ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+ !If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
  ALLOCATE(Rv(size(basis),size(basis)))
 
@@ -232,8 +232,6 @@ forall(i=1:N)
 end forall
 
 deallocate( temp_Lv , Energies , norm_states , ind )
-
-deallocate( norm_states )
 
 ! correction of the phases ...
 allocate( correction_phase ( N ) )
