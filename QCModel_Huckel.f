@@ -11,18 +11,15 @@
 !
 !
 !
-!=====================================================================================
- subroutine EigenSystem( system , basis , QM , flag1 , flag2 , flag3 , flag4 , flag5 )
-!=====================================================================================
+!=============================================================
+ subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
+!=============================================================
  implicit none
  type(structure)                             , intent(in)    :: system
  type(STO_basis)                             , intent(in)    :: basis(:)
  type(C_eigen)                               , intent(inout) :: QM
  integer          , optional                 , intent(inout) :: flag1
  integer          , optional                 , intent(in)    :: flag2
- real*8           , optional   , allocatable , intent(out)   :: flag3(:,:)
- real*8           , optional   , allocatable , intent(out)   :: flag4(:,:)
- integer          , optional   , allocatable , intent(out)   :: flag5(:)
 
 ! local variables ...
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
@@ -33,11 +30,6 @@
 
  CALL Overlap_Matrix(system,basis,S_matrix)
 
- if( present(flag4) ) then
-     allocate( flag4 ( size(basis) , size(basis) ) )
-     flag4 = S_matrix
- end if
- 
  If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
@@ -67,16 +59,6 @@
 
  end If
 
- if( present(flag3) ) then
-     allocate( flag3 ( size(basis) , size(basis) ) )
-     flag3 = h
-     do j = 1 , size(basis)
-         do i = 1 , j
-             flag3(j,i) = flag3(i,j)
-         end do
-     end do
- end if
-
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
  If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
@@ -99,9 +81,7 @@
  DEALLOCATE(h)
 
  ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- if( present(flag5) ) then
-     If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
- end if
+ If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
  ALLOCATE(Rv(size(basis),size(basis)))
 
@@ -114,12 +94,12 @@
 
  If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
 ! eigenvectors in the rows of QM%L
- QM%L = dcmplx(transpose(Lv))
+ QM%L = cmplx( transpose(Lv) )
  DEALLOCATE( Lv )
 
  If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
 ! eigenvectors in the columns of QM%R
- QM%R = dcmplx(Rv)
+ QM%R = cmplx( Rv )
  DEALLOCATE( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
@@ -201,9 +181,9 @@
  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
    
  end function Huckel_with_FIELDS
- !
- !
- !
+!
+!
+!
 !=========================================
  subroutine phase_locking( Lv , CR , Erg )
 !=========================================

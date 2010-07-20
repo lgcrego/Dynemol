@@ -72,7 +72,7 @@
  if( present(MO) ) then
 
     allocate( MO(size(FMO_basis)) )
-    MO(:) = wv_FMO(orbital(0),:)
+    MO(:) = wv_FMO(orbital(1),:)
 
     print*, ''
     print*, '>> FMO analysis done <<'

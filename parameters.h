@@ -37,7 +37,7 @@
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.0d0 ,            & ! <== final time in PICOseconds
+            t_f           =  2.d-2 ,            & ! <== final time in PICOseconds
             n_t           =  1250 ,             & ! <== number of time steps
 			MD_dt		  =  8.d-4 ,			& ! <== time step of MD simulation in PICOseconds
 
@@ -50,7 +50,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 1 ,              & ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
             n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters
