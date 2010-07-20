@@ -11,15 +11,18 @@
 !
 !
 !
-!=============================================================
- subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
-!=============================================================
+!=====================================================================================
+ subroutine EigenSystem( system , basis , QM , flag1 , flag2 , flag3 , flag4 , flag5 )
+!=====================================================================================
  implicit none
- type(structure)               , intent(in)    :: system
- type(STO_basis)               , intent(in)    :: basis(:)
- type(C_eigen)                 , intent(inout) :: QM
- integer          , optional   , intent(inout) :: flag1          
- integer          , optional   , intent(in)    :: flag2          
+ type(structure)                             , intent(in)    :: system
+ type(STO_basis)                             , intent(in)    :: basis(:)
+ type(C_eigen)                               , intent(inout) :: QM
+ integer          , optional                 , intent(inout) :: flag1
+ integer          , optional                 , intent(in)    :: flag2
+ real*8           , optional   , allocatable , intent(out)   :: flag3(:,:)
+ real*8           , optional   , allocatable , intent(out)   :: flag4(:,:)
+ integer          , optional   , allocatable , intent(out)   :: flag5(:)
 
 ! local variables ...
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
@@ -30,6 +33,11 @@
 
  CALL Overlap_Matrix(system,basis,S_matrix)
 
+ if( present(flag4) ) then
+     allocate( flag4 ( size(basis) , size(basis) ) )
+     flag4 = S_matrix
+ end if
+ 
  If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
@@ -59,6 +67,16 @@
 
  end If
 
+ if( present(flag3) ) then
+     allocate( flag3 ( size(basis) , size(basis) ) )
+     flag3 = h
+     do j = 1 , size(basis)
+         do i = 1 , j
+             flag3(j,i) = flag3(i,j)
+         end do
+     end do
+ end if
+
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
  If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
@@ -81,11 +99,13 @@
  DEALLOCATE(h)
 
  ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R )
+ if( present(flag5) ) then
+     If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+ end if
 
  ALLOCATE(Rv(size(basis),size(basis)))
 
- CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)  
+ CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
 
  DEALLOCATE( S_matrix )
 
@@ -94,12 +114,12 @@
 
  If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
 ! eigenvectors in the rows of QM%L
- QM%L = transpose(Lv)                 
+ QM%L = dcmplx(transpose(Lv))
  DEALLOCATE( Lv )
 
  If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
 ! eigenvectors in the columns of QM%R
- QM%R = Rv             
+ QM%R = dcmplx(Rv)
  DEALLOCATE( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
@@ -111,7 +131,7 @@
     do i = 1 , size(basis)
         write(9,*) i , QM%erg(i)
     end do
- CLOSE(9)   
+ CLOSE(9)  
 
  If( verbose ) Print*, '>> EigenSystem done <<'
 
@@ -181,72 +201,72 @@
  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
    
  end function Huckel_with_FIELDS
-!
-!
-!
-!===================================
- subroutine phase_locking( Lv , CR )
-!===================================
+ !
+ !
+ !
+!=========================================
+ subroutine phase_locking( Lv , CR , Erg )
+!=========================================
 implicit none
 real*8      , intent(inout) :: Lv(:,:)
 complex*16  , intent(in)    :: CR(:,:)
-
-! local parameters ...
-integer , parameter    :: n_check = 5  ! <== has to be odd !
+real*8      , intent(inout) :: Erg(:)
 
 ! local variables ...
-integer                :: J , K , N , indx
-real*8                 :: big , signal
-real*8                 :: norm(n_check)
-real*8  , allocatable  :: temp(:,:) , old_Rv(:,:) , MO_ovlp(:,:)
+real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , norm_states(:,:) , correction_phase(:) , old_Rv(:,:)
+integer     , allocatable  :: ind(:)
+real*8                     :: val
+integer                    :: N , i , j , pos
 
 N = size( CR(:,1) )
 
-allocate( temp    (N,N) )
-allocate( old_Rv  (N,N) )
-allocate( MO_ovlp (N,N) )
+! correction of crusaders states ...
+allocate( old_Rv      ( N , N ) )
+allocate( temp_Lv     ( N , N ) )
+allocate( norm_states ( N , N ) )
+allocate( Energies    ( N     ) )
+allocate( ind         ( N     ) )
 
 old_Rv = real(CR)
-         
-CALL gemm( Lv , old_Rv , MO_ovlp , 'T' , 'N' , D_one , D_zero )
 
-DO J = 1 , N
-      
-    norm = D_zero
+CALL gemm(Lv,old_Rv,norm_states,'T','N',D_one,D_zero)
 
-    DO K = 1 , n_check
-         
-        indx = J - (n_check/2) + K - 1
-      
-        IF( indx <= 0 ) indx = 1
-        IF( indx >= N ) indx = N
-             
-        norm(K) = MO_ovlp(J,indx)
-             
-    END DO   
+do i = 1 , N
+    val = abs( abs(norm_states(i,1)) - D_one )
+    pos = 1
+    do j = 2 , N
+        if( val > abs( abs(norm_states(i,j)) - D_one ) ) then
+            val = abs( abs(norm_states(i,j)) - D_one )
+            pos = j
+        end if
+    end do
+    ind(i) = pos
+end do
 
-    big  = abs(norm(1))  
-    indx = J - n_check / 2
+temp_Lv  = Lv
+Energies = Erg
 
-    DO K = 2 , n_check
-        IF( abs(norm(K)) > big ) then
-            big  =  abs(norm(K))
-            indx = J - (n_check/2) + K - 1
-        END IF   
-    END DO   
+forall(i=1:N)
+    Lv(:,i) = temp_Lv(:,ind(i))
+    Erg(i)  = Energies(ind(i))
+end forall
 
-    IF( indx <= 0 ) indx = 1
-    IF( indx >= N ) indx = N
+deallocate( temp_Lv , Energies , norm_states , ind )
 
-    signal = sign( 1.d0 , MO_ovlp(J,indx) )
-      
-    temp(:,indx) = signal * Lv(:,indx)
+deallocate( norm_states )
 
-END DO
+! correction of the phases ...
+allocate( correction_phase ( N ) )
 
-Lv = temp
+forall(i=1:N) correction_phase(i) = dot_product(Lv(:,i),old_Rv(:,i))
 
-deallocate( temp , old_Rv , MO_ovlp )
+do i = 1 , N
+    if( correction_phase(i) < 0.0d0 ) then
+        Lv(:,i) = - Lv(:,i)
+    end if
+end do
+
+deallocate( correction_phase , old_Rv )
 
 end subroutine phase_locking
 !

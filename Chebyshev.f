@@ -85,14 +85,14 @@ type(g_time)     , intent(inout) :: QDyn
 real*8           , intent(out)   :: t
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
-real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:)
+complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:) , A_r(:) , A_r_S(:)
+real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:) , H(:,:)
 real*8                      :: tau , inv , norm_ref , norm_test
 integer                     :: i , j , k_ref , N
 logical                     :: OK
 
 ! building  S_matrix  and  H'= S_inv * H ...
-CALL Build_Hprime( system , basis , H_prime , S_matrix )
+CALL Build_Hprime( system , basis , H_prime , S_matrix , H )
 
 N = size(basis)
 
@@ -102,7 +102,18 @@ allocate( Psi_temp (N         ) , source=C_zero )
 allocate( Dual_bra (N         ) , source=C_zero )
 allocate( Dual_ket (N         ) , source=C_zero )
 
+allocate( A_r ( N ) )
+allocate( A_r_S ( N ) )
+
 norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
+
+if( it == 2) then
+    A_r = matmul(H,Psi_t)
+    A_r_S = matmul(S_matrix,Psi_t)
+    write(131,*), 0.0d0 , real( dot_product( conjg(Psi_t) , A_r ) )
+    write(133,*), 0.0d0 , real( sum( conjg(Psi_t(:)) * A_r_S(:) ) )
+    write(134,*), 0.0d0 , sum( Psi_t(:) * conjg(A_r_S(:)) )
+end if
 
 ! constants of evolution ...
 inv = ( two * h_bar ) / E_range
@@ -148,6 +159,14 @@ do
 
     t = t + (tau * inv)
 
+    if( t >= MD_dt*frame_step*(it-1)  ) then
+        A_r = matmul(H,Psi_t)
+        A_r_S = matmul(S_matrix,Psi_t)
+        write(131,*), t , real( dot_product( conjg(Psi_t) , A_r ) )
+        write(133,*), t , real( sum( conjg(Psi_t(:)) * A_r_S(:) ) )
+        write(134,*), t , sum( Psi_t(:) * conjg(A_r_S(:)) )
+    end if
+
     if( t >= MD_dt*frame_step*(it-1)  ) exit
 
 end do
@@ -162,7 +181,7 @@ QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 ! clean and exit ...
 it = it  + 1
 
-deallocate( C_k , C_Psi , H_prime , S_matrix , DUAL_bra , DUAL_ket )
+deallocate( C_k , C_Psi , H_prime , S_matrix , DUAL_bra , DUAL_ket , H , A_r , A_r_S )
 
 Print 186, t
 
@@ -237,14 +256,15 @@ end subroutine Convergence
 !
 !
 !
-!======================================================
-subroutine Build_Hprime( system , basis , H_prime , S )
-!======================================================
+!==========================================================
+subroutine Build_Hprime( system , basis , H_prime , S , H )
+!==========================================================
 implicit none
 type(structure)                 , intent(in)  :: system
 type(STO_basis)                 , intent(in)  :: basis(:)
 real*8          , allocatable   , intent(out) :: H_prime(:,:)
 real*8          , allocatable   , intent(out) :: S(:,:)
+real*8          , allocatable   , intent(out) :: H(:,:)
 
 ! local variables...
 real*8  , allocatable   :: Hamiltonian(:,:)
@@ -271,6 +291,9 @@ CALL Invertion_Matrix( S , S_inv , size(basis) )
 allocate( H_prime ( size(basis) , size(basis) ) )
 
 H_prime = matmul(S_inv,Hamiltonian)
+
+allocate( H ( size(basis) , size(basis) ) )
+H = Hamiltonian
 
 deallocate( S_inv , Hamiltonian )
 

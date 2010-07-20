@@ -46,6 +46,8 @@ CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
+!frame = 1
+
 do frame = 1 , size(trj) , frame_step
 
     CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
@@ -55,6 +57,8 @@ do frame = 1 , size(trj) , frame_step
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
+
+!do
 
     select case ( DRIVER )
 
@@ -77,8 +81,14 @@ do frame = 1 , size(trj) , frame_step
 
     it = it + 1
 
+!end do
+
     print*, frame
 end do
+
+!CALL DeAllocate_UnitCell   ( Unit_Cell     )
+!CALL DeAllocate_Structures ( Extended_Cell )
+!DeAllocate                 ( ExCell_basis  )
 
 ! prepare data for survival probability ...
 allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 ) )

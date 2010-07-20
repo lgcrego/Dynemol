@@ -5,7 +5,7 @@ module Semi_Empirical_Parms
     type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
 
-    public :: read_EHT_parameters , Include_OPT_parameters
+    public :: read_EHT_parameters , Include_OPT_parameters , Read_Atomic_Mass
 
     private
 

@@ -72,7 +72,7 @@
  if( present(MO) ) then
 
     allocate( MO(size(FMO_basis)) )
-    MO(:) = wv_FMO(orbital(1),:)
+    MO(:) = wv_FMO(orbital(0),:)
 
     print*, ''
     print*, '>> FMO analysis done <<'
@@ -187,7 +187,7 @@
 
 ! local variables ... 
  integer               :: N_of_molecule_electrons, i, j , info
- real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) 
+ real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
 
  ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  FMO%erg(size(basis)) )
 
