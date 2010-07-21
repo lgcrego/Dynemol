@@ -1,5 +1,5 @@
 ! Subroutine for computing time evolution through time slices
-module TimeSlice_m
+module Chebyshev_driver_m
 
     use type_m
     use constants_m
@@ -20,16 +20,16 @@ module TimeSlice_m
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev
 
-    public :: Time_Slice
+    public :: Chebyshev_driver
 
     private
 
 contains
 !
 !
-!=======================
- subroutine Time_Slice
-!=======================
+!===========================
+ subroutine Chebyshev_driver
+!===========================
 implicit none
 
 ! local variables ...
@@ -48,26 +48,25 @@ CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 do frame = 1 , size(trj) , frame_step
 
-    CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+    CALL Coords_from_Universe   ( Unit_Cell , trj(frame) , frame )
 
-    CALL Generate_Structure( frame )
+    CALL Generate_Structure     ( frame )
 
-    CALL Basis_Builder( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
+    If( DP_field_ ) &
+    CALL Solvent_Molecule_DP    ( Extended_Cell )
 
-    select case ( DRIVER )
+    If( .NOT. done ) then
 
-        case( "chebyshev" )
+        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn )
+        done = .true.
 
-            if( .NOT. done ) then
-                CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn )
-                done = .true.
-            else
-                CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t )
-            end if
+    else
 
-    end select
+        CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t )
+
+    end if
 
     CALL DeAllocate_UnitCell   ( Unit_Cell     )
     CALL DeAllocate_Structures ( Extended_Cell )
@@ -90,8 +89,8 @@ CALL Dump_stuff( QDyn=QDyn )
 ! final procedures ...
 CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
-end subroutine Time_Slice
+end subroutine Chebyshev_driver
 !
 !
 !
-end module TimeSlice_m
+end module Chebyshev_driver_m

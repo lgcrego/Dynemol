@@ -7,6 +7,15 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use dipole_potential_m          , only : DP_phi
 
+    public :: EigenSystem , Huckel
+
+    private
+
+    interface EigenSystem
+        module procedure EigenSystem
+        module procedure EigenSystem_just_erg
+    end interface
+
  contains
 !
 !
@@ -81,7 +90,7 @@
  DEALLOCATE(h)
 
  ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- !If( (driver == "eigen_slice") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+ If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
  ALLOCATE(Rv(size(basis),size(basis)))
 
@@ -193,60 +202,99 @@ complex*16  , intent(in)    :: CR(:,:)
 real*8      , intent(inout) :: Erg(:)
 
 ! local variables ...
-real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , norm_states(:,:) , correction_phase(:) , old_Rv(:,:)
+real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , MO_ovlp(:,:) , old_Rv(:,:)
 integer     , allocatable  :: ind(:)
 real*8                     :: val
 integer                    :: N , i , j , pos
 
 N = size( CR(:,1) )
 
-! correction of crusaders states ...
-allocate( old_Rv      ( N , N ) )
-allocate( temp_Lv     ( N , N ) )
-allocate( norm_states ( N , N ) )
-allocate( Energies    ( N     ) )
-allocate( ind         ( N     ) )
+allocate( old_Rv   ( N , N ) )
+allocate( temp_Lv  ( N , N ) )
+allocate( MO_ovlp  ( N , N ) )
+allocate( Energies ( N     ) )
+allocate( ind      ( N     ) )
 
 old_Rv = real(CR)
 
-CALL gemm(Lv,old_Rv,norm_states,'T','N',D_one,D_zero)
+! MO overlap
+CALL gemm(Lv,old_Rv,MO_ovlp,'T','N',D_one,D_zero)
 
-do i = 1 , N
-    val = abs( abs(norm_states(i,1)) - D_one )
-    pos = 1
-    do j = 2 , N
-        if( val > abs( abs(norm_states(i,j)) - D_one ) ) then
-            val = abs( abs(norm_states(i,j)) - D_one )
-            pos = j
-        end if
-    end do
-    ind(i) = pos
-end do
-
+! correction of crossing states ...
 temp_Lv  = Lv
 Energies = Erg
+
+ind = maxloc( abs(transpose(MO_ovlp)) , dim=1 )
 
 forall(i=1:N)
     Lv(:,i) = temp_Lv(:,ind(i))
     Erg(i)  = Energies(ind(i))
 end forall
 
-deallocate( temp_Lv , Energies , norm_states , ind )
+deallocate( temp_Lv , Energies , MO_ovlp , ind )
 
 ! correction of the phases ...
-allocate( correction_phase ( N ) )
-
-forall(i=1:N) correction_phase(i) = dot_product(Lv(:,i),old_Rv(:,i))
-
 do i = 1 , N
-    if( correction_phase(i) < 0.0d0 ) then
+    if( dot_product(Lv(:,i),old_Rv(:,i)) < D_zero ) then
         Lv(:,i) = - Lv(:,i)
     end if
 end do
 
-deallocate( correction_phase , old_Rv )
+deallocate( old_Rv )
 
 end subroutine phase_locking
+!
+!
+!
+!=======================================================
+ subroutine EigenSystem_just_erg( system , basis , erg )
+!=======================================================
+ implicit none
+ type(structure)  , intent(in)    :: system
+ type(STO_basis)  , intent(in)    :: basis(:)
+ real*8           , intent(out)   :: erg( size(basis) )
+
+! local variables ...
+ real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
+ integer               :: i , j , info , N
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+ N = size(basis)
+
+ CALL Overlap_Matrix(system,basis,S_matrix)
+
+ ALLOCATE( h(N,N) )
+
+ If( DP_field_ ) then
+
+    do j = 1 , N
+        do i = 1 , j
+     
+            h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
+
+        end do
+    end do  
+
+ else
+
+    do j = 1 , N
+        do i = 1 , j
+     
+            h(i,j) = huckel(i,j,S_matrix(i,j),basis)
+
+        end do
+    end do  
+
+ end If
+
+ CALL SYGVD(h,S_matrix,erg,1,'N','U',info)
+
+ If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+
+ DEALLOCATE( h , S_matrix )
+
+ end subroutine EigenSystem_just_erg
 !
 !
 !

@@ -12,7 +12,7 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 = "eigen_slice"   ,	& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , eigen_slice , chebyshev
+            DRIVER		 = "slice_MO0"   ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
             GaussianCube = F_ ,                 &
 			Survival     = T_ ,                 &
@@ -46,7 +46,7 @@
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-            nnx = 1    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
+            nnx = 0    , nny = 1 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 

@@ -75,6 +75,8 @@ integer , intent(in) :: frame
 
 ! local variables ...
 integer :: copy , nr_sum , ix , iy , k , n
+! local parameter: offset for ASCII numerical characters ...
+integer :: ASC_offset = 48      
 
 !----------------------------------------------------------
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
@@ -135,6 +137,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! define the DONOR fragment ...
  where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
  where( (extended_cell%fragment == 'D') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
+ where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset + extended_cell%copy_No) 
 
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    

@@ -8,8 +8,8 @@ use qdynamics_m             , only : qdynamics
 use Sampling_m              , only : Avrg_Confgs
 use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
-use EigenSlice_m            , only : Eigen_Slice
-use TimeSlice_m             , only : Time_Slice
+use Chebyshev_driver_m      , only : Chebyshev_driver
+use Eigen_driver_m          , only : Eigen_driver
 
 ! local variables ...
  
@@ -27,11 +27,11 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "eigen_slice" )
-        CALL Eigen_Slice
+    case ( "slice_AO" , "slice_MO0" , "slice_MOt" )
+        CALL Eigen_driver
 
-    case ( "chebyshev" )
-        CALL Time_Slice
+    case ( "slice_Cheb" )
+        CALL Chebyshev_driver
 
     case ( "solvated_M" , "solid_sys" )
         CALL Avrg_Confgs
