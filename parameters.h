@@ -12,19 +12,19 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 = "slice_MO0"   ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 = "diagnostic"  ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
             GaussianCube = F_ ,                 &
-			Survival     = T_ ,                 &
-            SPECTRUM     = F_ ,                 & 
-			DP_Moment    = F_ ,                 &
-			OPT_basis    = F_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			Survival     = F_ ,                 &
+            SPECTRUM     = T_ ,                 & 
+			DP_Moment    = T_ ,                 &
+			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
-            file_format  =  "vasp" ,            & ! <= xyz , pdb or vasp
+            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -46,7 +46,7 @@
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-            nnx = 0    , nny = 1 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
+            nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 
@@ -62,7 +62,7 @@
 !
             sigma       =   0.080d0 ,                            &  !
 
-			DOS_range   =  real_interval( -17.d0 , -6.d0 ) ,     &
+			DOS_range   =  real_interval( -22.d0 , -6.d0 ) ,     &
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

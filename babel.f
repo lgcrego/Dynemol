@@ -161,6 +161,7 @@ end subroutine Coords_from_Universe
 ! local variables ...
 integer             :: i , j , N_of_atoms , nresidue
 integer             :: file_err , io_err
+character(len=5)    :: MMSymbol_char
 character(len=6)    :: keyword
 type(universe)      :: system        
 
@@ -195,11 +196,13 @@ do
     if( keyword == "CRYST1" ) then
         do i = 1 , system%N_of_atoms
             read(3 , 115 , iostat=io_err , err=12)             &
-                         system%atom(i)%MMSymbol            ,  &    ! <== atom type
+                         MMSymbol_char                      ,  &    ! <== atom type
                          system%atom(i)%residue             ,  &    ! <== residue name
                          system%atom(i)%nr                  ,  &    ! <== residue sequence number
                         (system%atom(i)%xyz(j) , j=1,3)     ,  &    ! <== xyz coordinates 
                          system%atom(i)%Symbol                      ! <== chemical element symbol
+
+                         system%atom(i)%MMSymbol = adjustl(MMSymbol_char)
         end do
     end if
     if ( keyword == "MASTER" ) exit

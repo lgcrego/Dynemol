@@ -42,29 +42,31 @@ integer :: i
 
  DO i = 1 , size(a)
 
-    select case(a(i)%symbol)
-        case( 'H') 
+    select case( adjustl(a(i)%symbol) )
+        case( 'H' ) 
             a(i)%AtNo = 1 
-        case( 'LI','Li') 
+        case( 'LI','Li' ) 
             a(i)%AtNo = 3 
-        case( 'C') 
+        case( 'C' ) 
             a(i)%AtNo = 6 
-        case( 'N') 
+        case( 'N' ) 
             a(i)%AtNo = 7 
-        case( 'O') 
+        case( 'O' ) 
             a(i)%AtNo = 8 
-        case( 'F') 
+        case( 'F' ) 
             a(i)%AtNo = 9 
-        case( 'AL','Al') 
+        case( 'AL','Al' ) 
             a(i)%AtNo = 13 
-        case( 'S','s') 
+        case( 'S','s' ) 
             a(i)%AtNo = 16 
-        case( 'CL','Cl') 
+        case( 'CL','Cl' ) 
             a(i)%AtNo = 17 
-        case( 'TI','Ti') 
+        case( 'TI','Ti' ) 
             a(i)%AtNo = 22 
-        case( 'MN','Mn') 
+        case( 'MN','Mn' ) 
             a(i)%AtNo = 25 
+        case( 'Ru' ) 
+            a(i)%AtNo = 44 
         case( 'I' ) 
             a(i)%AtNo = 53 
         case default
@@ -88,29 +90,31 @@ integer :: i
 
 DO i = 1 , a%atoms
 
-    select case(a%symbol(i))
-        case( 'H') 
+    select case( adjustl(a%symbol(i)) )
+        case( 'H' ) 
             a%AtNo(i) = 1 
-        case( 'LI','Li') 
+        case( 'LI','Li' ) 
             a%AtNo(i) = 3 
-        case( 'C') 
+        case( 'C' ) 
             a%AtNo(i) = 6 
-        case( 'N') 
+        case( 'N' ) 
             a%AtNo(i) = 7 
-        case( 'O') 
+        case( 'O' ) 
             a%AtNo(i) = 8 
-        case( 'F') 
+        case( 'F' ) 
             a%AtNo(i) = 9 
-        case( 'AL','Al') 
+        case( 'AL','Al' ) 
             a%AtNo(i) = 13 
-        case( 'S','s') 
+        case( 'S','s' ) 
             a%AtNo(i) = 16 
-        case( 'CL','Cl') 
+        case( 'CL','Cl' ) 
             a%AtNo(i) = 17 
-        case( 'TI','Ti') 
+        case( 'TI','Ti' ) 
             a%AtNo(i) = 22 
-        case( 'MN','Mn') 
+        case( 'MN','Mn' ) 
             a%AtNo(i) = 25 
+        case( 'Ru' ) 
+            a%AtNo(i) = 44 
         case( 'I' ) 
             a%AtNo(i) = 53 
         case default
@@ -136,29 +140,31 @@ integer :: i
  DO i = 1 , size(a)
 
     select case(a(i)%Atno)
-        case( 1) 
+        case( 1 ) 
             a(i)%Symbol = 'H'
-        case( 3) 
+        case( 3 ) 
             a(i)%Symbol = 'Li'
-        case( 6) 
+        case( 6 ) 
             a(i)%Symbol = 'C'
-        case( 7) 
+        case( 7 ) 
             a(i)%Symbol = 'N'
-        case( 8) 
+        case( 8 ) 
             a(i)%Symbol = 'O'
-        case( 9) 
+        case( 9 ) 
             a(i)%Symbol = 'F'
-        case( 13) 
+        case( 13 ) 
             a(i)%Symbol = 'Al'
-        case( 16) 
+        case( 16 ) 
             a(i)%Symbol = 'S '
-        case( 17) 
+        case( 17 ) 
             a(i)%Symbol = 'Cl '
-        case( 22) 
+        case( 22 ) 
             a(i)%Symbol = 'Ti '
-        case( 25) 
+        case( 25 ) 
             a(i)%Symbol = 'Mn'
-        case( 53) 
+        case( 44 ) 
+            a(i)%Symbol = 'Ru'
+        case( 53 ) 
             a(i)%Symbol = 'I'
         case default
             print*, ' >> unknown atom found ; execution terminated << : ', a(i)%AtNo , i
@@ -214,6 +220,8 @@ character(len=2)    :: element2
             a(i)%Symbol = 'Ti' 
         case( 'Li' ) 
             a(i)%Symbol = 'Li' 
+        case( 'Ru' ) 
+            a(i)%Symbol = 'Ru' 
     end select
 
  END DO
