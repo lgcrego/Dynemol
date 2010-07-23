@@ -19,6 +19,7 @@ module type_m
         character(3) , allocatable :: list_of_residues(:)
         character(3) , allocatable :: MMSymbol(:)
         integer      , allocatable :: AtNo(:)
+        integer      , allocatable :: Nvalen(:)
         real*8       , allocatable :: coord(:,:)
         real*8       , allocatable :: k_WH(:)
         real*8                     :: BoxSides(3)
@@ -33,6 +34,7 @@ module type_m
         real*8                        :: mass
         real*8                        :: charge
         integer                       :: AtNo
+        integer                       :: Nvalen
         integer                       :: nr
         integer                       :: copy_No
         character(3)                  :: residue

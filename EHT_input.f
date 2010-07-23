@@ -11,6 +11,11 @@ module Semi_Empirical_Parms
 
     type(EHT)   , allocatable   :: EH_atom(:)
 
+    interface Include_OPT_parameters 
+        module procedure Basis_OPT_parameters
+        module procedure Atomic_OPT_parameters
+    end interface
+
     contains
 !
 !
@@ -113,10 +118,15 @@ end subroutine Read_Atomic_Mass
 
 ! local variables ... 
  integer        :: ioerr , nr , i 
- character(1)   :: spdf
+ character(4)   :: spdf
  character(2)   :: dumb 
+ character(8)   :: Symbol_char
+ character(12)  :: EHSymbol_char
 
 OPEN(unit=3,file='OPT_eht_parameters.input.dat',status='old')
+
+! read file heading ...
+read(3,*,IOSTAT=ioerr) dumb 
 
 ! number of lines of OPT_parameters ...
 nr = 0
@@ -129,11 +139,12 @@ end do
 allocate( EH_atom(nr) )
 
 ! rewind and read the OPT-EHT_parameters ...
-rewind 3
+rewind 3    ;    read(3,*,IOSTAT=ioerr) dumb 
+
 do i = 1 , size(EH_atom)
 
-    read(3,17)  EH_atom(i)%Symbol       ,   &
-                EH_atom(i)%EHSymbol     ,   &
+    read(3,17)  Symbol_char             ,   &
+                EHSymbol_char           ,   &
                 EH_atom(i)%AtNo         ,   &
                 EH_atom(i)%Nvalen       ,   &
                 EH_atom(i)%Nzeta(0)     ,   &
@@ -146,7 +157,7 @@ do i = 1 , size(EH_atom)
                 EH_atom(i)%coef(0,2)    ,   &
                 EH_atom(i)%k_WH(0)
 
-    select case (spdf)
+    select case ( adjustl(spdf) )
         case('s')
             EH_atom(i)%l = 0
         case('p')
@@ -157,6 +168,8 @@ do i = 1 , size(EH_atom)
             EH_atom(i)%l = 3
     end select
 
+    EH_atom(i) % Symbol   =  adjustl( Symbol_char   )
+    EH_atom(i) % EHSymbol =  adjustl( EHSymbol_char )
     EH_atom(i) % DOS      =  atom( EH_atom(i)%AtNo ) % DOS
     EH_atom(i) % AngMax   =  atom( EH_atom(i)%AtNo ) % AngMax
 
@@ -169,14 +182,14 @@ Print 45 , EH_atom%EHSymbol
 
 include 'formats.h'
 
-17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
+17 format(A8,t10,A12,t24,I7,t32,I10,t43,I9,t53,I5,t61,A4,t68,F9.4,t78,F9.4,t88,F9.4,t98,F9.4,t108,F9.4,t118,F9.4)
 
 end subroutine read_OPT_parameters
 ! 
 !
 !
 !==========================================
- subroutine Include_OPT_parameters( basis )
+ subroutine Basis_OPT_parameters( basis )
 !==========================================
 implicit none
 type(STO_basis) , intent(inout) :: basis(:)
@@ -200,7 +213,30 @@ do i = 1 , size(EH_atom)
 
 end do
 
-end subroutine Include_OPT_parameters
+end subroutine Basis_OPT_parameters
+! 
+!
+!
+!==============================================
+ subroutine Atomic_OPT_parameters( system )
+!==============================================
+implicit none
+type(structure) , intent(inout) :: system
+
+! local variables ...
+integer :: i
+
+do i = 1 , size(EH_atom)
+
+    where( (system%MMSymbol == EH_atom(i)%EHSymbol) ) 
+        
+        system%Nvalen = EH_atom(i)%Nvalen
+
+    end where
+
+end do
+
+end subroutine Atomic_OPT_parameters
 !
 !
 end module Semi_Empirical_Parms

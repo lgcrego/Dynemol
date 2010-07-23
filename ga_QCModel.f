@@ -352,7 +352,7 @@ allocate(R_vector(system%atoms,3))
 forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - system%Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
-forall(xyz=1:3) Nuclear_DP(xyz) = sum( element( system%AtNo(:) )%Nvalen * R_vector(:,xyz) )
+forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen(:) * R_vector(:,xyz) )
 
 ! Electronic dipole 
 n_basis      =  size(basis)

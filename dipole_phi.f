@@ -67,9 +67,9 @@ do nr = first_nr , last_nr
     !-----------------------------------------------------------------------------------------------
     ! calculate Center_of_Charge for each solvent molecule: sum_i = (q_i * vec{r}_i) / sum_i q_i ...
 
-    forall( j=1:3 , i=i1:i2 ) Qi_Ri(i,j) = atom(a%AtNo(i))%Nvalen * a%coord(i,j)
+    forall( j=1:3 , i=i1:i2 ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
 
-    total_valence = sum( [ (atom(a%AtNo(i))%Nvalen , i=i1,i2) ] )
+    total_valence = sum( [ (a%Nvalen(i) , i=i1,i2) ] )
 
     forall(j=1:3) Q_center(nr,j) = sum( Qi_Ri(i1:i2,j) ) / total_valence
     !-----------------------------------------------------------------------------------------------

@@ -102,6 +102,7 @@ integer :: ASC_offset = 48
             extended_cell % coord    (k+n,2) =  unit_cell % coord    (n,2) + iy * unit_cell%T_xyz(2)
             extended_cell % coord    (k+n,3) =  unit_cell % coord    (n,3) 
             extended_cell % AtNo     (k+n)   =  unit_cell % AtNo     (n)
+            extended_cell % Nvalen   (k+n)   =  unit_cell % Nvalen   (n)
             extended_cell % k_WH     (k+n)   =  unit_cell % k_WH     (n)
             extended_cell % fragment (k+n)   =  unit_cell % fragment (n)
             extended_cell % Symbol   (k+n)   =  unit_cell % Symbol   (n)
@@ -124,6 +125,7 @@ integer :: ASC_offset = 48
 
     extended_cell % coord    (k+n,1:3)  =  unit_cell % coord    (n,1:3)
     extended_cell % AtNo     (k+n)      =  unit_cell % AtNo     (n)
+    extended_cell % Nvalen   (k+n)      =  unit_cell % Nvalen   (n)
     extended_cell % k_WH     (k+n)      =  unit_cell % k_WH     (n)
     extended_cell % fragment (k+n)      =  unit_cell % fragment (n)
     extended_cell % symbol   (k+n)      =  unit_cell % Symbol   (n)
@@ -147,6 +149,8 @@ integer :: ASC_offset = 48
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
  extended_cell%T_xyz(2) = (2*nny+1)*unit_cell%T_xyz(2)
  extended_cell%T_xyz(3) = unit_cell%T_xyz(3)
+
+ If( OPT_basis ) CALL Include_OPT_parameters( extended_cell )
 
  if( frame == 1 ) CALL diagnosis( Extended_Cell )
 
@@ -234,6 +238,10 @@ integer :: ASC_offset = 48
 
  If( OPT_basis ) CALL Include_OPT_parameters( basis )
 
+do i = 1 , size(basis)
+    write(14,*) basis(i)%IP 
+end do
+!stop
  end subroutine Basis_Builder
 !
 !
@@ -250,13 +258,12 @@ integer :: N_of_orbitals, N_of_electron, N_of_atom_type, AtNo , residue , N_of_r
 integer :: first_nr , last_nr , N_of_residue_members 
 integer :: i
 
-
 ! total number of orbitals ...
 N_of_orbitals = sum(atom(a%AtNo)%DOS)
 Print 120 , N_of_orbitals                       
 
 ! total number of electrons ...
-a%N_of_electrons = sum(atom(a%AtNo)%Nvalen)
+a%N_of_electrons = sum( a%Nvalen )
 Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
@@ -267,7 +274,7 @@ do AtNo = 1 , size(atom)
 
     N_of_atom_type = count( a%AtNo == AtNo )
    
-    If( N_of_atom_type /= 0 )       Print 121 , atom(AtNo)%symbol , N_of_atom_type
+    If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
 
 end do
 

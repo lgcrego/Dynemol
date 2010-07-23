@@ -97,7 +97,7 @@ complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
  forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - system%Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
- forall(xyz=1:3) Nuclear_DP(xyz) = sum( atom( system%AtNo(:) )%Nvalen * R_vector(:,xyz) )
+ forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen(:) * R_vector(:,xyz) )
 
 ! Electronic dipole 
  n_basis      =  size(basis)
@@ -163,9 +163,9 @@ integer              :: i , j
 
  allocate(Qi_Ri(a%atoms,3))
 
- forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = atom(a%AtNo(i))%Nvalen * a%coord(i,j)
+ forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
 
- total_valence = sum(atom(a%AtNo)%Nvalen)
+ total_valence = sum( a%Nvalen )
 
  forall(j=1:3) a%Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
 

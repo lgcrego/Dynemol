@@ -458,6 +458,9 @@ indx_EHS = [ ( minloc(GA_basis%EHSymbol , 1 , GA_basis%EHSymbol == GA%EHSymbol(i
 ! creating file OPT_eht_parameters.output.dat with the optimized parameters ...
 open( unit=13, file='OPT_eht_parameters.output.dat', status='unknown' )
 
+! print heading ...
+write(13,48)
+
 do n_EHS = 1 , N_of_EHSymbol
 
     i = indx_EHS(n_EHS)
@@ -487,6 +490,8 @@ enddo
 close(13)
 
 17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
+
+include 'formats.h'
 
 end subroutine Dump_OPT_parameters
 !

@@ -219,7 +219,7 @@
 
 ! save energies of the FMO system 
  OPEN(unit=9,file='molecule-ergs.dat',status='unknown')
-    N_of_molecule_electrons = sum(atom(system%AtNo)%Nvalen)
+    N_of_molecule_electrons = sum( system%Nvalen )
     write(9,*) float(N_of_molecule_electrons) / 2.0
     do i = 1 , size(basis)
         write(9,*) i , FMO%erg(i)

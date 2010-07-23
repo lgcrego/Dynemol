@@ -49,6 +49,7 @@
  FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%nr == nr ) 
  end forall
  FMO_system%AtNo       =  pack( system%AtNo      , system%nr == nr ) 
+ FMO_system%Nvalen     =  pack( system%Nvalen    , system%nr == nr ) 
  FMO_system%k_WH       =  pack( system%k_WH      , system%nr == nr )
  FMO_system%symbol     =  pack( system%Symbol    , system%nr == nr )
  FMO_system%fragment   =  pack( system%fragment  , system%nr == nr )
@@ -57,7 +58,7 @@
  FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%nr == nr )
  FMO_system%copy_No    =  0
 
- FMO_system%N_of_electrons = sum( atom(FMO_system%AtNo(:))%Nvalen )
+ FMO_system%N_of_electrons = sum( FMO_system%Nvalen )
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
@@ -279,7 +280,7 @@ allocate(R_vector(system%atoms,3))
 forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
-forall(xyz=1:3) Nuclear_DP(xyz) = sum( atom( system%AtNo(:) )%Nvalen * R_vector(:,xyz) )
+forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen * R_vector(:,xyz) )
 
 ! Electronic dipole 
 n_basis      =  size(basis)

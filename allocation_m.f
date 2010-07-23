@@ -14,6 +14,7 @@
 
     allocate( unit_cell % Symbol            (unit_cell%atoms)   )
     allocate( unit_cell % AtNo              (unit_cell%atoms)   )
+    allocate( unit_cell % Nvalen            (unit_cell%atoms)   )
     allocate( unit_cell % coord             (unit_cell%atoms,3) )
     allocate( unit_cell % k_WH              (unit_cell%atoms)   )
     allocate( unit_cell % fragment          (unit_cell%atoms)   )
@@ -39,6 +40,7 @@
     allocate( System % BasisPointer (System_Size)   )
     allocate( System % Symbol       (System_Size)   )
     allocate( System % AtNo         (System_size)   )
+    allocate( System % Nvalen       (System_size)   )
     allocate( System % coord        (System_Size,3) )
     allocate( System % k_WH         (System_size)   )
     allocate( System % copy_No      (System_size)   )
@@ -78,6 +80,7 @@
 
     deallocate( unit_cell % symbol            )
     deallocate( unit_cell % AtNo              )
+    deallocate( unit_cell % Nvalen            )
     deallocate( unit_cell % coord             )
     deallocate( unit_cell % k_WH              )
     deallocate( unit_cell % fragment          )
@@ -99,6 +102,7 @@
     deallocate( System % BasisPointer )
     deallocate( System % symbol       )
     deallocate( System % AtNo         )
+    deallocate( System % Nvalen       )
     deallocate( System % coord        )
     deallocate( System % k_WH         )
     deallocate( System % copy_No      )

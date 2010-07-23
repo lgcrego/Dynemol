@@ -14,6 +14,8 @@
                                          TO_UPPER_CASE ,        &
                                          Center_of_Gravity ,    &
                                          Initialize_System
+    use Semi_Empirical_Parms    , only : atom                                         
+
 
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_VASP
@@ -51,6 +53,7 @@ CALL Allocate_UnitCell( Unit_Cell , n_residues )
 
 ! coordinates and other info from input data ...
 forall( j=1:unit_cell%atoms )
+
     unit_cell % coord    (j,:) =  System % atom(j) % xyz(:)
     unit_cell % AtNo     (j)   =  System % atom(j) % AtNo  
     unit_cell % fragment (j)   =  System % atom(j) % fragment
@@ -58,6 +61,9 @@ forall( j=1:unit_cell%atoms )
     unit_cell % residue  (j)   =  System % atom(j) % residue
     unit_cell % nr       (j)   =  System % atom(j) % nr
     unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
+
+    unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
+
 end forall
 
 unit_cell%N_of_Solvent_Molecules = System%N_of_Solvent_Molecules
