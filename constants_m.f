@@ -17,7 +17,7 @@ MODULE constants_m
     REAL*8     , PARAMETER :: SIX   = 6.d0
 	REAL*8     , PARAMETER :: a_Bohr=0.52917720859d0
     REAL*8     , PARAMETER :: h_bar=6.58264d-4 ! <== Planck's  constant  (eV * ps)
-    REAL*8     , PARAMETER :: low_prec=1.d-7
+    REAL*8     , PARAMETER :: low_prec=1.1d-7
     REAL*8     , PARAMETER :: high_prec=1.d-14
 
     complex*16 , parameter :: zi = (0.d0,1.d0)

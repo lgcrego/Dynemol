@@ -69,7 +69,6 @@ end function Populations_vct
 integer             :: n , nf , N_of_fragments
 character(len=1)    :: fragment 
 
-
 !----------------------------------------------------------
 !              get time-dependent Populations
 !----------------------------------------------------------

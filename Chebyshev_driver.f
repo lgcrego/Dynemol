@@ -33,8 +33,7 @@ contains
 implicit none
 
 ! local variables ...
-integer                     :: it = 1
-integer                     :: frame 
+integer                     :: it , frame 
 real*8                      :: t 
 real*8       , allocatable  :: QDyn_temp(:,:)
 complex*16   , allocatable  :: MO(:)
@@ -43,10 +42,16 @@ logical                     :: done = .false.
 
 CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
+it = 0
+
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
 do frame = 1 , size(trj) , frame_step
+
+    if( it >= n_t ) exit
+
+    it = it + 1
 
     CALL Coords_from_Universe   ( Unit_Cell , trj(frame) , frame )
 
@@ -59,22 +64,18 @@ do frame = 1 , size(trj) , frame_step
 
     If( .NOT. done ) then
 
-        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn )
+        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , it )
         done = .true.
 
     else
 
-        CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t )
+        CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t , it )
 
     end if
 
     CALL DeAllocate_UnitCell   ( Unit_Cell     )
     CALL DeAllocate_Structures ( Extended_Cell )
     DeAllocate                 ( ExCell_basis  )
-
-    if( t >= t_f ) exit
-
-    it = it + 1
 
     print*, frame
 

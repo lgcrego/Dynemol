@@ -56,6 +56,7 @@
  FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
  end forall
  FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
+ FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == fragment ) 
  FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
  FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
  FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
@@ -81,7 +82,7 @@
 
  end if
 
- ! wv_FMO needed only for time-propagation of wv_FMO state ...
+! wv_FMO needed only for time-propagation of wv_FMO state ...
  If( Survival ) then
      
      CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
@@ -101,6 +102,7 @@
  DeAllocate( FMO_basis )
  CALL DeAllocate_Structures( FMO_system )
 
+! print chosen orbital energies on the screen ...
  do i = 0 , n_part
     Print 59, orbital(i) , FMO%erg(orbital(i))
  end do   
@@ -143,7 +145,7 @@
  CR_FMO => CR(p1:p2,:)
 
 !-----------------------------------------------------------------------------
-!    writes the isolated molecule wavefunction |k> in the MO basis 
+!    writes the isolated FMO wavefunction |k> in the MO basis 
 !    the isolated orbitals are stored in the ROWS of wv_FMO
 
  FMO%L = ( 0.d0 , 0.d0 )
@@ -186,7 +188,7 @@
  type(C_eigen)                 , intent(out) :: FMO       
 
 ! local variables ... 
- integer               :: N_of_molecule_electrons, i, j , info
+ integer               :: N_of_FMO_electrons, i, j , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
 
  ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  FMO%erg(size(basis)) )
@@ -218,9 +220,9 @@
  DeAllocate( s_FMO , h_FMO )
 
 ! save energies of the FMO system 
- OPEN(unit=9,file='molecule-ergs.dat',status='unknown')
-    N_of_molecule_electrons = sum( system%Nvalen )
-    write(9,*) float(N_of_molecule_electrons) / 2.0
+ OPEN(unit=9,file='FMO-ergs.dat',status='unknown')
+    N_of_FMO_electrons = sum( system%Nvalen )
+    write(9,*) float(N_of_FMO_electrons) / 2.0
     do i = 1 , size(basis)
         write(9,*) i , FMO%erg(i)
     end do
@@ -232,6 +234,4 @@
 !
 !
 !
-!include 'red_pro.f'
-
  end module FMO_m

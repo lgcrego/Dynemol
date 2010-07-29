@@ -6,7 +6,8 @@ module MOt_adiabatic_m
     use mkl95_blas
     use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &
-                                             trj
+                                             trj ,                          &
+                                             MD_dt
     use Allocation_m                , only : Allocate_UnitCell ,            &
                                              DeAllocate_UnitCell ,          &
                                              DeAllocate_Structures ,        &
@@ -43,8 +44,7 @@ integer         ,   intent(out) :: it
 
 ! local variables ...
 integer                :: j , frame 
-real*8                 :: t 
-real*8                 :: t_rate = MD_dt * frame_step
+real*8                 :: t , t_rate 
 real*8  , allocatable  :: QDyn_temp(:,:) 
 
 it = 1
@@ -54,11 +54,15 @@ CALL Preprocess( QDyn , it )
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
-it = 2
+t_rate = MD_dt * frame_step
 
 do frame = (1 + frame_step) , size(trj) , frame_step
 
     t = t + t_rate 
+
+    if( t >= t_f ) exit
+
+    it = it + 1
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
@@ -87,8 +91,6 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
-    if( t >= t_f ) exit
-
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
@@ -102,8 +104,6 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL Solvent_Molecule_DP    ( Extended_Cell )
 
     CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
-
-    it = it + 1
 
     !============================================================================
 

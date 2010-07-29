@@ -27,9 +27,13 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    struct % MMSymbol(3733) = "Ix"
-    struct % MMSymbol(3734) = "Ic"
-    struct % MMSymbol(3735) = "Ix" 
+    !===================================
+    !      define LIGAND_FMO atoms
+    !===================================
+
+    struct % residue(2 :21) = "BP1"
+    struct % residue(22:41) = "BP2"
+    struct % residue(42:61) = "BP3"
 
 end If
 
@@ -38,31 +42,15 @@ end If
 
 If( present(univ) ) then
 
-    !===================================
-    !       charge of the atoms ...
-    !===================================
-
-    OPEN(unit=33,file='charge.dat',status='old',iostat=ioerr,err=11)
-    do i = 1 , count(univ % atom % residue =="CCC")
-        read(33,*,iostat=ioerr) univ%atom(i)%charge
-    end do
-    close(33)
-
-11  if( ioerr > 0 ) stop 'charge.dat file not found; terminating execution'
 
     !===================================
-    !      define MM atom types ...
+    !      define LIGAND_FMO atoms
     !===================================
 
-    univ % atom(3733) % MMSymbol = "Ix"
-    univ % atom(3734) % MMSymbol = "Ic"
-    univ % atom(3735) % MMSymbol = "Ix"
+    univ % atom(2 :21) % residue = "BP1"
+    univ % atom(22:41) % residue = "BP2"
+    univ % atom(42:61) % residue = "BP3"
 
-    where( univ % atom % charge ==  2.1960d0 ) univ % atom % MMSymbol = "TiB"
-    where( univ % atom % charge ==  1.6470d0 ) univ % atom % MMSymbol = "TiD"
-    where( univ % atom % charge == -1.098d0  ) univ % atom % MMSymbol = "OB" 
-    where( univ % atom % charge == -0.8235d0 ) univ % atom % MMSymbol = "O2c"
-    where( univ % atom % charge == -1.647d0  ) univ % atom % MMSymbol = "O3c" 
 
 end if
 
@@ -111,6 +99,12 @@ integer  :: i
             a%atom(i)%fragment = 'I' 
         case( 'PYR') 
             a%atom(i)%fragment = 'P' 
+        case( 'BP1') 
+            a%atom(i)%fragment = 'D' 
+        case( 'BP2') 
+            a%atom(i)%fragment = '1' 
+        case( 'BP3') 
+            a%atom(i)%fragment = '2' 
         case default
             a%atom(i)%fragment = '#' 
     end select

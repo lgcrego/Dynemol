@@ -5,7 +5,7 @@
                                              Read_from_Poscar ,         &
                                              Read_from_PDB ,            &
                                              Read_PDB ,                 &
-                                             Read_VASP  ,               &
+                                             Read_XYZ,                  &
                                              Identify_Fragments ,       &
                                              System_Characteristics ,   & 
                                              trj 
@@ -48,8 +48,8 @@ select case( file_type )
         select case( file_format ) 
             case( "pdb" ) 
                 CALL Read_PDB   ( trj ) 
-            case( "vasp" )
-                CALL Read_VASP  ( trj )
+            case( "xyz" ) 
+                CALL Read_XYZ   ( trj )
             case default
                 print*, ">>> check file type selection <<< : " , file_format
             end select
@@ -238,10 +238,6 @@ integer :: ASC_offset = 48
 
  If( OPT_basis ) CALL Include_OPT_parameters( basis )
 
-do i = 1 , size(basis)
-    write(14,*) basis(i)%IP 
-end do
-!stop
  end subroutine Basis_Builder
 !
 !

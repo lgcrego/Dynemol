@@ -18,12 +18,12 @@
 
 
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
-    PUBLIC :: Read_PDB , Read_VASP
+    PUBLIC :: Read_PDB , Read_XYZ
     PUBLIC :: Coords_from_Universe
 
-    type(universe)  , allocatable , public  :: trj(:)
-
-    character(len=72) , PUBLIC :: System_Characteristics
+    type(universe)      , allocatable   , public  :: trj(:)
+    real*8                              , public  :: MD_dt
+    character(len=72)                   , public  :: System_Characteristics
 
 contains
 !
@@ -379,8 +379,9 @@ type(universe)  , allocatable   , intent(out)   :: trj(:)
 ! local variables ...
 integer      :: i , j , k  , n , m , openstatus , inputstatus , model , number_of_atoms
 real*8       :: time_1 , time_2 , delta_t 
-character(4) :: keyword
 character(1) :: test
+character(4) :: keyword
+character(5) :: MMSymbol_char
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) stop " *** Cannot open the file frames.pdb *** "
@@ -444,6 +445,9 @@ end do
 
 delta_t = time_2 - time_1
 
+! Molecular Dynamics time step (pico-sec) ...
+MD_dt = delta_t + epsilon(1.0)
+
 ! return to the top of the file ...
 rewind 31
 
@@ -467,21 +471,23 @@ do j = 1 , model
         CALL Initialize_System( trj(j) )
     
         do i = 1 , number_of_atoms
-            read(unit = 31, fmt = 33, iostat = inputstatus)   trj(j) % atom(i) % MMSymbol ,     &
+            read(unit = 31, fmt = 33, iostat = inputstatus)   MMSymbol_char               ,     &
                                                               trj(j) % atom(i) % residue ,      &
                                                               trj(j) % atom(i) % nr ,           &
                                                             ( trj(j) % atom(i) % xyz(k) , k=1,3 )
+
+            trj(j) % atom(i) % MMSymbol = adjustl(MMSymbol_char)
         end do
+
+        ! use ad hoc tuning of parameters ...
+        If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
 
         ! convert residues to upper case ...
         forall( i=1:number_of_atoms ) trj(j)%atom(i)%residue = TO_UPPER_CASE( trj(j)%atom(i)%residue )
 
-        CALL MMSymbol_2_Symbol( trj(j)%atom )
-        CALL Symbol_2_AtNo( trj(j)%atom )
-        CALL Setting_Fragments( trj(j) )
-
-        ! use ad hoc tuning of parameters ...
-        If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
+        CALL MMSymbol_2_Symbol  ( trj(j)%atom )
+        CALL Symbol_2_AtNo      ( trj(j)%atom )
+        CALL Setting_Fragments  ( trj(j)      )
 
     else
 
@@ -545,7 +551,7 @@ end do
 
 ! Formats ...
 32 format(5x, i6)
-33 format(13x, a3, t18, a3, t24, i3, t33, f6.3, t41, f6.3, t49, f6.3)
+33 format(12x, a5, t18, a3, t24, i3, t33, f6.3, t41, f6.3, t49, f6.3)
 35 format(a4)
 36 format(7x, i7)
 37 format(32x, f6.3, t41, f6.3, t49, f6.3)
@@ -560,9 +566,9 @@ end subroutine Read_PDB
 !
 !
 !
-!=========================
- subroutine Read_VASP(trj)
-!=========================
+!========================
+ subroutine Read_XYZ(trj)
+!========================
 implicit none
 type(universe)  , allocatable   , intent(out) :: trj(:)
 
@@ -573,8 +579,8 @@ integer       :: j1 , j2 , n_residues
 character(1)  :: fragment
 character(3)  :: residue
 
-open(unit = 13, file = 'VASP.trj', status = 'old', action = 'read', iostat = openstatus)
-if( openstatus > 0 ) stop '*** Cannot open the file VASP.trj ***'
+open(unit = 13, file = 'XYZ.trj', status = 'old', action = 'read', iostat = openstatus)
+if( openstatus > 0 ) stop '*** Cannot open the file XYZ.trj ***'
 
 ! read the number of models ...
 model = 0
@@ -682,7 +688,7 @@ end do
 22 format(i2, t4, f8.5, t13, f8.5, t22, f8.5)
 23 format(3x, f8.5, t13, f8.5, t22, f8.5)
 
-end subroutine Read_VASP
+end subroutine Read_XYZ
 !
 !
 !

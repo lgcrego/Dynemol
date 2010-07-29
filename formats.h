@@ -28,10 +28,6 @@
 
 54    FORMAT(1x,' >>> no PBC')
 
-71    FORMAT(1x,' >>> PBC in the X direction')
-
-72    FORMAT(1x,' >>> PBC in the Y direction')
-
 55    FORMAT(1x,'========= FINISHING S_matrix  =========',/) 
 
 56    FORMAT(/,1x,'Initial state of the isolated molecule => ',I3)
@@ -49,6 +45,10 @@
 69    FORMAT(1x,'Sparsity of OVERLAP Mtrx = ',F10.5)
 
 70    FORMAT(/,'>>> System Characteristics: ',A72)
+
+71    FORMAT(1x,' >>> PBC in the X direction')
+
+72    FORMAT(1x,' >>> PBC in the Y direction')
 
 73    FORMAT(1x,'Sparsity of DIPOLE Mtrx =',3F7.4)
 

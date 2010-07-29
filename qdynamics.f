@@ -43,8 +43,8 @@ implicit none
  
 ! preprocessing stuff ...................................
 
-FMO_    = ( spectrum .AND. survival  )
-DIPOLE_ = ( FMO_     .OR.  DP_Moment )
+FMO_    = ( spectrum .OR. survival  )
+DIPOLE_ = ( spectrum .OR. DP_Moment )
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )

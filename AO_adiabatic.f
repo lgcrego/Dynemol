@@ -6,7 +6,8 @@ module AO_adiabatic_m
     use mkl95_blas
     use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &
-                                             trj
+                                             trj ,                          &
+                                             MD_dt
     use Allocation_m                , only : Allocate_UnitCell ,            &
                                              DeAllocate_UnitCell ,          &
                                              DeAllocate_Structures ,        &
@@ -43,8 +44,7 @@ integer         , intent(out)   :: it
 
 ! local variables ...
 integer                :: j , frame 
-real*8                 :: t 
-real*8                 :: t_rate = MD_dt * frame_step
+real*8                 :: t , t_rate 
 real*8  , allocatable  :: QDyn_temp(:,:)
 
 it = 1
@@ -54,11 +54,15 @@ CALL Preprocess( QDyn , it )
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
-it = 2
+t_rate = MD_dt * frame_step
 
 do frame = (1 + frame_step) , size(trj) , frame_step
 
     t = t + t_rate 
+
+    if( t >= t_f ) exit
+
+    it = it + 1
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
@@ -87,8 +91,6 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
-    if( t >= t_f ) exit
-
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
@@ -106,8 +108,6 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     ! project back to MO_basis with UNI(t + t_rate)
     CALL gemm(UNI%R,DUAL_bra,MO_bra,'T','N',C_one,C_zero)
     CALL gemm(UNI%L,DUAL_ket,MO_ket,'N','N',C_one,C_zero)
-
-    it = it + 1
 
     !============================================================================
 
@@ -148,7 +148,7 @@ CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI%R , FMO )
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
- 
+
 CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
                          MO_bra   , MO_ket   ,      &
                          AO_bra   , AO_ket   ,      &

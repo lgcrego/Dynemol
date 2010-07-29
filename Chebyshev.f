@@ -5,6 +5,7 @@ module Chebyshev_m
     use mkl95_blas
     use mkl95_lapack
     use ifport
+    use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
     use QCmodel_Huckel      , only : Huckel 
@@ -22,21 +23,21 @@ module Chebyshev_m
     real*8      , parameter :: norm_error= 1.0d-6
 
 ! module variables ...
-    integer , save :: it = 1
     real*8  , save :: save_tau 
 
 contains
 !
 !
 !
-!=============================================================
- subroutine preprocess_Chebyshev( system , basis , MO , QDyn )
-!=============================================================
+!==================================================================
+ subroutine preprocess_Chebyshev( system , basis , MO , QDyn , it )
+!==================================================================
 implicit none
 type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)
 complex*16      , allocatable   , intent(out)   :: MO(:)
 type(g_time)                    , intent(inout) :: QDyn
+integer                         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
@@ -66,23 +67,22 @@ DUAL_ket(:) = matmul( S_matrix , MO )
 QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
 ! clean and exit ...
-it = it  + 1
-
 deallocate( DUAL_ket , S_matrix , DUAL_bra )
 
 end subroutine preprocess_Chebyshev
 !
 !
 !
-!=========================================================
- subroutine Chebyshev( system , basis , Psi_t , QDyn , t )
-!=========================================================
+!==============================================================
+ subroutine Chebyshev( system , basis , Psi_t , QDyn , t , it )
+!==============================================================
 implicit none
 type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 complex*16       , intent(inout) :: Psi_t(:)
 type(g_time)     , intent(inout) :: QDyn
 real*8           , intent(out)   :: t
+integer          , intent(in)    :: it
 
 ! local variables...
 complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:) 
@@ -160,8 +160,6 @@ DUAL_ket(:) = matmul(S_matrix,Psi_t)
 QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 ! clean and exit ...
-it = it  + 1
-
 deallocate( C_k , C_Psi , H_prime , S_matrix , DUAL_bra , DUAL_ket )
 
 Print 186, t

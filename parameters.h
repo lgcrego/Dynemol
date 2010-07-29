@@ -1,5 +1,4 @@
  integer 					:: initial_state , HOMO_mol , frame_step 
- real*8						:: MD_dt
  logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
  logical 					:: verbose , DP_field_
  type (real_interval) 		:: occupied , empty , DOS_range 
@@ -12,18 +11,18 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 = "diagnostic"  ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 = "slice_Cheb"   ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
             GaussianCube = F_ ,                 &
-			Survival     = F_ ,                 &
-            SPECTRUM     = T_ ,                 & 
-			DP_Moment    = T_ ,                 &
+			Survival     = T_ ,                 &
+            SPECTRUM     = F_ ,                 & 
+			DP_Moment    = F_ ,                 &
 			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-			ad_hoc       = F_ ,                 & ! <== ad hoc tuning of parameters
+			ad_hoc       = T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
@@ -37,12 +36,11 @@
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.d-2 ,            & ! <== final time in PICOseconds
-            n_t           =  1250 ,             & ! <== number of time steps
-			MD_dt		  =  8.d-4 ,			& ! <== time step of MD simulation in PICOseconds
+            t_f           =  2.5d-1,            & ! <== final time in PICOseconds
+            n_t           =  500  ,             & ! <== number of time steps
 
-            initial_state =  22  ,              & ! <== intial MO
-			HOMO_mol      =  21  ,              & ! <== HOMO of the molecule 
+            initial_state =  30  ,              & ! <== intial MO
+			HOMO_mol      =  29  ,              & ! <== HOMO of the molecule 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
