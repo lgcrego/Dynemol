@@ -49,7 +49,7 @@ it = 0
 
 do frame = 1 , size(trj) , frame_step
 
-    if( it >= n_t ) exit
+    if( (it >= n_t) .OR. (t >= t_f) ) exit
 
     it = it + 1
 
