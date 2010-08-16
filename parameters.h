@@ -37,7 +37,7 @@
 !
             t_i           =  0.d0 ,             &
             t_f           =  2.5d-1,            & ! <== final time in PICOseconds
-            n_t           =  500  ,             & ! <== number of time steps
+            n_t           =  1000  ,            & ! <== number of time steps
 
             initial_state =  30  ,              & ! <== intial MO
 			HOMO_mol      =  29  ,              & ! <== HOMO of the molecule 

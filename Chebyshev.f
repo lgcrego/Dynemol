@@ -18,9 +18,8 @@ module Chebyshev_m
 ! module parameters ...
     integer     , parameter :: order     = 15
     real*8      , parameter :: delta_t   = 2.5d0
-    real*8      , parameter :: E_range   = 2.0d0
-    real*8      , parameter :: error     = 1.0d-6
-    real*8      , parameter :: norm_error= 1.0d-6
+    real*8      , parameter :: error     = 1.0d-8
+    real*8      , parameter :: norm_error= 1.0d-8
 
 ! module variables ...
     real*8  , save :: save_tau 
@@ -30,12 +29,12 @@ contains
 !
 !
 !==================================================================
- subroutine preprocess_Chebyshev( system , basis , MO , QDyn , it )
+ subroutine preprocess_Chebyshev( system , basis , Psi , QDyn , it )
 !==================================================================
 implicit none
 type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)
-complex*16      , allocatable   , intent(out)   :: MO(:)
+complex*16      , allocatable   , intent(out)   :: Psi(:)
 type(g_time)                    , intent(inout) :: QDyn
 integer                         , intent(in)    :: it
 
@@ -52,16 +51,16 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO )
 ! place the  DONOR  state in structure Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
 N  = size(wv_FMO)
-allocate( MO(size(basis)) , source=C_zero )
-MO(li:li+N-1) = cmplx( wv_FMO(:) )
+allocate( Psi(size(basis)) , source=C_zero )
+Psi(li:li+N-1) = cmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
 ! prepare DUAL basis for local properties ...
 allocate( Dual_bra (size(basis)), source=C_zero )
 allocate( Dual_ket (size(basis)), source=C_zero )
 CALL Overlap_Matrix( system , basis , S_matrix )
-DUAL_bra(:) = conjg( MO )
-DUAL_ket(:) = matmul( S_matrix , MO )
+DUAL_bra(:) = conjg( Psi )
+DUAL_ket(:) = matmul( S_matrix , Psi )
 
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
@@ -87,7 +86,7 @@ integer          , intent(in)    :: it
 ! local variables...
 complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:) 
 real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:) 
-real*8                      :: tau , inv , norm_ref , norm_test
+real*8                      :: tau , norm_ref , norm_test
 integer                     :: i , j , k_ref , N
 logical                     :: OK
 
@@ -105,23 +104,22 @@ allocate( Dual_ket (N         ) , source=C_zero )
 norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
 
 ! constants of evolution ...
-inv = ( two * h_bar ) / E_range
-tau = merge( E_range * delta_t / (two*h_bar) , save_tau * 1.15d0 , it == 2 )
+tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
 
 ! first convergence: best tau-parameter for k_ref ...
 do
-    CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
+    CALL Convergence( Psi_t , C_k , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
 
     if( OK ) then
+        t = t + tau * h_bar
         save_tau = tau
         exit
     else            
-        tau = tau * 0.8d0
+        tau = tau * 0.9d0
     end if
 end do
 
 ! proceed evolution with best tau ...
-C_k = coefficient(tau,order)
 do
     C_Psi(:,1) = Psi_t(:)
 
@@ -141,12 +139,12 @@ do
         do
             tau = tau * 0.975d0
             print*, "rescaling tau" , tau 
-            CALL Convergence( Psi_t , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
+            CALL Convergence( Psi_t , C_k , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
             if( OK ) exit
         end do
     end if
 
-    t = t + (tau * inv)
+    t = t + (tau * h_bar)
 
     if( t >= MD_dt*frame_step*(it-1)  ) exit
 
@@ -160,7 +158,7 @@ DUAL_ket(:) = matmul(S_matrix,Psi_t)
 QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 ! clean and exit ...
-deallocate( C_k , C_Psi , H_prime , S_matrix , DUAL_bra , DUAL_ket )
+deallocate( C_k , C_Psi , Psi_temp , H_prime , S_matrix , DUAL_bra , DUAL_ket )
 
 Print 186, t
 
@@ -170,11 +168,12 @@ end subroutine Chebyshev
 !
 !
 !
-!===============================================================================
-subroutine Convergence( Psi , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
-!===============================================================================
+!=====================================================================================
+subroutine Convergence( Psi , C_k , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
+!=====================================================================================
 implicit none
 complex*16  , intent(inout) :: Psi(:)
+complex*16  , intent(out)   :: C_k(:)
 integer     , intent(inout) :: k_ref
 real*8      , intent(in)    :: tau
 real*8      , intent(in)    :: H_prime(:,:)
@@ -185,12 +184,11 @@ logical     , intent(inout) :: OK
 ! local variables...
 integer                     :: j , l , k , N  
 real*8                      :: norm_temp
-complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:,:) , C_k(:)
+complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:,:) 
 
 N = size(Psi)
 
 allocate( C_Psi    ( N , order ) , source=C_zero )
-allocate( C_k      ( order     ) , source=C_zero )
 allocate( Psi_temp ( N , 2     ) , source=C_zero )
 
 OK = .false.
@@ -229,7 +227,7 @@ end do
 
 k_ref = k
  
-deallocate( C_Psi , Psi_temp , C_k )
+deallocate( C_Psi , Psi_temp )
 
 end subroutine Convergence
 !

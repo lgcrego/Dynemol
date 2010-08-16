@@ -36,7 +36,7 @@ implicit none
 integer                     :: it , frame 
 real*8                      :: t 
 real*8       , allocatable  :: QDyn_temp(:,:)
-complex*16   , allocatable  :: MO(:)
+complex*16   , allocatable  :: Psi(:)
 type(f_time)                :: QDyn
 logical                     :: done = .false.
 
@@ -64,12 +64,12 @@ do frame = 1 , size(trj) , frame_step
 
     If( .NOT. done ) then
 
-        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , it )
+        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , Psi , QDyn , it )
         done = .true.
 
     else
 
-        CALL Chebyshev( Extended_Cell , ExCell_basis , MO , QDyn , t , it )
+        CALL Chebyshev( Extended_Cell , ExCell_basis , Psi , QDyn , t , it )
 
     end if
 
