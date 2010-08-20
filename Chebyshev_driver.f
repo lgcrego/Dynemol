@@ -14,6 +14,7 @@ module Chebyshev_driver_m
                                              Generate_Structure ,           &
                                              Basis_Builder ,                &
                                              ExCell_basis
+    use Solvated_M                  , only : Prepare_Solvated_System                                              
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Dipole_potential_m          , only : Solvent_Molecule_DP     
     use Data_Output                 , only : Dump_stuff 
@@ -37,8 +38,9 @@ integer                     :: it , frame
 real*8                      :: t 
 real*8       , allocatable  :: QDyn_temp(:,:)
 complex*16   , allocatable  :: Psi(:)
-type(f_time)                :: QDyn
 logical                     :: done = .false.
+type(f_time)                :: QDyn
+type(universe)              :: Solvated_System
 
 CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
@@ -53,7 +55,23 @@ do frame = 1 , size(trj) , frame_step
 
     it = it + 1
 
-    CALL Coords_from_Universe   ( Unit_Cell , trj(frame) , frame )
+    select case ( state_of_matter )
+
+        case( "solvated_M" )
+
+            CALL Prepare_Solvated_System( Solvated_System , frame )
+
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+
+        case( "solid_sys" )
+
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+        case default
+
+            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+    end select
 
     CALL Generate_Structure     ( frame )
 

@@ -72,7 +72,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
 do frame = 1 , size(trj) , frame_step
 
-    select case ( DRIVER )
+    select case ( state_of_matter )
+
         case( "solvated_M" )
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
@@ -82,6 +83,10 @@ do frame = 1 , size(trj) , frame_step
         case( "solid_sys" )
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+        case default
+
+            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
 
     end select
 
@@ -110,7 +115,9 @@ do frame = 1 , size(trj) , frame_step
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
          DeAllocate             ( ExCell_basis )
-print*, frame
+
+    print*, frame
+
 end do
 
 ! average over configurations ...

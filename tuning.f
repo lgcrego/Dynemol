@@ -31,9 +31,6 @@ If( present(struct) ) then
     !      define LIGAND_FMO atoms
     !===================================
 
-    struct % residue(2 :21) = "BP1"
-    struct % residue(22:41) = "BP2"
-    struct % residue(42:61) = "BP3"
 
 end If
 
@@ -47,9 +44,10 @@ If( present(univ) ) then
     !      define LIGAND_FMO atoms
     !===================================
 
-    univ % atom(2 :21) % residue = "BP1"
-    univ % atom(22:41) % residue = "BP2"
-    univ % atom(42:61) % residue = "BP3"
+    where( univ % atom % residue == "ION" ) univ % atom % solute = .true.
+    where( univ % atom % residue == "BP1" ) univ % atom % solute = .true.
+    where( univ % atom % residue == "BP2" ) univ % atom % solute = .true.
+    where( univ % atom % residue == "BP3" ) univ % atom % solute = .true.
 
 
 end if

@@ -4,21 +4,23 @@
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
- character (len=11)			:: DRIVER , file_type
+ character (len=11)			:: DRIVER , file_type , state_of_matter
  logical , parameter 		:: T_ = .true. , F_ = .false. 
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 = "slice_Cheb"   ,		& ! <== q_dynamics , solvated_M , Genetic_Alg , solid_sys , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "slice_AO"     ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            GaussianCube = F_ ,                 &
-			Survival     = T_ ,                 &
-            SPECTRUM     = F_ ,                 & 
-			DP_Moment    = F_ ,                 &
-			OPT_basis    = T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-			ad_hoc       = T_ ,                 & ! <== ad hoc tuning of parameters
+            state_of_matter = "solvated_M"   ,     & ! <== solvated_M , solid_sys 
+!			
+            GaussianCube 	= F_ ,                 &
+			Survival     	= T_ ,                 &
+            SPECTRUM     	= F_ ,                 & 
+			DP_Moment    	= F_ ,                 &
+			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
@@ -27,11 +29,11 @@
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-			DP_field_    =  F_  ,               & ! <== use dipole potential for solvent molecules
+			DP_field_    =  T_  ,               & ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1    ,             & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  2   ,              & ! <== step for avrg_confgs ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !

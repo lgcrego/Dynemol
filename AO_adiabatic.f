@@ -19,6 +19,7 @@ module AO_adiabatic_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
+    use Solvated_M                  , only : Prepare_Solvated_System 
     use Dipole_potential_m          , only : Solvent_Molecule_DP                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
@@ -46,6 +47,7 @@ integer         , intent(out)   :: it
 integer                :: j , frame 
 real*8                 :: t , t_rate 
 real*8  , allocatable  :: QDyn_temp(:,:)
+type(universe)         :: Solvated_System
 
 it = 1
 t  = t_i
@@ -94,7 +96,23 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
-    CALL Coords_from_Universe   ( Unit_Cell , trj(frame) , frame )
+    select case ( state_of_matter )
+
+        case( "solvated_M" )
+
+            CALL Prepare_Solvated_System( Solvated_System , frame )
+
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+
+        case( "solid_sys" )
+
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+        case default
+
+            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+    end select
 
     CALL Generate_Structure     ( frame )
 
@@ -130,11 +148,30 @@ implicit none
 type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
+! local variables
+type(universe)  :: Solvated_System
+integer :: frame
 ! preprocessing stuff .....................................................
 
 CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
 
-CALL Coords_from_Universe   ( Unit_Cell , trj(1) , 1 )
+select case ( state_of_matter )
+
+    case( "solvated_M" )
+
+        CALL Prepare_Solvated_System( Solvated_System , 1 )
+
+        CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
+
+    case( "solid_sys" )
+
+        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+
+    case default
+
+        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+end select
 
 CALL Generate_Structure     ( 1 )
 

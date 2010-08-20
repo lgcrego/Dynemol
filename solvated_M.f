@@ -23,7 +23,7 @@ type(universe)   , intent(inout)  :: Solvated_System
 integer          , intent(in)     :: frame
 
 ! local variables ...
-integer                                         :: i , system_PBC_size , solvent_PBC_size , system_size
+integer                                         :: i , system_PBC_size , solvent_PBC_size , system_size , k
 real*8                                          :: solvation_radius , Molecule_CG(3)
 real*8              , allocatable               :: distance(:)
 logical             , allocatable               :: mask(:)
@@ -34,10 +34,13 @@ type(int_pointer)   , allocatable               :: nres(:)
 ! local parameters ; number of 3D PBC unit-cells ...
 integer , parameter :: PBC_Factor = 27  
 
+! check-list ...
+if( count(trj(frame)%atom%solute) == 0 ) Pause " >>> Solute is not tagged <<< " 
+
 If( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 
-! identify the CG of the fragment ...
-forall( i=1:3 ) Molecule_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%fragment == "M" ) / count(trj(frame)%atom%fragment == "M")
+! identify the CG of the solute ...
+forall( i=1:3 ) Molecule_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%solute == .true. ) / count(trj(frame)%atom%solute)
 
 ! place origin at GC ...
 forall( i=1:trj(frame)%N_of_Atoms             ) trj(frame) % atom(i) % xyz(:)   = trj(frame) % atom(i) % xyz(:)   - Molecule_CG(:)
@@ -52,7 +55,7 @@ allocate( solvent_PBC (solvent_PBC_size) )
 
 CALL Apply_PBC( trj(frame) , system_PBC , solvent_PBC , nres )
 
-solvation_radius = minval( trj(frame)%box ) * two / three
+solvation_radius = minval( trj(frame)%box ) * two / six
 
 allocate( distance(solvent_PBC_size) )
 

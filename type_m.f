@@ -42,6 +42,7 @@ module type_m
         character(3)                  :: MMSymbol
         character(1)                  :: TorF(3)
         character(1)                  :: fragment
+        logical                       :: solute
     end type atomic
 
     type molecular
@@ -54,6 +55,7 @@ module type_m
         integer                       :: copy_No
         character(3)                  :: residue 
         character(72)                 :: Solvent_Characteristics
+        logical                       :: solute
     end type molecular
 
     type universe

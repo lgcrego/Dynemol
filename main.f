@@ -33,7 +33,7 @@ select case ( driver )
     case ( "slice_Cheb" )
         CALL Chebyshev_driver
 
-    case ( "solvated_M" , "solid_sys" )
+    case ( "avrg_confgs" )
         CALL Avrg_Confgs
 
     case ( "Genetic_Alg" )

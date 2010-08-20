@@ -478,12 +478,12 @@ integer :: i , j , n , mol_atoms
 ! initial position of S fragments in trj%atom array ...
 n = minloc( trj%atom%fragment , 1 , trj%atom%fragment == "S" ) 
 
-! center of gravity ...
+! center of gravity ; the solvent molecules must be contiguous ...
 do i = 1 , trj%N_of_Solvent_Molecules 
 
     mol_atoms = trj%solvent(i)%N_of_Atoms 
 
-    forall( j=1:3 ) trj%solvent(i)%CG(j) = sum( trj%atom(n:n+mol_atoms)%xyz(j) ) / trj%solvent(i)%N_of_Atoms
+    forall( j=1:3 ) trj%solvent(i)%CG(j) = sum( trj%atom(n:n+mol_atoms-1)%xyz(j) ) / trj%solvent(i)%N_of_Atoms
 
     trj % solvent(i) % nr      = trj % atom(n) % nr    
     trj % solvent(i) % residue = trj % atom(n) % residue
@@ -518,6 +518,7 @@ a % atom % residue  = "XXX"
 a % atom % Symbol   = "XX"
 a % atom % MMsymbol = "XXX"
 a % atom % fragment = "X"
+a % atom % solute   = .false.
 
 a % N_of_Surface_Atoms      = 0
 a % N_of_Solvent_Atoms      = 0

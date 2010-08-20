@@ -506,6 +506,7 @@ do j = 1 , model
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 37, iostat = inputstatus) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
+
     end if
 end do
 
@@ -530,6 +531,7 @@ forall(i = 2:model )
     trj(i)%atom%nr        =  trj(1)%atom%nr    
     trj(i)%atom%Symbol    =  trj(1)%atom%Symbol
     trj(i)%atom%fragment  =  trj(1)%atom%fragment
+    trj(i)%atom%solute    =  trj(1)%atom%solute
 end forall
 
 ! GROUP residues ...
@@ -538,6 +540,8 @@ do i = 1 , size(trj)
 end do
 
 ! Information about the Solvent System ...
+
+! solvent molecules must be contiguous ...
 trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' )         &
                             - minval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' ) + 1
 

@@ -64,11 +64,11 @@
 
 120   FORMAT(/,1x,'Total number of orbitals  = ',I6)
 
-121   FORMAT(1x,A2,' atoms  = ',I4)
+121   FORMAT(1x,A2,' atoms  = ',I5)
 
-122   FORMAT(/,1x,A3,' residues / atoms  = ',I4,' / ',I4)
+122   FORMAT(/,1x,A3,' residues / atoms  = ',I5,' / ',I5)
 
-123   FORMAT(/,1x,A1,' fragment atoms  = ',I4)
+123   FORMAT(/,1x,A1,' fragment atoms  = ',I5)
 
 140   FORMAT(/,1x,'Total number of electrons  = ',I6)
 
