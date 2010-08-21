@@ -38,7 +38,7 @@
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.5d-1,            & ! <== final time in PICOseconds
+            t_f           =  2.5d-2,            & ! <== final time in PICOseconds
             n_t           =  1000  ,            & ! <== number of time steps
 
             initial_state =  30  ,              & ! <== intial MO

@@ -12,6 +12,10 @@ module Solvated_m
 
     private
 
+! module variables
+integer , save :: N_of_Solvent_Molecules 
+logical , save :: first_time = .true.
+
 contains
 !
 !
@@ -23,7 +27,7 @@ type(universe)   , intent(inout)  :: Solvated_System
 integer          , intent(in)     :: frame
 
 ! local variables ...
-integer                                         :: i , system_PBC_size , solvent_PBC_size , system_size , k
+integer                                         :: i , system_PBC_size , solvent_PBC_size , system_size , N_of_insiders
 real*8                                          :: solvation_radius , Molecule_CG(3)
 real*8              , allocatable               :: distance(:)
 logical             , allocatable               :: mask(:)
@@ -53,16 +57,27 @@ solvent_PBC_size = trj(frame) % N_of_Solvent_Molecules *  PBC_Factor
 allocate( system_PBC  (system_PBC_size)  )
 allocate( solvent_PBC (solvent_PBC_size) )
 
-CALL Apply_PBC( trj(frame) , system_PBC , solvent_PBC , nres )
-
 solvation_radius = minval( trj(frame)%box ) * two / six
 
 allocate( distance(solvent_PBC_size) )
 
-! distance of [solvent molecule CG] with [Molecule CG] at the origin ...
-forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CG**2) )
+CALL Apply_PBC( trj(frame) , system_PBC , solvent_PBC , nres , distance , solvation_radius )
 
-where( distance > solvation_radius ) solvent_PBC%nr = 0
+If( first_time ) then
+
+    N_of_insiders = count( distance <= solvation_radius )
+
+    N_of_Solvent_Molecules = N_of_insiders
+
+    first_time = .false.
+
+else
+
+    N_of_insiders = N_of_Solvent_Molecules 
+
+end If
+
+solvent_PBC( N_of_insiders+1 : solvent_PBC_size ) % nr = 0
 
 forall( i=1:system_PBC_size ) system_PBC(i)%nr = nres(i)%PTR
 
@@ -96,14 +111,16 @@ end subroutine Prepare_Solvated_System
 !
 !
 !
-!=========================================================
-subroutine Apply_PBC( trj , trj_PBC , solvent_PBC , nres )
-!=========================================================
+!=======================================================================================
+subroutine Apply_PBC( trj , trj_PBC , solvent_PBC , nres , distance , solvation_radius )
+!=======================================================================================
 implicit none
 type(universe)                      , intent(in)        :: trj
 type(atomic)        , target        , intent(inout)     :: trj_PBC(:) 
 type(molecular)     , target        , intent(inout)     :: solvent_PBC(:)
 type(int_pointer)   , allocatable   , intent(out)       :: nres(:) 
+real*8                              , intent(inout)     :: distance(:)
+real*8                              , intent(in)        :: solvation_radius
 
 ! local variables ...
 integer :: i , j , k , n , atom , molecule , nresid , trj_PBC_size , solvent_PBC_size
@@ -163,7 +180,13 @@ end do
 end do
 end do
 
-!  nresidue[atomic] => nresidue[molecule]
+! distance of [solvent molecule CG] with [Molecule CG] at the origin ...
+forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CG**2) )
+
+! sort solvent_PBC molecules by increasing distance from the origin ...
+CALL Sort2(solvent_PBC,distance)
+
+! nresidue[atomic] => nresidue[molecule]
 allocate( nres(trj_PBC_size) )
 
 forall( i=1:trj_PBC_size )  nres(i)%PTR => trj_PBC(i)%nr
@@ -367,6 +390,68 @@ select case ( flag )
 end select
 
 end subroutine DeAllocate_SPEC
+!
+!
+!
+!=========================
+ subroutine  Sort2(ra,xra)
+!=========================
+implicit none
+type(molecular) , intent(inout) :: ra(:)
+real*8          , intent(inout) :: xra(:)
+
+! local variables ...
+integer         :: l, n, ir, i, j
+real*8          :: xrra
+type(molecular) :: rra
+
+!-----------------------------------------------------------
+!  SORT ra(I) , SO THAT THE ELEMENTS xra(I) FOLLOWS TOGETHER
+!-----------------------------------------------------------
+      n = size(ra)
+      l = n/2+1
+      ir = n
+
+10    continue
+      if(l .gt. 1) then
+         l = l -1
+         xrra = xra(l)
+         rra  = ra(l)
+      else
+         xrra = xra(ir)
+         rra  = ra(ir)
+         xra(ir) = xra(1)
+         ra(ir)  = ra(1)
+         ir = ir - 1
+         if(ir .eq. 1) then
+             xra(1) = xrra
+             ra(1)  = rra
+             return
+         endif
+      endif
+      i = l
+      j = l + l
+20    if(j .le. ir) then
+        if(j .lt. ir)then
+          if(xra(j) .lt. xra(j+1)) j = j + 1
+        endif
+      if(xrra .lt. xra(j)) then
+        xra(i) = xra(j)
+        ra(i)  = ra(j)
+        i = j
+        j = j + j
+      else
+      j = ir + 1
+      endif
+      goto 20
+      endif
+      xra(i) = xrra
+      ra(i)  = rra
+      goto 10
+
+end subroutine sort2
+!
+!
 !
 !
 end module Solvated_m
