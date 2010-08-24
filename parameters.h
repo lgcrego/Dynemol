@@ -1,4 +1,4 @@
- integer 					:: initial_state , HOMO_mol , frame_step 
+ integer 					:: initial_state , HOMO_mol , frame_step , GaussianCube_step
  logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
  logical 					:: verbose , DP_field_
  type (real_interval) 		:: occupied , empty , DOS_range 
@@ -15,7 +15,7 @@
 !			
             state_of_matter = "solvated_M"   ,     & ! <== solvated_M , solid_sys 
 !			
-            GaussianCube 	= F_ ,                 &
+            GaussianCube 	= T_ ,                 &
 			Survival     	= T_ ,                 &
             SPECTRUM     	= F_ ,                 & 
 			DP_Moment    	= F_ ,                 &
@@ -33,13 +33,15 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  2   ,              & ! <== step for avrg_confgs ; frame_step =< size(trj)
+			frame_step    =  2 ,                & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.5d-2,            & ! <== final time in PICOseconds
+            t_f           =  2.5d-1,            & ! <== final time in PICOseconds
             n_t           =  1000  ,            & ! <== number of time steps
+
+			GaussianCube_step = 10 ,   			& ! <== time step for saving Gaussian Cube files
 
             initial_state =  30  ,              & ! <== intial MO
 			HOMO_mol      =  29  ,              & ! <== HOMO of the molecule 
@@ -62,7 +64,7 @@
 !
             sigma       =   0.080d0 ,                            &  !
 
-			DOS_range   =  real_interval( -22.d0 , -6.d0 ) ,     &
+			DOS_range   =  real_interval( -20.d0 , -1.d0 ) ,     &
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

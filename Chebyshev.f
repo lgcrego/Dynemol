@@ -8,7 +8,8 @@ module Chebyshev_m
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
-    use QCmodel_Huckel      , only : Huckel 
+    use QCmodel_Huckel      , only : Huckel ,             &
+                                     Huckel_with_FIELDS
     use Data_Output         , only : Populations
 
     public  :: Chebyshev , preprocess_Chebyshev
@@ -251,14 +252,29 @@ CALL Overlap_Matrix( system , basis , S )
 
 allocate( Hamiltonian ( size(basis) , size(basis) ) )
 
-do j = 1 , size(basis)
-    do i = 1 , j
+If( DP_field_ ) then
+ 
+    do j = 1 , size(basis)
+        do i = 1 , j
+     
+            Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
+            Hamiltonian(j,i) = Hamiltonian(i,j)
 
-        Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
-        Hamiltonian(j,i) = Hamiltonian(i,j)
+        end do
+    end do  
 
-    end do
-end do
+else
+
+    do j = 1 , size(basis)
+        do i = 1 , j
+     
+            Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
+            Hamiltonian(j,i) = Hamiltonian(i,j)
+
+        end do
+    end do  
+
+end If
 
 ! compute S_inverse...
 CALL Invertion_Matrix( S , S_inv , size(basis) )

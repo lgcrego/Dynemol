@@ -23,6 +23,7 @@ module AO_adiabatic_m
     use Dipole_potential_m          , only : Solvent_Molecule_DP                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
+    use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
 
     public :: AO_adiabatic
 
@@ -88,6 +89,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     ket(:) = DUAL_ket(:,1)
 
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
+
+    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( UNI%L , it , t )
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
@@ -209,11 +212,43 @@ ket(:) = DUAL_ket(:,1)
 
 QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
 
+If( GaussianCube ) CALL Send_to_GaussianCube( UNI%L , it , t_i )
+
 !..........................................................................
 
 include 'formats.h'
 
 end subroutine Preprocess
+!
+!
+!
+! 
+!================================================
+subroutine Send_to_GaussianCube( UNI_L , it , t )
+!================================================
+implicit none
+complex*16  , intent(in)    :: UNI_L(:,:)
+integer     , intent(in)    :: it
+real*8      , intent(in)    :: t
+
+!----------------------------------------------------------
+! LOCAL representation for film STO production ...
+
+! coefs of <k(t)| in AO basis 
+CALL gemm(UNI_L,MO_bra,AO_bra,'T','N',C_one,C_zero)
+
+! coefs of |k(t)> in AO basis 
+CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+
+bra(:) = AO_bra(:,1)
+ket(:) = AO_ket(:,1)
+   
+CALL Gaussian_Cube_Format(bra,ket,it,t)
+
+!----------------------------------------------------------
+
+end subroutine Send_to_GaussianCube
+!
 !
 !
 !

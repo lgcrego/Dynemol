@@ -7,7 +7,7 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use dipole_potential_m          , only : DP_phi
 
-    public :: EigenSystem , Huckel
+    public :: EigenSystem , Huckel , Huckel_with_FIELDS
 
     private
 

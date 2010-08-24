@@ -57,7 +57,7 @@ solvent_PBC_size = trj(frame) % N_of_Solvent_Molecules *  PBC_Factor
 allocate( system_PBC  (system_PBC_size)  )
 allocate( solvent_PBC (solvent_PBC_size) )
 
-solvation_radius = minval( trj(frame)%box ) * two / six
+solvation_radius = minval( trj(frame)%box ) * two / four
 
 allocate( distance(solvent_PBC_size) )
 
