@@ -11,11 +11,11 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "slice_AO"     ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "q_dynamics"   ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "solvated_M"   ,     & ! <== solvated_M , solid_sys 
+            state_of_matter = "solid_sys"    ,     & ! <== solvated_M , solid_sys 
 !			
-            GaussianCube 	= T_ ,                 &
+            GaussianCube 	= F_ ,                 &
 			Survival     	= T_ ,                 &
             SPECTRUM     	= F_ ,                 & 
 			DP_Moment    	= F_ ,                 &
@@ -24,7 +24,7 @@
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
+            file_type	 =  "structure"  ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
@@ -39,7 +39,7 @@
 !
             t_i           =  0.d0 ,             &
             t_f           =  2.5d-1,            & ! <== final time in PICOseconds
-            n_t           =  1000  ,            & ! <== number of time steps
+            n_t           =  500   ,            & ! <== number of time steps
 
 			GaussianCube_step = 10 ,   			& ! <== time step for saving Gaussian Cube files
 
@@ -48,12 +48,12 @@
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-            nnx = 0    , nny = 0 ,              & ! <==  (nnx,nny) = (extended) REAL copies on each side
+            nnx = 0    , nny = 0 ,              		& ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0 ,              & ! <== PBC replicas : 1 = yes , 0 = no
-            n_unit     =  (2*mmx+1)*(2*mmy+1) , & ! <== # unit cells repeated periodically 
+            mmx = 1    , mmy = 1	, mmz = 1   ,		& ! <== PBC replicas : 1 = yes , 0 = no
+            n_unit  =  (2*mmx+1)*(2*mmy+1)*(2*mmz+1) , 	& ! <== # unit cells repeated periodically 
 !--------------------------------------------------------------------
 !           SLATER  parameters
 !

@@ -16,6 +16,7 @@ module qdynamics_m
                                      DeAllocate_QDyn
  use RK_m
  use Data_Output            , only : Dump_stuff
+ use dipole_potential_m     , only : Solvent_Molecule_DP 
 
  public :: qdynamics
 
@@ -60,6 +61,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  CALL Generate_Structure(1)
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
+
+ If( DP_field_ )CALL Solvent_Molecule_DP( Extended_Cell )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

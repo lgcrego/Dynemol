@@ -49,7 +49,7 @@ contains
 
         If( verbose ) then
             If( n_unit /= 1 ) then
-                Print 51
+                Print 51 , mmx , mmy , mmz
             else
                 Print 54
             end If

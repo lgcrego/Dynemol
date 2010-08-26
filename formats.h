@@ -20,7 +20,7 @@
                1x,'# of molecule states = ',I5/,  &
                1x,'# of unit cells = ',I2) 
 
-51    FORMAT(1x,'>>> PBC  in  use <<<')
+51    FORMAT(1x,'>>> PBC  in  use  (',3I1,')  <<<')
 
 52    FORMAT(/,1x,'>>> Hamiltonian  ',I4,'    /     ','time =',F8.4)  
 

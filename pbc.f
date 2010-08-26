@@ -20,12 +20,12 @@ contains
  type(STO_basis) , allocatable , intent(out) :: pbc_basis(:)
 
 ! local variables ... 
- integer :: ix , iy , k , n , copy
+ integer :: ix , iy , iz , k , n , copy
 
 !----------------------------------------------------------
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions
 
- CALL Allocate_Structures( (2*mmx+1)*(2*mmy+1)*cell%atoms , pbc_cell )
+ CALL Allocate_Structures( (2*mmx+1)*(2*mmy+1)*(2*mmz+1)*cell%atoms , pbc_cell )
 
  pbc_cell % coord    (1:cell%atoms,1:3)  =  cell % coord
  pbc_cell % symbol   (1:cell%atoms)      =  cell % symbol
@@ -44,10 +44,11 @@ contains
  k = cell%atoms
  copy = 0
 
- DO ix = -mmx , mmx
+ DO iz = -mmz , mmz
  DO iy = -mmy , mmy
+ DO ix = -mmx , mmx
 
-    If( (ix /= 0) .OR. (iy /= 0) ) THEN 
+    If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
 
         copy = copy + 1
         DO n = 1 , cell%atoms
@@ -56,7 +57,7 @@ contains
 
             pbc_cell % coord    (k,1) =  cell % coord(n,1) + ix * cell%T_xyz(1)
             pbc_cell % coord    (k,2) =  cell % coord(n,2) + iy * cell%T_xyz(2)
-            pbc_cell % coord    (k,3) =  cell % coord(n,3)
+            pbc_cell % coord    (k,3) =  cell % coord(n,3) + iz * cell%T_xyz(3)
             pbc_cell % AtNo     (k)   =  cell % AtNo     (n)
             pbc_cell % k_WH     (k)   =  cell % k_WH     (n)
             pbc_cell % fragment (k)   =  cell % fragment (n)
@@ -69,6 +70,7 @@ contains
         END DO
     END IF
 
+ END DO
  END DO
  END DO
 
