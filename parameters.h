@@ -11,20 +11,20 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "q_dynamics"   ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "avrg_confgs"  ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "solid_sys"    ,     & ! <== solvated_M , solid_sys 
+            state_of_matter = "solvated_M"   ,     & ! <== solvated_M , solid_sys 
 !			
             GaussianCube 	= F_ ,                 &
-			Survival     	= T_ ,                 &
+			Survival     	= F_ ,                 &
             SPECTRUM     	= F_ ,                 & 
-			DP_Moment    	= F_ ,                 &
+			DP_Moment    	= T_ ,                 &
 			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure"  ,      & ! <= structure or trajectory
+            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
@@ -33,7 +33,7 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  2 ,                & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+			frame_step    =  1000 ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
@@ -52,8 +52,8 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1	, mmz = 1   ,		& ! <== PBC replicas : 1 = yes , 0 = no
-            n_unit  =  (2*mmx+1)*(2*mmy+1)*(2*mmz+1) , 	& ! <== # unit cells repeated periodically 
+            mmx = 0    , mmy = 0	, mmz = 0   ,		& ! <== PBC replicas : 1 = yes , 0 = no
+
 !--------------------------------------------------------------------
 !           SLATER  parameters
 !

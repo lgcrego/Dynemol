@@ -1,6 +1,7 @@
  module QCModel_Huckel
 
     use type_m
+    use constants_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
@@ -47,7 +48,7 @@
  dumb_s = S_matrix
 
  If( DP_field_ ) then
- 
+
     do j = 1 , size(basis)
         do i = 1 , j
      
@@ -57,7 +58,7 @@
     end do  
 
  else
-
+ 
     do j = 1 , size(basis)
         do i = 1 , j
      
@@ -148,11 +149,11 @@
 
  c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+ huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
 
  IF(i == j) huckel = basis(i)%IP
 
@@ -173,23 +174,32 @@
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+
+IF( abs(S_ij) < mid_prec ) then 
+    
+    huckel_with_FIELDS = D_zero
+    return
+
+else
  
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
+    c1 = basis(i)%IP - basis(j)%IP
+    c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+    c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+    huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
 
- IF(i == j) huckel_with_FIELDS = basis(i)%IP
+    IF(i == j) huckel_with_FIELDS = basis(i)%IP
 
- huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+    huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+
+end IF
    
- end function Huckel_with_FIELDS
+end function Huckel_with_FIELDS
 !
 !
 !

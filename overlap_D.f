@@ -48,7 +48,7 @@ contains
         If( verbose ) Print 53
 
         If( verbose ) then
-            If( n_unit /= 1 ) then
+            If( (2*mmx+1)*(2*mmy+1)*(2*mmz+1) /= 1 ) then
                 Print 51 , mmx , mmy , mmz
             else
                 Print 54

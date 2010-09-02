@@ -7,6 +7,8 @@ module PBC_m
     use Structure_Builder 
     use Semi_Empirical_Parms
 
+    public ::  Generate_Periodic_Structure , Generate_Periodic_Solvent
+
 contains
 !
 !
@@ -81,6 +83,67 @@ contains
  end subroutine Generate_Periodic_Structure 
 ! 
 !
+!
+!
+!===============================================================================================================================
+ subroutine Generate_Periodic_Solvent( a , C_of_C , DP_Solvent_Mol , nr_Solvent_Mol , pbc_C_of_C , pbc_DP_MOL , pbc_nr_Sol_MOL )
+!===============================================================================================================================
+ implicit none
+ type(structure)                  , intent(in)  :: a
+ real*8                           , intent(in)  :: C_of_C(:,:)
+ real*8                           , intent(in)  :: DP_Solvent_Mol(:,:)
+ integer                          , intent(in)  :: nr_Solvent_Mol(:)
+ real*8           , allocatable   , intent(out) :: pbc_C_of_C(:,:)
+ real*8           , allocatable   , intent(out) :: pbc_DP_MOL(:,:)
+ integer          , allocatable   , intent(out) :: pbc_nr_Sol_MOL(:)
+
+! local variables ... 
+integer :: ix , iy , iz , i , j , k , n , N_of_pbc_solvent_mol
+
+! (VIRTUAL) REPLICAS for Period Boundary Conditions ...
+N_of_pbc_solvent_mol = (2*mmx+1)*(2*mmy+1)*(2*mmz+1) * a % N_of_Solvent_Molecules
+
+allocate( pbc_C_of_C     ( N_of_pbc_solvent_mol , 3 ) )
+allocate( pbc_DP_MOL     ( N_of_pbc_solvent_mol , 3 ) )
+allocate( pbc_nr_Sol_MOL ( N_of_pbc_solvent_mol )     )
+
+! original solvent cell ...
+do j = 1 , 3  
+    pbc_C_of_C     (:,j) = C_of_C         (:,j)
+    pbc_DP_MOL     (:,j) = DP_Solvent_Mol (:,j)
+end do
+
+pbc_nr_Sol_MOL = nr_Solvent_Mol 
+
+! include the replicas        
+k = a % N_of_Solvent_Molecules
+
+DO iz = -mmz , mmz
+DO iy = -mmy , mmy
+DO ix = -mmx , mmx
+
+    If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
+
+        DO n = 1 , a % N_of_Solvent_Molecules
+
+            k = k + 1
+
+            pbc_C_of_C (k,1) =  C_of_C(n,1) + ix * a % T_xyz(1)
+            pbc_C_of_C (k,2) =  C_of_C(n,2) + iy * a % T_xyz(2)
+            pbc_C_of_C (k,3) =  C_of_C(n,3) + iz * a % T_xyz(3)
+
+            forall( j =1:3 ) pbc_DP_MOL(k,j) = DP_Solvent_Mol(n,j)
+
+            pbc_nr_Sol_MOL(k) = nr_Solvent_Mol(n)
+
+        END DO
+    END IF
+
+END DO
+END DO
+END DO
+
+end subroutine Generate_Periodic_Solvent
 !
 !
 !

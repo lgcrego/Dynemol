@@ -164,6 +164,11 @@ module type_m
     end type
 
 
+    type real_pointer
+        real*8 , pointer :: PTR => null()
+    end type
+
+
     type transition
         type(R3_vector)        , allocatable :: matrix(:,:)
         type(real_interval)                  :: bra_range
