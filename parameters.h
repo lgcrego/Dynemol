@@ -4,21 +4,22 @@
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
- character (len=11)			:: DRIVER , file_type , state_of_matter
+ character (len=11)			:: DRIVER , file_type 
+ character (len=12)			:: state_of_matter
  logical , parameter 		:: T_ = .true. , F_ = .false. 
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "avrg_confgs"  ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "slice_AO"     ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "solvated_M"   ,     & ! <== solvated_M , solid_sys 
+            state_of_matter = "extended_sys"    ,     & ! <== solvated_sys , extended_sys 
 !			
-            GaussianCube 	= F_ ,                 &
-			Survival     	= F_ ,                 &
+            GaussianCube 	= T_ ,                 &
+			Survival     	= T_ ,                 &
             SPECTRUM     	= F_ ,                 & 
-			DP_Moment    	= T_ ,                 &
+			DP_Moment    	= F_ ,                 &
 			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
@@ -33,7 +34,7 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1000 ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+			frame_step    =  2    ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
@@ -41,7 +42,7 @@
             t_f           =  2.5d-1,            & ! <== final time in PICOseconds
             n_t           =  500   ,            & ! <== number of time steps
 
-			GaussianCube_step = 10 ,   			& ! <== time step for saving Gaussian Cube files
+			GaussianCube_step = 100,   			& ! <== time step for saving Gaussian Cube files
 
             initial_state =  30  ,              & ! <== intial MO
 			HOMO_mol      =  29  ,              & ! <== HOMO of the molecule 
@@ -52,7 +53,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0	, mmz = 0   ,		& ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 1    , mmy = 1	, mmz = 1   ,		& ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           SLATER  parameters

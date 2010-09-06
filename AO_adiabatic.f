@@ -101,13 +101,13 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     select case ( state_of_matter )
 
-        case( "solvated_M" )
+        case( "solvated_sys" )
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
             CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
 
-        case( "solid_sys" )
+        case( "extended_sys" )
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
@@ -148,8 +148,8 @@ end subroutine AO_adiabatic
  subroutine Preprocess( QDyn , it )
 !==================================
 implicit none
-type(f_time)    , intent(out)   :: QDyn
-integer         , intent(out)   :: it
+type(f_time)    , intent(out)    :: QDyn
+integer         , intent(in)     :: it
 
 ! local variables
 type(universe)  :: Solvated_System

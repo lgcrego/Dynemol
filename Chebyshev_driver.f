@@ -57,13 +57,13 @@ do frame = 1 , size(trj) , frame_step
 
     select case ( state_of_matter )
 
-        case( "solvated_M" )
+        case( "solvated_sys" )
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
             CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
 
-        case( "solid_sys" )
+        case( "extended_sys" )
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
