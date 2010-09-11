@@ -44,6 +44,7 @@ select case ( driver )
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver
+        stop
 
 end select
 

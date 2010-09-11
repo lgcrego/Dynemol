@@ -52,6 +52,7 @@ type(universe)         :: Solvated_System
 
 it = 1
 t  = t_i
+
 CALL Preprocess( QDyn , it )
 
 !--------------------------------------------------------------------------------
@@ -114,6 +115,7 @@ do frame = (1 + frame_step) , size(trj) , frame_step
         case default
 
             Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            stop
 
     end select
 
@@ -152,27 +154,29 @@ type(f_time)    , intent(out)    :: QDyn
 integer         , intent(in)     :: it
 
 ! local variables
+integer         :: frame
 type(universe)  :: Solvated_System
-integer :: frame
+
 ! preprocessing stuff .....................................................
 
 CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
 
 select case ( state_of_matter )
 
-    case( "solvated_M" )
+    case( "solvated_sys" )
 
         CALL Prepare_Solvated_System( Solvated_System , 1 )
 
         CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
 
-    case( "solid_sys" )
+    case( "extended_sys" )
 
         CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
 
     case default
 
         Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+        stop
 
 end select
 

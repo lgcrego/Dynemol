@@ -13,8 +13,11 @@ module Solvated_m
     private
 
 ! module variables
-integer , save :: N_of_Solvent_Molecules 
-logical , save :: first_time = .true.
+integer                         , save  :: N_of_Solvent_Molecules 
+integer         , allocatable   , save  :: data_B(:,:)
+logical                         , save  :: first_time = .true.
+logical                         , save  :: done_preprocess
+type(universe)                  , save  :: Solvated_System_0
 
 contains
 !
@@ -23,20 +26,20 @@ contains
  subroutine Prepare_Solvated_System( Solvated_System , frame )
 !=============================================================
 implicit none
-type(universe)   , intent(inout)  :: Solvated_System
-integer          , intent(in)     :: frame
+type(universe)  , intent(out)   :: Solvated_System
+integer         , intent(in)    :: frame
 
 ! local variables ...
-integer                                         :: i , system_PBC_size , solvent_PBC_size , system_size , N_of_insiders
+integer                                         :: system_PBC_size , solvent_PBC_size , system_size , N_of_insiders , i
 real*8                                          :: solvation_radius , Molecule_CG(3)
 real*8              , allocatable               :: distance(:)
 logical             , allocatable               :: mask(:)
 type(atomic)        , allocatable               :: system_PBC(:) , system(:)
 type(molecular)     , allocatable   , target    :: solvent_PBC(:) 
-type(int_pointer)   , allocatable               :: nres(:) 
+type(int_pointer)   , allocatable               :: nres(:)
 
 ! local parameters ; number of 3D PBC unit-cells ...
-integer , parameter :: PBC_Factor = 27  
+integer , parameter :: PBC_Factor = 27
 
 ! check-list ...
 if( count(trj(frame)%atom%solute) == 0 ) Pause " >>> Solute is not tagged <<< " 
@@ -50,14 +53,14 @@ forall( i=1:3 ) Molecule_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%s
 forall( i=1:trj(frame)%N_of_Atoms             ) trj(frame) % atom(i) % xyz(:)   = trj(frame) % atom(i) % xyz(:)   - Molecule_CG(:)
 forall( i=1:trj(frame)%N_of_Solvent_Molecules ) trj(frame) % solvent(i) % CG(:) = trj(frame) % solvent(i) % CG(:) - Molecule_CG(:) 
 
-! define the PBC system ...
+! define the PBC System ...
 system_PBC_size  = trj(frame) % N_of_atoms             *  PBC_Factor
 solvent_PBC_size = trj(frame) % N_of_Solvent_Molecules *  PBC_Factor
 
 allocate( system_PBC  (system_PBC_size)  )
 allocate( solvent_PBC (solvent_PBC_size) )
 
-solvation_radius = minval( trj(frame)%box ) * two / 2.7d0   !<== best value !
+solvation_radius = minval( trj(frame)%box ) * two / four  !2.8d0  ! <== best value 
 
 allocate( distance(solvent_PBC_size) )
 
@@ -88,10 +91,10 @@ mask = (system_PBC%nr /= 0 .AND. system_PBC%fragment == "S") .OR. (system_PBC%co
 ! define the solvation cell ...
 system_size = count(mask)
 allocate( system(system_size) )
-system = pack(system_PBC , mask , system)
+System = pack(system_PBC , mask , system)
 
 ! build Solvated_System
-CALL move_alloc( from=system , to=Solvated_System%atom )
+CALL move_alloc( from=System , to=Solvated_System%atom )
 
 CALL Sort_Fragments( Solvated_System )
 
@@ -99,6 +102,12 @@ Solvated_System%N_of_Atoms              =  system_size
 Solvated_System%N_of_Solvent_Molecules  =  count( solvent_PBC%nr /= 0 )
 Solvated_System%System_Characteristics  =  trj(frame)%System_Characteristics
 Solvated_System%box                     =  trj(frame)%box
+
+! Correction of the solvent positions ...
+if( done_preprocess == T_ ) CALL Correction_of_Solvent_Positions( Solvated_System )
+
+! Preprocess for routine Correction_of_Solvent_Positions ...
+if( done_preprocess == F_ ) CALL preprocess_CSP( data_B , Solvated_System , done_preprocess )
 
 deallocate( system_PBC , solvent_PBC , distance , mask ) 
 
@@ -108,6 +117,120 @@ if( frame == 1 ) then
 end if
 
 end subroutine Prepare_Solvated_System
+!
+!
+!
+!=============================================================
+subroutine preprocess_CSP( data_B , System , done_preprocess )
+!=============================================================
+implicit none
+integer         , allocatable   , intent(out)   :: data_B(:,:)
+type(universe)                  , intent(in)    :: System
+logical                         , intent(inout) :: done_preprocess
+
+! local variable ...
+integer :: i , size_sys
+
+size_sys = size( System%atom )
+
+allocate( Solvated_System_0%atom(size_sys) )
+
+allocate( data_B ( count(System%atom%fragment == 'S') , 2 ) )
+
+Solvated_System_0 % atom = System % atom
+
+data_B(:,1) = pack( System%atom%nr                  , System%atom%fragment == 'S' )
+data_B(:,2) = pack( [( i , i=1,System%N_of_atoms )] , System%atom%fragment == 'S' )
+
+done_preprocess = T_
+
+end subroutine preprocess_CSP
+!
+!
+!
+!===================================================
+subroutine Correction_of_Solvent_Positions( System )
+!===================================================
+implicit none
+type(universe)  , intent(inout) :: System
+
+! local variables ...
+integer                 :: i , j , l , var , counter , size_S_sys , N_of_atoms_in_S_mol , flux
+integer , allocatable   :: data_A(:,:) , atoms_out(:) , atoms_in(:)
+type(universe)          :: System_temp
+
+size_S_sys          = count(System%atom%fragment == 'S')
+N_of_atoms_in_S_mol = size_S_sys / system%N_of_Solvent_Molecules
+
+! store indices of atoms and nr's in data_A ...
+allocate( data_A ( size_S_sys , 2 ) )
+
+data_A(:,1) = pack( System%atom%nr                  , System%atom%fragment == 'S' )
+data_A(:,2) = pack( [( i , i=1,System%N_of_atoms )] , System%atom%fragment == 'S' )
+
+! number of molecules that have entered/exited the sphere ...
+counter = 0
+do i = 1 , size(data_A(:,1)) , N_of_atoms_in_S_mol
+    do j = 1 , size(data_B(:,1)) , N_of_atoms_in_S_mol
+
+        if( data_A(i,1) == data_B(j,1) ) counter = counter + 1
+       
+    end do
+end do
+
+! fix the system if there is flux of solvent molecules in/out of droplet ...
+flux = size_S_sys - (N_of_atoms_in_S_mol*counter)
+
+if( flux /= I_zero ) then
+
+    allocate( atoms_out( flux ) , atoms_in( flux ) )
+
+    ! save atoms that exit the sphere ...
+    var = 1
+    do i = 1 , size_S_sys , N_of_atoms_in_S_mol
+
+        If( count(data_A(:,1) == data_B(i,1)) == I_zero ) then
+
+            do l = 0 , N_of_atoms_in_S_mol - 1 
+                atoms_out(var) = data_B(i,2) + l
+                var = var + 1
+            end do
+
+        end if
+
+    end do
+
+    ! save atoms that entered the sphere ...
+    var = 1
+    do i = 1 , size_S_sys , N_of_atoms_in_S_mol
+
+        If( count(data_B(:,1) == data_A(i,1)) == I_zero) then
+
+            do l = 0 , N_of_atoms_in_S_mol - 1
+                atoms_in(var) = data_A(i,2) + l
+                var = var + 1
+            end do
+
+        end if
+
+    end do
+
+    deallocate( data_A )
+
+    ! exchange atoms that exited by atoms that entered ...
+    allocate( System_temp%atom( size(atoms_in) ) )
+
+    System_temp%atom(:) = System%atom(atoms_in(:))
+
+    System%atom = Solvated_System_0%atom
+        
+    System%atom(atoms_out(:)) = System_temp%atom(:)
+
+    deallocate( atoms_in , atoms_out ,  System_temp%atom )
+
+end if
+
+end subroutine Correction_of_Solvent_Positions
 !
 !
 !
@@ -252,7 +375,7 @@ end subroutine Dump_pdb
 !
 !
 !==================================
-subroutine Sort_Fragments( system )
+subroutine Sort_Fragments( System )
 !==================================
 implicit none
 type(universe) , intent(inout) :: system

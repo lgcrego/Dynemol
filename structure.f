@@ -41,6 +41,7 @@ select case( file_type )
                 CALL Read_from_POSCAR   ( Unit_Cell )
             case default
                 print*, ">>> check file type selection <<< : " , file_format
+                stop
             end select
 
     case( "trajectory" )
@@ -52,10 +53,12 @@ select case( file_type )
                 CALL Read_XYZ   ( trj )
             case default
                 print*, ">>> check file type selection <<< : " , file_format
+                stop
             end select
 
     case default
         print*, ">>> check file type selection <<< : " , file_type
+        stop
 
 end select
 
