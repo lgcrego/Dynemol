@@ -96,6 +96,7 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
+    Deallocate                  ( UNI%R , UNI%L , UNI%erg )
 
     ! build new UNI(t + t_rate) ...
     !============================================================================
