@@ -165,7 +165,7 @@
      print*, '>> projection done <<'
  else
      Print 58 , check 
-     pause '---> problem in projector <---'
+     print*, '---> problem in projector <---'
  end if
 
 !-----------------------------------------------------------------------------

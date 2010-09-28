@@ -80,6 +80,7 @@ do nr = first_nr , last_nr
     total_valence = sum( [ (a%Nvalen(i) , i=i1,i2) ] )
 
     forall(j=1:3) Q_center(nr,j) = sum( Qi_Ri(i1:i2,j) ) / total_valence
+
     !-----------------------------------------------------------------------------------------------
 
     !-----------------------------------------------------------------------------------------------
@@ -178,7 +179,7 @@ If( mmx+mmy+mmz == 0) then
 else
 
     ! maximum distance from midpoint a-b ...
-    cut_off_radius = minval(Extended_Cell%T_xyz) / two
+    cut_off_radius = minval(Extended_Cell%T_xyz) * two / three
 
     allocate( vector_ALL   ( N_of_DP , 3 ) , source = D_zero  )
     allocate( distance_ALL ( N_of_DP     ) , source = D_zero  )

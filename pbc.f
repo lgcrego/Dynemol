@@ -38,6 +38,7 @@ contains
  pbc_cell % MMSymbol (1:cell%atoms)      =  cell % MMSymbol
  pbc_cell % residue  (1:cell%atoms)      =  cell % residue
  pbc_cell % nr       (1:cell%atoms)      =  cell % nr 
+ pbc_cell % solute   (1:cell%atoms)      =  cell % solute
  pbc_cell % copy_No  (1:cell%atoms)      =  0
 
 
@@ -67,6 +68,7 @@ contains
             pbc_cell % MMSymbol (k)   =  cell % MMSymbol (n)
             pbc_cell % residue  (k)   =  cell % residue  (n)
             pbc_cell % nr       (k)   =  cell % nr       (n) 
+            pbc_cell % solute   (k)   =  cell % solute   (n) 
             pbc_cell % copy_No  (k)   =  copy
 
         END DO

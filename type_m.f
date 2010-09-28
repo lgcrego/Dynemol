@@ -26,6 +26,7 @@ module type_m
         real*8                     :: Center_of_Mass(3)
         real*8                     :: Center_of_Charge(3)
         real*8                     :: T_xyz(3)
+        logical     , allocatable  :: solute(:)
     end type structure
 
 !-----------------------------------------------------------------------------
@@ -49,6 +50,7 @@ module type_m
         type(atomic)    , allocatable :: atom(:) 
         real*8                        :: radius
         real*8                        :: CG(3)
+        real*8                        :: CC(3)
         real*8                        :: DP(3)
         integer                       :: N_of_Atoms 
         integer                       :: nr
@@ -114,6 +116,7 @@ module type_m
         character(len=1) :: fragment
         character(len=3) :: EHSymbol
         character(len=3) :: residue 
+        logical          :: solute
     end type STO_basis
 
 

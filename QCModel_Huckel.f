@@ -171,34 +171,28 @@
 ! local variables ... 
  real*8  :: Huckel_with_FIELDS
  real*8  :: k_eff , k_WH , c1 , c2 , c3
+ logical :: flag
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
-
-IF( abs(S_ij) < mid_prec ) then 
     
-    huckel_with_FIELDS = D_zero
-    return
+ c1 = basis(i)%IP - basis(j)%IP
+ c2 = basis(i)%IP + basis(j)%IP
 
-else
- 
-    c1 = basis(i)%IP - basis(j)%IP
-    c2 = basis(i)%IP + basis(j)%IP
+ c3 = (c1/c2)*(c1/c2)
 
-    c3 = (c1/c2)*(c1/c2)
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
-    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+ huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
 
-    huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
+ IF( i == j ) huckel_with_FIELDS = basis(i)%IP 
 
-    IF(i == j) huckel_with_FIELDS = basis(i)%IP
+ flag = ( abs(S_ij) > mid_prec ) 
 
-    huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+ IF( flag )  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
 
-end IF
-   
 end function Huckel_with_FIELDS
 !
 !

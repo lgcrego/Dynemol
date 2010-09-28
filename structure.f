@@ -78,6 +78,7 @@ integer , intent(in) :: frame
 
 ! local variables ...
 integer :: copy , nr_sum , ix , iy , k , n
+
 ! local parameter: offset for ASCII numerical characters ...
 integer :: ASC_offset = 48      
 
@@ -112,6 +113,7 @@ integer :: ASC_offset = 48
             extended_cell % MMSymbol (k+n)   =  unit_cell % MMSymbol (n)
             extended_cell % nr       (k+n)   =  unit_cell % nr       (n)   + nr_sum
             extended_cell % residue  (k+n)   =  unit_cell % residue  (n)
+            extended_cell % solute   (k+n)   =  unit_cell % solute   (n)
             extended_cell % copy_No  (k+n)   =  copy
         
         END FORALL
@@ -133,8 +135,9 @@ integer :: ASC_offset = 48
     extended_cell % fragment (k+n)      =  unit_cell % fragment (n)
     extended_cell % symbol   (k+n)      =  unit_cell % Symbol   (n)
     extended_cell % MMSymbol (k+n)      =  unit_cell % MMSymbol (n)
-    extended_cell % residue  (k+n)      =  unit_cell % residue  (n)
     extended_cell % nr       (k+n)      =  unit_cell % nr       (n)
+    extended_cell % residue  (k+n)      =  unit_cell % residue  (n)
+    extended_cell % solute   (k+n)      =  unit_cell % solute   (n)
     extended_cell % copy_No  (k+n)      =  0
 
  END FORALL
@@ -214,6 +217,7 @@ integer :: ASC_offset = 48
             basis(k) % fragment  =  system % fragment (i)
             basis(k) % EHSymbol  =  system % MMSymbol (i)
             basis(k) % residue   =  system % residue  (i)
+            basis(k) % solute    =  system % solute   (i)
 
             basis(k) % n         =  atom(AtNo) % Nquant(l)
             basis(k) % l         =  l

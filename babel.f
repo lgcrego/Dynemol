@@ -61,6 +61,7 @@ forall( j=1:unit_cell%atoms )
     unit_cell % residue  (j)   =  System % atom(j) % residue
     unit_cell % nr       (j)   =  System % atom(j) % nr
     unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
+    unit_cell % solute   (j)   =  System % atom(j) % solute  
 
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
 
@@ -457,7 +458,9 @@ allocate( trj(model) )
 trj(:)%System_Characteristics = System_Characteristics
 
 do j = 1 , model
+
     if( j == 1 ) then
+
         do
             read(unit = 31, fmt = 35, iostat = inputstatus) keyword
             if( keyword == 'CRYS' ) then
@@ -489,6 +492,8 @@ do j = 1 , model
         CALL Symbol_2_AtNo      ( trj(j)%atom )
         CALL Setting_Fragments  ( trj(j)      )
 
+        trj(j)%atom%Nvalen    =  atom(trj(j)%atom%AtNo)%Nvalen
+
     else
 
         do
@@ -508,6 +513,7 @@ do j = 1 , model
         end do
 
     end if
+
 end do
 
 close(31)
@@ -525,6 +531,7 @@ CALL Identify_Fragments( trj(1) )
 
 ! Copy information from trj(1) to trj(:) ...
 forall(i = 2:model )
+
     trj(i)%atom%AtNo      =  trj(1)%atom%AtNo    
     trj(i)%atom%MMSymbol  =  trj(1)%atom%MMSymbol
     trj(i)%atom%residue   =  trj(1)%atom%residue
@@ -532,6 +539,9 @@ forall(i = 2:model )
     trj(i)%atom%Symbol    =  trj(1)%atom%Symbol
     trj(i)%atom%fragment  =  trj(1)%atom%fragment
     trj(i)%atom%solute    =  trj(1)%atom%solute
+
+    trj(i)%atom%Nvalen    =  atom(trj(1)%atom%AtNo)%Nvalen
+
 end forall
 
 ! GROUP residues ...
@@ -546,11 +556,13 @@ trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nr, trj(1) % atom % fragme
                             - minval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' ) + 1
 
 do i = 1 , size(trj)
-    allocate( trj(i)%solvent(trj(i)%N_of_Solvent_Molecules) )
+
+    allocate( trj(i) % solvent( trj(i)%N_of_Solvent_Molecules ) )
 
     trj(i)%solvent%N_of_Atoms = count( trj(i)%atom%fragment == 'S' ) / trj(i)%N_of_Solvent_molecules
 
     CALL Center_of_Gravity( trj(i) )
+
 end do
 
 ! Formats ...

@@ -473,7 +473,8 @@ implicit none
 type(universe) , intent(inout) :: trj
 
 ! local variables ...
-integer :: i , j , n , mol_atoms
+integer :: i , j , n , n1 , n2 , mol_atoms
+real*8  :: total_valence
 
 ! initial position of S fragments in trj%atom array ...
 n = minloc( trj%atom%fragment , 1 , trj%atom%fragment == "S" ) 
@@ -483,7 +484,18 @@ do i = 1 , trj%N_of_Solvent_Molecules
 
     mol_atoms = trj%solvent(i)%N_of_Atoms 
 
-    forall( j=1:3 ) trj%solvent(i)%CG(j) = sum( trj%atom(n:n+mol_atoms-1)%xyz(j) ) / trj%solvent(i)%N_of_Atoms
+    n1 = n
+    n2 = n+mol_atoms-1
+
+    total_valence = sum( trj % atom(n1:n2) % Nvalen )
+
+    forall( j=1:3 ) 
+
+        trj % solvent(i) % CG(j) = sum( trj % atom(n1:n2) % xyz(j) ) / trj % solvent(i) % N_of_Atoms
+
+        trj % solvent(i) % CC(j) = sum( trj % atom(n1:n2) % xyz(j) * trj % atom(n1:n2) % Nvalen ) / total_valence
+
+    end forall
 
     trj % solvent(i) % nr      = trj % atom(n) % nr    
     trj % solvent(i) % residue = trj % atom(n) % residue

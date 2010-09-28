@@ -87,6 +87,7 @@ do frame = 1 , size(trj) , frame_step
         case default
 
             Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            stop
 
     end select
 

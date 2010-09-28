@@ -14,9 +14,9 @@
 !
             DRIVER		 	= "slice_AO"     ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "solvated_sys"    ,     & ! <== solvated_sys , extended_sys 
+            state_of_matter = "extended_sys" ,     & ! <== solvated_sys , extended_sys 
 !			
-            GaussianCube 	= T_ ,                 &
+            GaussianCube 	= F_ ,                 &
 			Survival     	= T_ ,                 &
             SPECTRUM     	= F_ ,                 & 
 			DP_Moment    	= F_ ,                 &
@@ -39,8 +39,8 @@
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.5d-1,            & ! <== final time in PICOseconds
-            n_t           =  500   ,            & ! <== number of time steps
+            t_f           =  1.0d0 ,            & ! <== final time in PICOseconds
+            n_t           =  1001  ,            & ! <== number of time steps
 
 			GaussianCube_step = 100,   			& ! <== time step for saving Gaussian Cube files
 
@@ -53,7 +53,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 0    , mmy = 0	, mmz = 0   ,		& ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 1    , mmy = 1	, mmz = 1   ,		& ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           SLATER  parameters

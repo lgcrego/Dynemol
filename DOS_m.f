@@ -184,7 +184,7 @@ PDOS(nr)%occupation(1) = two * PDOS(nr)%peaks(1)
 do k = 2 , npoints 
     PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k-1) + two*PDOS(nr)%peaks(k) 
 end do
-sub_occupation = undernith_occupation(system,QM,atom,list_of_DOS_states(1))
+sub_occupation = underneath_occupation(system,QM,atom,list_of_DOS_states(1))
 PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
 
 DEALLOCATE( peaks , DOS_partial , list_of_DOS_states )
@@ -195,9 +195,9 @@ end subroutine Partial_DOS
 !
 !
 !
-!=========================================================
- function  undernith_occupation( system, QM , atom , top )
-!=========================================================
+!==========================================================
+ function  underneath_occupation( system, QM , atom , top )
+!==========================================================
 implicit none
 type(structure)             , intent(in)    :: system
 type(C_eigen)               , intent(in)    :: QM
@@ -205,11 +205,11 @@ integer       , OPTIONAL    , intent(in)    :: atom(:)
 integer                     , intent(in)    :: top
 
 ! local variables ...
-real*8                :: undernith_occupation
+real*8                :: underneath_occupation
 real*8  , allocatable :: state_projection(:) 
 integer               :: j , l , i1 , i2 , n_of_atoms 
 
-! state projection up to highest undernith state ...
+! state projection up to highest underneath state ...
 allocate( state_projection(top-1) , source = 0.d0 )
 
 ! number of atoms of species = residue ...
@@ -229,11 +229,11 @@ do j = 1 , top-1
 end do
 
 ! occupation of states up to state (top-1) ...
-undernith_occupation = two * sum(state_projection)
+underneath_occupation = two * sum(state_projection)
 
 deallocate( state_projection )
 
-end function undernith_occupation
+end function underneath_occupation
 !
 !
 !

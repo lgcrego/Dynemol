@@ -31,7 +31,7 @@ integer         , intent(in)    :: frame
 
 ! local variables ...
 integer                                         :: system_PBC_size , solvent_PBC_size , system_size , N_of_insiders , i
-real*8                                          :: solvation_radius , Molecule_CG(3)
+real*8                                          :: solvation_radius , solute_CG(3)
 real*8              , allocatable               :: distance(:)
 logical             , allocatable               :: mask(:)
 type(atomic)        , allocatable               :: system_PBC(:) , system(:)
@@ -47,11 +47,11 @@ if( count(trj(frame)%atom%solute) == 0 ) Pause " >>> Solute is not tagged <<< "
 If( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 
 ! identify the CG of the solute ...
-forall( i=1:3 ) Molecule_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%solute == .true. ) / count(trj(frame)%atom%solute)
+forall( i=1:3 ) solute_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%solute == .true. ) / count(trj(frame)%atom%solute)
 
 ! place origin at GC ...
-forall( i=1:trj(frame)%N_of_Atoms             ) trj(frame) % atom(i) % xyz(:)   = trj(frame) % atom(i) % xyz(:)   - Molecule_CG(:)
-forall( i=1:trj(frame)%N_of_Solvent_Molecules ) trj(frame) % solvent(i) % CG(:) = trj(frame) % solvent(i) % CG(:) - Molecule_CG(:) 
+forall( i=1:trj(frame)%N_of_Atoms             ) trj(frame) % atom(i) % xyz(:)   = trj(frame) % atom(i) % xyz(:)   - solute_CG(:)
+forall( i=1:trj(frame)%N_of_Solvent_Molecules ) trj(frame) % solvent(i) % CC(:) = trj(frame) % solvent(i) % CC(:) - solute_CG(:) 
 
 ! define the PBC System ...
 system_PBC_size  = trj(frame) % N_of_atoms             *  PBC_Factor
@@ -60,7 +60,7 @@ solvent_PBC_size = trj(frame) % N_of_Solvent_Molecules *  PBC_Factor
 allocate( system_PBC  (system_PBC_size)  )
 allocate( solvent_PBC (solvent_PBC_size) )
 
-solvation_radius = minval( trj(frame)%box ) * two / four  !2.8d0  ! <== best value 
+solvation_radius = minval( trj(frame)%box ) * two / three  !2.8d0  ! <== best value 
 
 allocate( distance(solvent_PBC_size) )
 
@@ -275,9 +275,9 @@ do i = -1,+1
 
     forall( n = 1:trj%N_of_Solvent_Molecules )
 
-        solvent_PBC(molecule+n) % CG(1)    =  trj % solvent(n) % CG(1) + i * trj % box(1)
-        solvent_PBC(molecule+n) % CG(2)    =  trj % solvent(n) % CG(2) + j * trj % box(2)
-        solvent_PBC(molecule+n) % CG(3)    =  trj % solvent(n) % CG(3) + k * trj % box(3)
+        solvent_PBC(molecule+n) % CC(1)    =  trj % solvent(n) % CC(1) + i * trj % box(1)
+        solvent_PBC(molecule+n) % CC(2)    =  trj % solvent(n) % CC(2) + j * trj % box(2)
+        solvent_PBC(molecule+n) % CC(3)    =  trj % solvent(n) % CC(3) + k * trj % box(3)
  
         solvent_PBC(molecule+n) % nr       =  trj % solvent(n) % nr + nresid
         solvent_PBC(molecule+n) % copy_No  =  i + j*tres + k*nove  
@@ -303,8 +303,8 @@ end do
 end do
 end do
 
-! distance of [solvent molecule CG] with [Molecule CG] at the origin ...
-forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CG**2) )
+! distance of [solvent molecule CC] with [solute CG] at the origin ...
+forall( i=1:solvent_PBC_size ) distance(i) = sqrt( sum(solvent_PBC(i)%CC**2) )
 
 ! sort solvent_PBC molecules by increasing distance from the origin ...
 CALL Sort2(solvent_PBC,distance)
