@@ -12,7 +12,7 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "diagnostic"   ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "avrg_confgs"  ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
             state_of_matter = "extended_sys" ,     & ! <== solvated_sys , extended_sys 
 !			
@@ -25,7 +25,7 @@
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "structure" ,       & ! <= structure or trajectory
+            file_type	 =  "trajectory",       & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS

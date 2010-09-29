@@ -65,7 +65,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  CALL Total_DOS( UNI%erg , TDOS )
 
  do nr = 1 , N_of_residues
-!    CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
+    CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
  If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
