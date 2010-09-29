@@ -10,7 +10,6 @@ module Multipole_Core
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
     public :: Dipole_Matrix 
-    public :: Center_of_Charge
     public :: rotationmultipoles
     public :: multipole_messages
     public :: multipoles1c
@@ -56,9 +55,7 @@ Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
 If( verbose ) Print 73, Sparsity  
 
-CALL Center_of_Charge(system)
- 
-if ( DP_Moment ) CALL Dipole_Moment( Extended_Cell , ExCell_basis , L_vec , R_vec , Total_DP )
+if ( DP_Moment ) CALL Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
 
 !----------------------------------------------------------
 If( verbose ) then
@@ -76,36 +73,38 @@ end subroutine Dipole_Matrix
  subroutine Dipole_Moment( system , basis , L_vec , R_vec , DP_total )
 !=====================================================================
 implicit none
-type(structure)             , intent(in)  :: system
-type(STO_basis)             , intent(in)  :: basis(:)
-complex*16                  , intent(in)  :: L_vec(:,:) , R_vec(:,:)
-real*8          , optional  , intent(out) :: DP_total(3) 
+type(structure)             , intent(inout) :: system
+type(STO_basis)             , intent(in)    :: basis(:)
+complex*16                  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+real*8          , optional  , intent(out)   :: DP_total(3) 
 
 ! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 complex*16      , allocatable :: a(:,:), b(:,:)
+logical         , allocatable :: mask(:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
 ! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
-complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
-! atomic positions measured from the Center of Charge
- allocate(R_vector(system%atoms,3))
- forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - system%Center_of_Charge(xyz)
+! define system for DP_Moment calculation ...
+allocate( mask(size(basis)) , source = .true. )
+mask = merge( mask , basis%solute , count(basis%solute) == 0 )
+
+CALL Center_of_Charge( system , R_vector )
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
- forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen(:) * R_vector(:,xyz) )
+Nuclear_DP = D_zero 
 
 ! Electronic dipole 
  n_basis      =  size(basis)
- Fermi_state  =  system%N_of_electrons / 2
+ Fermi_state  =  sum( system%Nvalen ) / two
  
- allocate( a(n_basis,n_basis) )
- allocate( b(n_basis,n_basis) )
- allocate( origin_Dependent(Fermi_state) )
+ allocate( a(n_basis,n_basis)              , source = C_zero )
+ allocate( b(n_basis,n_basis)              , source = C_zero )
+ allocate( origin_Dependent(Fermi_state)   )
  allocate( origin_Independent(Fermi_state) )
 
  do xyz = 1 , 3
@@ -114,24 +113,24 @@ complex*16      , parameter   :: one = (1.d0,0.d0) , zero = (0.d0,0.d0)
 
     forall(states=1:Fermi_state)
 
-        forall(i=1:n_basis) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+        forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
 
-        origin_Dependent(states)%DP(xyz) = 2.d0 * sum( a(states,:) * R_vec(:,states) )
+        origin_Dependent(states)%DP(xyz) = 2.d0 * real( sum( a(states,:)*R_vec(:,states) , mask ) )
 
     end forall    
- 
+
 !   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
     b = DP_matrix_AO%DP(xyz)
-       
-    CALL gemm(L_vec,b,a,'N','N',one,zero)    
 
-    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = 2.d0 * sum(a(states,:)*L_vec(states,:))
+    CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
+
+    forall( states=1:Fermi_state ) origin_Independent(states)%DP(xyz) = 2.d0 * real( sum( a(states,:)*L_vec(states,:) , mask ) )
 
  end do
 
  forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
- 
+
  Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
  If( present(DP_total) ) DP_total = Total_DP
@@ -148,28 +147,38 @@ end subroutine Dipole_Moment
 !
 !
 !
-!=============================
-subroutine Center_of_Charge(a)
-!=============================
+!===========================================
+ subroutine Center_of_Charge( a , R_vector )
+!===========================================
 implicit none
-type(structure) , intent(inout) :: a
+type(structure)                 , intent(inout) :: a
+real*8          , allocatable   , intent(out)   :: R_vector(:,:)
 
-! local variables
-real*8 , allocatable :: Qi_Ri(:,:) 
-real*8               :: total_valence
-integer              :: i , j
+! local variables ...
+integer               :: i , j
+real*8                :: total_valence
+real*8  , allocatable :: Qi_Ri(:,:) 
+logical , allocatable :: mask(:)
 
-! sum_i = (q_i * vec{r}_i) / sum_i q_i
+! define system for DP_Moment calculation ...
+allocate( mask(a%atoms) , source = .true. )
+mask = merge( mask , a%solute , count(a%solute) == I_zero )
 
- allocate(Qi_Ri(a%atoms,3))
+! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
 
- forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
+allocate( Qi_Ri(a%atoms,3) , source = D_zero )
 
- total_valence = sum( a%Nvalen )
+forall( j=1:3 , i=1:a%atoms , mask(i) ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
 
- forall(j=1:3) a%Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
+total_valence = sum( a%Nvalen , mask )
 
- deallocate(Qi_Ri)
+forall(j=1:3) a%Center_of_Charge(j) = sum( Qi_Ri(:,j) , mask ) / total_valence
+
+! atomic positions measured from the Center of Charge
+allocate( R_vector(a%atoms,3) , source = D_zero )
+forall( j=1:3 , i=1:a%atoms , mask(i) ) R_vector(i,j) = a%coord(i,j) - a%Center_of_Charge(j)
+
+deallocate( Qi_Ri , mask )
 
 end subroutine Center_of_Charge
 !

@@ -12,20 +12,20 @@
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "slice_AO"     ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "diagnostic"   ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
             state_of_matter = "extended_sys" ,     & ! <== solvated_sys , extended_sys 
 !			
             GaussianCube 	= F_ ,                 &
-			Survival     	= T_ ,                 &
+			Survival     	= F_ ,                 &
             SPECTRUM     	= F_ ,                 & 
-			DP_Moment    	= F_ ,                 &
+			DP_Moment    	= T_ ,                 &
 			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
 			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-            file_type	 =  "trajectory" ,      & ! <= structure or trajectory
+            file_type	 =  "structure" ,       & ! <= structure or trajectory
             file_format  =  "pdb"  ,            & ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
@@ -34,7 +34,7 @@
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  2    ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+			frame_step    =  1000 ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !

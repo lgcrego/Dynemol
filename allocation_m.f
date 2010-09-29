@@ -22,6 +22,7 @@
     allocate( unit_cell % residue           (unit_cell%atoms)   )
     allocate( unit_cell % MMSymbol          (unit_cell%atoms)   )
     allocate( unit_cell % solute            (unit_cell%atoms)   )
+    allocate( unit_cell % FMO               (unit_cell%atoms)   )
     allocate( unit_cell % list_of_residues  (n_residues)        )
     allocate( unit_cell % list_of_fragments (n_residues)        )
 
@@ -50,6 +51,7 @@
     allocate( System % residue      (System_size)   )
     allocate( System % MMSymbol     (System_size)   )
     allocate( System % solute       (System_size)   )
+    allocate( System % FMO          (System_size)   )
  
     System%N_of_Solvent_Molecules = 0
 
@@ -90,6 +92,7 @@
     deallocate( unit_cell % residue           )
     deallocate( unit_cell % MMSymbol          )
     deallocate( unit_cell % solute            )
+    deallocate( unit_cell % FMO               )
     deallocate( unit_cell % list_of_residues  )
     deallocate( unit_cell % list_of_fragments )
  
@@ -114,6 +117,7 @@
     deallocate( System % residue      )
     deallocate( System % MMSymbol     )
     deallocate( System % solute       )
+    deallocate( System % FMO          )
 
     If( allocated(System%list_of_residues ) ) deallocate( System%list_of_residues  )
     If( allocated(System%list_of_fragments) ) deallocate( System%list_of_fragments )

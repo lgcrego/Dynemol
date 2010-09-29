@@ -12,8 +12,7 @@ module GA_QCModel_m
     use Multipole_Core          , only : rotationmultipoles ,   &
                                          multipole_messages ,   &
                                          multipoles1c ,         &
-                                         multipoles2c ,         &
-                                         Center_of_Charge
+                                         multipoles2c 
 
     public ::  GA_eigen , GA_DP_Analysis , Mulliken
 
@@ -427,6 +426,32 @@ end subroutine Dipole_Moment
 
  end function Huckel_bare
 !
+!
+!
+!=============================
+subroutine Center_of_Charge(a)
+!=============================
+implicit none
+type(structure) , intent(inout) :: a
+
+! local variables
+real*8 , allocatable :: Qi_Ri(:,:) 
+real*8               :: total_valence
+integer              :: i , j
+
+! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
+
+ allocate(Qi_Ri(a%atoms,3))
+
+ forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
+
+ total_valence = sum( a%Nvalen )
+
+ forall(j=1:3) a%Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
+
+ deallocate(Qi_Ri)
+
+end subroutine Center_of_Charge
 !
 !
 !

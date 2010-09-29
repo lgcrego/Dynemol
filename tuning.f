@@ -44,11 +44,12 @@ If( present(univ) ) then
     !      define LIGAND_FMO atoms
     !===================================
 
-    where( univ % atom % residue == "ION" ) univ % atom % solute = .true.
-    where( univ % atom % residue == "BP1" ) univ % atom % solute = .true.
-    where( univ % atom % residue == "BP2" ) univ % atom % solute = .true.
-    where( univ % atom % residue == "BP3" ) univ % atom % solute = .true.
+    where( univ % atom % residue == "ION" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP1" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
 
+    where( univ % atom % FMO ) univ % atom % solute = .true.
 
 end if
 
@@ -114,9 +115,3 @@ end subroutine Setting_Fragments
 end module tuning_m 
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! TiO2 ...
-!where( system % atom % MMSymbol == "TiB" ) system % atom % residue = "BLK"
-!where( system % atom % MMSymbol == "OB"  ) system % atom % residue = "BLK"
-!where( system % atom % MMSymbol == "TiD" ) system % atom % residue = "TiD"
-!where( system % atom % MMSymbol == "O2c" ) system % atom % residue = "O2c"
-!where( system % atom % MMSymbol == "O3c" ) system % atom % residue = "O3c"

@@ -27,6 +27,7 @@ module type_m
         real*8                     :: Center_of_Charge(3)
         real*8                     :: T_xyz(3)
         logical     , allocatable  :: solute(:)
+        logical     , allocatable  :: FMO(:)
     end type structure
 
 !-----------------------------------------------------------------------------
@@ -44,6 +45,7 @@ module type_m
         character(1)                  :: TorF(3)
         character(1)                  :: fragment
         logical                       :: solute
+        logical                       :: FMO
     end type atomic
 
     type molecular
@@ -58,6 +60,7 @@ module type_m
         character(3)                  :: residue 
         character(72)                 :: Solvent_Characteristics
         logical                       :: solute
+        logical                       :: FMO
     end type molecular
 
     type universe
@@ -117,6 +120,7 @@ module type_m
         character(len=3) :: EHSymbol
         character(len=3) :: residue 
         logical          :: solute
+        logical          :: FMO
     end type STO_basis
 
 

@@ -531,6 +531,7 @@ a % atom % Symbol   = "XX"
 a % atom % MMsymbol = "XXX"
 a % atom % fragment = "X"
 a % atom % solute   = .false.
+a % atom % FMO      = .false.
 
 a % N_of_Surface_Atoms      = 0
 a % N_of_Solvent_Atoms      = 0
