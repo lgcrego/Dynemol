@@ -14,7 +14,7 @@
 !
             DRIVER		 	= "avrg_confgs"  ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "extended_sys" ,     & ! <== solvated_sys , extended_sys 
+            state_of_matter = "solvated_sys" ,     & ! <== solvated_sys , extended_sys 
 !			
             GaussianCube 	= F_ ,                 &
 			Survival     	= F_ ,                 &
@@ -53,7 +53,7 @@
 !
 !           Periodic Boundary Conditions 
 
-            mmx = 1    , mmy = 1	, mmz = 1   ,		& ! <== PBC replicas : 1 = yes , 0 = no
+            mmx = 0    , mmy = 0	, mmz = 0   ,		& ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           SLATER  parameters

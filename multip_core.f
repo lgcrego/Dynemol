@@ -91,7 +91,7 @@ real*8          , parameter   :: Debye_unit = 4.803204d0
 
 ! define system for DP_Moment calculation ...
 allocate( mask(size(basis)) , source = .true. )
-mask = merge( mask , basis%solute , count(basis%solute) == 0 )
+mask = merge( mask , basis%FMO , count(basis%FMO) == I_zero )
 
 CALL Center_of_Charge( system , R_vector )
 
@@ -162,7 +162,7 @@ logical , allocatable :: mask(:)
 
 ! define system for DP_Moment calculation ...
 allocate( mask(a%atoms) , source = .true. )
-mask = merge( mask , a%solute , count(a%solute) == I_zero )
+mask = merge( mask , a%FMO , count(a%FMO) == I_zero )
 
 ! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
 
