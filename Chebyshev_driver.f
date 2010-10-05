@@ -16,7 +16,7 @@ module Chebyshev_driver_m
                                              ExCell_basis
     use Solvated_M                  , only : Prepare_Solvated_System                                              
     use Schroedinger_m              , only : DeAllocate_QDyn
-    use Dipole_potential_m          , only : Solvent_Molecule_DP     
+    use Dipole_potential_m          , only : Molecular_DPs     
     use Data_Output                 , only : Dump_stuff 
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev
@@ -78,7 +78,7 @@ do frame = 1 , size(trj) , frame_step
     CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) &
-    CALL Solvent_Molecule_DP    ( Extended_Cell )
+    CALL Molecular_DPs          ( Extended_Cell )
 
     If( .NOT. done ) then
 

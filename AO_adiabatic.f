@@ -20,7 +20,7 @@ module AO_adiabatic_m
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
     use Solvated_M                  , only : Prepare_Solvated_System 
-    use Dipole_potential_m          , only : Solvent_Molecule_DP                                              
+    use Dipole_potential_m          , only : Molecular_DPs                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
@@ -125,7 +125,7 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) &
-    CALL Solvent_Molecule_DP    ( Extended_Cell )
+    CALL Molecular_DPs          ( Extended_Cell )
 
     CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
@@ -186,7 +186,7 @@ CALL Generate_Structure     ( 1 )
 CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
 If( DP_field_ ) &
-CALL Solvent_Molecule_DP    ( Extended_Cell )
+CALL Molecular_DPs          ( Extended_Cell )
 
 CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 

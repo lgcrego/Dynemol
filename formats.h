@@ -84,6 +84,8 @@
 
 157   FORMAT(/,1x,'N_of_Solvent_Molecules in DP_field = ',I4/)
 
+158   FORMAT(/,1x,'N_of_Solute_Molecules in DP_field = ',I4/)
+
 160   FORMAT(/,1x,'Custo : ',I4,' /',I4)
 
 165   FORMAT(1x,'========= ',A20,' =========')

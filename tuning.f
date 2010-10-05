@@ -27,10 +27,8 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    !===================================
-    !      define LIGAND_FMO atoms
-    !===================================
-
+    where( struct % FMO       ) struct % nr = 1
+    where( .not. struct % FMO ) struct % nr = struct % nr - 3
 
 end If
 
@@ -40,16 +38,15 @@ end If
 If( present(univ) ) then
 
 
-    !===================================
-    !      define LIGAND_FMO atoms
-    !===================================
-
     where( univ % atom % residue == "ION" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP1" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
 
-    where( univ % atom % FMO ) univ % atom % solute = .true.
+    where( univ % atom % FMO       ) univ % atom % nr = 1
+    where( .not. univ % atom % FMO ) univ % atom % nr = univ % atom % nr - 3
+
+    univ % atom % solute = univ % atom % FMO    
 
 end if
 
@@ -80,6 +77,7 @@ integer  :: i
 !   Donor       =   D 
 !   Molecule    =   M
 !   Solvent     =   S
+!   Solute      =   R
 !   Cluster     =   C 
 !   Passivator  =   P 
 !   ghost       =   #

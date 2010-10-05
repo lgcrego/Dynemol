@@ -19,7 +19,7 @@ module MO0_adiabatic_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
-    use Dipole_potential_m          , only : Solvent_Molecule_DP                                              
+    use Dipole_potential_m          , only : Molecular_DPs                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
 
@@ -101,7 +101,7 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) &
-    CALL Solvent_Molecule_DP    ( Extended_Cell )
+    CALL Molecular_DPs          ( Extended_Cell )
 
     CALL EigenSystem            ( Extended_Cell , ExCell_basis , erg )
 
@@ -141,7 +141,7 @@ CALL Generate_Structure     ( 1 )
 CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 
 If( DP_field_ ) &
-CALL Solvent_Molecule_DP    ( Extended_Cell )
+CALL Molecular_DPs          ( Extended_Cell )
 
 CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI_0 , flag2=0 )
 

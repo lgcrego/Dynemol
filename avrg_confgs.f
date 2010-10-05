@@ -27,7 +27,7 @@ module Sampling_m
                                      DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
 
-    use dipole_potential_m  , only : Solvent_Molecule_DP
+    use dipole_potential_m  , only : Molecular_DPs
 
     public :: Avrg_Confgs 
 
@@ -95,7 +95,7 @@ do frame = 1 , size(trj) , frame_step
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL Solvent_Molecule_DP( Extended_Cell )
+    If( DP_field_ ) CALL Molecular_DPs( Extended_Cell )
 
     CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

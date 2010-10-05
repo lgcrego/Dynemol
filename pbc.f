@@ -7,7 +7,7 @@ module PBC_m
     use Structure_Builder 
     use Semi_Empirical_Parms
 
-    public ::  Generate_Periodic_Structure , Generate_Periodic_Solvent
+    public ::  Generate_Periodic_Structure , Generate_Periodic_DPs
 
 contains
 !
@@ -89,38 +89,41 @@ contains
 !
 !
 !
-!===============================================================================================================================
- subroutine Generate_Periodic_Solvent( a , C_of_C , DP_Solvent_Mol , nr_Solvent_Mol , pbc_C_of_C , pbc_DP_MOL , pbc_nr_Sol_MOL )
-!===============================================================================================================================
+!=======================================================================================================
+ subroutine Generate_Periodic_DPs( a , CC_Mol , DP_Mol , nr_Mol , pbc_CC_Mol , pbc_DP_MOL , pbc_nr_MOL )
+!=======================================================================================================
  implicit none
  type(structure)                  , intent(in)  :: a
- real*8                           , intent(in)  :: C_of_C(:,:)
- real*8                           , intent(in)  :: DP_Solvent_Mol(:,:)
- integer                          , intent(in)  :: nr_Solvent_Mol(:)
- real*8           , allocatable   , intent(out) :: pbc_C_of_C(:,:)
+ real*8                           , intent(in)  :: CC_Mol(:,:)
+ real*8                           , intent(in)  :: DP_Mol(:,:)
+ integer                          , intent(in)  :: nr_Mol(:)
+ real*8           , allocatable   , intent(out) :: pbc_CC_Mol(:,:)
  real*8           , allocatable   , intent(out) :: pbc_DP_MOL(:,:)
- integer          , allocatable   , intent(out) :: pbc_nr_Sol_MOL(:)
+ integer          , allocatable   , intent(out) :: pbc_nr_MOL(:)
 
 ! local variables ... 
-integer :: ix , iy , iz , i , j , k , n , N_of_pbc_solvent_mol
+integer :: ix , iy , iz , i , j , k , n , N_of_DP_MOLs , N_of_pbc_mols
+
+! number of DPs in the original cell ...
+N_of_DP_MOLs = size( nr_MOL )
 
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions ...
-N_of_pbc_solvent_mol = (2*mmx+1)*(2*mmy+1)*(2*mmz+1) * a % N_of_Solvent_Molecules
+N_of_pbc_mols = (2*mmx+1)*(2*mmy+1)*(2*mmz+1) * N_of_DP_MOLs
 
-allocate( pbc_C_of_C     ( N_of_pbc_solvent_mol , 3 ) )
-allocate( pbc_DP_MOL     ( N_of_pbc_solvent_mol , 3 ) )
-allocate( pbc_nr_Sol_MOL ( N_of_pbc_solvent_mol )     )
+allocate( pbc_CC_MOL ( N_of_pbc_mols , 3 ) )
+allocate( pbc_DP_MOL ( N_of_pbc_mols , 3 ) )
+allocate( pbc_nr_MOL ( N_of_pbc_mols )     )
 
-! original solvent cell ...
+! original DPs cell ...
 do j = 1 , 3  
-    pbc_C_of_C     (:,j) = C_of_C         (:,j)
-    pbc_DP_MOL     (:,j) = DP_Solvent_Mol (:,j)
+    pbc_CC_MOL(:,j) = CC_MOL(:,j)
+    pbc_DP_MOL(:,j) = DP_Mol(:,j)
 end do
 
-pbc_nr_Sol_MOL = nr_Solvent_Mol 
+pbc_nr_MOL = nr_Mol 
 
 ! include the replicas        
-k = a % N_of_Solvent_Molecules
+k = N_of_DP_MOLs
 
 DO iz = -mmz , mmz
 DO iy = -mmy , mmy
@@ -128,17 +131,17 @@ DO ix = -mmx , mmx
 
     If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
 
-        DO n = 1 , a % N_of_Solvent_Molecules
+        DO n = 1 , N_of_DP_MOLs
 
             k = k + 1
 
-            pbc_C_of_C (k,1) =  C_of_C(n,1) + ix * a % T_xyz(1)
-            pbc_C_of_C (k,2) =  C_of_C(n,2) + iy * a % T_xyz(2)
-            pbc_C_of_C (k,3) =  C_of_C(n,3) + iz * a % T_xyz(3)
+            pbc_CC_MOL (k,1) =  CC_MOL(n,1) + ix * a % T_xyz(1)
+            pbc_CC_MOL (k,2) =  CC_MOL(n,2) + iy * a % T_xyz(2)
+            pbc_CC_MOL (k,3) =  CC_MOL(n,3) + iz * a % T_xyz(3)
 
-            forall( j =1:3 ) pbc_DP_MOL(k,j) = DP_Solvent_Mol(n,j)
+            forall( j =1:3 ) pbc_DP_MOL(k,j) = DP_Mol(n,j)
 
-            pbc_nr_Sol_MOL(k) = nr_Solvent_Mol(n)
+            pbc_nr_MOL(k) = nr_Mol(n)
 
         END DO
     END IF
@@ -147,7 +150,7 @@ END DO
 END DO
 END DO
 
-end subroutine Generate_Periodic_Solvent
+end subroutine Generate_Periodic_DPs
 !
 !
 !

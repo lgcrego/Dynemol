@@ -9,6 +9,7 @@ module type_m
         integer                    :: atoms 
         integer                    :: N_of_electrons
         integer                    :: N_of_Solvent_Molecules
+        integer                    :: N_of_Solute_Molecules
         integer      , allocatable :: nr(:)
         integer      , allocatable :: copy_No(:)
         integer      , allocatable :: BasisPointer(:)
