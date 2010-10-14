@@ -17,6 +17,8 @@ use Eigen_driver_m          , only : Eigen_driver
 !========================================================
 !                   DRIVER ROUTINE
 !========================================================
+
+CALL system( "./env.sh" )
  
 CALL read_EHT_parameters
 

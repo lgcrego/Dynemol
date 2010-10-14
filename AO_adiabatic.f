@@ -93,6 +93,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
 
+    CALL dump_Qdyn( Qdyn , it )
+
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( UNI%L , it , t )
 
     If( DP_Moment ) CALL Send_to_Dipole_Moment( UNI%L , DUAL_bra , DUAL_ket , t )
@@ -221,6 +223,8 @@ ket(:) = DUAL_ket(:,1)
 
 QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
 
+CALL dump_Qdyn( Qdyn , it )
+
 If( GaussianCube ) CALL Send_to_GaussianCube  ( UNI%L , it , t_i )
 
 If( DP_Moment    ) CALL Send_to_Dipole_Moment ( UNI%L , DUAL_bra , DUAL_ket , t_i )
@@ -293,9 +297,9 @@ CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
 
 If( t == t_i ) then
-    open( unit = 51 , file = "dipole_dyn.dat" , status = "replace" )
+    open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )
 else
-    open( unit = 51 , file = "dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+    open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
 end If
 write(51,'(F9.4,4F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
 close(51)
@@ -303,6 +307,35 @@ close(51)
 !----------------------------------------------------------
 
 end subroutine Send_to_Dipole_Moment
+!
+!
+!
+!
+!=================================
+ subroutine dump_Qdyn( Qdyn , it )
+!=================================
+implicit none
+type(f_time)    , intent(in) :: QDyn
+integer         , intent(in) :: it
+
+!local variables ...
+integer :: nf
+
+If( it == 1 ) then
+    open( unit = 52 , file = "tmp_data/survival.dat" , status = "replace" , action = "write" , position = "append" )
+    write(52,12) "#" , QDyn%fragments , "total"
+else
+    open( unit = 52 , file = "tmp_data/survival.dat" , status = "unknown", action = "write" , position = "append" )
+end If
+
+write(52,13) ( QDyn%dyn(it,nf) , nf=0,size(QDyn%fragments)+1 ) 
+
+close(52)
+
+12 FORMAT(10A9)
+13 FORMAT(10F9.4)
+
+end subroutine dump_Qdyn
 !
 !
 !
