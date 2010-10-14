@@ -43,7 +43,7 @@
  fragment = 'D'
 
 ! orbitals to be propagated
- orbital(0) = HOMO_mol      ; spin(0) = +1 
+ orbital(0) = hole_state    ; spin(0) = +1 
  orbital(1) = initial_state ; spin(1) = +1 
 
 ! FMO_system = fragment
@@ -103,7 +103,8 @@
  CALL DeAllocate_Structures( FMO_system )
 
 ! print chosen orbital energies on the screen ...
- do i = 0 , n_part
+ do i = 1 , n_part
+ 
     Print 59, orbital(i) , FMO%erg(orbital(i))
  end do   
 

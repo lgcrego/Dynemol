@@ -8,6 +8,7 @@
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : orbital
+ use Multipole_Core             , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 
@@ -22,20 +23,21 @@
  subroutine Huckel_dynamics(system, basis, UNI, FMO , QDyn )
 !===========================================================
  implicit none
- type(structure) , intent(in)       :: system
+ type(structure) , intent(inout)    :: system
  type(STO_basis) , intent(in)       :: basis(:)
  type(C_eigen)   , intent(in)       :: UNI 
  type(C_eigen)   , intent(in)       :: FMO 
  type(f_time)    , intent(inout)    :: QDyn
 
 ! local variables ...
-integer                  :: it , j
-real*8                   :: t , t_rate
-real*8     , ALLOCATABLE :: Pops(:,:)
-complex*16 , ALLOCATABLE :: MO_bra(:,:)   , MO_ket(:,:)
-complex*16 , ALLOCATABLE :: AO_bra(:,:)   , AO_ket(:,:) 
-complex*16 , ALLOCATABLE :: DUAL_ket(:,:) , DUAL_bra(:,:) 
-complex*16 , ALLOCATABLE :: phase(:)      , bra(:)        , ket(:)
+integer                             :: it , j
+real*8                              :: t , t_rate
+real*8                              :: Total_DP(3)
+real*8          , ALLOCATABLE       :: Pops(:,:)
+complex*16      , ALLOCATABLE       :: MO_bra(:,:)   , MO_ket(:,:)
+complex*16      , ALLOCATABLE       :: AO_bra(:,:)   , AO_ket(:,:) 
+complex*16      , ALLOCATABLE       :: DUAL_ket(:,:) , DUAL_bra(:,:) 
+complex*16      , ALLOCATABLE       :: phase(:)      , bra(:)        , ket(:)
 
 ! preprocessing stuff ..........................................................
 
@@ -82,20 +84,21 @@ DO it = 1 , n_t
 
    bra(:) = AO_bra(:,1)
    ket(:) = AO_ket(:,1)
-   
-   if( GaussianCube ) CALL Gaussian_Cube_Format(bra,ket,it,t)
+ 
+   if ( GaussianCube ) CALL Gaussian_Cube_Format(bra,ket,it,t)
 
 !--------------------------------------------------------------------------
 ! DUAL representation for efficient calculation of survival probabilities ...
 
 ! coefs of <k(t)| in DUAL basis ...
-   CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
+   DUAL_bra = AO_bra
 
 ! coefs of |k(t)> in DUAL basis ...
    CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
-    
    Pops(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+
+   if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
 
    t = t + t_rate
 

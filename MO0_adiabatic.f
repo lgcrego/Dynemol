@@ -87,6 +87,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
 
+    If( DP_Moment ) Print*, ">>> DP_Moment not implemented for this routine <<<"
+
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -172,6 +174,8 @@ ket(:) = DUAL_ket(:,1)
 
 QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
 
+If( DP_Moment ) Print*, ">>> DP_Moment not implemented for this routine <<<"
+
 !..........................................................................
 
 allocate( erg(size(ExCell_basis)) )
@@ -180,6 +184,7 @@ forall( i=1:size(ExCell_basis) ) erg(i) = UNI_0%erg(i)
 include 'formats.h'
 
 end subroutine Preprocess
+!
 !
 !
 !

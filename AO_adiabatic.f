@@ -19,6 +19,8 @@ module AO_adiabatic_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
+    use Multipole_Core              , only : Dipole_Matrix ,                &
+                                             Dipole_Moment
     use Solvated_M                  , only : Prepare_Solvated_System 
     use Dipole_potential_m          , only : Molecular_DPs                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
@@ -64,7 +66,7 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     t = t + t_rate 
 
-    if( t >= t_f ) exit
+    if( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
 
@@ -92,6 +94,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
 
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( UNI%L , it , t )
+
+    If( DP_Moment ) CALL Send_to_Dipole_Moment( UNI%L , DUAL_bra , DUAL_ket , t )
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
@@ -217,7 +221,9 @@ ket(:) = DUAL_ket(:,1)
 
 QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
 
-If( GaussianCube ) CALL Send_to_GaussianCube( UNI%L , it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( UNI%L , it , t_i )
+
+If( DP_Moment    ) CALL Send_to_Dipole_Moment ( UNI%L , DUAL_bra , DUAL_ket , t_i )
 
 !..........................................................................
 
@@ -253,6 +259,50 @@ CALL Gaussian_Cube_Format(bra,ket,it,t)
 !----------------------------------------------------------
 
 end subroutine Send_to_GaussianCube
+!
+!
+!
+!
+!===================================================================
+ subroutine Send_to_Dipole_Moment( UNI_L , DUAL_bra , DUAL_ket , t )
+!===================================================================
+implicit none
+complex*16      , intent(in)    :: UNI_L(:,:)
+complex*16      , intent(in)    :: DUAL_bra(:,:)
+complex*16      , intent(in)    :: DUAL_ket(:,:)
+real*8          , intent(in)    :: t
+
+!local variables ...
+integer :: i
+real*8  :: Total_DP(3)
+
+!----------------------------------------------------------
+! LOCAL representation for DP calculation ...
+
+! coefs of <k(t)| in AO basis 
+AO_bra = DUAL_bra
+
+! coefs of |k(t)> in AO basis 
+CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+
+bra(:) = AO_bra(:,1)
+ket(:) = AO_ket(:,1)
+
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
+CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
+
+If( t == t_i ) then
+    open( unit = 51 , file = "dipole_dyn.dat" , status = "replace" )
+else
+    open( unit = 51 , file = "dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+end If
+write(51,'(F9.4,4F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
+close(51)
+
+!----------------------------------------------------------
+
+end subroutine Send_to_Dipole_Moment
 !
 !
 !

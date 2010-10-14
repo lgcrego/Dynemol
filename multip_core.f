@@ -4,12 +4,12 @@ module Multipole_Core
     use constants_m
     use mkl95_precision
     use mkl95_blas
-    use Semi_Empirical_Parms
-    use Structure_Builder 
+    use Semi_Empirical_Parms    , only : atom
 
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
     public :: Dipole_Matrix 
+    public :: Dipole_Moment
     public :: rotationmultipoles
     public :: multipole_messages
     public :: multipoles1c
@@ -28,7 +28,7 @@ contains
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-complex*16                  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+complex*16      , optional  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , optional  , intent(out)   :: Total_DP(3) 
 
 ! local variables ...
@@ -55,7 +55,8 @@ Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
 If( verbose ) Print 73, Sparsity  
 
-if ( DP_Moment ) CALL Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
+! execute only for static calculations ...
+if ( DP_Moment .AND. ( .not. Survival) ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP ) 
 
 !----------------------------------------------------------
 If( verbose ) then
@@ -69,21 +70,25 @@ end subroutine Dipole_Matrix
 !
 !
 !
-!=====================================================================
- subroutine Dipole_Moment( system , basis , L_vec , R_vec , DP_total )
-!=====================================================================
+!============================================================================================
+ subroutine Dipole_Moment( system , basis , L_vec , R_vec , bra , ket , Dual_ket , DP_total )
+!============================================================================================
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-complex*16                  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+complex*16                  , intent(in)    :: L_vec(:,:) 
+complex*16                  , intent(in)    :: R_vec(:,:)
+complex*16      , optional  , intent(in)    :: bra(:) 
+complex*16      , optional  , intent(in)    :: ket(:) 
+complex*16      , optional  , intent(in)    :: Dual_ket(:)
 real*8          , optional  , intent(out)   :: DP_total(3) 
 
 ! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
-real*8                        :: Nuclear_DP(3), Electronic_DP(3), Total_DP(3)
+real*8                        :: Nuclear_DP(3), Electronic_DP(3), Single_electron_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 complex*16      , allocatable :: a(:,:), b(:,:)
-logical         , allocatable :: mask(:)
+logical         , allocatable :: mask(:), MO_mask(:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
 ! local parameters ...
@@ -111,13 +116,15 @@ Nuclear_DP = D_zero
 
 !   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
 
-    forall(states=1:Fermi_state)
+    forall( states=1:Fermi_state )
 
         forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
 
-        origin_Dependent(states)%DP(xyz) = 2.d0 * real( sum( a(states,:)*R_vec(:,states) , mask ) )
+        origin_Dependent(states)%DP(xyz) = two * real( sum( a(states,:)*R_vec(:,states) , mask ) )
 
     end forall    
+
+    If( hole_state /= I_zero ) Single_electron_DP(xyz) = real( sum( a(hole_state,:)*R_vec(:,hole_state) , mask ) )
 
 !   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
@@ -125,25 +132,102 @@ Nuclear_DP = D_zero
 
     CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
 
-    forall( states=1:Fermi_state ) origin_Independent(states)%DP(xyz) = 2.d0 * real( sum( a(states,:)*L_vec(states,:) , mask ) )
+    forall( states=1:Fermi_state ) origin_Independent(states)%DP(xyz) = two * real( sum( a(states,:)*L_vec(states,:) , mask ) )
+
+    If( hole_state /= I_zero ) Single_electron_DP(xyz) = Single_electron_DP(xyz) + real( sum( a(hole_state,:)*L_vec(hole_state,:) , mask ) )
 
  end do
 
- forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+ deallocate(a,b)
+
+!--------------------------------------------------------------------------------------
+! Build DP_Moment ...
+!--------------------------------------------------------------------------------------
+! contribution from the valence states 
+ allocate( MO_mask(Fermi_state) , source = .true. )
+
+ If( hole_state /= I_zero ) then
+    MO_mask( hole_state ) = .false. 
+ end If
+
+ forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) , MO_mask )
+
+! contribution from the wavepacket ... 
+ If( present(bra) ) then
+
+    If( hole_state == I_zero ) Pause " >>> hole state NOT defined <<< : execution stopped"
+
+    Electronic_DP = Electronic_DP + Single_electron_DP + wavepacket_DP( basis , bra , ket , Dual_ket , R_vector )
+
+ else
+
+    If( hole_state /= I_zero ) Pause " >>> FMO not in the Ground State <<< : execution stopped"
+
+ end If
 
  Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
+!--------------------------------------------------------------------------------------
+
+ Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
 
  If( present(DP_total) ) DP_total = Total_DP
 
- If( verbose ) Print 154, Total_DP, dsqrt(sum(Total_DP*Total_DP))
-
- deallocate(R_vector,a,b)
+ deallocate(R_vector)
  deallocate(origin_Dependent)
  deallocate(origin_Independent)
 
  include 'formats.h'
 
 end subroutine Dipole_Moment
+!
+!
+!
+!=================================================================
+ function wavepacket_DP( basis , bra , ket , Dual_ket , R_vector )
+!=================================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+complex*16      , intent(in)    :: bra(:) 
+complex*16      , intent(in)    :: ket(:) 
+complex*16      , intent(in)    :: Dual_ket(:)
+real*8          , intent(in)    :: R_vector(:,:)
+real*8                          :: wavepacket_DP(3)
+
+! local variables ...
+integer                         :: i, j, xyz, n_basis
+complex*16      , allocatable   :: a(:), b(:,:)
+type(R3_vector)                 :: origin_Dependent, origin_Independent
+
+! Electronic dipole 
+ n_basis = size(ket)
+ 
+ allocate( a(n_basis)         , source = C_zero )
+ allocate( b(n_basis,n_basis) , source = C_zero )
+
+ do xyz = 1 , 3
+
+!   origin dependent DP = sum{bra * vec{R} * S_ij * ket}
+
+    forall( i=1:n_basis ) a(i) = bra(i) * R_vector(basis(i)%atom,xyz)
+
+    origin_Dependent%DP(xyz) = real( sum( a(:)*Dual_ket(:) ) )
+
+!   origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
+
+    b = DP_matrix_AO%DP(xyz)
+
+    CALL gemv( b , ket , a , C_one , C_zero )    
+
+    origin_Independent%DP(xyz) = real( sum( bra(:)*a(:) ) )
+
+ end do
+
+ wavepacket_DP = origin_Dependent%DP + origin_Independent%DP 
+
+ deallocate( a , b )
+
+
+end function wavepacket_DP
 !
 !
 !

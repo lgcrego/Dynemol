@@ -1,27 +1,27 @@
- integer 					:: initial_state , HOMO_mol , frame_step , GaussianCube_step
- logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
- logical 					:: verbose , DP_field_
+ integer 					:: initial_state , hole_state , frame_step , GaussianCube_step
  type (real_interval) 		:: occupied , empty , DOS_range 
  type (integer_interval) 	:: holes , electrons , rho_range
  character (len=4)			:: file_format
  character (len=11)			:: DRIVER , file_type 
  character (len=12)			:: state_of_matter
+ logical 					:: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
+ logical 					:: verbose , DP_field_
  logical , parameter 		:: T_ = .true. , F_ = .false. 
 
  parameter (& 
 !--------------------------------------------------------------------
 !           ACTION	flags
 !
-            DRIVER		 	= "avrg_confgs"  ,	   & ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+            DRIVER		 	= "slice_AO"     ,  	& ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
-            state_of_matter = "extended_sys" ,     & ! <== solvated_sys , extended_sys 
+            state_of_matter = "extended_sys" ,     	& ! <== solvated_sys , extended_sys 
 !			
-            GaussianCube 	= F_ ,                 &
-			Survival     	= F_ ,                 &
-            SPECTRUM     	= F_ ,                 & 
-			DP_Moment    	= T_ ,                 &
-			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
+            GaussianCube 	= F_ ,                 	&
+			Survival     	= T_ ,                 	&
+            SPECTRUM     	= F_ ,                 	& 
+			DP_Moment    	= T_ ,                 	&
+			OPT_basis    	= T_ ,                 	& ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			ad_hoc       	= T_ ,                 	& ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
@@ -30,22 +30,22 @@
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-			DP_field_    =  T_  ,               & ! <== use dipole potential for solvent molecules
+			DP_field_    =  F_  ,               & ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-			frame_step    =  1000 ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+			frame_step    =  1    ,             & ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  1.0d0 ,            & ! <== final time in PICOseconds
+            t_f           =  2.0d0 ,            & ! <== final time in PICOseconds
             n_t           =  1001  ,            & ! <== number of time steps
 
 			GaussianCube_step = 100,   			& ! <== time step for saving Gaussian Cube files
 
-            initial_state =  30  ,              & ! <== intial MO
-			HOMO_mol      =  29  ,              & ! <== HOMO of the molecule 
+			hole_state    =  29  ,              & ! <== 0 for ground state (GS) calculation
+            initial_state =  30  ,              & ! <== intial MO of DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
@@ -75,18 +75,6 @@
             empty       =  real_interval( -11.00d0 , -6.00d0 )  , & 
 
 !--------------------------------------------------------------------
-!           Readfield  parameters
-!
-
-			hole_state	=	864									,	&
-
-            holes     	= 	integer_interval( 864 , ABOVE ) 	,   & 
-
-            electrons 	= 	integer_interval( 864 , ABOVE )  	,   & 
-
-			rho_range 	= 	integer_interval( 864 , 1300  ) 	,   & 
-
-!--------------------------------------------------------------------
 !           2-Pi  COHERENT  CONTROL
 !
             start_2P  = 17.000d0 ,              & ! <= start of the train 
@@ -95,6 +83,7 @@
 !--------------------------------------------------------------------
 !			Environment
 !
-			verbose = ( DRIVER /= "Genetic_Alg" ) 					&
+			verbose  = ( (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") )	 	&	! verbose OFF for those DRIVERS
+
 )
 

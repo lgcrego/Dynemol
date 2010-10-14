@@ -26,6 +26,10 @@ integer                :: it
 real*8  , allocatable  :: QDyn_temp(:,:)
 type(f_time)           :: QDyn
 
+If( .NOT. survival ) then
+    Print*, ">>> Survival = .FALSE. <<<"
+    Stop
+end If
 
 select case ( DRIVER )
 

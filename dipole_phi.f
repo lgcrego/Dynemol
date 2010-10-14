@@ -48,12 +48,12 @@ CALL Util_Multipoles
 CALL DeAllocate_DPs( DP_mols_pbc , flag = "garbage" )
 
 ! solvent and solute must not overlap ...
-IF( count( (a%fragment=="S") .AND. (a%solute) ) /= I_zero) then
+IF( any( (a%fragment=="S") .AND. (a%solute) ) ) then
     Print*, " >>> solvent and solute overlap in Molecular_DPs <<< : execution stopped" 
     stop
 end If
 
-If( count(a%solute) /= I_zero ) then
+If( any(a%solute) ) then
     
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
     CALL Build_DP_mols( a , solute  , instance = "solute"  )

@@ -42,7 +42,7 @@ type(int_pointer)   , allocatable               :: nres(:)
 integer , parameter :: PBC_Factor = 27
 
 ! check-list ...
-if( count(trj(frame)%atom%solute) == 0 ) Pause " >>> Solute is not tagged <<< " 
+if( .not. any(trj(frame)%atom%solute) ) Pause " >>> Solute is not tagged <<< " 
 
 If( nnx+nny+mmx+mmy /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 
