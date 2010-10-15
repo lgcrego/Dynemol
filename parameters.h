@@ -16,12 +16,12 @@
 !			
             state_of_matter = "extended_sys" ,     	& ! <== solvated_sys , extended_sys 
 !			
-            GaussianCube 	= F_ ,                 	&
-			Survival     	= T_ ,                 	&
-            SPECTRUM     	= F_ ,                 	& 
-			DP_Moment    	= T_ ,                 	&
-			OPT_basis    	= T_ ,                 	& ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-			ad_hoc       	= T_ ,                 	& ! <== ad hoc tuning of parameters
+            GaussianCube 	= F_ ,                 &
+			Survival     	= T_ ,                 &
+            SPECTRUM     	= F_ ,                 & 
+			DP_Moment    	= F_ ,                 &
+			OPT_basis    	= T_ ,                 & ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+			ad_hoc       	= T_ ,                 & ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
@@ -30,7 +30,7 @@
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-			DP_field_    =  F_  ,               & ! <== use dipole potential for solvent molecules
+			DP_field_    =  T_  ,               & ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -39,7 +39,7 @@
 !           QDynamics parameters
 !
             t_i           =  0.d0 ,             &
-            t_f           =  2.0d0 ,            & ! <== final time in PICOseconds
+            t_f           =  5.d-1 ,            & ! <== final time in PICOseconds
             n_t           =  1001  ,            & ! <== number of time steps
 
 			GaussianCube_step = 100,   			& ! <== time step for saving Gaussian Cube files
@@ -83,7 +83,8 @@
 !--------------------------------------------------------------------
 !			Environment
 !
-			verbose  = ( (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") )	 	&	! verbose OFF for those DRIVERS
-
+			verbose  = ( 		(DRIVER /= "Genetic_Alg") 						&
+						.AND. 	(DRIVER /= "slice_AO" .OR. (.NOT. DP_Moment)) 	&
+						)	 													&	! verbose OFF for those DRIVERS
 )
 
