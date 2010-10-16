@@ -1,6 +1,10 @@
  module FMO_m
 
     use type_m
+    use parameters_m                , only : n_part ,                   &
+                                             Survival ,                 &
+                                             initial_state ,            &
+                                             hole_state
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack

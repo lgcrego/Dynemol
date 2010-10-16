@@ -3,6 +3,7 @@ module Eigen_driver_m
 
     use type_m
     use constants_m
+    use parameters_m                , only : survival , driver
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use MO0_adiabatic_m             , only : MO0_adiabatic

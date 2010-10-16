@@ -1,6 +1,7 @@
 module Semi_Empirical_Parms
 
     use type_m
+    use parameters_m    , only  : OPT_basis
 
     type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)

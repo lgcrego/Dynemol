@@ -1,6 +1,7 @@
  module DP_FMO_m
 
     use type_m
+    use parameters_m            , only : OPT_basis
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack

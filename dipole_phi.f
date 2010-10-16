@@ -2,6 +2,7 @@ module dipole_potential_m
 
     use type_m
     use constants_m
+    use parameters_m            , only : mmx , mmy , mmz
     use mkl95_precision
     use mkl95_blas
     use Structure_Builder       , only : Extended_Cell

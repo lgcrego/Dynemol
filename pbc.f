@@ -1,6 +1,7 @@
 module PBC_m
 
     use type_m
+    use parameters_m            , only  : mmx , mmy , mmz
     use Babel_m
     use constants_m
     use Allocation_m

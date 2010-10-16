@@ -1,6 +1,8 @@
  module Babel_m
 
     use type_m                  
+    use parameters_m            , only : file_type,             &
+                                         ad_hoc
     use Allocation_m            , only : Allocate_UnitCell
     use tuning_m                , only : Setting_fragments ,    &
                                          ad_hoc_tuning

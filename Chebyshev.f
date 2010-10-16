@@ -2,6 +2,7 @@ module Chebyshev_m
 
     use type_m              , g_time => f_time  
     use constants_m
+    use parameters_m        , only : t_i , DP_Field_ , frame_step
     use mkl95_blas
     use mkl95_lapack
     use ifport
@@ -29,9 +30,9 @@ contains
 !
 !
 !
-!==================================================================
+!===================================================================
  subroutine preprocess_Chebyshev( system , basis , Psi , QDyn , it )
-!==================================================================
+!===================================================================
 implicit none
 type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)

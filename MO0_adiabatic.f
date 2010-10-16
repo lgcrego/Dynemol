@@ -3,6 +3,8 @@ module MO0_adiabatic_m
 
     use type_m
     use constants_m
+    use parameters_m                , only : t_i , t_f , n_part , frame_step ,          &
+                                             DP_Moment , DP_Field_ , initial_state
     use mkl95_blas
     use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &

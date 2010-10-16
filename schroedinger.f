@@ -2,6 +2,7 @@
 
  use type_m
  use constants_m
+ use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , DP_Moment , initial_state
  use mkl95_precision
  use mkl95_blas
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures

@@ -213,7 +213,4 @@ module type_m
         character(3) , allocatable  :: EHSymbol(:)               
     end type OPT
 
-
-    include 'parameters.h'    
-
 end module type_m

@@ -2,11 +2,14 @@ module Oscillator_m
 
     use type_m
     use constants_m
+    use parameters_m                , only  : empty ,               &
+                                              occupied ,            &
+                                              rho_range
     use mkl95_precision
     use mkl95_blas
     use Multipole_Core
 
-    public :: Optical_Transitions , Transition_Dipole_Builder
+    public :: Optical_Transitions   ,  Transition_Dipole_Builder
 
     private
 

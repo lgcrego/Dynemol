@@ -1,6 +1,7 @@
  module Allocation_m
 
     use type_m
+    use parameters_m    , only : n_part
 
  contains
 !
@@ -33,7 +34,7 @@
 !
 !
  subroutine Allocate_Structures(System_Size,System)
-
+    implicit none
     integer         , intent(in)    :: System_Size
     type(structure) , intent(inout) :: System
 
@@ -60,7 +61,7 @@
 !
 !
  subroutine Allocate_BracKets(Basis_Size, MO_bra, MO_ket, AO_bra, AO_ket, DUAL_bra, DUAL_ket, bra, ket, phase)
-
+    implicit none
     integer                  , intent(in)  :: Basis_Size
     complex*16 , ALLOCATABLE , intent(out) :: MO_bra   (:,:) , MO_ket   (:,:)
     complex*16 , ALLOCATABLE , intent(out) :: AO_bra   (:,:) , AO_ket   (:,:) 
@@ -79,7 +80,7 @@
 !
 !
  subroutine DeAllocate_UnitCell(unit_cell)
-
+    implicit none
     type(structure) , intent(inout) :: unit_cell
 
     deallocate( unit_cell % symbol            )
@@ -102,7 +103,7 @@
 !
 !
  subroutine DeAllocate_Structures(System)
-
+    implicit none
     type(structure) , intent(inout) :: System
 
     deallocate( System % BasisPointer )

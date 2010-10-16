@@ -2,6 +2,9 @@
 
     use type_m
     use constants_m
+    use parameters_m                , only : DP_Field_  ,       &
+                                             driver ,           &
+                                             verbose
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack

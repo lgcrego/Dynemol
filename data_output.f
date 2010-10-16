@@ -1,8 +1,11 @@
  module Data_Output
 
     use type_m
+    use parameters_m        , only  : n_part ,      &
+                                      spectrum ,    &
+                                      survival
 
-    public :: Populations , Dump_stuff
+    public :: Populations   , Dump_stuff
 
     private
 

@@ -2,6 +2,7 @@ Program qdynamo
 
 use type_m
 use constants_m
+use parameters_m            , only : driver , Define_Environment               
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
@@ -19,6 +20,8 @@ use Eigen_driver_m          , only : Eigen_driver
 !========================================================
 
 CALL system( "./env.sh" )
+
+CAll Define_Environment
  
 CALL read_EHT_parameters
 

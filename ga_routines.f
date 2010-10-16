@@ -2,6 +2,7 @@ module GA_m
 
     use type_m
     use constants_m
+    use parameters_m            , only : DP_Moment , F_
     use type_m
     use Semi_Empirical_Parms    , only : element => atom 
     use Structure_Builder       , only : Extended_Cell 

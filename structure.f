@@ -1,6 +1,10 @@
  module Structure_Builder
 
     use type_m
+    use parameters_m                , only : file_type ,                &
+                                             file_format ,              &
+                                             nnx , nny ,                &
+                                             OPT_basis
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
                                              Read_from_PDB ,            &

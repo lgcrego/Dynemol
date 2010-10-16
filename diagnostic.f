@@ -2,6 +2,9 @@ module diagnostic_m
 
  use type_m
  use constants_m
+ use parameters_m               , only : spectrum , DP_Moment , &
+                                         survival , DP_Field_ , &
+                                         GaussianCube
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 

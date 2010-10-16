@@ -2,6 +2,7 @@ module GA_driver_m
 
  use type_m
  use constants_m
+ use parameters_m               , only : spectrum , DP_Moment , GaussianCube
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use QCModel_Huckel             , only : EigenSystem
  use GA_m                       , only : Genetic_Algorithm 

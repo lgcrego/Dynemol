@@ -4,6 +4,7 @@ module Overlap_Builder
 
     use type_m
     use constants_m
+    use parameters_m            , only  : verbose
     use PBC_m
     use Semi_Empirical_Parms    , only  : atom
     use Structure_Builder 

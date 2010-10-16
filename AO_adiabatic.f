@@ -3,6 +3,10 @@ module AO_adiabatic_m
 
     use type_m
     use constants_m
+    use parameters_m                , only : t_i , n_t , t_f , n_part , frame_step ,    &
+                                             state_of_matter , DP_Field_ , DP_Moment ,  &
+                                             GaussianCube , GaussianCube_step ,         &
+                                             initial_state
     use mkl95_blas
     use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &

@@ -2,9 +2,13 @@ module Multipole_Core
 
     use type_m
     use constants_m
+    use parameters_m            , only  : verbose ,     &
+                                          DP_Moment ,   &
+                                          static ,      &
+                                          hole_state
     use mkl95_precision
     use mkl95_blas
-    use Semi_Empirical_Parms    , only : atom
+    use Semi_Empirical_Parms    , only  : atom
 
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
@@ -56,7 +60,7 @@ Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 If( verbose ) Print 73, Sparsity  
 
 ! execute only for static calculations ...
-if ( DP_Moment .AND. ( .not. Survival) ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP ) 
+if ( DP_Moment .AND. static ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP ) 
 
 !----------------------------------------------------------
 If( verbose ) then

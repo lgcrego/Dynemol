@@ -3,6 +3,8 @@ module Chebyshev_driver_m
 
     use type_m
     use constants_m
+    use parameters_m                , only : t_f , n_t , state_of_matter ,  &
+                                             frame_step , DP_Field_
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj
     use Allocation_m                , only : Allocate_UnitCell ,            &
