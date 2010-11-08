@@ -27,25 +27,25 @@ implicit none
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
   GaussianCube    = F_                       
-  Survival        = T_                       
+  Survival        = F_                       
   SPECTRUM        = F_                          
-  DP_Moment       = F_                       
+  DP_Moment       = T_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <= structure or trajectory
+  file_type    =  "structure"                 ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -59,8 +59,8 @@ implicit none
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  hole_state    =  29                         ! <== 0 for ground state (GS) calculation
-  initial_state =  30                         ! <== intial MO of DONOR fragment
+  hole_state    =  00                         ! <== 0 for ground state (GS) calculation
+  initial_state =  91                         ! <== intial MO of DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !

@@ -4,7 +4,8 @@ module Oscillator_m
     use constants_m
     use parameters_m                , only  : empty ,               &
                                               occupied ,            &
-                                              rho_range
+                                              rho_range ,           &
+                                              sigma
     use mkl95_precision
     use mkl95_blas
     use Multipole_Core

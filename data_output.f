@@ -143,7 +143,7 @@ end if
 If( spectrum ) then
     OPEN( unit=3 , file='spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
-            write(3,11) SPEC%grid(i) , SPEC%average(i) 
+            write(3,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
         end do
     CLOSE(3)
 end if

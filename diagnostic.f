@@ -13,6 +13,7 @@ module diagnostic_m
  use DOS_m
  use Structure_Builder          , only : Generate_Structure ,   &
                                          Basis_Builder
+ use GA_QCModel_m               , only : Mulliken
  use Multipole_Core             , only : Dipole_Matrix
  use Oscillator_m               , only : Optical_Transitions
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -81,6 +82,26 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(11,:) , UNI%R(:,11) , 11 , 0.d0 )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(12,:) , UNI%R(:,12) , 12 , 0.d0 )
+
+! Population analysis ...
+Print*, " " 
+print*, "MO-93-Ru", Mulliken(UNI,ExCell_basis,MO=93,atom=1)
+Print*, " " 
+print*, "MO-92-Ru", Mulliken(UNI,ExCell_basis,MO=92,atom=1) 
+Print*, " " 
+print*, "MO-91-Ru", Mulliken(UNI,ExCell_basis,MO=91,atom=1)
+Print*, " " 
+print*, "MO-90-Ru", Mulliken(UNI,ExCell_basis,MO=90,atom=1) 
+Print*, " " 
+print*, "MO-89-Ru", Mulliken(UNI,ExCell_basis,MO=89,atom=1)
+Print*, " " 
+print*, "MO-88-Ru", Mulliken(UNI,ExCell_basis,MO=88,atom=1)
+Print*, " " 
+print*, "MO-87-Ru", Mulliken(UNI,ExCell_basis,MO=87,atom=1) 
+Print*, " " 
+print*, "MO-86-Ru", Mulliken(UNI,ExCell_basis,MO=86,atom=1) 
+Print*, " " 
+
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

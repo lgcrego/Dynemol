@@ -2,7 +2,7 @@ module GA_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : DP_Moment , F_
+    use parameters_m            , only : DP_Moment , F_ , T_
     use type_m
     use Semi_Empirical_Parms    , only : element => atom 
     use Structure_Builder       , only : Extended_Cell 
@@ -14,12 +14,12 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   800         
-    integer , parameter :: N_generations  =   1200        
-    integer , parameter :: Top_Selection  =   100          ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.1d0        ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.4           
-    logical , parameter :: Mutate_Cross   =   F_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+    integer , parameter :: Pop_Size       =   400         
+    integer , parameter :: N_generations  =   140        
+    integer , parameter :: Top_Selection  =   70           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.15d0       ! <== range of variation of parameters
+    real*8  , parameter :: Mutation_rate  =   0.2           
+    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -46,37 +46,37 @@ chi(:) = 0.d0   ;   weight(:) = 0.d0
 ! IODIDES ...
 ! HOMO-LUMO gaps ...
 
-chi(1) = ( GA%erg(12) - GA%erg(11) ) - 2.6515d0    ; weight(1) = 4.0d0
+chi(1) = ( GA%erg(91) - GA%erg(90) ) - 2.6515d0    ; weight(1) = 2.0d0
 
-chi(2) = ( GA%erg(12) - GA%erg(10) ) - 2.6515d0    ; weight(2) = 4.0d0
+chi(2) = ( GA%erg(90) - GA%erg(89) ) - 0.2515d0    ; weight(2) = 2.0d0
 
-chi(3) = ( GA%erg(10) - GA%erg(11) ) - 0.0000d0    ; weight(3) = 10.0d0
+chi(3) = ( GA%erg(89) - GA%erg(88) ) - 0.0000d0    ; weight(3) = 1.0d0
 
-chi(4) = ( GA%erg(11) - GA%erg(09) ) - 0.3584d0    ; weight(4) = 6.0d0 
+chi(4) = ( GA%erg(92) - GA%erg(91) ) - 0.1000d0    ; weight(4) = 1.0d0 
 
-chi(5) = ( GA%erg(10) - GA%erg(09) ) - 0.3584d0    ; weight(5) = 6.0d0 
+chi(5) = ( GA%erg(93) - GA%erg(92) ) - 0.0000d0    ; weight(5) = 1.0d0 
 
 ! Population analysis ...
-chi(6) =  Mulliken(GA_UNI,basis,MO=09,atom=1,AO_ang=1) - 0.43d0      ; weight(6)  = 6.0d0
-chi(7) =  Mulliken(GA_UNI,basis,MO=09,atom=2,AO_ang=0) - 0.14d0      ; weight(7)  = 6.0d0
-chi(8) =  Mulliken(GA_UNI,basis,MO=09,atom=3,AO_ang=1) - 0.43d0      ; weight(8)  = 6.0d0
 
-chi(09) =  Mulliken(GA_UNI,basis,MO=10,atom=1,AO_ang=1) - 0.33d0     ; weight(09) = 6.0d0
-chi(10) =  Mulliken(GA_UNI,basis,MO=10,atom=2,AO_ang=1) - 0.33d0     ; weight(10) = 6.0d0
-chi(11) =  Mulliken(GA_UNI,basis,MO=10,atom=3,AO_ang=1) - 0.33d0     ; weight(11) = 6.0d0
+chi(6) =  Mulliken(GA_UNI,basis,MO=93,atom=1) - 0.05d0      ; weight(6) =  1.0d0
 
-chi(12) =  Mulliken(GA_UNI,basis,MO=11,atom=1,AO_ang=1) - 0.33d0     ; weight(12) = 6.0d0
-chi(13) =  Mulliken(GA_UNI,basis,MO=11,atom=2,AO_ang=1) - 0.33d0     ; weight(13) = 6.0d0
-chi(14) =  Mulliken(GA_UNI,basis,MO=11,atom=3,AO_ang=1) - 0.33d0     ; weight(14) = 6.0d0
+chi(7) =  Mulliken(GA_UNI,basis,MO=92,atom=1) - 0.05d0      ; weight(7) =  1.0d0
 
-chi(15) =  Mulliken(GA_UNI,basis,MO=12,atom=1,AO_ang=0) - 0.04d0     ; weight(15) = 6.0d0
-chi(16) =  Mulliken(GA_UNI,basis,MO=12,atom=1,AO_ang=1) - 0.22d0     ; weight(16) = 6.0d0
-chi(17) =  Mulliken(GA_UNI,basis,MO=12,atom=2,AO_ang=1) - 0.48d0     ; weight(17) = 6.0d0
-chi(18) =  Mulliken(GA_UNI,basis,MO=12,atom=3,AO_ang=0) - 0.04d0     ; weight(18) = 6.0d0
-chi(19) =  Mulliken(GA_UNI,basis,MO=12,atom=3,AO_ang=1) - 0.22d0     ; weight(19) = 6.0d0
+chi(8) =  Mulliken(GA_UNI,basis,MO=91,atom=1) - 0.00d0      ; weight(8) =  2.0d0
+
+
+chi(9)   =  Mulliken(GA_UNI,basis,MO=90,atom=1) - 0.85d0    ; weight(9)  =  3.0d0
+
+chi(10)  =  Mulliken(GA_UNI,basis,MO=89,atom=1) - 0.75d0    ; weight(10) =  3.0d0
+
+chi(11)  =  Mulliken(GA_UNI,basis,MO=88,atom=1) - 0.75d0    ; weight(11) =  3.0d0
+
+chi(12)  =  Mulliken(GA_UNI,basis,MO=87,atom=1) - 0.00d0    ; weight(12) =  1.0d0
+
+chi(13)  =  Mulliken(GA_UNI,basis,MO=86,atom=1) - 0.00d0    ; weight(13) =  1.0d0
 
 ! Total DIPOLE moment ...
-chi(20) = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )     ; weight(20) = 35.d0
+chi(14)  = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )     ; weight(14) = 3.d0
 !============================================================
 
 ! apply weight on chi and evaluate cost ...
@@ -490,7 +490,7 @@ do n_EHS = 1 , N_of_EHSymbol
 enddo
 close(13)
 
-17 format(A3,t6,A3,t10,I3,t17,I3,t24,I3,t30,I3,t36,A3,t43,F8.3,t52,F8.4,t61,F8.4,t70,F8.4,t79,F8.4,t88,F8.4)
+17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t69,F8.3,t79,F8.4,t89,F8.4,t99,F8.4,t109,F8.4,t119,F8.4)
 
 include 'formats.h'
 
