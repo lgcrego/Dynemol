@@ -522,20 +522,21 @@ forall( i=1:3 )
     a % atom % TorF(i) = "X"
 end forall
 
-a % atom % mass     = 0.d0
-a % atom % charge   = 0.d0
-a % atom % AtNo     = 0
-a % atom % nr       = 0
-a % atom % residue  = "XXX"
-a % atom % Symbol   = "XX"
-a % atom % MMsymbol = "XXX"
-a % atom % fragment = "X"
-a % atom % solute   = .false.
-a % atom % FMO      = .false.
+a % atom % mass               = 0.d0
+a % atom % charge             = 0.d0
+a % atom % solvation_hardcore = 2.5d0
+a % atom % AtNo               = 0
+a % atom % nr                 = 0
+a % atom % residue            = "XXX"
+a % atom % Symbol             = "XX"
+a % atom % MMsymbol           = "XXX"
+a % atom % fragment           = "X"
+a % atom % solute             = .false.
+a % atom % FMO                = .false.
 
-a % N_of_Surface_Atoms      = 0
-a % N_of_Solvent_Atoms      = 0
-a % N_of_Solvent_Molecules  = 0
+a % N_of_Surface_Atoms        = 0
+a % N_of_Solvent_Atoms        = 0
+a % N_of_Solvent_Molecules    = 0
 
 end subroutine Initialize_System
 !

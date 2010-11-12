@@ -89,22 +89,36 @@ integer  :: i
     select case(a%atom(i)%residue)
         case( 'CCC') 
             a%atom(i)%fragment = 'C' 
+
         case( 'ALQ') 
             a%atom(i)%fragment = 'M' 
-        case( 'ACN') 
-            a%atom(i)%fragment = 'S' 
-        case( 'ION') 
-            a%atom(i)%fragment = 'I' 
+
         case( 'PYR') 
             a%atom(i)%fragment = 'P' 
+
+        case( 'ACN') 
+            a%atom(i)%fragment = 'S' 
+            a%atom(i)%solvation_hardcore = 3.d0
+
+        case( 'ION') 
+            a%atom(i)%fragment = 'I' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
         case( 'BP1') 
             a%atom(i)%fragment = 'D' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
         case( 'BP2') 
             a%atom(i)%fragment = '1' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
         case( 'BP3') 
             a%atom(i)%fragment = '2' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
         case default
             a%atom(i)%fragment = '#' 
+
     end select
 
  END DO

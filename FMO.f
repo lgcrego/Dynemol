@@ -108,8 +108,7 @@
 
 ! print chosen orbital energies on the screen ...
  do i = 1 , n_part
- 
-    Print 59, orbital(i) , FMO%erg(orbital(i))
+    If( orbital(i) /= I_zero) Print 59, orbital(i) , FMO%erg(orbital(i))
  end do   
 
  print*, ''

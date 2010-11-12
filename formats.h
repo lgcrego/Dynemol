@@ -40,7 +40,11 @@
 
 60    FORMAT(1x,'norm of Psi(t) = ',F9.7)     
 
-61    FORMAT(1x,'>>>  2Pi pulse')
+61    FORMAT(1x,'>> AO_preprocess done <<')
+
+62    FORMAT(/,'>>>  EXCITED State Calculation ')
+
+63    FORMAT(/,'>>>  GROUND State Calculation ')
 
 69    FORMAT(1x,'Sparsity of OVERLAP Mtrx = ',F10.5)
 

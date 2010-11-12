@@ -26,12 +26,12 @@ module Sampling_m
                                      Basis_Builder 
     use DOS_m
     use Oscillator_m        , only : Optical_Transitions
-    use Multipole_Core      , only : Dipole_Matrix 
+    use DP_main_m           , only : Dipole_Matrix 
+    use DP_potential_m      , only : Molecular_DPs
     use Schroedinger_m      , only : Huckel_dynamics ,              &
                                      DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
 
-    use dipole_potential_m  , only : Molecular_DPs
 
     public :: Avrg_Confgs 
 

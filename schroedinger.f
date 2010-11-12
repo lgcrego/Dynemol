@@ -9,7 +9,7 @@
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : orbital
- use Multipole_Core             , only : Dipole_Moment
+ use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 

@@ -23,10 +23,11 @@ module AO_adiabatic_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
-    use Multipole_Core              , only : Dipole_Matrix ,                &
+    use DP_FMO_m                    , only : wormhole                                             
+    use DP_main_m                   , only : Dipole_Matrix ,                &
                                              Dipole_Moment
+    use DP_potential_m              , only : Molecular_DPs                                              
     use Solvated_M                  , only : Prepare_Solvated_System 
-    use Dipole_potential_m          , only : Molecular_DPs                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
@@ -85,17 +86,13 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    ! coefs of <k(t)| in DUAL basis ...
     CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-
-    ! coefs of |k(t)> in DUAL basis ...
     CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
-    ! save populations(t + t_rate) ...
-    bra(:) = DUAL_bra(:,1)
-    ket(:) = DUAL_ket(:,1)
+    If( DP_Field_ ) CALL DP_Field_stuff ( Extended_Cell , UNI%L , DUAL_bra , DUAL_ket , it )
 
-    QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
+    ! save populations(t + t_rate) ...
+    QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -130,14 +127,14 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     end select
 
-    CALL Generate_Structure     ( frame )
+    CALL Generate_Structure ( frame )
 
-    CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) &
-    CALL Molecular_DPs          ( Extended_Cell )
+    If( DP_field_ )         & 
+    CALL Molecular_DPs      ( Extended_Cell )
 
-    CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+    CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL gemm(UNI%R,DUAL_bra,MO_bra,'T','N',C_one,C_zero)
@@ -165,12 +162,11 @@ type(f_time)    , intent(out)    :: QDyn
 integer         , intent(in)     :: it
 
 ! local variables
-integer         :: frame
-type(universe)  :: Solvated_System
+type(universe) :: Solvated_System
 
 ! preprocessing stuff .....................................................
 
-CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 select case ( state_of_matter )
 
@@ -191,16 +187,13 @@ select case ( state_of_matter )
 
 end select
 
-CALL Generate_Structure     ( 1 )
+CALL Generate_Structure ( 1 )
 
-CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-If( DP_field_ ) &
-CALL Molecular_DPs          ( Extended_Cell )
+CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI , flag2=it )
-
-CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI%R , FMO )
+CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , FMO )
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
 
@@ -214,18 +207,29 @@ MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
 MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-
-! coefs of <k(t)| in DUAL basis ...
 CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-
-! coefs of |k(t)> in DUAL basis ...
 CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
-! save populations ...
-bra(:) = DUAL_bra(:,1)
-ket(:) = DUAL_ket(:,1)
+! repeat preprocess with DP_Field ...
+If( DP_field_ ) then
 
-QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
+    CALL DP_Field_stuff ( Extended_Cell , UNI%L , DUAL_bra , DUAL_ket , it )
+
+    CALL EigenSystem    ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+
+    CALL FMO_analysis   ( Extended_Cell , ExCell_basis , UNI%R , FMO )
+
+    MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+    MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+
+    ! DUAL representation for efficient calculation of survival probabilities ...
+    CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
+    CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
+
+end If
+
+! save populations ...
+QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) ,DUAL_ket(:,1) , t_i )
 
 CALL dump_Qdyn( Qdyn , it )
 
@@ -254,7 +258,7 @@ real*8      , intent(in)    :: t
 ! LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
-CALL gemm(UNI_L,MO_bra,AO_bra,'T','N',C_one,C_zero)
+AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
 CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
@@ -267,6 +271,40 @@ CALL Gaussian_Cube_Format(bra,ket,it,t)
 !----------------------------------------------------------
 
 end subroutine Send_to_GaussianCube
+!
+!
+!
+! 
+!======================================================================
+ subroutine DP_Field_stuff( system , UNI_L , DUAL_bra , DUAL_ket , it )
+!======================================================================
+implicit none
+type(structure) , intent(in)    :: system
+complex*16      , intent(in)    :: UNI_L(:,:)
+complex*16      , intent(in)    :: DUAL_bra(:,:)
+complex*16      , intent(in)    :: DUAL_ket(:,:)
+integer         , intent(in)    :: it
+
+!----------------------------------------------------------
+! LOCAL representation for wavepacket DP_Field calculation ...
+
+! coefs of <k(t)| in AO basis 
+AO_bra = DUAL_bra
+
+! coefs of |k(t)> in AO basis 
+CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+
+bra(:) = AO_bra(:,1)
+ket(:) = AO_ket(:,1)
+
+! put data in DP_FMO_m for future use ...
+CALL wormhole( ExCell_basis , bra , ket , Dual_ket(:,1) )
+
+If( it == 1 ) CALL Molecular_DPs( Extended_Cell )
+
+!----------------------------------------------------------
+
+end subroutine DP_Field_stuff
 !
 !
 !

@@ -18,7 +18,7 @@ module Chebyshev_driver_m
                                              ExCell_basis
     use Solvated_M                  , only : Prepare_Solvated_System                                              
     use Schroedinger_m              , only : DeAllocate_QDyn
-    use Dipole_potential_m          , only : Molecular_DPs     
+    use DP_potential_m              , only : Molecular_DPs     
     use Data_Output                 , only : Dump_stuff 
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev

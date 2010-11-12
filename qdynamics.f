@@ -12,13 +12,13 @@ module qdynamics_m
  use DOS_m
  use Structure_Builder      , only : Generate_Structure ,   &
                                      Basis_Builder
- use Multipole_Core         , only : Dipole_Matrix
+ use DP_main_m              , only : Dipole_Matrix
+ use DP_potential_m         , only : Molecular_DPs 
  use Oscillator_m           , only : Optical_Transitions
  use Schroedinger_m         , only : Huckel_dynamics ,      &
                                      DeAllocate_QDyn
  use RK_m
  use Data_Output            , only : Dump_stuff
- use dipole_potential_m     , only : Molecular_DPs 
 
  public :: qdynamics
 

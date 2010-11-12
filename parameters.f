@@ -24,16 +24,19 @@ contains
 !=============================
 implicit none
 
+! local variables ...
+logical :: dynamic
+
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
   GaussianCube    = F_                       
   Survival        = F_                       
-  SPECTRUM        = F_                          
+  SPECTRUM        = T_                          
   DP_Moment       = T_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
@@ -45,7 +48,7 @@ implicit none
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -54,13 +57,15 @@ implicit none
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  5.d-1                               ! <== final time in PICOseconds
-  n_t  =  1001                                ! <== number of time steps
+  t_f  =  1.5d0                               ! <== final time in PICOseconds
+  n_t  =  1501                                ! <== number of time steps
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  hole_state    =  00                         ! <== 0 for ground state (GS) calculation
-  initial_state =  91                         ! <== intial MO of DONOR fragment
+  hole_state    =  00                         ! <== 0 for GROUND STATE of special FMO 
+
+  initial_state =  30                         ! <== CASE static  = excited state of special FMO
+                                              ! <== CASE dynamic = intial MO of DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
@@ -80,9 +85,9 @@ implicit none
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
 !
-  occupied  =  real_interval( -14.50d0 , -11.01d0 )       
+  occupied  =  real_interval( -15.50d0 , -9.501d0 )       
 
-  empty     =  real_interval( -11.00d0 , -6.00d0 )        
+  empty     =  real_interval( -9.500d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
 
@@ -90,11 +95,11 @@ select case( DRIVER )
 
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_MO0" , "slice_MOt" )
         
-        static   = F_ 
+        dynamic = T_ .OR. Survival 
 
     case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
 
-        static = T_ .OR. survival
+        dynamic = F_ .OR. Survival
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver
@@ -102,7 +107,10 @@ select case( DRIVER )
 
 end select
 
-verbose = ( (DRIVER /= "Genetic_Alg")  .AND. (DRIVER /= "slice_AO" .OR. (.NOT. DP_Moment)) )   ! verbose OFF for those DRIVERS
+static = .not. dynamic
+
+! verbose is T_ only if ...
+verbose = (DRIVER /= "Genetic_Alg")  .AND. (DRIVER /= "slice_AO") 
 
 end subroutine Define_Environment
 !

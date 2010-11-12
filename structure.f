@@ -1,9 +1,11 @@
  module Structure_Builder
 
     use type_m
+    use constants_m
     use parameters_m                , only : file_type ,                &
                                              file_format ,              &
                                              nnx , nny ,                &
+                                             hole_state ,               &
                                              OPT_basis
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
@@ -106,20 +108,21 @@ integer :: ASC_offset = 48
 
         FORALL( n=1:unit_cell%atoms )
 
-            extended_cell % coord    (k+n,1) =  unit_cell % coord    (n,1) + ix * unit_cell%T_xyz(1)
-            extended_cell % coord    (k+n,2) =  unit_cell % coord    (n,2) + iy * unit_cell%T_xyz(2)
-            extended_cell % coord    (k+n,3) =  unit_cell % coord    (n,3) 
-            extended_cell % AtNo     (k+n)   =  unit_cell % AtNo     (n)
-            extended_cell % Nvalen   (k+n)   =  unit_cell % Nvalen   (n)
-            extended_cell % k_WH     (k+n)   =  unit_cell % k_WH     (n)
-            extended_cell % fragment (k+n)   =  unit_cell % fragment (n)
-            extended_cell % Symbol   (k+n)   =  unit_cell % Symbol   (n)
-            extended_cell % MMSymbol (k+n)   =  unit_cell % MMSymbol (n)
-            extended_cell % nr       (k+n)   =  unit_cell % nr       (n)   + nr_sum
-            extended_cell % residue  (k+n)   =  unit_cell % residue  (n)
-            extended_cell % solute   (k+n)   =  unit_cell % solute   (n)
-            extended_cell % FMO      (k+n)   =  unit_cell % FMO      (n)
-            extended_cell % copy_No  (k+n)   =  copy
+            extended_cell % coord              (k+n,1) =  unit_cell % coord    (n,1) + ix * unit_cell%T_xyz(1)
+            extended_cell % coord              (k+n,2) =  unit_cell % coord    (n,2) + iy * unit_cell%T_xyz(2)
+            extended_cell % coord              (k+n,3) =  unit_cell % coord    (n,3) 
+            extended_cell % AtNo               (k+n)   =  unit_cell % AtNo     (n)
+            extended_cell % Nvalen             (k+n)   =  unit_cell % Nvalen   (n)
+            extended_cell % k_WH               (k+n)   =  unit_cell % k_WH     (n)
+            extended_cell % fragment           (k+n)   =  unit_cell % fragment (n)
+            extended_cell % Symbol             (k+n)   =  unit_cell % Symbol   (n)
+            extended_cell % MMSymbol           (k+n)   =  unit_cell % MMSymbol (n)
+            extended_cell % nr                 (k+n)   =  unit_cell % nr       (n)   + nr_sum
+            extended_cell % residue            (k+n)   =  unit_cell % residue  (n)
+            extended_cell % solute             (k+n)   =  unit_cell % solute   (n)
+            extended_cell % FMO                (k+n)   =  unit_cell % FMO      (n)
+            extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
+            extended_cell % copy_No  (k+n)             =  copy
         
         END FORALL
 
@@ -133,18 +136,19 @@ integer :: ASC_offset = 48
 
  FORALL( n=1:unit_cell%atoms )     ! <== the DONOR CELL is at the end (extended_cell%copy_No = 0)
 
-    extended_cell % coord    (k+n,1:3)  =  unit_cell % coord    (n,1:3)
-    extended_cell % AtNo     (k+n)      =  unit_cell % AtNo     (n)
-    extended_cell % Nvalen   (k+n)      =  unit_cell % Nvalen   (n)
-    extended_cell % k_WH     (k+n)      =  unit_cell % k_WH     (n)
-    extended_cell % fragment (k+n)      =  unit_cell % fragment (n)
-    extended_cell % symbol   (k+n)      =  unit_cell % Symbol   (n)
-    extended_cell % MMSymbol (k+n)      =  unit_cell % MMSymbol (n)
-    extended_cell % nr       (k+n)      =  unit_cell % nr       (n)
-    extended_cell % residue  (k+n)      =  unit_cell % residue  (n)
-    extended_cell % solute   (k+n)      =  unit_cell % solute   (n)
-    extended_cell % FMO      (k+n)      =  unit_cell % FMO      (n)
-    extended_cell % copy_No  (k+n)      =  0
+    extended_cell % coord              (k+n,1:3)  =  unit_cell % coord    (n,1:3)
+    extended_cell % AtNo               (k+n)      =  unit_cell % AtNo     (n)
+    extended_cell % Nvalen             (k+n)      =  unit_cell % Nvalen   (n)
+    extended_cell % k_WH               (k+n)      =  unit_cell % k_WH     (n)
+    extended_cell % fragment           (k+n)      =  unit_cell % fragment (n)
+    extended_cell % symbol             (k+n)      =  unit_cell % Symbol   (n)
+    extended_cell % MMSymbol           (k+n)      =  unit_cell % MMSymbol (n)
+    extended_cell % nr                 (k+n)      =  unit_cell % nr       (n)
+    extended_cell % residue            (k+n)      =  unit_cell % residue  (n)
+    extended_cell % solute             (k+n)      =  unit_cell % solute   (n)
+    extended_cell % FMO                (k+n)      =  unit_cell % FMO      (n)
+    extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
+    extended_cell % copy_No  (k+n)                =  0
 
  END FORALL
 
@@ -215,34 +219,35 @@ integer :: ASC_offset = 48
 
         do m = -l , +l
 
-            basis(k) % atom      =  i
-            basis(k) % AtNo      =  AtNo
-            basis(k) % nr        =  system % nr       (i)
-            basis(k) % copy_No   =  system % copy_No  (i)
-            basis(k) % symbol    =  system % symbol   (i)
-            basis(k) % fragment  =  system % fragment (i)
-            basis(k) % EHSymbol  =  system % MMSymbol (i)
-            basis(k) % residue   =  system % residue  (i)
-            basis(k) % solute    =  system % solute   (i)
-            basis(k) % FMO       =  system % FMO      (i)
+            basis(k) % atom                =  i
+            basis(k) % AtNo                =  AtNo
+            basis(k) % nr                  =  system % nr       (i)
+            basis(k) % copy_No             =  system % copy_No  (i)
+            basis(k) % symbol              =  system % symbol   (i)
+            basis(k) % fragment            =  system % fragment (i)
+            basis(k) % EHSymbol            =  system % MMSymbol (i)
+            basis(k) % residue             =  system % residue  (i)
+            basis(k) % solute              =  system % solute   (i)
+            basis(k) % FMO                 =  system % FMO      (i)
+            basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
-            basis(k) % n         =  atom(AtNo) % Nquant(l)
-            basis(k) % l         =  l
-            basis(k) % m         =  m
+            basis(k) % n        =  atom(AtNo) % Nquant(l)
+            basis(k) % l        =  l
+            basis(k) % m        =  m
 
-            basis(k) % IP        =  atom(AtNo) % IP    (l)
-            basis(k) % Nzeta     =  atom(AtNo) % Nzeta (l)
-            basis(k) % coef(1)   =  atom(AtNo) % coef  (l,1)
-            basis(k) % coef(2)   =  atom(AtNo) % coef  (l,2)
-            basis(k) % zeta(1)   =  atom(AtNo) % zeta  (l,1)
-            basis(k) % zeta(2)   =  atom(AtNo) % zeta  (l,2)
-            basis(k) % k_WH      =  system % k_WH(i)
+            basis(k) % IP       =  atom(AtNo) % IP    (l)
+            basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
+            basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
+            basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
+            basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
+            basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
+            basis(k) % k_WH     =  system % k_WH(i)
 
-            basis(k) % x         =  system % coord (i,1)
-            basis(k) % y         =  system % coord (i,2)
-            basis(k) % z         =  system % coord (i,3)
+            basis(k) % x        =  system % coord (i,1)
+            basis(k) % y        =  system % coord (i,2)
+            basis(k) % z        =  system % coord (i,3)
 
-            basis(k) % indx      = k
+            basis(k) % indx     = k
 
             k = k + 1
 
@@ -311,6 +316,13 @@ do fragment = 1 , size(a%list_of_fragments)
     If( N_of_fragment_type /= 0 )   Print 123 , a%list_of_fragments(fragment) , N_of_fragment_type
 
 end do
+
+! Ground State vs Excited State calculation ...
+If( hole_state /= I_zero) then
+    Print 62
+else
+    Print 63
+end If
 
 ! dumping information about structure ...
 CALL dump_diagnosis( a )

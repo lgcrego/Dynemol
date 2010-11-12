@@ -6,7 +6,7 @@ module QOptics_m
     use mkl95_blas
     use Oscillator_m
     use FMO_m           , only : orbital
-    use Multipole_Core
+    use DP_main_m
 
     public :: Evolution , RK_setup
 

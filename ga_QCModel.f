@@ -9,7 +9,7 @@ module GA_QCModel_m
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
-    use Multipole_Core          , only : rotationmultipoles ,   &
+    use Multipole_Routines_m    , only : rotationmultipoles ,   &
                                          multipole_messages ,   &
                                          multipoles1c ,         &
                                          multipoles2c 
@@ -28,9 +28,9 @@ module GA_QCModel_m
 contains
 !
 !
-!================================================================================
- pure function R_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
-!================================================================================
+!======================================================================
+ pure function R_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol )
+!======================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -38,17 +38,15 @@ integer                     , intent(in) :: MO
 integer         , optional  , intent(in) :: atom
 integer         , optional  , intent(in) :: AO_ang
 character(len=*), optional  , intent(in) :: EHSymbol
-character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
 real*8                :: R_Mulliken
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
 allocate( mask_3(size(basis)) , source=.false. )
-allocate( mask_4(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -69,28 +67,22 @@ else
     where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
 end IF
 !====================================================
-IF( .NOT. present(residue) ) then
-    mask_4 = .true.
-else
-    where( basis%residue == residue ) mask_4 = .true.
-end IF
-!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
 ! perform the population analysis ...
 R_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
-deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
+deallocate( mask , mask_1 , mask_2 , mask_3 )
 
 end function R_Mulliken
 !
 !
 !
-!================================================================================
- pure function C_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
-!================================================================================
+!======================================================================
+ pure function C_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol )
+!======================================================================
 implicit none
 type(C_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -98,17 +90,15 @@ integer                     , intent(in) :: MO
 integer         , optional  , intent(in) :: atom
 integer         , optional  , intent(in) :: AO_ang
 character(len=*), optional  , intent(in) :: EHSymbol
-character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
 real*8                :: C_Mulliken
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:)
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
 allocate( mask_3(size(basis)) , source=.false. )
-allocate( mask_4(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -129,20 +119,13 @@ else
     where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
 end IF
 !====================================================
-IF( .NOT. present(residue) ) then
-    mask_4 = .true.
-else
-    where( basis%residue == residue ) mask_4 = .true.
-end IF
-!====================================================
 
-
-mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4)
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
 ! perform the population analysis ...
 C_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
-deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
+deallocate( mask , mask_1 , mask_2 , mask_3 )
 
 end function C_Mulliken
 !

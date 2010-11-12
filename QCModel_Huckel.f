@@ -9,7 +9,7 @@
     use mkl95_blas
     use mkl95_lapack
     use Overlap_Builder             , only : Overlap_Matrix
-    use dipole_potential_m          , only : DP_phi
+    use DP_potential_m              , only : DP_phi
 
     public :: EigenSystem , Huckel , Huckel_with_FIELDS
 

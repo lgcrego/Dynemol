@@ -56,15 +56,16 @@ CALL Allocate_UnitCell( Unit_Cell , n_residues )
 ! coordinates and other info from input data ...
 forall( j=1:unit_cell%atoms )
 
-    unit_cell % coord    (j,:) =  System % atom(j) % xyz(:)
-    unit_cell % AtNo     (j)   =  System % atom(j) % AtNo  
-    unit_cell % fragment (j)   =  System % atom(j) % fragment
-    unit_cell % Symbol   (j)   =  System % atom(j) % Symbol
-    unit_cell % residue  (j)   =  System % atom(j) % residue
-    unit_cell % nr       (j)   =  System % atom(j) % nr
-    unit_cell % MMSymbol (j)   =  System % atom(j) % MMSymbol
-    unit_cell % solute   (j)   =  System % atom(j) % solute  
-    unit_cell % FMO      (j)   =  System % atom(j) % FMO     
+    unit_cell % coord              (j,:) =  System % atom(j) % xyz(:)
+    unit_cell % AtNo               (j)   =  System % atom(j) % AtNo  
+    unit_cell % fragment           (j)   =  System % atom(j) % fragment
+    unit_cell % Symbol             (j)   =  System % atom(j) % Symbol
+    unit_cell % residue            (j)   =  System % atom(j) % residue
+    unit_cell % nr                 (j)   =  System % atom(j) % nr
+    unit_cell % MMSymbol           (j)   =  System % atom(j) % MMSymbol
+    unit_cell % solute             (j)   =  System % atom(j) % solute  
+    unit_cell % FMO                (j)   =  System % atom(j) % FMO     
+    unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
 
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
 
@@ -80,7 +81,7 @@ select case( file_type )
     case( "trajectory" )
         unit_cell%list_of_residues  = trj(1)%list_of_residues
         unit_cell%list_of_fragments = trj(1)%list_of_fragments
-    end select
+end select
 
 ! sort the nr indices ...
 CALL Sort_nr( unit_cell )

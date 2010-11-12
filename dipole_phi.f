@@ -1,4 +1,4 @@
-module dipole_potential_m
+module DP_potential_m
 
     use type_m
     use constants_m
@@ -8,7 +8,7 @@ module dipole_potential_m
     use Structure_Builder       , only : Extended_Cell
     use Semi_Empirical_Parms    , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
-    use Multipole_Core          , only : Util_Multipoles
+    use Multipole_Routines_m    , only : Util_Multipoles
     use PBC_m                   , only : Generate_Periodic_DPs
 
     public :: Molecular_DPs , DP_phi
@@ -196,14 +196,14 @@ type(STO_basis) , intent(in) :: basis(:)
 ! local variables ...
 integer                 :: i , j , N_of_DP 
 integer , allocatable   :: nr_Mols(:)
-real*8                  :: DP_phi , cut_off_radius
+real*8                  :: DP_phi , hard_core , cut_off_radius 
 real*8                  :: midpoint_ab(3)
 real*8  , allocatable   :: distance(:) , distance_ALL(:) , mol_phi(:) 
 real*8  , allocatable   :: vector(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(:,:) 
 logical , allocatable   :: mask(:)
 
-! local parameters ...
-real*8  , parameter     :: hard_core = 2.d0  ! <== (Angs)
+! combination rule for solvation hardcore shell ...
+hard_core = ( basis(a)%solvation_hardcore + basis(b)%solvation_hardcore ) / two
 
 ! midpoint between atoms a & b ...
 midpoint_ab(1) = ( basis(a)%x + basis(b)%x ) / two
@@ -336,4 +336,4 @@ end subroutine DeAllocate_DPs
 !
 !
 !
-end module dipole_potential_m
+end module DP_potential_m

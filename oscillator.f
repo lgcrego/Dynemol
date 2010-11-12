@@ -2,13 +2,13 @@ module Oscillator_m
 
     use type_m
     use constants_m
+    use mkl95_precision
+    use mkl95_blas
+    use DP_main_m                   , only  : DP_matrix_AO
     use parameters_m                , only  : empty ,               &
                                               occupied ,            &
                                               rho_range ,           &
                                               sigma
-    use mkl95_precision
-    use mkl95_blas
-    use Multipole_Core
 
     public :: Optical_Transitions   ,  Transition_Dipole_Builder
 
