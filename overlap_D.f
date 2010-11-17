@@ -5,9 +5,9 @@ module Overlap_Builder
     use type_m
     use constants_m
     use parameters_m            , only  : verbose , mmx , mmy , mmz
-    use PBC_m
+    use PBC_m                   , only  : Generate_Periodic_Structure
     use Semi_Empirical_Parms    , only  : atom
-    use Structure_Builder 
+    use Allocation_m            , only  : DeAllocate_Structures    
 
     public :: Overlap_Matrix 
 
