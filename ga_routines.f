@@ -3,7 +3,6 @@ module GA_m
     use type_m
     use constants_m
     use parameters_m            , only : DP_Moment , F_ , T_
-    use type_m
     use Semi_Empirical_Parms    , only : element => atom 
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,         &
@@ -490,7 +489,7 @@ do n_EHS = 1 , N_of_EHSymbol
 enddo
 close(13)
 
-17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t69,F8.3,t79,F8.4,t89,F8.4,t99,F8.4,t109,F8.4,t119,F8.4)
+17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
 
 include 'formats.h'
 

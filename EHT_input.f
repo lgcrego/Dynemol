@@ -183,7 +183,7 @@ Print 45 , EH_atom%EHSymbol
 
 include 'formats.h'
 
-17 format(A8,t10,A12,t24,I7,t32,I10,t43,I9,t53,I5,t61,A4,t68,F9.4,t78,F9.4,t88,F9.4,t98,F9.4,t108,F9.4,t118,F9.4)
+17 format(A8,t10,A12,t24,I7,t32,I10,t43,I9,t53,I5,t61,A4,t68,F9.6,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
 
 end subroutine read_OPT_parameters
 ! 

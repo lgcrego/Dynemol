@@ -2,7 +2,6 @@ module GA_QCModel_m
 
     use type_m
     use constants_m
-    use type_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
