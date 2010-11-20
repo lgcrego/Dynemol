@@ -28,6 +28,8 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
+    where( struct % FMO       ) struct % nr = 1
+    where( .not. struct % FMO ) struct % nr = struct % nr - 3
 
 end If
 
@@ -36,6 +38,16 @@ end If
 
 If( present(univ) ) then
 
+
+    where( univ % atom % residue == "ION" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP1" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
+
+    where( univ % atom % FMO       ) univ % atom % nr = 1
+    where( .not. univ % atom % FMO ) univ % atom % nr = univ % atom % nr - 3
+
+    univ % atom % solute = univ % atom % FMO    
 
 end if
 
@@ -86,7 +98,7 @@ integer  :: i
 
         case( 'H2O') 
             a%atom(i)%fragment = 'S' 
-
+        
         case( 'ACN') 
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0

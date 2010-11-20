@@ -30,20 +30,20 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
   GaussianCube    = F_                       
-  Survival        = F_                       
-  SPECTRUM        = T_                          
+  Survival        = T_                       
+  SPECTRUM        = F_                          
   DP_Moment       = T_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <= structure or trajectory
+  file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           POTENTIALS
@@ -62,7 +62,7 @@ logical :: dynamic
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  hole_state    =  00                         ! <== 0 for GROUND STATE of special FMO 
+  hole_state    =  90                         ! <== 0 for GROUND STATE of special FMO 
 
   initial_state =  30                         ! <== CASE static  = excited state of special FMO
                                               ! <== CASE dynamic = intial MO of DONOR fragment
@@ -110,7 +110,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = (DRIVER /= "Genetic_Alg")  .AND. (DRIVER /= "slice_AO") 
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
 
 end subroutine Define_Environment
 !

@@ -126,7 +126,7 @@ do xyz = 1 , 3
 
         forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
 
-        origin_Dependent(states)%DP(xyz) = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
+        origin_Dependent(states)%DP(xyz)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
 
     end forall    
 

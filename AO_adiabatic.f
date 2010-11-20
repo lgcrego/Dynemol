@@ -3,11 +3,13 @@ module AO_adiabatic_m
 
     use type_m
     use constants_m
-    use parameters_m                , only : t_i , n_t , t_f , n_part , frame_step ,    &
-                                             state_of_matter , DP_Field_ , DP_Moment ,  &
-                                             GaussianCube , GaussianCube_step ,         &
-                                             initial_state
     use mkl95_blas
+    use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
+                                             frame_step , state_of_matter , &
+                                             DP_Field_ , DP_Moment ,        &
+                                             GaussianCube ,                 &
+                                             GaussianCube_step ,            &
+                                             hole_state , initial_state
     use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
@@ -23,9 +25,9 @@ module AO_adiabatic_m
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
                                              orbital
-    use DP_FMO_m                    , only : wormhole                                             
     use DP_main_m                   , only : Dipole_Matrix ,                &
                                              Dipole_Moment
+    use DP_FMO_m                    , only : wormhole                                             
     use DP_potential_m              , only : Molecular_DPs                                              
     use Solvated_M                  , only : Prepare_Solvated_System 
     use QCModel_Huckel              , only : EigenSystem                                                 
@@ -86,19 +88,19 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-    CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
-
-    If( DP_Field_ ) CALL DP_Field_stuff ( Extended_Cell , UNI%L , DUAL_bra , DUAL_ket , it )
+    CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' , C_one , C_zero )
+    CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' , C_one , C_zero )
 
     ! save populations(t + t_rate) ...
     QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
 
     CALL dump_Qdyn( Qdyn , it )
 
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( UNI%L , it , t )
+    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( it , t )
 
-    If( DP_Moment ) CALL Send_to_Dipole_Moment( UNI%L , DUAL_bra , DUAL_ket , t )
+    If( DP_Moment ) CALL Send_to_Dipole_Moment( t )
+
+    If( DP_Field_ ) CALL DP_Field_wormhole( Extended_Cell )
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
@@ -137,8 +139,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
-    CALL gemm(UNI%R,DUAL_bra,MO_bra,'T','N',C_one,C_zero)
-    CALL gemm(UNI%L,DUAL_ket,MO_ket,'N','N',C_one,C_zero)
+    CALL gemm( UNI%R , DUAL_bra , MO_bra , 'T' , 'N' , C_one , C_zero )
+    CALL gemm( UNI%L , DUAL_ket , MO_ket , 'N' , 'N' , C_one , C_zero )
 
     !============================================================================
 
@@ -162,7 +164,8 @@ type(f_time)    , intent(out)    :: QDyn
 integer         , intent(in)     :: it
 
 ! local variables
-type(universe) :: Solvated_System
+integer         :: hole_save 
+type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
 
@@ -191,51 +194,44 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
+If( DP_field_ ) then
+    hole_save  = hole_state
+    hole_state = 0
+
+    ! DP potential in the GS configuration ...
+    CALL Molecular_DPs  ( Extended_Cell )
+
+    hole_state = hole_save
+end If
+
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
 CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , FMO )
 
-Print 56 , initial_state     ! <== initial state of the isolated molecule 
+CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
+                          MO_bra   , MO_ket   ,       &
+                          AO_bra   , AO_ket   ,       &
+                          DUAL_bra , DUAL_ket ,       &
+                          bra      , ket      , phase )
 
-CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
-                         MO_bra   , MO_ket   ,      &
-                         AO_bra   , AO_ket   ,      &
-                         DUAL_bra , DUAL_ket ,      &
-                         bra      , ket      , phase)
+! initial state of the isolated molecule ...
+Print 56 , initial_state     
 
-MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+MO_bra = FMO%L( : , orbital(1:n_part) )    
+MO_ket = FMO%R( : , orbital(1:n_part) )    
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
-
-! repeat preprocess with DP_Field ...
-If( DP_field_ ) then
-
-    CALL DP_Field_stuff ( Extended_Cell , UNI%L , DUAL_bra , DUAL_ket , it )
-
-    CALL EigenSystem    ( Extended_Cell , ExCell_basis , UNI , flag2=it )
-
-    CALL FMO_analysis   ( Extended_Cell , ExCell_basis , UNI%R , FMO )
-
-    MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-    MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-
-    ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL gemm(UNI%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-    CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
-
-end If
+CALL gemm(UNI%L , MO_bra , DUAL_bra , 'T' , 'N' , C_one , C_zero )
+CALL gemm(UNI%R , MO_ket , DUAL_ket , 'N' , 'N' , C_one , C_zero )
 
 ! save populations ...
 QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) ,DUAL_ket(:,1) , t_i )
 
 CALL dump_Qdyn( Qdyn , it )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( UNI%L , it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment    ) CALL Send_to_Dipole_Moment ( UNI%L , DUAL_bra , DUAL_ket , t_i )
+If( DP_Moment    ) CALL Send_to_Dipole_Moment ( t_i )
 
 !..........................................................................
 
@@ -246,27 +242,26 @@ end subroutine Preprocess
 !
 !
 ! 
-!================================================
-subroutine Send_to_GaussianCube( UNI_L , it , t )
-!================================================
+!========================================
+subroutine Send_to_GaussianCube( it , t )
+!========================================
 implicit none
-complex*16  , intent(in)    :: UNI_L(:,:)
 integer     , intent(in)    :: it
 real*8      , intent(in)    :: t
 
 !----------------------------------------------------------
-! LOCAL representation for film STO production ...
+!     LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
 AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
-CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
 bra(:) = AO_bra(:,1)
 ket(:) = AO_ket(:,1)
    
-CALL Gaussian_Cube_Format(bra,ket,it,t)
+CALL Gaussian_Cube_Format( bra , ket , it ,t )
 
 !----------------------------------------------------------
 
@@ -275,15 +270,11 @@ end subroutine Send_to_GaussianCube
 !
 !
 ! 
-!======================================================================
- subroutine DP_Field_stuff( system , UNI_L , DUAL_bra , DUAL_ket , it )
-!======================================================================
+!======================================
+ subroutine DP_Field_wormhole( system )
+!======================================
 implicit none
-type(structure) , intent(in)    :: system
-complex*16      , intent(in)    :: UNI_L(:,:)
-complex*16      , intent(in)    :: DUAL_bra(:,:)
-complex*16      , intent(in)    :: DUAL_ket(:,:)
-integer         , intent(in)    :: it
+type(structure) , intent(in) :: system
 
 !----------------------------------------------------------
 ! LOCAL representation for wavepacket DP_Field calculation ...
@@ -292,7 +283,7 @@ integer         , intent(in)    :: it
 AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
-CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
 bra(:) = AO_bra(:,1)
 ket(:) = AO_ket(:,1)
@@ -300,36 +291,31 @@ ket(:) = AO_ket(:,1)
 ! put data in DP_FMO_m for future use ...
 CALL wormhole( ExCell_basis , bra , ket , Dual_ket(:,1) )
 
-If( it == 1 ) CALL Molecular_DPs( Extended_Cell )
-
 !----------------------------------------------------------
 
-end subroutine DP_Field_stuff
+end subroutine DP_Field_wormhole
 !
 !
 !
 !
-!===================================================================
- subroutine Send_to_Dipole_Moment( UNI_L , DUAL_bra , DUAL_ket , t )
-!===================================================================
+!=====================================
+ subroutine Send_to_Dipole_Moment( t )
+!=====================================
 implicit none
-complex*16      , intent(in)    :: UNI_L(:,:)
-complex*16      , intent(in)    :: DUAL_bra(:,:)
-complex*16      , intent(in)    :: DUAL_ket(:,:)
-real*8          , intent(in)    :: t
+real*8  , intent(in) :: t
 
 !local variables ...
 integer :: i
 real*8  :: Total_DP(3)
 
 !----------------------------------------------------------
-! LOCAL representation for DP calculation ...
+!       LOCAL representation for DP calculation ...
 
 ! coefs of <k(t)| in AO basis 
 AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
-CALL gemm(UNI_L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
 bra(:) = AO_bra(:,1)
 ket(:) = AO_ket(:,1)

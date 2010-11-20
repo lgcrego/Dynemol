@@ -1,9 +1,9 @@
  module DP_FMO_m
 
     use type_m
-    use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
+    use mkl95_precision
     use parameters_m            , only : OPT_basis ,                    &
                                          static ,                       &
                                          hole_state ,                   &
@@ -180,7 +180,7 @@ real*8          , intent(out) :: Total_DP(3)
 
 ! local variables ...
 integer                       :: i , j , states , xyz , n_basis , Fermi_state
-real*8                        :: Electronic_DP(3) , excited_DP(3) , hole_DP(3)
+real*8                        :: Nuclear_DP(3) , Electronic_DP(3) , excited_DP(3) , hole_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:) , b(:,:)
 logical                       :: special_FMO
@@ -196,11 +196,15 @@ forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Q_Charge(xyz)
 
 ! if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
 
+Nuclear_DP = D_zero
+
+! define special_FMO condition ...
+special_FMO = merge( .true. , .false. , system%FMO(1) )
+special_FMO = special_FMO .AND. ( hole_state /= I_zero )
+
 !-----------------------------------
 ! Build up electronic DP_Moment ...
 !-----------------------------------
-
-special_FMO = merge( .true. , .false. , system%FMO(1) )
 
 ! contribution from valence states ...
 n_basis      =  size(basis)
@@ -223,7 +227,7 @@ do xyz = 1 , 3
 
     end forall    
 
-    If( special_FMO .AND. (hole_state /= I_zero) ) then
+    If( special_FMO ) then
 
            hole_DP(xyz) = sum( a(hole_state,:)    * R_vec(:,hole_state)    ) 
         excited_DP(xyz) = sum( a(excited_state,:) * R_vec(:,excited_state) ) 
@@ -238,7 +242,7 @@ do xyz = 1 , 3
 
     forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = two * sum( a(states,:)*L_vec(states,:) )
 
-    If( special_FMO .AND. (hole_state /= I_zero) ) then
+    If( special_FMO ) then
         
            hole_DP(xyz) =    hole_DP(xyz) + sum( a(hole_state,:)    * L_vec(hole_state,:)    ) 
         excited_DP(xyz) = excited_DP(xyz) + sum( a(excited_state,:) * L_vec(excited_state,:) ) 
@@ -249,19 +253,28 @@ end do
 
 deallocate(a,b)
 
-allocate( MO_mask(Fermi_state) , source = .true. )
 
-If( hole_state /= I_zero ) MO_mask( hole_state ) = .false. 
+If( special_FMO ) then
 
-forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) , MO_mask )
+    allocate( MO_mask(Fermi_state) , source = .true. )
+
+    MO_mask( hole_state ) = .false. 
+
+    forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) , MO_mask )
+
+    deallocate(MO_mask)
+else
+
+    forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+
+end If
 
 !------------------------------------------------------------------------------------------
 ! contribution from the hole and excited states ... 
-If( hole_state /= I_zero ) then
+If( special_FMO ) then
 
     If( static ) then
 
-        If( special_FMO ) &
         Electronic_DP = Electronic_DP + hole_DP + excited_DP
 
     else
@@ -272,9 +285,9 @@ If( hole_state /= I_zero ) then
 
 end If
 
-Total_DP = ( - Electronic_DP ) * Debye_unit
+Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
-deallocate(R_vector , MO_mask)
+deallocate(R_vector)
 deallocate(origin_Dependent)
 deallocate(origin_Independent)
 

@@ -2,9 +2,9 @@ module DP_potential_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : mmx , mmy , mmz
-    use mkl95_precision
     use mkl95_blas
+    use mkl95_precision
+    use parameters_m            , only : mmx , mmy , mmz
     use Structure_Builder       , only : Extended_Cell
     use Semi_Empirical_Parms    , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
