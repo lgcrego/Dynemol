@@ -7,7 +7,8 @@ module GA_driver_m
  use QCModel_Huckel             , only : EigenSystem
  use GA_m                       , only : Genetic_Algorithm 
  use GA_QCModel_m               , only : Mulliken
- use DOS_m
+ use DOS_m 
+ use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Basis_Builder
  use DP_main_m                  , only : Dipole_Matrix
  use Oscillator_m               , only : Optical_Transitions
@@ -60,6 +61,8 @@ CALL Basis_Builder( Extended_Cell, ExCell_basis )
 ! setting up constraints ...
 CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
+If( DIPOLE_ ) CALL Util_multipoles
+
 allocate( REF%erg(size(UNI%erg)) )
 REF%erg = UNI%erg
 REF%DP  = [ 0.00 , 0.0 , 0.0 ]
@@ -84,29 +87,13 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, GA_basis, UNI , SPEC )
 ! print zone ...
 Print 154, DP, sqrt( dot_product(DP,DP) )
 Print*, " " 
-Print*, UNI%erg(12) - UNI%erg(11)
-Print*, UNI%erg(12) - UNI%erg(10)
-Print*, UNI%erg(11) - UNI%erg(10)
-Print*, UNI%erg(11) - UNI%erg(09)
-Print*, " " 
+Print*, UNI%erg(5) - UNI%erg(4)
+Print*, UNI%erg(5) - UNI%erg(3)
+Print*, UNI%erg(4) - UNI%erg(3)
+Print*, UNI%erg(4) - UNI%erg(2)
+Print*, " "
+
 ! Population analysis ...
-print*, "09-Ix-l=1", Mulliken(UNI,GA_basis,MO=09,atom=1,AO_ang=1) 
-print*, "09-Ic-l=0", Mulliken(UNI,GA_basis,MO=09,atom=2,AO_ang=0)
-print*, "09-Ix-l=1", Mulliken(UNI,GA_basis,MO=09,atom=3,AO_ang=1)
-Print*, " " 
-print*, "10-Ix-l=1", Mulliken(UNI,GA_basis,MO=10,atom=1,AO_ang=1) 
-print*, "10-Ic-l=1", Mulliken(UNI,GA_basis,MO=10,atom=2,AO_ang=1)
-print*, "10-Ix-l=1", Mulliken(UNI,Ga_basis,MO=10,atom=3,AO_ang=1)
- Print*, " " 
-print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=1,AO_ang=1)
-print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=2,AO_ang=1)
-print*, "11-Ix-l=1", Mulliken(UNI,GA_basis,MO=11,atom=3,AO_ang=1)
-Print*, " " 
-print*, "12-Ix-l=0", Mulliken(UNI,GA_basis,MO=12,atom=1,AO_ang=0)
-print*, "12-Ix-l=1", Mulliken(UNI,GA_basis,MO=12,atom=1,AO_ang=1)
-print*, "12-Ic-l=1", Mulliken(UNI,GA_basis,MO=12,atom=2,AO_ang=1)
-print*, "12-Ix-l=0", Mulliken(UNI,GA_basis,MO=12,atom=3,AO_ang=0)
-print*, "12-Ix-l=1", Mulliken(UNI,GA_basis,MO=12,atom=3,AO_ang=1)
 
 If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
 If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )
