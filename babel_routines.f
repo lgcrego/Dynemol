@@ -208,6 +208,10 @@ character(len=2)    :: element2
     write( element2,'(A2)' ) adjustl( a(i)%MMSymbol )
 
     select case( element2 )
+        case( 'Ow')
+            a(i)%Symbol = 'O' 
+        case( 'Hw' )
+            a(i)%Symbol = 'H' 
         case( 'Ix','Ic' )
             a(i)%Symbol = 'I' 
         case( 'YC' ) 

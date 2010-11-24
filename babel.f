@@ -382,7 +382,7 @@ implicit none
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ...
-integer      :: i , j , k  , n , m , openstatus , inputstatus , model , number_of_atoms
+integer      :: i , j , k  , n , m , dumb_number , openstatus , inputstatus , model , number_of_atoms
 real*8       :: time_1 , time_2 , delta_t 
 character(1) :: test
 character(4) :: keyword
@@ -427,11 +427,13 @@ do
     end if
 end do
 
+number_of_atoms = 0
 do
     read(unit = 31, fmt = 35, iostat = inputstatus) keyword
     if ( keyword == 'ATOM' ) then
         backspace 31
-        read(unit = 31, fmt = 32, iostat = inputstatus) number_of_atoms ! <==
+        read(unit = 31, fmt = 32, iostat = inputstatus) dumb_number
+        number_of_atoms = number_of_atoms + 1
     else
         ! reading the time ...
         if ( keyword == 'TITL' ) then
@@ -473,10 +475,10 @@ do j = 1 , model
             end if
             if( keyword == 'MODE' ) exit
         end do
-    
+
         allocate( trj(j)%atom(number_of_atoms) )
         CALL Initialize_System( trj(j) )
-    
+
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 33, iostat = inputstatus)   MMSymbol_char               ,     &
                                                               trj(j) % atom(i) % residue ,      &
