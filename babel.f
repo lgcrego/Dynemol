@@ -538,16 +538,17 @@ CALL Identify_Fragments( trj(1) )
 ! Copy information from trj(1) to trj(:) ...
 forall(i = 2:model )
 
-    trj(i) % atom % AtNo      =  trj(1) % atom % AtNo    
-    trj(i) % atom % MMSymbol  =  trj(1) % atom % MMSymbol
-    trj(i) % atom % residue   =  trj(1) % atom % residue
-    trj(i) % atom % nr        =  trj(1) % atom % nr    
-    trj(i) % atom % Symbol    =  trj(1) % atom % Symbol
-    trj(i) % atom % fragment  =  trj(1) % atom % fragment
-    trj(i) % atom % solute    =  trj(1) % atom % solute
-    trj(i) % atom % FMO       =  trj(1) % atom % FMO   
+    trj(i) % atom % AtNo                =  trj(1) % atom % AtNo    
+    trj(i) % atom % MMSymbol            =  trj(1) % atom % MMSymbol
+    trj(i) % atom % residue             =  trj(1) % atom % residue
+    trj(i) % atom % nr                  =  trj(1) % atom % nr    
+    trj(i) % atom % Symbol              =  trj(1) % atom % Symbol
+    trj(i) % atom % fragment            =  trj(1) % atom % fragment
+    trj(i) % atom % solute              =  trj(1) % atom % solute
+    trj(i) % atom % FMO                 =  trj(1) % atom % FMO   
+    trj(i) % atom % solvation_hardcore  =  trj(1) % atom % solvation_hardcore   
 
-    trj(i) % atom % Nvalen    =  atom(trj(1)%atom%AtNo) % Nvalen
+    trj(i) % atom % Nvalen              =  atom(trj(1)%atom%AtNo) % Nvalen
 
 end forall
 

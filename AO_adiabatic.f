@@ -7,10 +7,9 @@ module AO_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , state_of_matter , &
                                              DP_Field_ , DP_Moment ,        &
-                                             GaussianCube ,                 &
+                                             GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state
-    use Data_Output                 , only : Populations 
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -27,12 +26,13 @@ module AO_adiabatic_m
                                              orbital
     use DP_main_m                   , only : Dipole_Matrix ,                &
                                              Dipole_Moment
-    use DP_FMO_m                    , only : wormhole                                             
+    use TD_Dipole_m                 , only : wavepacket_DP                                        
     use DP_potential_m              , only : Molecular_DPs                                              
     use Solvated_M                  , only : Prepare_Solvated_System 
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
+    use Data_Output                 , only : Populations 
 
     public :: AO_adiabatic
 
@@ -58,6 +58,7 @@ integer                :: j , frame
 real*8                 :: t , t_rate 
 real*8  , allocatable  :: QDyn_temp(:,:)
 type(universe)         :: Solvated_System
+
 
 it = 1
 t  = t_i
@@ -98,14 +99,11 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( it , t )
 
-    If( DP_Moment ) CALL Send_to_Dipole_Moment( t )
-
-    If( DP_Field_ ) CALL DP_Field_wormhole( Extended_Cell )
+    If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
-    Deallocate                  ( UNI%R , UNI%L , UNI%erg )
 
     ! build new UNI(t + t_rate) ...
     !============================================================================
@@ -133,8 +131,9 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )         & 
-    CALL Molecular_DPs      ( Extended_Cell )
+    If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
+
+    Deallocate              ( UNI%R , UNI%L , UNI%erg )
 
     CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
@@ -197,11 +196,13 @@ CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 If( DP_field_ ) then
     hole_save  = hole_state
     hole_state = 0
+    static     = .true. 
 
-    ! DP potential in the GS configuration ...
+    ! DP potential in the static GS configuration ...
     CALL Molecular_DPs  ( Extended_Cell )
 
     hole_state = hole_save
+    static     = .false.
 end If
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
@@ -231,7 +232,9 @@ CALL dump_Qdyn( Qdyn , it )
 
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment    ) CALL Send_to_Dipole_Moment ( t_i )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix" )
+
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment" )
 
 !..........................................................................
 
@@ -269,40 +272,13 @@ end subroutine Send_to_GaussianCube
 !
 !
 !
-! 
-!======================================
- subroutine DP_Field_wormhole( system )
-!======================================
+!
+!===================================
+ subroutine DP_stuff( t , instance )
+!===================================
 implicit none
-type(structure) , intent(in) :: system
-
-!----------------------------------------------------------
-! LOCAL representation for wavepacket DP_Field calculation ...
-
-! coefs of <k(t)| in AO basis 
-AO_bra = DUAL_bra
-
-! coefs of |k(t)> in AO basis 
-CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
-
-bra(:) = AO_bra(:,1)
-ket(:) = AO_ket(:,1)
-
-! put data in DP_FMO_m for future use ...
-CALL wormhole( ExCell_basis , bra , ket , Dual_ket(:,1) )
-
-!----------------------------------------------------------
-
-end subroutine DP_Field_wormhole
-!
-!
-!
-!
-!=====================================
- subroutine Send_to_Dipole_Moment( t )
-!=====================================
-implicit none
-real*8  , intent(in) :: t
+real*8          , intent(in)    :: t
+character(*)    , intent(in)    :: instance
 
 !local variables ...
 integer :: i
@@ -320,21 +296,40 @@ CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 bra(:) = AO_bra(:,1)
 ket(:) = AO_ket(:,1)
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
+select case( instance )
 
-If( t == t_i ) then
-    open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )
-else
-    open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
-end If
-write(51,'(F9.4,4F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
-close(51)
+    case( "DP_matrix" )
+
+        CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
+    case( "DP_field" )
+
+        CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
+        ! wavepacket component of the dipole vector ...
+
+        CALL wavepacket_DP( Extended_Cell , ExCell_basis , bra , ket , Dual_ket(:,1) )
+
+        CALL Molecular_DPs( Extended_Cell )
+
+    case( "DP_moment" )
+
+        CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
+
+        If( t == t_i ) then
+            open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )
+        else
+            open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+        end If
+        write(51,'(F9.4,4F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
+        close(51)
+
+end select
 
 !----------------------------------------------------------
 
-end subroutine Send_to_Dipole_Moment
+end subroutine DP_stuff
 !
 !
 !

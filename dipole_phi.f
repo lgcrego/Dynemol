@@ -15,13 +15,6 @@ module DP_potential_m
 
     private
 
-! module types
-    type dipoles
-        integer ,  allocatable  :: nr(:)
-        real*8  ,  allocatable  :: CC(:,:)
-        real*8  ,  allocatable  :: DP(:,:)
-    end type dipoles
-
 ! module variables ...       
     type(dipoles) , save  :: DP_mols_pbc  
 

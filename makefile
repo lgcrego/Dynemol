@@ -41,6 +41,7 @@ SOURCE = constants_m.o  \
 		 multip_routines.o  \
 		 electron_hole_DP.o	\
 		 DP_main.o \
+		 td_dp.o \
 		 DP_FMO.o \
 		 dipole_phi.o \
 		 QCModel_Huckel.o \

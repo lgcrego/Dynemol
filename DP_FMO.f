@@ -8,22 +8,23 @@
                                          static ,                       &
                                          hole_state ,                   &
                                          excited_state => initial_state
-    use Allocation_m            , only : Allocate_Structures
     use Semi_Empirical_Parms    , only : atom ,                         &
                                          Include_OPT_parameters
-    use Overlap_Builder         , only : Overlap_Matrix
-    use Structure_Builder       , only : Basis_Builder
     use Multipole_Routines_m    , only : rotationmultipoles ,           &
                                          multipole_messages ,           &
                                          multipoles1c ,                 &
                                          multipoles2c
+    use Allocation_m            , only : Allocate_Structures
+    use Overlap_Builder         , only : Overlap_Matrix
+    use Structure_Builder       , only : Basis_Builder
+    use TD_Dipole_m             , only : wavepacket
+
 
     public :: DP_FMO_analysis , wormhole
 
     private
 
     type(R3_vector) , allocatable          :: FMO_DP_matrix_AO(:,:)
-    complex*16      , allocatable   , save :: special_FMO_bra(:) , special_FMO_ket(:) , special_FMO_Dual_ket(:)
 
  contains
 !
@@ -199,8 +200,7 @@ forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Q_Charge(xyz)
 Nuclear_DP = D_zero
 
 ! define special_FMO condition ...
-special_FMO = merge( .true. , .false. , system%FMO(1) )
-special_FMO = special_FMO .AND. ( hole_state /= I_zero )
+special_FMO = system%FMO(1) .AND. ( hole_state /= I_zero )
 
 !-----------------------------------
 ! Build up electronic DP_Moment ...
@@ -273,15 +273,19 @@ end If
 ! contribution from the hole and excited states ... 
 If( special_FMO ) then
 
-    If( static ) then
+    If( .not. static ) then
 
-        Electronic_DP = Electronic_DP + hole_DP + excited_DP
+        Electronic_DP = Electronic_DP + hole_DP + wavepacket%DP( system%nr(1),: )
 
     else
 
-        Electronic_DP = Electronic_DP + hole_DP + wavepacket_DP( basis , R_vector )
+        Electronic_DP = Electronic_DP + hole_DP + excited_DP
 
     end If
+
+else
+
+    If( .not. static ) Electronic_DP = Electronic_DP + wavepacket%DP( system%nr(1),: )
 
 end If
 
@@ -413,80 +417,6 @@ do ia = 1 , system%atoms
 end do
 
 end subroutine Build_DIPOLE_Matrix
-!
-!
-!
-!=======================================================
- subroutine wormhole( UNI_basis , bra , ket , Dual_ket )
-!=======================================================
-implicit none
-type(STO_basis) , intent(in) :: UNI_basis(:)
-complex*16      , intent(in) :: bra(:)
-complex*16      , intent(in) :: ket(:)
-complex*16      , intent(in) :: Dual_ket(:)
-
-! local variables ...
-integer :: special_FMO_size
-
-special_FMO_size = count( UNI_basis%FMO )
-
-If( .not. allocated(special_FMO_bra) ) then
-    allocate( special_FMO_bra      ( special_FMO_size ) )
-    allocate( special_FMO_ket      ( special_FMO_size ) )
-    allocate( special_FMO_DUAL_ket ( special_FMO_size ) )
-end If
-
-special_FMO_bra      = pack( bra      , UNI_basis%FMO , special_FMO_bra      )
-special_FMO_ket      = pack( ket      , UNI_basis%FMO , special_FMO_ket      )
-special_FMO_Dual_ket = pack( Dual_ket , UNI_basis%FMO , special_FMO_Dual_ket )
-
-end subroutine wormhole
-!
-!
-!
-!==========================================
- function wavepacket_DP( basis , R_vector )
-!==========================================
-implicit none
-type(STO_basis)                 , intent(in) :: basis(:)
-real*8                          , intent(in) :: R_vector(:,:)
-real*8                                       :: wavepacket_DP(3)
-
-! local variables ...
-integer                         :: i, j, xyz, n_basis
-complex*16      , allocatable   :: a(:), b(:,:)
-type(R3_vector)                 :: origin_Dependent, origin_Independent
-
-! dynamic case ...
-
-n_basis = size(basis)
-
-allocate( a(n_basis)         , source = C_zero )
-allocate( b(n_basis,n_basis) , source = C_zero )
-
-do xyz = 1 , 3
-
-    ! origin dependent DP = sum{bra * vec{R} * S_ij * ket}
-
-    forall( i=1:n_basis ) a(i) = special_FMO_bra(i) * R_vector(basis(i)%atom,xyz)
-
-    origin_Dependent%DP(xyz) = real( sum( a(:)*special_FMO_Dual_ket(:) ) )
-
-    ! origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
-
-    b = FMO_DP_matrix_AO%DP(xyz)
-
-    CALL gemv( b , special_FMO_ket , a , C_one , C_zero )    
-
-    origin_Independent%DP(xyz) = real( sum( special_FMO_bra(:)*a(:) ) )
-
-end do
-
-deallocate( a , b )
-
-wavepacket_DP = origin_Dependent%DP + origin_Independent%DP 
-
-end function wavepacket_DP
 !
 !
 !
