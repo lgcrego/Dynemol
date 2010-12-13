@@ -96,7 +96,7 @@ integer  :: i
         case( 'PYR') 
             a%atom(i)%fragment = 'P' 
 
-        case( 'H2O') 
+        case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 2.0d0
         
