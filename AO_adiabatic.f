@@ -9,14 +9,16 @@ module AO_adiabatic_m
                                              DP_Field_ , DP_Moment ,        &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
-                                             hole_state , initial_state
+                                             hole_state , initial_state ,   &
+                                             restart           
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
     use Allocation_m                , only : Allocate_UnitCell ,            &
                                              DeAllocate_UnitCell ,          &
                                              DeAllocate_Structures ,        &
-                                             Allocate_Brackets
+                                             Allocate_Brackets ,            &
+                                             ReAllocate_Brackets
     use Structure_Builder           , only : Unit_Cell ,                    &
                                              Extended_Cell ,                &
                                              Generate_Structure ,           &
@@ -32,7 +34,10 @@ module AO_adiabatic_m
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations 
+    use Data_Output                 , only : Populations
+    use Backup_m                    , only : Security_Copy ,                &
+                                             Restart_state ,                &
+                                             Restart_Sys
 
     public :: AO_adiabatic
 
@@ -54,23 +59,28 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-integer                :: j , frame 
+integer                :: j , frame , frame_init , frame_restart
 real*8                 :: t , t_rate 
 real*8  , allocatable  :: QDyn_temp(:,:)
 type(universe)         :: Solvated_System
 
-
 it = 1
 t  = t_i
 
-CALL Preprocess( QDyn , it )
+If( restart ) then
+    CALL Restart_stuff( QDyn , t , it , frame_restart )
+else
+    CALL Preprocess( QDyn , it )
+end IF
+
+frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
 t_rate = MD_dt * frame_step
 
-do frame = (1 + frame_step) , size(trj) , frame_step
+do frame = frame_init , size(trj) , frame_step
 
     t = t + t_rate 
 
@@ -80,7 +90,6 @@ do frame = (1 + frame_step) , size(trj) , frame_step
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
-
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
     forall( j=1:n_part )   
@@ -142,6 +151,8 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     CALL gemm( UNI%L , DUAL_ket , MO_ket , 'N' , 'N' , C_one , C_zero )
 
     !============================================================================
+
+    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame )
 
     print*, frame 
 
@@ -245,9 +256,9 @@ end subroutine Preprocess
 !
 !
 ! 
-!========================================
-subroutine Send_to_GaussianCube( it , t )
-!========================================
+!=========================================
+ subroutine Send_to_GaussianCube( it , t )
+!=========================================
 implicit none
 integer     , intent(in)    :: it
 real*8      , intent(in)    :: t
@@ -295,7 +306,6 @@ CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
 bra(:) = AO_bra(:,1)
 ket(:) = AO_ket(:,1)
-
 
 select case( instance )
 
@@ -350,7 +360,6 @@ If( it == 1 ) then
 else
     open( unit = 52 , file = "tmp_data/survival.dat" , status = "unknown", action = "write" , position = "append" )
 end If
-
 write(52,13) ( QDyn%dyn(it,nf) , nf=0,size(QDyn%fragments)+1 ) 
 
 close(52)
@@ -359,6 +368,28 @@ close(52)
 13 FORMAT(10F9.4)
 
 end subroutine dump_Qdyn
+!
+!
+!
+!
+!========================================================
+subroutine Restart_stuff( QDyn , t , it , frame_restart )
+!========================================================
+implicit none
+type(f_time)    , intent(out)   :: QDyn
+real*8          , intent(inout) :: t
+integer         , intent(inout) :: it
+integer         , intent(inout) :: frame_restart
+
+CALL DeAllocate_QDyn     ( QDyn , flag="alloc" )
+
+CALL Restart_State       ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame_restart )
+
+CALL ReAllocate_Brackets ( size(MO_bra(:,1)) , AO_bra , AO_ket , phase )
+
+CALL Restart_Sys         ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , bra , ket , frame_restart , it )
+
+end subroutine Restart_stuff
 !
 !
 !

@@ -2,7 +2,7 @@ MODULE parameters_m
 
 use type_m
 
-integer                 :: nnx , nny , mmx , mmy , mmz , n_t 
+integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
 integer                 :: initial_state , hole_state , frame_step , GaussianCube_step
 real*8                  :: t_i , t_f , sigma
 type (real_interval)    :: occupied , empty , DOS_range 
@@ -10,7 +10,7 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
-logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc
+logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
 logical                 :: verbose , static , DP_field_
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
@@ -40,11 +40,17 @@ logical :: dynamic
   DP_Moment       = T_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
+
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
   file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
+!--------------------------------------------------------------------
+!           SECURITY COPY
+!
+  restart       = F_                          ! TRUE if occured interruption of dynamic
+  step_security = 100                         ! interval for save the informations basics of the dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -58,11 +64,11 @@ logical :: dynamic
 !
   t_i  =  0.d0                               
   t_f  =  1.5d0                               ! <== final time in PICOseconds
-  n_t  =  1501                                ! <== number of time steps
+  n_t  =  1500                                ! <== number of time steps
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  hole_state    =  90                         ! <== 0 for GROUND STATE of special FMO 
+  hole_state    =  0                         ! <== 0 for GROUND STATE of special FMO 
 
   initial_state =  30                         ! <== CASE static  = excited state of special FMO
                                               ! <== CASE dynamic = intial MO of DONOR fragment

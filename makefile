@@ -59,6 +59,7 @@ SOURCE = constants_m.o  \
 		 diagnostic.o \
 		 qdynamics.o \
 		 Chebyshev.o \
+		 backup.o \
 		 AO_adiabatic.o \
 		 MO0_adiabatic.o \
 		 MOt_adiabatic.o \
