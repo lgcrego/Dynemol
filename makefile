@@ -2,7 +2,7 @@
 
 SUFFIX=.f
 
-FC=/usr/opt/intel/Compiler/11.1/064/bin/intel64/ifort 
+FC=/opt/intel/Compiler/11.1/064/bin/intel64/ifort
 FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 

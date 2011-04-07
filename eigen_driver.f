@@ -55,7 +55,7 @@ end select
 allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 ) )
 CALL move_alloc( from=QDyn_temp , to=QDyn%dyn )
 
-CALL Dump_stuff( QDyn=QDyn )
+!CALL Dump_stuff( QDyn=QDyn ) ################################################
 
 ! final procedures ...
 CALL DeAllocate_QDyn( QDyn , flag="dealloc" )

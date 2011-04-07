@@ -29,7 +29,7 @@ module type_m
         real*8                     :: Center_of_Charge(3)
         real*8                     :: T_xyz(3)
         logical     , allocatable  :: solute(:)
-        logical     , allocatable  :: FMO(:)
+        logical     , allocatable  :: FMO(:)                    ! <== ad-hoc defined fragment tag
     end type structure
 
 !-----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ module type_m
         character(1)                  :: TorF(3)
         character(1)                  :: fragment
         logical                       :: solute
-        logical                       :: FMO
+        logical                       :: FMO                    ! <== ad-hoc defined fragment tag
     end type atomic
 
     type molecular
@@ -63,7 +63,7 @@ module type_m
         character(3)                  :: residue 
         character(72)                 :: Solvent_Characteristics
         logical                       :: solute
-        logical                       :: FMO
+        logical                       :: FMO                    ! <== ad-hoc defined fragment tag
     end type molecular
 
     type universe
@@ -132,6 +132,7 @@ module type_m
         complex*16 , allocatable :: R(:,:)
         complex*16 , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
+        integer                  :: Fermi_state
     end type C_eigen
 
 
@@ -139,13 +140,8 @@ module type_m
         real*8     , allocatable :: R(:,:)
         real*8     , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
+        integer                  :: Fermi_state
     end type R_eigen
-
-
-    type spin_orbital
-        integer :: orbital
-        integer :: spin
-    end type spin_orbital
 
 
     type R3_vector
@@ -208,6 +204,13 @@ module type_m
         character(1) , allocatable   :: fragments(:)
         character(3) , allocatable   :: residues(:)
     end type f_time
+
+
+    type newf_time
+        real*8       , allocatable   :: dyn(:,:,:)                          ! <== dyn( time , fragments , el/hl )
+        character(1) , allocatable   :: fragments(:)
+        character(3) , allocatable   :: residues(:)
+    end type newf_time
 
 
     type OPT

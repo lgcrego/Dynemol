@@ -8,6 +8,8 @@ module DOS_m
     use Overlap_Builder
     use Semi_Empirical_Parms    , the_chemical_atom => atom
 
+    public  :: Total_DOS , Partial_DOS
+
  contains
 !
 !

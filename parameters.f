@@ -3,7 +3,7 @@ MODULE parameters_m
 use type_m
 
 integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
-integer                 :: initial_state , hole_state , frame_step , GaussianCube_step
+integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step
 real*8                  :: t_i , t_f , sigma
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
@@ -13,8 +13,6 @@ character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
 logical                 :: verbose , static , DP_field_
 logical , parameter     :: T_ = .true. , F_ = .false. 
-
-integer , parameter     :: n_part = 1
 
 contains
 !
@@ -30,7 +28,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
@@ -41,10 +39,12 @@ logical :: dynamic
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
+  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
+
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <= structure or trajectory
+  file_type    =  "structure"                 ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -54,7 +54,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -63,15 +63,17 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  1.5d0                               ! <== final time in PICOseconds
-  n_t  =  3001                                ! <== number of time steps
+  t_f  =  1.5d-1                                ! <== final time in PICOseconds
+  n_t  =  3001                                  ! <== number of time steps
 
-  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
+  n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  90                        ! <== 0 for GROUND STATE of special FMO 
+  hole_state    =  3                            ! <== GROUND STATE calcs     = 0 (ZERO)
+                                                ! <== case STATIC & DP_calcs = hole state of special FMO
+                                                ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  30                         ! <== CASE static  = excited state of special FMO
-                                              ! <== CASE dynamic = intial MO of DONOR fragment
+  initial_state =  30                           ! <== case STATIC & DP_calcs = excited state of special FMO
+                                                ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
@@ -79,14 +81,14 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 1  ; mmy = 1   ; mmz = 1              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
 !
   sigma     =  0.080d0                                     !
 
-  DOS_range = real_interval( -20.d0 , -1.d0 )            
+  DOS_range = real_interval( -20.d0 , 20.d0 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

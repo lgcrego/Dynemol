@@ -28,8 +28,7 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    where( struct % FMO       ) struct % nr = 1
-    where( .not. struct % FMO ) struct % nr = struct % nr - 3
+
 
 end If
 
@@ -38,16 +37,22 @@ end If
 
 If( present(univ) ) then
 
-
     where( univ % atom % residue == "ION" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP1" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
 
-    where( univ % atom % FMO       ) univ % atom % nr = 1
-    where( .not. univ % atom % FMO ) univ % atom % nr = univ % atom % nr - 3
+!    forall( i=1:size(univ%atom) ) univ % atom(i) % nr = (i-1)/6 + 1    
 
-    univ % atom % solute = univ % atom % FMO    
+!    do i = 1 , size(univ%atom)
+!        univ % atom(i) % xyz(2) = univ % atom(i) % xyz(2) + (univ % atom(i) % nr**2 -1)/4.d1
+!    end do
+
+
+!    univ % atom(61:66) % residue = "DON"
+
+!    where( univ % atom % nr <= 5  ) univ % atom % residue = "LFT"
+!    where( univ % atom % nr >= 17 ) univ % atom % residue = "RGT"
 
 end if
 
@@ -74,27 +79,32 @@ type(universe)  , intent(inout) :: a
 integer  :: i 
 
 ! ---------- Table of fragments -------------
+!
+! fragments are set based on RESIDUE names ...
+! 
 !   Acceptor    =   A       
 !   Donor       =   D 
+!   Hole        =   H 
 !   Molecule    =   M
 !   Solvent     =   S
 !   Solute      =   R
 !   Cluster     =   C 
-!   Passivator  =   P 
 !   ghost       =   #
+!
+! some typical cases are used below ...
 !--------------------------------------------
 
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
-        case( 'CCC') 
-            a%atom(i)%fragment = 'C' 
+        case( 'LFT') 
+            a%atom(i)%fragment = 'L' 
 
-        case( 'ALQ') 
-            a%atom(i)%fragment = 'M' 
+        case( 'DON') 
+            a%atom(i)%fragment = 'D' 
 
-        case( 'PYR') 
-            a%atom(i)%fragment = 'P' 
+        case( 'RGT') 
+            a%atom(i)%fragment = 'R' 
 
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
@@ -105,7 +115,7 @@ integer  :: i
             a%atom(i)%solvation_hardcore = 3.d0
 
         case( 'ION') 
-            a%atom(i)%fragment = 'I' 
+            a%atom(i)%fragment = 'H' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case( 'BP1') 

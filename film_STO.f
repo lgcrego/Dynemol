@@ -4,9 +4,9 @@
     use constants_m
     use parameters_m            , only : initial_state
     use Babel_m                 , only : System_Characteristics
-    use Semi_Empirical_Parms
-    use Structure_Builder
-    use Slater_Type_Orbitals
+    use Semi_Empirical_Parms    , only : atom
+    use Structure_Builder       , only : Unit_Cell
+    use Slater_Type_Orbitals    , only : s_orb , p_orb , d_x2y2 , d_z2 , d_xyz  
 
     public :: Gaussian_Cube_Format 
 
@@ -18,13 +18,14 @@
 !
 !
 !
-!======================================================
- subroutine  Gaussian_Cube_Format( bra , ket , it , t )
-!======================================================
+!==============================================================
+ subroutine  Gaussian_Cube_Format( bra , ket , it , t , el_hl )
+!==============================================================
  implicit none
- complex*16 , intent(in) :: bra(:), ket(:)
- real*8     , intent(in) :: t
- integer    , intent(in) :: it 
+ complex*16                , intent(in) :: bra(:), ket(:)
+ real*8                    , intent(in) :: t
+ integer                   , intent(in) :: it 
+ character(*) , optional   , intent(in) :: el_hl
 
 ! local variables ...
  complex*16 , allocatable :: Psi_bra(:) , Psi_ket(:)
@@ -32,16 +33,28 @@
  real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2 , dx , dy , dz , a , b , c , r , SlaterOrbital
  integer                  :: AtNo , nx_steps , ny_steps , nz_steps , i , j , ix , iy , iz , k 
  character(len=4)         :: string 
- character(len=15)        :: f_name
+ character(len=23)        :: f_name
 
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
  allocate(xyz(unit_cell%atoms,3))
  allocate(Psi_bra(size(bra)) , Psi_ket(size(ket)))
 
- write(string,'(i4.4)') it
- f_name = 'shot'//string//'.cube'
- OPEN(unit=4,file=f_name,status='unknown')  
+ select case ( el_hl )
+
+    case ( "el" )
+
+        write(string,'(i4.4)') it
+        f_name = 'el_dens_shot'//string//'.cube'
+        OPEN(unit=4,file=f_name,status='unknown')  
+
+    case ( "hl" )
+
+        write(string,'(i4.4)') it
+        f_name = 'hl_dens_shot'//string//'.cube'
+        OPEN(unit=4,file=f_name,status='unknown')  
+
+    end select
 
 ! bounding box for isosurfaces ... 
  CALL BoundingBox( unit_cell ) 

@@ -48,6 +48,8 @@ implicit none
 FMO_    = ( spectrum .AND. survival  )
 DIPOLE_ = ( FMO_     .OR.  DP_Moment )
 
+IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
+
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )

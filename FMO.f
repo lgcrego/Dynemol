@@ -15,25 +15,30 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
 
-    integer , public , protected :: spin(0:n_part) , orbital(0:n_part)
+    integer      , allocatable , public , protected :: orbital(:)
+    character(2) , allocatable , public , protected :: eh_tag(:) 
 
     public :: FMO_analysis
 
     private
 
+    ! module variables ...
+    logical , save  :: done = .false.
+
  contains
 !
 !
 !
-!======================================================
- subroutine FMO_analysis( system, basis, CR, FMO , MO )
-!======================================================
+!=================================================================
+ subroutine FMO_analysis( system, basis, CR, FMO , MO , fragment )
+!=================================================================
  implicit none
  type(structure)                                , intent(in)    :: system
  type(STO_basis)                                , intent(in)    :: basis(:)
  complex*16         , optional  , allocatable   , intent(in)    :: CR(:,:)
  type(C_eigen)                                  , intent(out)   :: FMO
  real*8             , optional  , allocatable   , intent(inout) :: MO(:)
+ character(*)       , optional                  , intent(in)    :: fragment
 
 ! local variables ...
  type(structure)               :: FMO_system
@@ -41,14 +46,18 @@
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
  integer                       :: i
- character(len=1)              :: fragment
 
-! electron donor fragment ... 
- fragment = 'D'
+! orbitals to be propagated ...
+If( .NOT. done ) then
 
-! orbitals to be propagated
- orbital(0) = hole_state    ; spin(0) = +1 
- orbital(1) = initial_state ; spin(1) = +1 
+    allocate( orbital(n_part) , eh_tag(n_part) )
+
+    orbital(1) = initial_state ; eh_tag(1) = "el"
+    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
+
+    done = .true.
+
+end If
 
 ! FMO_system = fragment
 
@@ -76,6 +85,7 @@
 ! get wv_FMO orbital in local representation and leave subroutine ... 
  if( present(MO) ) then
 
+    ! MO vector used at Chebyshev propagator ...
     allocate( MO(size(FMO_basis)) )
     MO(:) = wv_FMO(orbital(1),:)
 
@@ -106,11 +116,6 @@
  DeAllocate( FMO_basis )
  CALL DeAllocate_Structures( FMO_system )
 
-! print chosen orbital energies on the screen ...
- do i = 1 , n_part
-    If( orbital(i) /= I_zero) Print 59, orbital(i) , FMO%erg(orbital(i))
- end do   
-
  print*, ''
  print*, '>> FMO analysis done <<'
 
@@ -137,20 +142,20 @@
 
  ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
  FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
- 
+
  Allocate( FMO%L (ALL_size,FMO_size) )
  Allocate( FMO%R (ALL_size,FMO_size) )
  Allocate( CR_FMO(FMO_size,ALL_size) )
 
- p1 =  minloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
- p2 =  maxloc((/(i,i=1,ALL_size)/),1,basis_fragment == fragment)
+ p1 =  minloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
+ p2 =  maxloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
 
 ! . the fragment basis MUST correspond to a contiguous window ... 
  CR_FMO => CR(p1:p2,:)
 
-!-----------------------------------------------------------------------------
-!    writes the isolated FMO wavefunction |k> in the MO basis 
-!    the isolated orbitals are stored in the ROWS of wv_FMO
+!--------------------------------------------------------------------------------------
+!             writes the isolated FMO eigenfunctions in the MO basis 
+! the isolated orbitals are stored in the "ROWS of wv_FMO" and in the "COLUMNS of FMO"
 
  FMO%L = ( 0.d0 , 0.d0 )
  FMO%R = ( 0.d0 , 0.d0 )
@@ -172,7 +177,7 @@
      print*, '---> problem in projector <---'
  end if
 
-!-----------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 
  nullify( CR_FMO )
 
@@ -215,6 +220,7 @@
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
+ FMO % Fermi_State = sum( system%Nvalen ) / two
 !---------------------------------------------------------------------
 
  ALLOCATE( wv_FMO(size(basis),size(basis)) )

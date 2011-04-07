@@ -46,7 +46,7 @@
  type(R_eigen)                   :: FMO
  integer                         :: i
 
-! FMO_system = molecule with residue # nr ...
+! FMO_system = atoms/molecules with residue # nr ...
 
  FMO_system%atoms = count( system%nr == nr )
 

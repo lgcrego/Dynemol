@@ -36,7 +36,9 @@
 
 58    FORMAT(1x,'Electrons in the Slater determinant = ',F9.3)
 
-59    FORMAT(/,1x,'Energy of orbital state(',I3,') = ',F10.5)
+591   FORMAT(/,1x,'Energy of El-packet state(',I3,') = ',F10.5)
+
+592   FORMAT(/,1x,'Energy of Hl-packet state(',I3,') = ',F10.5)
 
 60    FORMAT(1x,'norm of Psi(t) = ',F9.7)     
 

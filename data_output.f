@@ -4,6 +4,7 @@
     use parameters_m        , only  : n_part ,      &
                                       spectrum ,    &
                                       survival
+    use FMO_m               , only  : eh_tag                                      
 
     public :: Populations   , Dump_stuff
 
@@ -66,18 +67,22 @@ end function Populations_vct
  type(STO_basis) , intent(in)  :: basis(:)
  complex*16      , intent(in)  :: bra(:,:) , ket(:,:)
  real*8          , intent(in)  :: t
- real*8                        :: Populations_mtx( 0:size(QDyn_fragments)+1 )
+ real*8                        :: Populations_mtx( 0:size(QDyn_fragments)+1 , n_part)
 
 ! local variables ...
 integer             :: n , nf , N_of_fragments
 character(len=1)    :: fragment 
 
-!----------------------------------------------------------
+!-----------------------------------------------------------------------
 !              get time-dependent Populations
-!----------------------------------------------------------
+!
+! storage:  Populations_mtx( 0:size(QDyn_fragments)+1 , n_part)
+!
+! Populations_mtx( [time] + [# of fragments] + [total dens] , el_hl )
+!-----------------------------------------------------------------------
 
 ! time of population ...
-Populations_mtx(0) = t
+Populations_mtx(0,:) = t
 
 ! partial populations ...
 N_of_fragments = size( QDyn_fragments )
@@ -88,12 +93,12 @@ do n = 1 , n_part
 
         fragment = QDyn_fragments (nf)
 
-        Populations_mtx(nf) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment )
+        Populations_mtx( nf , n ) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment )
 
     end do
 
-    ! total population ...
-    Populations_mtx(N_of_fragments+1) = pop_Slater( basis , bra(:,n) , ket(:,n) )
+    ! total populations ...
+    Populations_mtx( N_of_fragments+1 , n ) = pop_Slater( basis , bra(:,n) , ket(:,n) )
 
 end do
 
@@ -103,17 +108,17 @@ end function Populations_mtx
 !
 !
 !
-!======================================================================
+!==========================================================
  subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn ) 
-!======================================================================
+!==========================================================
 implicit none
 type(f_grid)  , intent(in)     , optional  :: TDOS
 type(f_grid)  , intent(in)     , optional  :: PDOS(:)
 type(f_grid)  , intent(in)     , optional  :: SPEC
-type(f_time)  , intent(in)     , optional  :: QDyn
+type(newf_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
-integer         :: i , nr , nf , N_of_residues , N_of_fragments
+integer         :: i , nr , nf , np , N_of_residues , N_of_fragments
 real*8          :: t 
 character(12)   :: string
 
@@ -148,15 +153,28 @@ If( spectrum ) then
     CLOSE(3)
 end if
 
-! save time-dependent populations ...
+! save time-dependent electron or hole populations ...
 If( survival ) then
+
     N_of_fragments = size( QDyn%fragments )
-    OPEN( unit=3 , file="survival.dat" , status="unknown" )
-    write(3,12) "#" , QDyn%fragments , "total"
-    do i = 1 , size(QDyn%dyn(:,1))
-        write(3,13) ( QDyn%dyn(i,nf) , nf=0,N_of_fragments+1 )
-    end do
-    CLOSE(3)
+
+        do np = 1 , n_part
+
+            select case ( eh_tag(np) )
+                case ( "el" )
+                    OPEN( unit=3 , file="el_survival.dat" , status="unknown" )
+                case ( "hl" )
+                    OPEN( unit=3 , file="hl_survival.dat" , status="unknown" )
+            end select
+
+            write(3,12) "#" , QDyn%fragments , "total"
+            do i = 1 , size( QDyn%dyn(:,1,1) )
+                write(3,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
+            end do
+
+            CLOSE(3)
+
+        end do
 end if
 
 10   FORMAT(4F12.5)
