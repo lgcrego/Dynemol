@@ -29,7 +29,7 @@ module Sampling_m
     use DP_main_m           , only : Dipole_Matrix 
     use DP_potential_m      , only : Molecular_DPs
     use Schroedinger_m      , only : Huckel_dynamics ,              &
-                                     newDeAllocate_QDyn
+                                     DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
 
 
@@ -53,7 +53,7 @@ logical                         :: FMO_ , DIPOLE_
 type(C_eigen)                   :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
-type(newf_time)                    :: QDyn
+type(f_time)                    :: QDyn
 type(universe)                  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -66,7 +66,7 @@ internal_sigma = sigma / ( float(size(trj))/float(frame_step) )
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )
-CALL newDeAllocate_QDyn( QDyn , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
@@ -133,7 +133,7 @@ CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn )
 CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
 CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
 CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
-CALL newDeAllocate_QDyn( QDyn , flag="dealloc" )
+CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
 end subroutine Avrg_Confgs
 

@@ -40,21 +40,9 @@
  allocate(xyz(unit_cell%atoms,3))
  allocate(Psi_bra(size(bra)) , Psi_ket(size(ket)))
 
- select case ( el_hl )
-
-    case ( "el" )
-
-        write(string,'(i4.4)') it
-        f_name = 'el_dens_shot'//string//'.cube'
-        OPEN(unit=4,file=f_name,status='unknown')  
-
-    case ( "hl" )
-
-        write(string,'(i4.4)') it
-        f_name = 'hl_dens_shot'//string//'.cube'
-        OPEN(unit=4,file=f_name,status='unknown')  
-
-    end select
+ write(string,'(i4.4)') it
+ f_name = el_hl//'_dens_shot'//string//'.cube'
+ OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
  CALL BoundingBox( unit_cell ) 

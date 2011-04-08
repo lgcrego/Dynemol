@@ -1,10 +1,12 @@
-! Subroutine for computing time evolution through time slices
+! Subroutine for computing time evolution through Chebyshev expansion ...
+! Propagation of ONE WAVE PACKET ONLY : (n_part = 1) ...
 module Chebyshev_driver_m
 
     use type_m
     use constants_m
     use parameters_m                , only : t_f , n_t , state_of_matter ,  &
-                                             frame_step , DP_Field_
+                                             frame_step , DP_Field_ ,       &
+                                             n_part
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj
     use Allocation_m                , only : Allocate_UnitCell ,            &
@@ -38,11 +40,14 @@ implicit none
 ! local variables ...
 integer                     :: it , frame 
 real*8                      :: t 
-real*8       , allocatable  :: QDyn_temp(:,:)
+real*8       , allocatable  :: QDyn_temp(:,:,:)
 complex*16   , allocatable  :: Psi(:)
 logical                     :: done = .false.
 type(f_time)                :: QDyn
 type(universe)              :: Solvated_System
+
+! check point Charlie ...
+If( n_part > 1 ) pause ">>> quit: Chebyshev driver propagates only one wavepacket, check your n_part <<<"
 
 CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
@@ -102,10 +107,10 @@ do frame = 1 , size(trj) , frame_step
 end do
 
 ! prepare data for survival probability ...
-allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 ) )
+allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 , n_part ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 , : ) )
 CALL move_alloc( from=QDyn_temp , to=QDyn%dyn )
 
-!CALL Dump_stuff( QDyn=QDyn )        #######################################
+CALL Dump_stuff( QDyn=QDyn )   
 
 ! final procedures ...
 CALL DeAllocate_QDyn( QDyn , flag="dealloc" )

@@ -65,7 +65,7 @@ DUAL_bra(:) = conjg( Psi )
 DUAL_ket(:) = matmul( S_matrix , Psi )
 
 ! save populations(time=t_i) ...
-QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
 ! clean and exit ...
 deallocate( DUAL_ket , S_matrix , DUAL_bra )
@@ -157,7 +157,7 @@ DUAL_bra(:) = conjg(Psi_t)
 DUAL_ket(:) = matmul(S_matrix,Psi_t)
 
 ! save populations(time) ...
-QDyn%dyn(it,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 ! clean and exit ...
 deallocate( C_k , C_Psi , Psi_temp , H_prime , S_matrix , DUAL_bra , DUAL_ket )

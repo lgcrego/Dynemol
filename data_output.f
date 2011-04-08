@@ -115,7 +115,7 @@ implicit none
 type(f_grid)  , intent(in)     , optional  :: TDOS
 type(f_grid)  , intent(in)     , optional  :: PDOS(:)
 type(f_grid)  , intent(in)     , optional  :: SPEC
-type(newf_time)  , intent(in)     , optional  :: QDyn
+type(f_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
 integer         :: i , nr , nf , np , N_of_residues , N_of_fragments
@@ -160,12 +160,7 @@ If( survival ) then
 
         do np = 1 , n_part
 
-            select case ( eh_tag(np) )
-                case ( "el" )
-                    OPEN( unit=3 , file="el_survival.dat" , status="unknown" )
-                case ( "hl" )
-                    OPEN( unit=3 , file="hl_survival.dat" , status="unknown" )
-            end select
+            OPEN( unit=3 , file=eh_tag(np)//"_survival.dat" , status="unknown" )
 
             write(3,12) "#" , QDyn%fragments , "total"
             do i = 1 , size( QDyn%dyn(:,1,1) )

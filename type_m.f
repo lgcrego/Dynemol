@@ -200,17 +200,10 @@ module type_m
 
 
     type f_time
-        real*8       , allocatable   :: dyn(:,:)
-        character(1) , allocatable   :: fragments(:)
-        character(3) , allocatable   :: residues(:)
-    end type f_time
-
-
-    type newf_time
         real*8       , allocatable   :: dyn(:,:,:)                          ! <== dyn( time , fragments , el/hl )
         character(1) , allocatable   :: fragments(:)
         character(3) , allocatable   :: residues(:)
-    end type newf_time
+    end type f_time
 
 
     type OPT

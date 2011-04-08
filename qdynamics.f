@@ -21,7 +21,7 @@ module qdynamics_m
  use DP_potential_m         , only : Molecular_DPs 
  use Oscillator_m           , only : Optical_Transitions
  use Schroedinger_m         , only : Huckel_dynamics ,      &
-                                     newDeAllocate_QDyn
+                                     DeAllocate_QDyn
  use Data_Output            , only : Dump_stuff
 
  public :: qdynamics
@@ -45,7 +45,7 @@ implicit none
  type(C_eigen)                  :: el_FMO , hl_FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
- type(newf_time)                   :: QDyn
+ type(f_time)                   :: QDyn
 
  
 ! preprocessing stuff ...................................
@@ -57,7 +57,7 @@ DIPOLE_ = ( spectrum .OR. DP_Moment )
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )
-CALL newDeAllocate_QDyn( QDyn , flag="alloc" )
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
@@ -108,7 +108,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
  CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
  CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
- CALL newDeAllocate_QDyn( QDyn , flag="dealloc" )
+ CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
  include 'formats.h'
 

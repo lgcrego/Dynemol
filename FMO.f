@@ -80,7 +80,7 @@ end If
 
  CALL Basis_Builder( FMO_system , FMO_basis )
  
- CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO, FMO )
+ CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
 
 ! get wv_FMO orbital in local representation and leave subroutine ... 
  if( present(MO) ) then
@@ -187,14 +187,15 @@ end If
 ! 
 !
 !
-!---------------------------------------------------
- subroutine  eigen_FMO( system, basis, wv_FMO, FMO )
-!---------------------------------------------------
+!--------------------------------------------------------------
+ subroutine  eigen_FMO( system, basis, wv_FMO, FMO , fragment )
+!--------------------------------------------------------------
  implicit none
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  real*8          , ALLOCATABLE , intent(out) :: wv_FMO(:,:)
  type(C_eigen)                 , intent(out) :: FMO       
+ character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
  integer               :: N_of_FMO_electrons, i, j , info
@@ -230,12 +231,17 @@ end If
  DeAllocate( s_FMO , h_FMO )
 
 ! save energies of the FMO system 
- OPEN(unit=9,file='FMO-ergs.dat',status='unknown')
-    N_of_FMO_electrons = sum( system%Nvalen )
-    write(9,*) float(N_of_FMO_electrons) / 2.0
-    do i = 1 , size(basis)
-        write(9,*) i , FMO%erg(i)
-    end do
+ If( present(fragment) .AND. fragment=="H" ) then
+    OPEN(unit=9,file='hl_FMO-ergs.dat',status='unknown')
+ else
+    OPEN(unit=9,file='el_FMO-ergs.dat',status='unknown')
+ end IF
+
+ N_of_FMO_electrons = sum( system%Nvalen )
+ write(9,*) float(N_of_FMO_electrons) / 2.0
+ do i = 1 , size(basis)
+    write(9,*) i , FMO%erg(i)
+ end do
  CLOSE(9)   
 
  print*, '>> eigen_FMO done <<'

@@ -20,7 +20,7 @@ module MO0_adiabatic_m
                                              Basis_Builder ,                &
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
-                                             orbital
+                                             orbital , eh_tag
     use DP_potential_m              , only : Molecular_DPs                                              
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
@@ -32,7 +32,7 @@ module MO0_adiabatic_m
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket , phase
-    type(C_eigen)                             :: FMO , UNI_0
+    type(C_eigen)                             :: el_FMO , hl_FMO , UNI_0
 
 contains
 !
@@ -47,7 +47,7 @@ integer         ,   intent(out) :: it
 ! local variables ...
 integer                :: j , frame 
 real*8                 :: t , t_rate 
-real*8  , allocatable  :: erg(:) , QDyn_temp(:,:) 
+real*8  , allocatable  :: erg(:) 
 
 it = 1
 t  = t_i
@@ -77,17 +77,11 @@ do frame = (1 + frame_step) , size(trj) , frame_step
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    ! coefs of <k(t)| in DUAL basis ...
     CALL gemm(UNI_0%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-
-    ! coefs of |k(t)> in DUAL basis ...
     CALL gemm(UNI_0%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
     ! save populations(t + t_rate) ...
-    bra(:) = DUAL_bra(:,1)
-    ket(:) = DUAL_ket(:,1)
-
-    QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t )
+    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
     If( DP_Moment ) Print*, ">>> DP_Moment not implemented for this routine <<<"
 
@@ -132,7 +126,8 @@ type(f_time)                    ,   intent(out) :: QDyn
 integer                         ,   intent(in)  :: it
 
 ! local variables ...
-integer :: i
+integer :: i , n
+logical :: el_hl_
 
 ! preprocessing stuff .....................................................
 
@@ -140,6 +135,8 @@ CALL DeAllocate_QDyn        ( QDyn , flag="alloc" )
 
 CALL Coords_from_Universe   ( Unit_Cell , trj(1) , 1 )
 
+el_hl_ = any( Unit_Cell%fragment == "H")
+ 
 CALL Generate_Structure     ( 1 )
 
 CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
@@ -149,7 +146,9 @@ CALL Molecular_DPs          ( Extended_Cell )
 
 CALL EigenSystem            ( Extended_Cell , ExCell_basis , UNI_0 , flag2=0 )
 
-CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI_0%R , FMO )
+CALL FMO_analysis           ( Extended_Cell , ExCell_basis , UNI_0%R , el_FMO , fragment="D" )
+
+If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI_0%R , hl_FMO , fragment="H" )
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
@@ -159,22 +158,36 @@ CALL Allocate_Brackets( size(UNI_0%L(1,:))   ,      &
                          DUAL_bra , DUAL_ket ,      &
                          bra      , ket      , phase)
 
-MO_bra = FMO%L( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
-MO_ket = FMO%R( : , orbital(1:n_part) )    ! <== expansion coefficients at t = 0
+! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
+! assuming non-interacting electrons ...
+do n = 1 , n_part                         
+    select case( eh_tag(n) )
+
+        case( "el" )
+
+            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
+            MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
+
+            Print 591, orbital(n) , el_FMO%erg(orbital(n))
+        
+        case( "hl" )
+
+            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+
+            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
+            MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
+
+            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+
+        end select
+end do
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-
-! coefs of <k(t)| in DUAL basis ...
 CALL gemm(UNI_0%L,MO_bra,DUAL_bra,'T','N',C_one,C_zero)
-
-! coefs of |k(t)> in DUAL basis ...
 CALL gemm(UNI_0%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
 
 ! save populations ...
-bra(:) = DUAL_bra(:,1)
-ket(:) = DUAL_ket(:,1)
-
-QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , bra , ket , t_i )
+QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 
 If( DP_Moment ) Print*, ">>> DP_Moment not implemented for this routine <<<"
 

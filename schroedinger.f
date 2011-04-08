@@ -13,7 +13,7 @@
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 
- public :: Huckel_dynamics , DeAllocate_QDyn, newDeAllocate_QDyn
+ public :: Huckel_dynamics , DeAllocate_QDyn
 
  private
 
@@ -29,7 +29,7 @@
  type(C_eigen)              , intent(in)       :: UNI 
  type(C_eigen)              , intent(in)       :: el_FMO 
  type(C_eigen)   , optional , intent(in)       :: hl_FMO 
- type(newf_time)            , intent(inout)    :: QDyn
+ type(f_time)            , intent(inout)    :: QDyn
 
 ! local variables ...
 integer                             :: it , i , n 
@@ -67,7 +67,7 @@ do n = 1 , n_part
         
         case( "hl" )
 
-                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -88,16 +88,14 @@ t_rate = (t_f - t_i) / float(n_t)
 
 DO it = 1 , n_t    
 
-    do n = 1 , n_part   
+    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-        phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
+    If( t == t_i ) phase = C_one
 
-        If( t == t_i ) phase = C_one
-
+    forall( n=1:n_part)   
         MO_bra(:,n) = conjg(phase(:)) * MO_bra(:,n) 
         MO_ket(:,n) =       phase(:)  * MO_ket(:,n) 
-
-    end do 
+    end forall
 
 !--------------------------------------------------------------------------
 ! LOCAL representation for film STO production ...
@@ -145,10 +143,10 @@ end subroutine Huckel_dynamics
 !
 !
 !=========================================
- subroutine newDeAllocate_QDyn( QDyn , flag )
+ subroutine DeAllocate_QDyn( QDyn , flag )
 !=========================================
 implicit none
-type(newf_time)  , intent(inout) :: QDyn
+type(f_time)  , intent(inout) :: QDyn
 character(*)  , intent(in)    :: flag
 
 ! local variable ...
@@ -190,57 +188,8 @@ select case( flag )
 
 end select
 
-end subroutine newDeAllocate_QDyn
-!
-!
-!
-!=========================================
- subroutine DeAllocate_QDyn( QDyn , flag )
-!=========================================
-implicit none
-type(f_time)  , intent(inout) :: QDyn
-character(*)  , intent(in)    :: flag
-
-! local variable ...
-integer      :: i , N_of_fragments
-character(1) :: first_in_line
-
-select case( flag )
-
-    case( "alloc" )
-
-        if( allocated(trj) ) then
-
-            CALL Coords_from_Universe( Unit_Cell, trj(2) )          ! <== use number 2 to avoid verbose
-            CALL Generate_Structure( 2 )
-            N_of_fragments = size( Extended_Cell%list_of_fragments ) 
-
-        else
-
-            CALL Generate_Structure( 2 )                            ! <== use number 2 to avoid verbose
-            N_of_fragments = size( Extended_Cell%list_of_fragments )
-
-        end if
-
-        ! for the sake of having the donor survival probability in the first column at output ...
-        first_in_line = Extended_Cell%list_of_fragments(1)
-        where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
-        Extended_Cell%list_of_fragments(1) = "D"
-
-        ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
-        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
-        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 )                , source = 0.d0                              )
-
-        ! cleaning the mess ...
-        CALL DeAllocate_Structures( Extended_Cell )
-
-    case( "dealloc" )
-
-        deallocate( QDyn%dyn , QDyn%fragments )
-
-end select
-
 end subroutine DeAllocate_QDyn
+!
 !
 !
 end module Schroedinger_m

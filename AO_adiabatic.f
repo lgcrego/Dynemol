@@ -25,7 +25,7 @@ module AO_adiabatic_m
                                              Basis_Builder ,                &
                                              ExCell_basis
     use FMO_m                       , only : FMO_analysis ,                 &
-                                             orbital
+                                             orbital , eh_tag
     use DP_main_m                   , only : Dipole_Matrix ,                &
                                              Dipole_Moment
     use TD_Dipole_m                 , only : wavepacket_DP                                        
@@ -46,7 +46,7 @@ module AO_adiabatic_m
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket , phase
-    type(C_eigen)                             :: UNI , FMO 
+    type(C_eigen)                             :: UNI , el_FMO , hl_FMO
 
 contains
 !
@@ -61,7 +61,6 @@ integer         , intent(out)   :: it
 ! local variables ...
 integer                :: j , frame , frame_init , frame_restart
 real*8                 :: t , t_rate 
-real*8  , allocatable  :: QDyn_temp(:,:)
 type(universe)         :: Solvated_System
 
 it = 1
@@ -102,7 +101,7 @@ do frame = frame_init , size(trj) , frame_step
     CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' , C_one , C_zero )
 
     ! save populations(t + t_rate) ...
-    QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
+    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -174,7 +173,8 @@ type(f_time)    , intent(out)    :: QDyn
 integer         , intent(in)     :: it
 
 ! local variables
-integer         :: hole_save 
+integer         :: hole_save , n
+logical         :: el_hl_
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -200,6 +200,8 @@ select case ( state_of_matter )
 
 end select
 
+el_hl_ = any( Unit_Cell%fragment == "H")
+ 
 CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
@@ -218,7 +220,9 @@ end If
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , FMO )
+CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , fragment="D" )
+
+If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , fragment="H" )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
                           MO_bra   , MO_ket   ,       &
@@ -229,15 +233,36 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
 ! initial state of the isolated molecule ...
 Print 56 , initial_state     
 
-MO_bra = FMO%L( : , orbital(1:n_part) )    
-MO_ket = FMO%R( : , orbital(1:n_part) )    
+! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
+! assuming non-interacting electrons ...
+do n = 1 , n_part                         
+    select case( eh_tag(n) )
+
+        case( "el" )
+
+            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
+            MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
+
+            Print 591, orbital(n) , el_FMO%erg(orbital(n))
+        
+        case( "hl" )
+
+            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+
+            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
+            MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
+
+            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+
+        end select
+end do
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL gemm(UNI%L , MO_bra , DUAL_bra , 'T' , 'N' , C_one , C_zero )
 CALL gemm(UNI%R , MO_ket , DUAL_ket , 'N' , 'N' , C_one , C_zero )
 
 ! save populations ...
-QDyn%dyn(it,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) ,DUAL_ket(:,1) , t_i )
+QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 
 CALL dump_Qdyn( Qdyn , it )
 
@@ -349,20 +374,25 @@ end subroutine DP_stuff
 !=================================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-integer         , intent(in) :: it
+integer         , intent(in) :: it 
 
-!local variables ...
-integer :: nf
+! local variables ...
+integer :: nf , n
 
-If( it == 1 ) then
-    open( unit = 52 , file = "tmp_data/survival.dat" , status = "replace" , action = "write" , position = "append" )
-    write(52,12) "#" , QDyn%fragments , "total"
-else
-    open( unit = 52 , file = "tmp_data/survival.dat" , status = "unknown", action = "write" , position = "append" )
-end If
-write(52,13) ( QDyn%dyn(it,nf) , nf=0,size(QDyn%fragments)+1 ) 
+do n = 1 , n_part
 
-close(52)
+    If( it == 1 ) then
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,12) "#" , QDyn%fragments , "total"
+    else
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+    end If
+
+    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
+
+    close(52)
+
+end do
 
 12 FORMAT(10A9)
 13 FORMAT(10F9.4)
