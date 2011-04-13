@@ -248,7 +248,7 @@ deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 43  format(a72)
 100 format(t10, f6.3, t19, f6.3, t28, f6.3)
 105 format(a6)
-115 FORMAT(t12,a5,t18,a3,t23,i4,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
+115 FORMAT(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
 
 end subroutine Read_from_PDB
 !
@@ -575,7 +575,7 @@ end do
 
 ! Formats ...
 32 format(5x, i6)
-33 format(12x, a5, t18, a3, t24, i3, t33, f6.3, t41, f6.3, t49, f6.3)
+33 format(12x, a5, t18, a3, t24, i7, t33, f6.3, t41, f6.3, t49, f6.3)
 35 format(a4)
 36 format(7x, i7)
 37 format(32x, f6.3, t41, f6.3, t49, f6.3)

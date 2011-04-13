@@ -20,11 +20,11 @@
     use TD_Dipole_m             , only : wavepacket
 
 
-    public :: DP_FMO_analysis , wormhole
+    public :: DP_FMO_analysis 
 
     private
 
-    type(R3_vector) , allocatable          :: FMO_DP_matrix_AO(:,:)
+    type(R3_vector) , allocatable :: FMO_DP_matrix_AO(:,:)
 
  contains
 !

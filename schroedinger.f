@@ -29,7 +29,7 @@
  type(C_eigen)              , intent(in)       :: UNI 
  type(C_eigen)              , intent(in)       :: el_FMO 
  type(C_eigen)   , optional , intent(in)       :: hl_FMO 
- type(f_time)            , intent(inout)    :: QDyn
+ type(f_time)               , intent(inout)    :: QDyn
 
 ! local variables ...
 integer                             :: it , i , n 
@@ -123,9 +123,7 @@ DO it = 1 , n_t
 
    Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
-   bra(:) = AO_bra(:,1)
-   ket(:) = AO_ket(:,1)
-!   if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
+   if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
    t = t + t_rate
 

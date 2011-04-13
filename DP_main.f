@@ -15,7 +15,9 @@ module DP_main_m
                                           multipoles1c ,                        &
                                           multipoles2c ,                        &
                                           util_multipoles
-    use DP_excited_m            , only  : electron_hole_DPs
+    use DP_excited_m            , only  : el_hl_StaticDPs
+    use FMO_m                   , only  : eh_tag
+
 
     type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
 
@@ -76,18 +78,18 @@ end subroutine Dipole_Matrix
 !
 !
 !
-!============================================================================================
- subroutine Dipole_Moment( system , basis , L_vec , R_vec , bra , ket , Dual_ket , DP_total )
-!============================================================================================
+!==================================================================================================
+ subroutine Dipole_Moment( system , basis , L_vec , R_vec , AO_bra , AO_ket , Dual_ket , DP_total )
+!==================================================================================================
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-complex*16                  , intent(in)    :: L_vec(:,:) 
-complex*16                  , intent(in)    :: R_vec(:,:)
-complex*16      , optional  , intent(in)    :: bra(:) 
-complex*16      , optional  , intent(in)    :: ket(:) 
-complex*16      , optional  , intent(in)    :: Dual_ket(:)
-real*8          , optional  , intent(out)   :: DP_total(3) 
+complex*16                  , intent(in)    :: L_vec    (:,:) 
+complex*16                  , intent(in)    :: R_vec    (:,:)
+complex*16      , optional  , intent(in)    :: AO_bra   (:,:) 
+complex*16      , optional  , intent(in)    :: AO_ket   (:,:) 
+complex*16      , optional  , intent(in)    :: Dual_ket (:,:)
+real*8          , optional  , intent(out)   :: DP_total (3) 
 
 ! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
@@ -145,29 +147,36 @@ deallocate(a,b)
 !--------------------------------------------------------------------------------------
 ! Build DP_Moment ...
 !--------------------------------------------------------------------------------------
+
 ! contribution from the valence states ...
 forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
-! contribution from the hole and electronic-wavepacket ... 
+! contribution from the hole and electronic-wavepackets ... 
+! excited-state case: hole_state /= 0 ...
 If( hole_state /= I_zero ) then
-
-    hole_DP = electron_hole_DPs( system , instance="hole" )
 
     If( static ) then
 
-        excited_DP    = electron_hole_DPs( system , instance="electron" )
+        hole_DP    = el_hl_StaticDPs( system , instance="hole" )
 
-        Electronic_DP = Electronic_DP - hole_DP + excited_DP
+        excited_DP = el_hl_StaticDPs( system , instance="electron" )
 
     else
 
-        Electronic_DP = Electronic_DP - hole_DP + wavepacket_DP( basis , AO_mask , R_vector , bra , ket , Dual_ket )
+        If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP <<<"
+
+        hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
+
+        excited_DP =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,1) , AO_ket(:,1) , Dual_ket(:,1) )
 
     end If
+
+    Electronic_DP = Electronic_DP - hole_DP + excited_DP
 
 end If
 
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
+
 !--------------------------------------------------------------------------------------
 
 Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
@@ -184,9 +193,9 @@ end subroutine Dipole_Moment
 !
 !
 !
-!========================================================================
- function wavepacket_DP( basis , mask , R_vector , bra , ket , Dual_ket )
-!========================================================================
+!=============================================================================
+ pure function wavepacket_DP( basis , mask , R_vector , bra , ket , Dual_ket )
+!=============================================================================
 implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 logical         , intent(in)    :: mask(:)

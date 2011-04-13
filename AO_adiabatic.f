@@ -350,7 +350,7 @@ select case( instance )
 
     case( "DP_moment" )
 
-        CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , bra , ket , Dual_ket(:,1) , Total_DP )
+        CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
         If( t == t_i ) then
             open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )

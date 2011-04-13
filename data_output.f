@@ -32,9 +32,13 @@
 integer             :: nf , N_of_fragments
 character(len=1)    :: fragment 
 
-!----------------------------------------------------------
+!-------------------------------------------------------------
 !              get time-dependent Populations
-!----------------------------------------------------------
+!
+! storage:  Populations_vct( 0:size(QDyn_fragments)+1 )
+!
+! Populations_vct( [time] + [# of fragments] + [total dens] )
+!-------------------------------------------------------------
 
 ! time of population ...
 Populations_vct(0) = t

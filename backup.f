@@ -14,8 +14,8 @@ module Backup_m
     use QCModel_Huckel      , only : EigenSystem
     use DP_potential_m      , only : Molecular_DPs
     use TD_Dipole_m         , only : wavepacket_DP
-    use DP_main_m           , only : Dipole_Matrix              , &
-                                     Dipole_Moment
+    use DP_main_m           , only : Dipole_Matrix   
+                                     
 
     public  :: Security_Copy , Restart_State , Restart_Sys
 

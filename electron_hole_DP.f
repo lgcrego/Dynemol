@@ -17,7 +17,7 @@ module DP_excited_m
                                          multipoles1c ,                 &
                                          multipoles2c
 
-    public :: electron_hole_DPs 
+    public :: el_hl_StaticDPs 
 
     private
 
@@ -28,7 +28,7 @@ module DP_excited_m
 !
 !
 !===============================================
- function electron_hole_DPs( system , instance )
+ function el_hl_StaticDPs( system , instance )
 !===============================================
  implicit none
  type(structure) , intent(in)  :: system
@@ -39,9 +39,9 @@ module DP_excited_m
  type(STO_basis) , allocatable   :: FMO_basis(:)
  type(R_eigen)                   :: FMO
  integer                         :: i
- real*8                          :: electron_hole_DPs(3) , DP_FMO(3)
+ real*8                          :: el_hl_StaticDPs(3) , DP_FMO(3)
 
-! specialFMO_system = molecule with FMO = .true. ...
+! specialFMO_system <= molecule with FMO = .true. ...
 
  FMO_system%atoms = count( system%FMO )
 
@@ -73,13 +73,13 @@ module DP_excited_m
  
  CALL DP_moments( FMO_system , FMO_basis , FMO%L , FMO%R , instance , DP_FMO )
 
- electron_hole_DPs = DP_FMO 
+ el_hl_StaticDPs = DP_FMO 
 
  DeAllocate( FMO_basis )
  DeAllocate( moiety_DP_matrix_AO )
  DeAllocate( FMO%L , FMO%R , FMO%erg )
 
- end function electron_hole_DPs
+ end function el_hl_StaticDPs
 !
 !
 !

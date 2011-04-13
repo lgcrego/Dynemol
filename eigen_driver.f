@@ -37,11 +37,11 @@ select case ( DRIVER )
 
     case( "slice_MO0" )
 
-!        CALL MO0_adiabatic( QDyn , it )
+        CALL MO0_adiabatic( QDyn , it )
 
     case( "slice_MOt" )
 
-!        CALL MOt_adiabatic( QDyn , it )
+        CALL MOt_adiabatic( QDyn , it )
 
     case( "slice_AO" )
 
