@@ -23,17 +23,17 @@ contains
 !
 !
 !
-!============================================================================================================
- subroutine Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , bra , ket , frame , it )
-!============================================================================================================
+!==================================================================================================================
+ subroutine Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , AO_bra , AO_ket , frame , it )
+!==================================================================================================================
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
 type(structure)                 , intent(out)   :: Unit_Cell
 type(C_eigen)                   , intent(out)   :: UNI
-complex*16                      , intent(in)    :: DUAL_ket(:,:)
-complex*16                      , intent(in)    :: bra(:)
-complex*16                      , intent(in)    :: ket(:)
+complex*16                      , intent(in)    :: DUAL_ket (:,:)
+complex*16                      , intent(in)    :: AO_bra   (:,:)
+complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
 integer                         , intent(in)    :: it
 
@@ -70,7 +70,7 @@ if( DP_field_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , bra , ket , Dual_ket(:,1) )
+    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
     CALL Molecular_DPs  ( Extended_Cell )
 
@@ -82,22 +82,22 @@ end subroutine Restart_Sys
 !
 !                                                                    
 !
-!=============================================================================================
-subroutine Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame )
-!=============================================================================================
+!===================================================================================================
+subroutine Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+!===================================================================================================
 implicit none
-complex*16  , intent(in)    :: MO_bra(:,:)
-complex*16  , intent(in)    :: MO_ket(:,:)
-complex*16  , intent(in)    :: DUAL_bra(:,:)
-complex*16  , intent(in)    :: DUAL_ket(:,:)
-complex*16  , intent(in)    :: bra(:)
-complex*16  , intent(in)    :: ket(:)
+complex*16  , intent(in)    :: MO_bra   (:,:)
+complex*16  , intent(in)    :: MO_ket   (:,:)
+complex*16  , intent(in)    :: DUAL_bra (:,:)
+complex*16  , intent(in)    :: DUAL_ket (:,:)
+complex*16  , intent(in)    :: AO_bra   (:,:)
+complex*16  , intent(in)    :: AO_ket   (:,:)
 real*8      , intent(in)    :: t
 integer     , intent(in)    :: it
 integer     , intent(in)    :: frame
 
 ! local variables ...
-integer         :: i , file_err
+integer         :: i , j , basis_size , file_err , n_part
 logical , save  :: first_time = .true. 
 
 ! check whether restart is properly set ...
@@ -117,21 +117,22 @@ write(33) t
 write(33) size(MO_bra(:,1))
 write(33) size(MO_bra(1,:))
 
-do i = 1 , size(MO_bra(:,1))
+basis_size = size(MO_bra(:,1))
+n_part     = size(MO_bra(1,:))
 
-    write(33) MO_bra(i,1) , MO_ket(i,1)
+do j = 1, n_part
 
-end do
+    do i = 1 , basis_size
+        write(33) MO_bra(i,j) , MO_ket(i,j)
+    end do
 
-do i = 1 , size(DUAL_bra(:,1))
+    do i = 1 , basis_size
+        write(33) DUAL_bra(i,j) , DUAL_ket(i,j)
+    end do
 
-    write(33) DUAL_bra(i,1) , DUAL_ket(i,1)
-
-end do
-
-do i = 1 , size(bra)
-
-    write(33) bra(i) , ket(i)
+    do i = 1 , basis_size
+        write(33) AO_bra(i,j) , AO_ket(i,j)
+    end do
 
 end do
 
@@ -144,22 +145,22 @@ end subroutine Security_Copy
 !
 !
 !
-!=============================================================================================
-subroutine Restart_State( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame )
-!=============================================================================================
+!===================================================================================================
+subroutine Restart_State( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+!===================================================================================================
 implicit none
-complex*16  , allocatable   , intent(out) :: MO_bra(:,:)
-complex*16  , allocatable   , intent(out) :: MO_ket(:,:)
-complex*16  , allocatable   , intent(out) :: DUAL_bra(:,:)
-complex*16  , allocatable   , intent(out) :: DUAL_ket(:,:)
-complex*16  , allocatable   , intent(out) :: bra(:)
-complex*16  , allocatable   , intent(out) :: ket(:)
+complex*16  , allocatable   , intent(out) :: MO_bra     (:,:)
+complex*16  , allocatable   , intent(out) :: MO_ket     (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_bra   (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_ket   (:,:)
+complex*16  , allocatable   , intent(out) :: AO_bra     (:,:)
+complex*16  , allocatable   , intent(out) :: AO_ket     (:,:)
 real*8                      , intent(out) :: t
 integer                     , intent(out) :: it
 integer                     , intent(out) :: frame
 
 ! local variables ...
-integer :: i , size_r , size_c , file_err
+integer :: i , j , size_r , size_c , file_err
 
 open(unit=33, file="Restart_copy.dat", form="unformatted", status="old", action="read" , iostat=file_err , err=11 )
 
@@ -169,31 +170,27 @@ read(33) t
 read(33) size_r
 read(33) size_c
 
-allocate( MO_bra ( size_r , size_c ) )
-allocate( MO_ket ( size_r , size_c ) )
-
-do i = 1 , size_r
-
-    read(33) MO_bra(i,1) , MO_ket(i,1)
-
-end do
-
+allocate( MO_bra   ( size_r , size_c ) )
+allocate( MO_ket   ( size_r , size_c ) )
 allocate( DUAL_bra ( size_r , size_c ) )
 allocate( DUAL_ket ( size_r , size_c ) )
+allocate( AO_bra   ( size_r , size_c ) )
+allocate( AO_ket   ( size_r , size_c ) )
 
-do i = 1 , size_r
+do j = 1 , size_c
 
-    read(33) DUAL_bra(i,1) , DUAL_ket(i,1)
-    
-end do
+    do i = 1 , size_r
+        read(33) MO_bra(i,j) , MO_ket(i,j)
+    end do
 
-allocate( bra ( size_r ) )
-allocate( ket ( size_r ) )
+    do i = 1 , size_r
+        read(33) DUAL_bra(i,j) , DUAL_ket(i,j)
+    end do
 
-do i = 1 , size_r
+    do i = 1 , size_r
+        read(33) AO_bra(i,j) , AO_ket(i,j)
+    end do
 
-    read(33) bra(i) , ket(i)
-    
 end do
 
 close( 33 )

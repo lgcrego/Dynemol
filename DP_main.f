@@ -163,7 +163,7 @@ If( hole_state /= I_zero ) then
 
     else
 
-        If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP <<<"
+        If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP in DP_main.f <<<"
 
         hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
 

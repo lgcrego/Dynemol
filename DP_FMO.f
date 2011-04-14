@@ -202,10 +202,6 @@ Nuclear_DP = D_zero
 ! define special_FMO condition ...
 special_FMO = system%FMO(1) .AND. ( hole_state /= I_zero )
 
-!-----------------------------------
-! Build up electronic DP_Moment ...
-!-----------------------------------
-
 ! contribution from valence states ...
 n_basis      =  size(basis)
 Fermi_state  =  system%N_of_electrons / 2
@@ -227,7 +223,7 @@ do xyz = 1 , 3
 
     end forall    
 
-    If( special_FMO ) then
+    If( special_FMO .AND. static ) then
 
            hole_DP(xyz) = sum( a(hole_state,:)    * R_vec(:,hole_state)    ) 
         excited_DP(xyz) = sum( a(excited_state,:) * R_vec(:,excited_state) ) 
@@ -242,7 +238,7 @@ do xyz = 1 , 3
 
     forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = two * sum( a(states,:)*L_vec(states,:) )
 
-    If( special_FMO ) then
+    If( special_FMO .AND. static ) then
         
            hole_DP(xyz) =    hole_DP(xyz) + sum( a(hole_state,:)    * L_vec(hole_state,:)    ) 
         excited_DP(xyz) = excited_DP(xyz) + sum( a(excited_state,:) * L_vec(excited_state,:) ) 
@@ -253,39 +249,45 @@ end do
 
 deallocate(a,b)
 
-
-If( special_FMO ) then
-
-    allocate( MO_mask(Fermi_state) , source = .true. )
-
-    MO_mask( hole_state ) = .false. 
-
-    forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) , MO_mask )
-
-    deallocate(MO_mask)
-else
-
-    forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
-
-end If
-
-!------------------------------------------------------------------------------------------
-! contribution from the hole and excited states ... 
+!--------------------------------------------------------------------------------------
+! Build DP_Moment ...
+!--------------------------------------------------------------------------------------
 If( special_FMO ) then
 
     If( .not. static ) then
 
-        Electronic_DP = Electronic_DP + hole_DP + wavepacket%DP( system%nr(1),: )
+        ! DP vector with all valence orbitals ...
+        forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+
+        ! adding (subtracting) DP moment contribution from el(hl)_wavepacket ...
+        Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:) 
 
     else
 
+        allocate( MO_mask(Fermi_state) , source = .true. )
+        MO_mask( hole_state ) = .false. 
+
+        ! DP vector of FMO valence orbitals, excluding the FMO (up-down spin) hole-states ... 
+        forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) , MO_mask )
+
+        ! adding DP moment contribution from (single spin) MO_hole-state and MO_excited state ...
         Electronic_DP = Electronic_DP + hole_DP + excited_DP
+
+        deallocate(MO_mask)
 
     end If
 
-else
+end If
+!
+!=================================
+!
+If( .not. special_FMO ) then
 
-    If( .not. static ) Electronic_DP = Electronic_DP + wavepacket%DP( system%nr(1),: )
+    ! DP vector with all valence orbitals ...
+    forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+
+    ! including DP moment contribution from el-hl wavepackets to non FMO molecules ...
+    If( .not. static ) Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:)
 
 end If
 

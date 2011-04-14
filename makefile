@@ -40,12 +40,12 @@ SOURCE = constants_m.o  \
 		 STO.o \
 		 multip_routines.o  \
 		 electron_hole_DP.o	\
+		 FMO.o \
 		 DP_main.o \
 		 td_dp.o \
 		 DP_FMO.o \
 		 dipole_phi.o \
 		 QCModel_Huckel.o \
-		 FMO.o \
 		 data_output.o \
 		 film_STO.o \
 		 DOS_m.o \

@@ -54,7 +54,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -81,7 +81,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 1  ; mmy = 1   ; mmz = 1              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

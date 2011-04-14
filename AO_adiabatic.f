@@ -151,7 +151,7 @@ do frame = frame_init , size(trj) , frame_step
 
     !============================================================================
 
-    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame )
+    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
     print*, frame 
 
@@ -329,9 +329,6 @@ AO_bra = DUAL_bra
 ! coefs of |k(t)> in AO basis 
 CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
-bra(:) = AO_bra(:,1)
-ket(:) = AO_ket(:,1)
-
 select case( instance )
 
     case( "DP_matrix" )
@@ -343,8 +340,7 @@ select case( instance )
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         ! wavepacket component of the dipole vector ...
-
-        CALL wavepacket_DP( Extended_Cell , ExCell_basis , bra , ket , Dual_ket(:,1) )
+        CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
         CALL Molecular_DPs( Extended_Cell )
 
@@ -413,11 +409,11 @@ integer         , intent(inout) :: frame_restart
 
 CALL DeAllocate_QDyn     ( QDyn , flag="alloc" )
 
-CALL Restart_State       ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , bra , ket , t , it , frame_restart )
+CALL Restart_State       ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
 CALL ReAllocate_Brackets ( size(MO_bra(:,1)) , AO_bra , AO_ket , phase )
 
-CALL Restart_Sys         ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , bra , ket , frame_restart , it )
+CALL Restart_Sys         ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
 
 end subroutine Restart_stuff
 !

@@ -3,9 +3,11 @@ module TD_Dipole_m
     use type_m
     use constants_m
     use mkl95_blas
+    use parameters_m                , only : n_part
     use Structure_Builder           , only : Extended_Cell ,                &
                                              ExCell_basis
     use DP_main_m                   , only : DP_Matrix_AO
+    use FMO_m                       , only : eh_tag
 
     public :: wavepacket_DP , DeAllocate_DPs , wavepacket 
 
@@ -15,17 +17,19 @@ module TD_Dipole_m
 
 contains
 !
+! this module calculates the contribution to DP vector of solute and solvent molecules(nr) 
+! due EXCLUSIVELY to el-hl wavepacket charge ...
+! Valence charge contribution will be calculated elsewhere ... 
 !
-!
-!============================================================
- subroutine wavepacket_DP( a , basis , bra , ket , Dual_ket )
-!============================================================
+!==================================================================
+ subroutine wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket )
+!==================================================================
 implicit none
 type(structure) , intent(inout) :: a
-type(STO_basis) , intent(in)    :: basis(:)
-complex*16      , intent(in)    :: bra(:)
-complex*16      , intent(in)    :: ket(:)
-complex*16      , intent(in)    :: Dual_ket(:)
+type(STO_basis) , intent(in)    :: basis    (:)
+complex*16      , intent(in)    :: AO_bra   (:,:)
+complex*16      , intent(in)    :: AO_ket   (:,:)
+complex*16      , intent(in)    :: Dual_ket (:,:)
 
 ! local variables ...
 integer       :: nr_max , xyz
@@ -34,18 +38,22 @@ type(dipoles) :: solvent , solute
 
 ! center of charge of special FMO ...
 forall( xyz=1:3 ) xyz_FMO(xyz) = sum( a%coord(:,xyz) * a%Nvalen(:) , a%FMO ) / sum( a%Nvalen , a%FMO )
+
+! el_hl wavepacket component to DP only for molecules within the solvation_shell centered at xyz_FMO ...
 solvation_shell = maxval( a%solvation_hardcore , a%FMO ) + 3.d0
 
-CALL preprocess_wavepacket_DP( a , basis , bra , ket , Dual_ket , solute  , xyz_FMO , solvation_shell , instance = "solute"  )
-CALL preprocess_wavepacket_DP( a , basis , bra , ket , Dual_ket , solvent , xyz_FMO , solvation_shell , instance = "solvent" )
+CALL preprocess_wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket , solute  , xyz_FMO , solvation_shell , instance = "solute"  )
+CALL preprocess_wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket , solvent , xyz_FMO , solvation_shell , instance = "solvent" )
 
 nr_max = maxval( a%nr )
 
-If( allocated(wavepacket%DP) ) CALL DeAllocate_DPs( wavepacket , flag = "dealloc" )
+If( allocated(wavepacket%el_DP) ) CALL DeAllocate_DPs( wavepacket , flag = "dealloc" )
 
 CALL DeAllocate_DPs( wavepacket , nr_max , flag = "alloc" )
 
-wavepacket % DP = solute % DP + solvent % DP 
+! output of this subroutine: nr , CC , DP of (solute and solvent) molecules 
+wavepacket % el_DP = solute % el_DP + solvent % el_DP 
+wavepacket % hl_DP = solute % hl_DP + solvent % hl_DP 
 
 CALL DeAllocate_DPs( solvent , flag = "dealloc" )
 CALL DeAllocate_DPs( solute  , flag = "dealloc" )
@@ -54,22 +62,22 @@ end subroutine wavepacket_DP
 !
 !
 !
-!========================================================================================================================
- subroutine preprocess_wavepacket_DP( a , basis , bra , ket , Dual_ket , molecule , origin , solvation_shell , instance )
-!========================================================================================================================
+!==============================================================================================================================
+ subroutine preprocess_wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket , molecule , origin , solvation_shell , instance )
+!==============================================================================================================================
 implicit none
 type(structure) , intent(inout) :: a
-type(STO_basis) , intent(in)    :: basis(:)
-complex*16      , intent(in)    :: bra(:)
-complex*16      , intent(in)    :: ket(:)
-complex*16      , intent(in)    :: Dual_ket(:)
+type(STO_basis) , intent(in)    :: basis   (:)
+complex*16      , intent(in)    :: AO_bra  (:,:)
+complex*16      , intent(in)    :: AO_ket  (:,:)
+complex*16      , intent(in)    :: Dual_ket(:,:)
 type(dipoles)   , intent(out)   :: molecule
 real*8          , intent(in)    :: origin(3)
 real*8          , intent(in)    :: solvation_shell
 character(*)    , intent(in)    :: instance
 
 ! local variables ...
-integer                :: i , j , i1 , i2 , nr , last_nr , first_nr , nr_atoms , nr_max
+integer                :: i , j , i1 , i2 , nr , last_nr , first_nr , nr_atoms , nr_max , np
 real*8                 :: total_valence 
 real*8 , allocatable   :: Qi_Ri(:,:) 
 
@@ -122,7 +130,13 @@ do nr = first_nr , last_nr
     If( sqrt(dot_product(molecule%CC(nr,:)-origin(:) , molecule%CC(nr,:)-origin(:))) <= solvation_shell ) then
 
         ! calculate wavepacket component of the dipole vector ...
-        CALL Build_wavepacket_DP( a , basis , bra , ket , Dual_ket , nr , molecule%CC(nr,:) , molecule%DP(nr,:) ) 
+        do np = 1 , n_part
+            If( eh_tag(np) == "el" )    &
+            CALL Build_wavepacket_DP( a , basis , AO_bra(:,np) , AO_ket(:,np) , Dual_ket(:,np) , nr , molecule%CC(nr,:) , molecule%el_DP(nr,:) ) 
+            
+            If( eh_tag(np) == "hl" )    &
+            CALL Build_wavepacket_DP( a , basis , AO_bra(:,np) , AO_ket(:,np) , Dual_ket(:,np) , nr , molecule%CC(nr,:) , molecule%hl_DP(nr,:) ) 
+        end do
 
     end If
 
@@ -155,7 +169,7 @@ complex*16      , allocatable   :: a(:) , b(:,:)
 logical         , allocatable   :: nr_mask(:)
 type(R3_vector)                 :: origin_Dependent , origin_Independent 
 
-! atomic positions measured from Center_of_Charge(nr) ...
+! all atomic positions measured from Center_of_Charge(nr) ...
 ! if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0) ...
 allocate( R_vector(system%atoms,3) )
 forall( xyz=1:3 ) R_vector(:,xyz) = system%coord(:,xyz) - Q_center(xyz)
@@ -189,7 +203,7 @@ end do
 
 DP_wave = origin_Dependent%DP + origin_Independent%DP 
 
-deallocate( nr_mask )
+deallocate( nr_mask , a , b )
 
 end subroutine Build_wavepacket_DP
 !
@@ -208,22 +222,28 @@ select case( flag )
 
     case( "alloc" )
 
-        allocate( DPs%CC ( n , 3 ) , source = D_zero )
-        allocate( DPs%DP ( n , 3 ) , source = D_zero )
-        allocate( DPs%nr ( n )     , source = I_zero )
+        allocate( DPs%CC    ( n , 3 ) , source = D_zero )
+        allocate( DPs%DP    ( n , 3 ) , source = D_zero )
+        allocate( DPs%el_DP ( n , 3 ) , source = D_zero )
+        allocate( DPs%hl_DP ( n , 3 ) , source = D_zero )
+        allocate( DPs%nr    ( n )     , source = I_zero )
 
     case( "dealloc" )
 
-        deallocate( DPs%CC )
-        deallocate( DPs%DP )
-        deallocate( DPs%nr )
+        deallocate( DPs%CC    )
+        deallocate( DPs%DP    )
+        deallocate( DPs%el_DP )
+        deallocate( DPs%hl_DP )
+        deallocate( DPs%nr    )
 
     case( "garbage" )
 
         ! garbage collection before restart calculations ...
-        If( allocated( DPs%CC ) ) deallocate( DPs%CC )
-        If( allocated( DPs%DP ) ) deallocate( DPs%DP )
-        If( allocated( DPs%nr ) ) deallocate( DPs%nr )
+        If( allocated( DPs%CC    ) ) deallocate( DPs%CC    )
+        If( allocated( DPs%DP    ) ) deallocate( DPs%DP    )
+        If( allocated( DPs%el_DP ) ) deallocate( DPs%el_DP )
+        If( allocated( DPs%hl_DP ) ) deallocate( DPs%hl_DP )
+        If( allocated( DPs%nr    ) ) deallocate( DPs%nr    )
 
 end select
 

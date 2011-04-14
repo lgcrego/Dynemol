@@ -10,7 +10,6 @@
     use mkl95_lapack
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
-    use QCModel_Huckel              , only : Huckel
     use Semi_Empirical_Parms        , only : atom
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
@@ -250,4 +249,36 @@ end If
 !
 !
 !
- end module FMO_m
+!====================================
+ pure function Huckel(i,j,S_ij,basis)
+!====================================
+ implicit none
+ integer         , intent(in) :: i , j
+ real*8          , intent(in) :: S_ij
+ type(STO_basis) , intent(in) :: basis(:)
+
+! local variables ... 
+ real*8  :: Huckel
+ real*8  :: k_eff , k_WH , c1 , c2 , c3
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+ 
+ c1 = basis(i)%IP - basis(j)%IP
+ c2 = basis(i)%IP + basis(j)%IP
+
+ c3 = (c1/c2)*(c1/c2)
+
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+
+ huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
+
+ IF(i == j) huckel = basis(i)%IP
+
+ end function Huckel
+! 
+!
+! 
+end module FMO_m

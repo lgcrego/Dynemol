@@ -216,9 +216,11 @@ module type_m
 
 
     type dipoles
-        integer ,  allocatable  :: nr(:)
-        real*8  ,  allocatable  :: CC(:,:)
-        real*8  ,  allocatable  :: DP(:,:)
+        integer ,  allocatable  :: nr   (:)
+        real*8  ,  allocatable  :: CC   (:,:)
+        real*8  ,  allocatable  :: DP   (:,:)
+        real*8  ,  allocatable  :: el_DP(:,:)
+        real*8  ,  allocatable  :: hl_DP(:,:)
     end type dipoles
 
 end module type_m
