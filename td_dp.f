@@ -223,7 +223,6 @@ select case( flag )
     case( "alloc" )
 
         allocate( DPs%CC    ( n , 3 ) , source = D_zero )
-        allocate( DPs%DP    ( n , 3 ) , source = D_zero )
         allocate( DPs%el_DP ( n , 3 ) , source = D_zero )
         allocate( DPs%hl_DP ( n , 3 ) , source = D_zero )
         allocate( DPs%nr    ( n )     , source = I_zero )
@@ -231,7 +230,6 @@ select case( flag )
     case( "dealloc" )
 
         deallocate( DPs%CC    )
-        deallocate( DPs%DP    )
         deallocate( DPs%el_DP )
         deallocate( DPs%hl_DP )
         deallocate( DPs%nr    )
@@ -240,7 +238,6 @@ select case( flag )
 
         ! garbage collection before restart calculations ...
         If( allocated( DPs%CC    ) ) deallocate( DPs%CC    )
-        If( allocated( DPs%DP    ) ) deallocate( DPs%DP    )
         If( allocated( DPs%el_DP ) ) deallocate( DPs%el_DP )
         If( allocated( DPs%hl_DP ) ) deallocate( DPs%hl_DP )
         If( allocated( DPs%nr    ) ) deallocate( DPs%nr    )
