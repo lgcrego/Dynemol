@@ -42,17 +42,10 @@ If( present(univ) ) then
     where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
     where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
 
-!    forall( i=1:size(univ%atom) ) univ % atom(i) % nr = (i-1)/6 + 1    
+    where( univ % atom % FMO       ) univ % atom % nr = 1
+    where( .not. univ % atom % FMO ) univ % atom % nr = univ % atom % nr - 3
 
-!    do i = 1 , size(univ%atom)
-!        univ % atom(i) % xyz(2) = univ % atom(i) % xyz(2) + (univ % atom(i) % nr**2 -1)/4.d1
-!    end do
-
-
-!    univ % atom(61:66) % residue = "DON"
-
-!    where( univ % atom % nr <= 5  ) univ % atom % residue = "LFT"
-!    where( univ % atom % nr >= 17 ) univ % atom % residue = "RGT"
+    univ % atom % solute = univ % atom % FMO        
 
 end if
 

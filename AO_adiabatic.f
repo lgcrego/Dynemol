@@ -288,8 +288,10 @@ implicit none
 integer     , intent(in)    :: it
 real*8      , intent(in)    :: t
 
-!----------------------------------------------------------
-!     LOCAL representation for film STO production ...
+! local variables ...
+integer :: n
+
+! LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
 AO_bra = DUAL_bra
@@ -297,10 +299,9 @@ AO_bra = DUAL_bra
 ! coefs of |k(t)> in AO basis 
 CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
 
-bra(:) = AO_bra(:,1)
-ket(:) = AO_ket(:,1)
-   
-CALL Gaussian_Cube_Format( bra , ket , it ,t )
+do n = 1 , n_part
+    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+end do
 
 !----------------------------------------------------------
 

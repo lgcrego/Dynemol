@@ -2,9 +2,10 @@
 
  use type_m
  use constants_m
- use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , DP_Moment , initial_state
  use mkl95_precision
  use mkl95_blas
+ use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
+                                         GaussianCube_step ,  DP_Moment , initial_state
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -106,7 +107,7 @@ DO it = 1 , n_t
 ! coefs of |k(t)> in AO basis 
     CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',C_one,C_zero)
 
-    if ( GaussianCube ) then
+    if( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
         do n = 1 , n_part
             CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
         end do
