@@ -63,7 +63,7 @@
  FMO_system%residue    =  pack( system%residue   , system%nr == nr )
  FMO_system%nr         =  pack( system%nr        , system%nr == nr )
  FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%nr == nr )
- FMO_system%FMO        =  pack( system%FMO       , system%nr == nr )
+ FMO_system%DPF        =  pack( system%DPF       , system%nr == nr )
  FMO_system%copy_No    =  0
 
  FMO_system%N_of_electrons = sum( FMO_system%Nvalen )
@@ -184,7 +184,7 @@ integer                       :: i , j , states , xyz , n_basis , Fermi_state
 real*8                        :: Nuclear_DP(3) , Electronic_DP(3) , excited_DP(3) , hole_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:) , b(:,:)
-logical                       :: special_FMO
+logical                       :: excited_DPF
 logical         , allocatable :: MO_mask(:)
 type(R3_vector) , allocatable :: origin_Dependent(:) , origin_Independent(:)
 
@@ -199,8 +199,8 @@ forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Q_Charge(xyz)
 
 Nuclear_DP = D_zero
 
-! define special_FMO condition ...
-special_FMO = system%FMO(1) .AND. ( hole_state /= I_zero )
+! define excited_DPF condition ...
+excited_DPF = system%DPF(1) .AND. ( hole_state /= I_zero )
 
 ! contribution from valence states ...
 n_basis      =  size(basis)
@@ -223,7 +223,7 @@ do xyz = 1 , 3
 
     end forall    
 
-    If( special_FMO .AND. static ) then
+    If( excited_DPF .AND. static ) then
 
            hole_DP(xyz) = sum( a(hole_state,:)    * R_vec(:,hole_state)    ) 
         excited_DP(xyz) = sum( a(excited_state,:) * R_vec(:,excited_state) ) 
@@ -238,7 +238,7 @@ do xyz = 1 , 3
 
     forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = two * sum( a(states,:)*L_vec(states,:) )
 
-    If( special_FMO .AND. static ) then
+    If( excited_DPF .AND. static ) then
         
            hole_DP(xyz) =    hole_DP(xyz) + sum( a(hole_state,:)    * L_vec(hole_state,:)    ) 
         excited_DP(xyz) = excited_DP(xyz) + sum( a(excited_state,:) * L_vec(excited_state,:) ) 
@@ -252,7 +252,7 @@ deallocate(a,b)
 !--------------------------------------------------------------------------------------
 ! Build DP_Moment ...
 !--------------------------------------------------------------------------------------
-If( special_FMO ) then
+If( excited_DPF ) then
 
     If( .not. static ) then
 
@@ -281,7 +281,7 @@ end If
 !
 !=================================
 !
-If( .not. special_FMO ) then
+If( .not. excited_DPF ) then
 
     ! DP vector with all valence orbitals ...
     forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )

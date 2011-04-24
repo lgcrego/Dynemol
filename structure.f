@@ -121,7 +121,7 @@ integer :: ASC_offset_2 = 96
             extended_cell % nr                 (k+n)   =  unit_cell % nr       (n)   + nr_sum
             extended_cell % residue            (k+n)   =  unit_cell % residue  (n)
             extended_cell % solute             (k+n)   =  unit_cell % solute   (n)
-            extended_cell % FMO                (k+n)   =  unit_cell % FMO      (n)
+            extended_cell % DPF                (k+n)   =  unit_cell % DPF      (n)
             extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
             extended_cell % copy_No  (k+n)             =  copy
         
@@ -147,7 +147,7 @@ integer :: ASC_offset_2 = 96
     extended_cell % nr                 (k+n)      =  unit_cell % nr       (n)
     extended_cell % residue            (k+n)      =  unit_cell % residue  (n)
     extended_cell % solute             (k+n)      =  unit_cell % solute   (n)
-    extended_cell % FMO                (k+n)      =  unit_cell % FMO      (n)
+    extended_cell % DPF                (k+n)      =  unit_cell % DPF      (n)
     extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
     extended_cell % copy_No  (k+n)                =  0
 
@@ -233,7 +233,7 @@ integer :: ASC_offset_2 = 96
             basis(k) % EHSymbol            =  system % MMSymbol (i)
             basis(k) % residue             =  system % residue  (i)
             basis(k) % solute              =  system % solute   (i)
-            basis(k) % FMO                 =  system % FMO      (i)
+            basis(k) % DPF                 =  system % DPF      (i)
             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
             basis(k) % n        =  atom(AtNo) % Nquant(l)

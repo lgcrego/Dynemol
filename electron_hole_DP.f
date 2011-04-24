@@ -43,22 +43,22 @@ module DP_excited_m
 
 ! specialFMO_system <= molecule with FMO = .true. ...
 
- FMO_system%atoms = count( system%FMO )
+ FMO_system%atoms = count( system%DPF )
 
  CALL Allocate_Structures( FMO_system%atoms , FMO_system )
 
  forall(i=1:3)
- FMO_system%coord(:,i) =  pack( system%coord(:,i) , system%FMO ) 
+ FMO_system%coord(:,i) =  pack( system%coord(:,i) , system%DPF ) 
  end forall
- FMO_system%AtNo       =  pack( system%AtNo       , system%FMO ) 
- FMO_system%Nvalen     =  pack( system%Nvalen     , system%FMO ) 
- FMO_system%k_WH       =  pack( system%k_WH       , system%FMO )
- FMO_system%symbol     =  pack( system%Symbol     , system%FMO )
- FMO_system%fragment   =  pack( system%fragment   , system%FMO )
- FMO_system%residue    =  pack( system%residue    , system%FMO )
- FMO_system%nr         =  pack( system%nr         , system%FMO )
- FMO_system%MMSymbol   =  pack( system%MMSymbol   , system%FMO )
- FMO_system%FMO        =  pack( system%FMO        , system%FMO )
+ FMO_system%AtNo       =  pack( system%AtNo       , system%DPF ) 
+ FMO_system%Nvalen     =  pack( system%Nvalen     , system%DPF ) 
+ FMO_system%k_WH       =  pack( system%k_WH       , system%DPF )
+ FMO_system%symbol     =  pack( system%Symbol     , system%DPF )
+ FMO_system%fragment   =  pack( system%fragment   , system%DPF )
+ FMO_system%residue    =  pack( system%residue    , system%DPF )
+ FMO_system%nr         =  pack( system%nr         , system%DPF )
+ FMO_system%MMSymbol   =  pack( system%MMSymbol   , system%DPF )
+ FMO_system%DPF        =  pack( system%DPF        , system%DPF )
  FMO_system%copy_No    =  0
 
  FMO_system%N_of_electrons = sum( FMO_system%Nvalen )

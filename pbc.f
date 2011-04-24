@@ -40,7 +40,7 @@ contains
  pbc_cell % residue            (1:cell%atoms)      =  cell % residue
  pbc_cell % nr                 (1:cell%atoms)      =  cell % nr 
  pbc_cell % solute             (1:cell%atoms)      =  cell % solute
- pbc_cell % FMO                (1:cell%atoms)      =  cell % FMO   
+ pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
  pbc_cell % solvation_hardcore (1:cell%atoms)      =  cell % solvation_hardcore
  pbc_cell % copy_No  (1:cell%atoms)                =  0
 
@@ -73,7 +73,7 @@ contains
             pbc_cell % residue            (k)   =  cell % residue            (n)
             pbc_cell % nr                 (k)   =  cell % nr                 (n) 
             pbc_cell % solute             (k)   =  cell % solute             (n) 
-            pbc_cell % FMO                (k)   =  cell % FMO                (n) 
+            pbc_cell % DPF                (k)   =  cell % DPF                (n) 
             pbc_cell % solvation_hardcore (k)   =  cell % solvation_hardcore (n)
             pbc_cell % copy_No  (k)             =  copy
 

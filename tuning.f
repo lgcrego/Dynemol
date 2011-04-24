@@ -28,7 +28,8 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-
+    where( struct % DPF       ) struct % nr = 1
+    where( .not. struct % DPF ) struct % nr = struct % nr - 3
 
 end If
 
@@ -37,15 +38,15 @@ end If
 
 If( present(univ) ) then
 
-    where( univ % atom % residue == "ION" ) univ % atom % FMO = .true.
-    where( univ % atom % residue == "BP1" ) univ % atom % FMO = .true.
-    where( univ % atom % residue == "BP2" ) univ % atom % FMO = .true.
-    where( univ % atom % residue == "BP3" ) univ % atom % FMO = .true.
+    where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
+    where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
+    where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
+    where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
 
-    where( univ % atom % FMO       ) univ % atom % nr = 1
-    where( .not. univ % atom % FMO ) univ % atom % nr = univ % atom % nr - 3
+    where( univ % atom % DPF       ) univ % atom % nr = 1
+    where( .not. univ % atom % DPF ) univ % atom % nr = univ % atom % nr - 3
 
-    univ % atom % solute = univ % atom % FMO        
+    univ % atom % solute = univ % atom % DPF        
 
 end if
 

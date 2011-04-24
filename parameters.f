@@ -64,11 +64,11 @@ logical :: dynamic
 !
   t_i  =  0.d0                               
   t_f  =  1.5d-1                                ! <== final time in PICOseconds
-  n_t  =  200                                   ! <== number of time steps
+  n_t  =  300                                   ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  3                            ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  90                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 

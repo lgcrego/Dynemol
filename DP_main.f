@@ -104,7 +104,7 @@ real*8          , parameter   :: Debye_unit = 4.803204d0
 
 ! define system for DP_Moment calculation ...
 allocate( AO_mask(size(basis)) , source = .true. )
-AO_mask = merge( basis%FMO , AO_mask , any(basis%FMO) )
+AO_mask = merge( basis%DPF , AO_mask , any(basis%DPF) )
 
 ! if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
 CALL Center_of_Charge( system , R_vector )
@@ -256,7 +256,7 @@ logical , allocatable :: mask(:)
 
 ! define system for DP_Moment calculation ...
 allocate( mask(a%atoms) , source = .true. )
-mask = merge( mask , a%FMO , count(a%FMO) == I_zero )
+mask = merge( mask , a%DPF , count(a%DPF) == I_zero )
 
 ! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
 

@@ -36,11 +36,11 @@ integer       :: nr_max , xyz
 real*8        :: xyz_FMO(3) , solvation_shell
 type(dipoles) :: solvent , solute 
 
-! center of charge of special FMO ...
-forall( xyz=1:3 ) xyz_FMO(xyz) = sum( a%coord(:,xyz) * a%Nvalen(:) , a%FMO ) / sum( a%Nvalen , a%FMO )
+! center of charge of special DPF ...
+forall( xyz=1:3 ) xyz_FMO(xyz) = sum( a%coord(:,xyz) * a%Nvalen(:) , a%DPF ) / sum( a%Nvalen , a%DPF )
 
 ! el_hl wavepacket component to DP only for molecules within the solvation_shell centered at xyz_FMO ...
-solvation_shell = maxval( a%solvation_hardcore , a%FMO ) + 3.d0
+solvation_shell = maxval( a%solvation_hardcore , a%DPF ) + 3.d0
 
 CALL preprocess_wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket , solute  , xyz_FMO , solvation_shell , instance = "solute"  )
 CALL preprocess_wavepacket_DP( a , basis , AO_bra , AO_ket , Dual_ket , solvent , xyz_FMO , solvation_shell , instance = "solvent" )

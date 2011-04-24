@@ -60,6 +60,8 @@ end If
 
 ! FMO_system = fragment
 
+ If( fragment == "H" ) where( system%DPF ) system%fragment = "H"
+
  FMO_system%atoms = count(system%fragment == fragment)
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
