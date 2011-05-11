@@ -14,8 +14,8 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
 
-    integer      , allocatable , public , protected :: orbital(:)
-    character(2) , allocatable , public , protected :: eh_tag(:) 
+    integer      , allocatable , public :: orbital(:)
+    character(2) , allocatable , public :: eh_tag(:) 
 
     public :: FMO_analysis
 

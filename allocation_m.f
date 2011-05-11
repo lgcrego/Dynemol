@@ -83,21 +83,6 @@
 !
 !
 !
- subroutine ReAllocate_BracKets(Basis_Size, AO_bra, AO_ket, phase)
-    implicit none
-    integer                  , intent(in)  :: Basis_Size
-    complex*16 , ALLOCATABLE , intent(out) :: AO_bra(:,:) , AO_ket(:,:) 
-    complex*16 , ALLOCATABLE , intent(out) :: phase(:)
-
-    allocate( AO_bra (Basis_Size,n_part) )
-    allocate( AO_ket (Basis_Size,n_part) )
-    allocate( phase  (Basis_Size)        )
-
- end subroutine ReAllocate_BracKets
-!
-!
-!
-!
  subroutine DeAllocate_UnitCell(unit_cell)
     implicit none
     type(structure) , intent(inout) :: unit_cell

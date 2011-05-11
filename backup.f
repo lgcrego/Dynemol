@@ -11,6 +11,8 @@ module Backup_m
                                      trj
     use Structure_Builder   , only : Generate_Structure         , &
                                      Basis_Builder
+    use FMO_m               , only : orbital                    , &
+                                     eh_tag    
     use QCModel_Huckel      , only : EigenSystem
     use DP_potential_m      , only : Molecular_DPs
     use TD_Dipole_m         , only : wavepacket_DP
@@ -116,11 +118,16 @@ write(33) it
 write(33) t
 write(33) size(MO_bra(:,1))
 write(33) size(MO_bra(1,:))
+write(33) size(eh_tag)
 
 basis_size = size(MO_bra(:,1))
 n_part     = size(MO_bra(1,:))
 
-do j = 1, n_part
+do i = 1 , n_part
+    write(33) orbital(i) , eh_tag(i)
+end do
+
+do j = 1 , n_part
 
     do i = 1 , basis_size
         write(33) MO_bra(i,j) , MO_ket(i,j)
@@ -160,7 +167,7 @@ integer                     , intent(out) :: it
 integer                     , intent(out) :: frame
 
 ! local variables ...
-integer :: i , j , size_r , size_c , file_err
+integer :: i , j , size_r , size_c , file_err , size_eh_tag
 
 open(unit=33, file="Restart_copy.dat", form="unformatted", status="old", action="read" , iostat=file_err , err=11 )
 
@@ -169,6 +176,7 @@ read(33) it
 read(33) t
 read(33) size_r
 read(33) size_c
+read(33) size_eh_tag
 
 allocate( MO_bra   ( size_r , size_c ) )
 allocate( MO_ket   ( size_r , size_c ) )
@@ -176,6 +184,12 @@ allocate( DUAL_bra ( size_r , size_c ) )
 allocate( DUAL_ket ( size_r , size_c ) )
 allocate( AO_bra   ( size_r , size_c ) )
 allocate( AO_ket   ( size_r , size_c ) )
+
+allocate( orbital(size_eh_tag) , eh_tag(size_eh_tag) )
+
+do i = 1 , size_eh_tag
+    read(33) orbital(i) , eh_tag(i)
+end do
 
 do j = 1 , size_c
 
