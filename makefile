@@ -26,6 +26,7 @@ INCS = $(INCS_MKL)
 #-----------------------------------------------------------------------
 
 SOURCE = constants_m.o  \
+		 exec_time.o  \
 		 type_m.o  \
 		 parameters.o  \
 		 allocation_m.o  \

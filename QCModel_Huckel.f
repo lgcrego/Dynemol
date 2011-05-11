@@ -53,6 +53,7 @@
  If( DP_field_ ) then
 
     do j = 1 , size(basis)
+    print*,j
         do i = 1 , j
      
             h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
