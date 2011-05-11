@@ -7,7 +7,7 @@ FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
 
-FFLAGS = -O3 -openmp $(FREE) 
+FFLAGS = -O3 -openmp -parallel $(FREE) 
 
 #LIB    = -L/usr/lib64 -llapack -lblas -L/home/lrego/lib -lmyblas95
 #INCS   = -I/home/lrego/lib/blas_95
