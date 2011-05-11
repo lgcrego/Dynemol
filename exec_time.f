@@ -38,7 +38,7 @@ call date_and_time(values=time_array_0)
 
 finish_time = time_array_0(5)*3600 + time_array_0(6)*60 + time_array_0(7) + 0.001*time_array_0(8)
 
-print*, " >> Execution Time :", finish_time - start_time 
+Print*, " >> Execution Time :", finish_time - start_time , " seconds"
 
 end subroutine stop_clock
 

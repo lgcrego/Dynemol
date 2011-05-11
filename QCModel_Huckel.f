@@ -1,6 +1,7 @@
  module QCModel_Huckel
 
     use type_m
+    use omp_lib
     use constants_m
     use parameters_m                , only : DP_Field_  ,       &
                                              driver ,           &
@@ -52,14 +53,15 @@
 
  If( DP_field_ ) then
 
+    !$OMP PARALLEL DO
     do j = 1 , size(basis)
-    print*,j
         do i = 1 , j
      
             h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
 
         end do
     end do  
+    !$OMP END PARALLEL DO
 
  else
  
