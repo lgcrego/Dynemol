@@ -11,6 +11,7 @@ use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
+use Coulomb_m               , only : Int_Coulomb
 
 ! local variables ...
  
@@ -22,7 +23,7 @@ use Eigen_driver_m          , only : Eigen_driver
 CALL system( "./env.sh" )
 
 CAll Define_Environment
- 
+
 CALL read_EHT_parameters
 
 CALL Read_Structure
@@ -46,6 +47,9 @@ select case ( driver )
 
     case ( "diagnostic" )
         CALL diagnostic
+
+    case ( "Coulomb" )
+        CALL Int_Coulomb
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver
