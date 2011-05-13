@@ -25,10 +25,11 @@ start_time = time_array_0(5)*3600 + time_array_0(6)*60 + time_array_0(7) + 0.001
 end subroutine start_clock
 !
 !
-!=====================
- subroutine stop_clock
-!=====================
+!==============================
+ subroutine stop_clock( label )
+!==============================
 implicit none
+character(*) , optional , intent(in) :: label
 
 ! local variables ...
 integer :: time_array_0(8)
@@ -38,7 +39,11 @@ call date_and_time(values=time_array_0)
 
 finish_time = time_array_0(5)*3600 + time_array_0(6)*60 + time_array_0(7) + 0.001*time_array_0(8)
 
-Print*, " >> Execution Time :", finish_time - start_time , " seconds"
+if( present(label) ) then
+    Print*, " >> ",label," << Execution Time :", finish_time - start_time , " seconds"
+else
+    Print*, " >> Execution Time :", finish_time - start_time , " seconds"
+end if
 
 end subroutine stop_clock
 
