@@ -48,12 +48,13 @@
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
 
+ CALL start_clock
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_s = S_matrix
 
  If( DP_field_ ) then
 
-    !$OMP PARALLEL DO
+!$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
         do i = 1 , j
      
@@ -61,7 +62,7 @@
 
         end do
     end do  
-    !$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
 
  else
  
@@ -74,6 +75,7 @@
     end do  
 
  end If
+ CALL stop_clock("Hamiltonian")
 
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 

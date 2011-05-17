@@ -1,6 +1,7 @@
 module DP_main_m
 
     use type_m
+    use omp_lib
     use constants_m
     use mkl95_precision
     use mkl95_blas
@@ -95,7 +96,6 @@ real*8          , optional  , intent(out)   :: DP_total (3)
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), hole_DP(3), excited_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
-complex*16      , allocatable :: a(:,:), b(:,:)
 logical         , allocatable :: AO_mask(:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
@@ -111,45 +111,17 @@ CALL Center_of_Charge( system , R_vector )
 
 Nuclear_DP = D_zero 
 
-! Electronic dipole 
-n_basis      =  size(basis)
-Fermi_state  =  sum( system%Nvalen ) / two
- 
-allocate( a(n_basis,n_basis)              , source = C_zero )
-allocate( b(n_basis,n_basis)              , source = C_zero )
-allocate( origin_Dependent  (Fermi_state) )
-allocate( origin_Independent(Fermi_state) )
+Fermi_state = sum( system%Nvalen ) / two
 
 do xyz = 1 , 3
 
-!   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
-
-    forall( states=1:Fermi_state )
-
-        forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-
-        origin_Dependent(states)%DP(xyz)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
-
-    end forall    
-
-!   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
-
-    b = DP_matrix_AO%DP(xyz)
-
-    CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
-
-    forall( states=1:Fermi_state ) origin_Independent(states)%DP(xyz) = two * real( sum( a(states,:)*L_vec(states,:) , AO_mask ) )
+    Electronic_DP(xyz) = DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state )
 
 end do
-
-deallocate(a,b)
 
 !--------------------------------------------------------------------------------------
 ! Build DP_Moment ...
 !--------------------------------------------------------------------------------------
-
-! contribution from the valence states ...
-forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
 ! contribution from the hole and electronic-wavepackets ... 
 ! excited-state case: hole_state /= 0 ...
@@ -157,17 +129,25 @@ If( hole_state /= I_zero ) then
 
     If( static ) then
 
+!$OMP   PARALLEL SECTIONS
+!$OMP   SECTION
         hole_DP    = el_hl_StaticDPs( system , instance="hole" )
 
+!$OMP   SECTION
         excited_DP = el_hl_StaticDPs( system , instance="electron" )
+!$OMP   END PARALLEL SECTIONS
 
     else
 
         If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP in DP_main.f <<<"
 
+!$OMP   PARALLEL SECTIONS
+!$OMP   SECTION
         hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
 
+!$OMP   SECTION
         excited_DP =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,1) , AO_ket(:,1) , Dual_ket(:,1) )
+!$OMP   END PARALLEL SECTIONS
 
     end If
 
@@ -184,97 +164,10 @@ Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
 If( present(DP_total) ) DP_total = Total_DP
 
 deallocate(R_vector , AO_mask)
-deallocate(origin_Dependent)
-deallocate(origin_Independent)
 
 include 'formats.h'
 
 end subroutine Dipole_Moment
-!
-!
-!
-!=============================================================================
- pure function wavepacket_DP( basis , mask , R_vector , bra , ket , Dual_ket )
-!=============================================================================
-implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-logical         , intent(in)    :: mask(:)
-real*8          , intent(in)    :: R_vector(:,:)
-complex*16      , intent(in)    :: bra(:) 
-complex*16      , intent(in)    :: ket(:) 
-complex*16      , intent(in)    :: Dual_ket(:)
-real*8                          :: wavepacket_DP(3)
-
-! local variables ...
-integer                         :: i, j, xyz, n_basis
-complex*16      , allocatable   :: a(:), b(:,:)
-type(R3_vector)                 :: origin_Dependent, origin_Independent
-
-n_basis = size(basis)
- 
-allocate( a(n_basis)         , source = C_zero )
-allocate( b(n_basis,n_basis) , source = C_zero )
-
-do xyz = 1 , 3
-
-        ! origin dependent DP = sum{bra * vec{R} * S_ij * ket}
-
-        forall( i=1:n_basis ) a(i) = bra(i) * R_vector(basis(i)%atom,xyz)
-
-        origin_Dependent%DP(xyz) = real( sum( a(:)*Dual_ket(:) , mask ) )
-
-        ! origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
-
-        b = DP_matrix_AO%DP(xyz)
-
-        CALL gemv( b , ket , a , C_one , C_zero )    
-
-        origin_Independent%DP(xyz) = real( sum( bra(:)*a(:) , mask ) )
-
-end do
-
-wavepacket_DP = origin_Dependent%DP + origin_Independent%DP 
-
-deallocate( a , b )
-
-end function wavepacket_DP
-!
-!
-!
-!===========================================
- subroutine Center_of_Charge( a , R_vector )
-!===========================================
-implicit none
-type(structure)                 , intent(inout) :: a
-real*8          , allocatable   , intent(out)   :: R_vector(:,:)
-
-! local variables ...
-integer               :: i , j
-real*8                :: total_valence
-real*8  , allocatable :: Qi_Ri(:,:) 
-logical , allocatable :: mask(:)
-
-! define system for DP_Moment calculation ...
-allocate( mask(a%atoms) , source = .true. )
-mask = merge( mask , a%DPF , count(a%DPF) == I_zero )
-
-! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
-
-allocate( Qi_Ri(a%atoms,3) , source = D_zero )
-
-forall( j=1:3 , i=1:a%atoms , mask(i) ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
-
-total_valence = sum( a%Nvalen , mask )
-
-forall(j=1:3) a%Center_of_Charge(j) = sum( Qi_Ri(:,j) , mask ) / total_valence
-
-! atomic positions measured from the Center of Charge
-allocate( R_vector(a%atoms,3) , source = D_zero )
-forall( j=1:3 , i=1:a%atoms , mask(i) ) R_vector(i,j) = a%coord(i,j) - a%Center_of_Charge(j)
-
-deallocate( Qi_Ri , mask )
-
-end subroutine Center_of_Charge
 !
 !
 !
@@ -364,6 +257,148 @@ do ia = 1 , system%atoms
 end do
 
 end subroutine Build_DIPOLE_Matrix
+!
+!
+!
+!=================================================================================================
+pure function DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state)
+!=================================================================================================
+implicit none
+integer                  , intent(in) :: xyz
+type(STO_basis)          , intent(in) :: basis    (:)
+complex*16               , intent(in) :: L_vec    (:,:) 
+complex*16               , intent(in) :: R_vec    (:,:)
+real*8                   , intent(in) :: R_vector (:,:)
+logical                  , intent(in) :: AO_mask  (:)
+integer                  , intent(in) :: Fermi_state
+
+real*8 :: DP_Moment_component
+
+! local variables ...
+complex*16 , allocatable :: a(:,:), b(:,:)
+real*8     , allocatable :: origin_Dependent   (:)
+real*8     , allocatable :: origin_Independent (:)
+integer                  :: i , states , n_basis
+
+! Electronic dipole 
+n_basis = size(basis)
+ 
+allocate( a(n_basis,n_basis)              , source = C_zero )
+allocate( b(n_basis,n_basis)              , source = C_zero )
+allocate( origin_Dependent  (Fermi_state) )
+allocate( origin_Independent(Fermi_state) )
+
+! origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
+
+forall( states=1:Fermi_state )
+
+    forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+
+    origin_Dependent(states)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
+
+end forall    
+
+! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
+
+b = DP_matrix_AO%DP(xyz)
+
+CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
+
+forall( states=1:Fermi_state ) origin_Independent(states) = two * real( sum( a(states,:)*L_vec(states,:) , AO_mask ) )
+
+deallocate( a , b )
+
+! contribution from the valence states ...
+DP_Moment_component = sum( origin_Dependent + origin_Independent )
+
+deallocate( origin_Dependent , origin_Independent )
+
+end function DP_Moment_component
+!
+!
+!
+!=============================================================================
+ pure function wavepacket_DP( basis , mask , R_vector , bra , ket , Dual_ket )
+!=============================================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+logical         , intent(in)    :: mask(:)
+real*8          , intent(in)    :: R_vector(:,:)
+complex*16      , intent(in)    :: bra(:) 
+complex*16      , intent(in)    :: ket(:) 
+complex*16      , intent(in)    :: Dual_ket(:)
+real*8                          :: wavepacket_DP(3)
+
+! local variables ...
+integer                         :: i, j, xyz, n_basis
+complex*16      , allocatable   :: a(:), b(:,:)
+type(R3_vector)                 :: origin_Dependent, origin_Independent
+
+n_basis = size(basis)
+ 
+allocate( a(n_basis)         , source = C_zero )
+allocate( b(n_basis,n_basis) , source = C_zero )
+
+do xyz = 1 , 3
+
+        ! origin dependent DP = sum{bra * vec{R} * S_ij * ket}
+
+        forall( i=1:n_basis ) a(i) = bra(i) * R_vector(basis(i)%atom,xyz)
+
+        origin_Dependent%DP(xyz) = real( sum( a(:)*Dual_ket(:) , mask ) )
+
+        ! origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
+
+        b = DP_matrix_AO%DP(xyz)
+
+        CALL gemv( b , ket , a , C_one , C_zero )    
+
+        origin_Independent%DP(xyz) = real( sum( bra(:)*a(:) , mask ) )
+
+end do
+
+wavepacket_DP = origin_Dependent%DP + origin_Independent%DP 
+
+deallocate( a , b )
+
+end function wavepacket_DP
+!
+!
+!
+!===========================================
+ subroutine Center_of_Charge( a , R_vector )
+!===========================================
+implicit none
+type(structure)                 , intent(inout) :: a
+real*8          , allocatable   , intent(out)   :: R_vector(:,:)
+
+! local variables ...
+integer               :: i , j
+real*8                :: total_valence
+real*8  , allocatable :: Qi_Ri(:,:) 
+logical , allocatable :: mask(:)
+
+! define system for DP_Moment calculation ...
+allocate( mask(a%atoms) , source = .true. )
+mask = merge( mask , a%DPF , count(a%DPF) == I_zero )
+
+! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
+
+allocate( Qi_Ri(a%atoms,3) , source = D_zero )
+
+forall( j=1:3 , i=1:a%atoms , mask(i) ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
+
+total_valence = sum( a%Nvalen , mask )
+
+forall(j=1:3) a%Center_of_Charge(j) = sum( Qi_Ri(:,j) , mask ) / total_valence
+
+! atomic positions measured from the Center of Charge
+allocate( R_vector(a%atoms,3) , source = D_zero )
+forall( j=1:3 , i=1:a%atoms , mask(i) ) R_vector(i,j) = a%coord(i,j) - a%Center_of_Charge(j)
+
+deallocate( Qi_Ri , mask )
+
+end subroutine Center_of_Charge
 !
 !
 !
