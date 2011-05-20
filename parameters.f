@@ -28,13 +28,13 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "diagnostic"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
   GaussianCube    = F_                       
-  Survival        = T_                       
-  SPECTRUM        = F_                          
+  Survival        = F_                       
+  SPECTRUM        = T_                          
   DP_Moment       = T_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
@@ -44,7 +44,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <= structure or trajectory
+  file_type    =  "structure"                 ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -64,7 +64,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                               
   t_f  =  1.5d-1                                ! <== final time in PICOseconds
-  n_t  =  300                                   ! <== number of time steps
+  n_t  =  2                                     ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 

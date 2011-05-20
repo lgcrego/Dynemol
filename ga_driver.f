@@ -9,7 +9,7 @@ module GA_driver_m
  use GA_QCModel_m               , only : Mulliken
  use DOS_m 
  use Multipole_Routines_m       , only : Util_multipoles
- use Structure_Builder          , only : Generate_Structure , Basis_Builder
+ use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use DP_main_m                  , only : Dipole_Matrix
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff

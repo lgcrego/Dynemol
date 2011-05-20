@@ -97,7 +97,6 @@ integer                       :: i, j, states, xyz, n_basis, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), hole_DP(3), excited_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 logical         , allocatable :: AO_mask(:)
-type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
 ! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
@@ -129,25 +128,19 @@ If( hole_state /= I_zero ) then
 
     If( static ) then
 
-!$OMP   PARALLEL SECTIONS
-!$OMP   SECTION
-        hole_DP    = el_hl_StaticDPs( system , instance="hole" )
-
-!$OMP   SECTION
-        excited_DP = el_hl_StaticDPs( system , instance="electron" )
-!$OMP   END PARALLEL SECTIONS
+        CALL el_hl_StaticDPs( system , hole_DP , excited_DP )
 
     else
 
         If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP in DP_main.f <<<"
 
-!$OMP   PARALLEL SECTIONS
-!$OMP   SECTION
+!$OMP PARALLEL SECTIONS
+    !$OMP SECTION
         hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
 
-!$OMP   SECTION
+    !$OMP SECTION
         excited_DP =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,1) , AO_ket(:,1) , Dual_ket(:,1) )
-!$OMP   END PARALLEL SECTIONS
+!$OMP END PARALLEL SECTIONS
 
     end If
 

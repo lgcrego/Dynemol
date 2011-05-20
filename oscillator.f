@@ -47,7 +47,9 @@ npoints = size( SPEC%grid )
 trans_DP%bra_range = empty
 trans_DP%ket_range = occupied
 
+call start_clock
 CALL Transition_Dipole_Builder(system, basis, QM, Trans_DP)
+call stop_clock("Transition_Dipole_Builder")
 
 dim_bra = size(trans_DP%bra_PTR)
 dim_ket = size(trans_DP%ket_PTR)
@@ -70,6 +72,7 @@ allocate( peak_ij(npoints) )
 
 forall(k=1:npoints) SPEC%grid(k) = (k-1)*step 
 
+call start_clock
 ! . the optical spectrum : peaks and broadened lines ...
 SPEC%peaks = 0.d0
 SPEC%func  = 0.d0
@@ -91,6 +94,7 @@ do i=1,dim_bra
 
     end do
 end do
+call stop_clock("optical spectrum")
 
 SPEC%average = SPEC%average + SPEC%func
 

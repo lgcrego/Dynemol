@@ -27,19 +27,19 @@ module DP_excited_m
 !
 !
 !
-!===============================================
- function el_hl_StaticDPs( system , instance )
-!===============================================
+!=========================================================
+ subroutine el_hl_StaticDPs( system , hole_DP , excited_DP )
+!=========================================================
  implicit none
  type(structure) , intent(in)  :: system
- character(*)    , intent(in)  :: instance
+ real*8          , intent(out) :: hole_DP(3)
+ real*8          , intent(out) :: excited_DP(3)
 
 ! local variables ...
  type(structure)                 :: FMO_system
  type(STO_basis) , allocatable   :: FMO_basis(:)
  type(R_eigen)                   :: FMO
  integer                         :: i
- real*8                          :: el_hl_StaticDPs(3) , DP_FMO(3)
 
 ! specialFMO_system <= molecule with FMO = .true. ...
 
@@ -70,16 +70,22 @@ module DP_excited_m
  CALL eigen_FMO( FMO_system , FMO_basis , FMO )
 
  CALL Build_DIPOLE_Matrix( FMO_system , FMO_basis )
- 
- CALL DP_moments( FMO_system , FMO_basis , FMO%L , FMO%R , instance , DP_FMO )
 
- el_hl_StaticDPs = DP_FMO 
+!$OMP sections
+
+    !$OMP section
+    CALL DP_moments( FMO_system , FMO_basis , FMO%L , FMO%R , "hole" , hole_DP )
+
+    !$OMP section
+    CALL DP_moments( FMO_system , FMO_basis , FMO%L , FMO%R , "electron" , excited_DP )
+
+!$OMP end sections
 
  DeAllocate( FMO_basis )
  DeAllocate( moiety_DP_matrix_AO )
  DeAllocate( FMO%L , FMO%R , FMO%erg )
 
- end function el_hl_StaticDPs
+ end subroutine el_hl_StaticDPs
 !
 !
 !
