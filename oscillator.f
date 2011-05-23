@@ -33,7 +33,7 @@ real*8           , allocatable :: Transition_Strength(:,:)
 
 ! . local variables: resonance spectrum
 type(transition)               :: Trans_DP
-real*8           , allocatable :: peak_ij(:) , SPEC_peaks(:) , SPEC_func(:)
+real*8           , allocatable :: SPEC_peaks(:) , SPEC_func(:)
 real*8                         :: gauss_norm , sgm , two_sigma2 , step , resonance , osc_const
 real*8           , parameter   :: one = 1.d0 , zero = 0.d0
 real*8           , parameter   :: osc_const_parameter = 1.65338d-4  ! <== (2/3)*(m_e/h_bar*h_bar) ; unit = 1/( eV * (a_B)^2 ) 
@@ -49,9 +49,7 @@ npoints = size( SPEC%grid )
 trans_DP%bra_range = empty
 trans_DP%ket_range = occupied
 
-call start_clock
 CALL Transition_Dipole_Builder(system, basis, QM, Trans_DP)
-call stop_clock("Transition_Dipole_Builder")
 
 dim_bra = size(trans_DP%bra_PTR)
 dim_ket = size(trans_DP%ket_PTR)
@@ -70,48 +68,36 @@ two_sigma2 = 2.d0 * sgm*sgm
 
 step = (QM%erg(trans_DP%bra_PTR(dim_bra))-QM%erg(trans_DP%ket_PTR(1))) / float(npoints-1)
 
-allocate( peak_ij(npoints) )
-
 forall(k=1:npoints) SPEC%grid(k) = (k-1)*step 
 
-call start_clock
 ! . the optical spectrum : peaks and broadened lines ...
 allocate( SPEC_peaks(npoints) , source = 0.d0 )
 allocate( SPEC_func (npoints) , source = 0.d0 )
 
-!$OMP parallel 
-!$OMP do reduction(+:SPEC_peaks,SPEC_func) private( osc_const , resonance , peak_ij )
-do i=1,dim_bra
-    do j=1,dim_ket 
+!$OMP parallel do private( resonance ) reduction( + : SPEC_peaks , SPEC_func ) 
+do j=1,dim_ket 
+    do i=1,dim_bra
 
         resonance = QM%erg(trans_DP%bra_PTR(i)) - QM%erg(trans_DP%ket_PTR(j))
         Transition_Strength(i,j) = osc_const * resonance * Transition_Strength(i,j)
 
-        peak_ij(:) = 0.d0
-        where( dabs(SPEC%grid-resonance) < step ) peak_ij(:) = Transition_Strength(i,j)
+        where( dabs(SPEC%grid(:)-resonance) < step ) SPEC_peaks(:) = SPEC_peaks(:) + Transition_Strength(i,j)
 
-        SPEC_peaks(:) = SPEC_peaks(:) + peak_ij(:)    
-
-        peak_ij(:) = 0.d0
-        where( ((SPEC%grid-resonance)**2/two_sigma2) < 25.d0 ) peak_ij(:) = dexp( -(SPEC%grid(:)-resonance)**2 / two_sigma2 )
-
-        SPEC_func(:) = SPEC_func(:) + Transition_Strength(i,j) * peak_ij(:)
+        where( ((SPEC%grid(:)-resonance)**2/two_sigma2) < 25.d0 ) &
+        SPEC_func(:) = SPEC_func(:) + Transition_Strength(i,j) * dexp( -(SPEC%grid(:)-resonance)**2 / two_sigma2 )
 
     end do
 end do
-!$OMP end do
-!$OMP end parallel
+!$OMP end parallel do
 
 SPEC%peaks = SPEC_peaks
-SPEC%func  = SPEC_func 
-
-deallocate( SPEC_peaks , SPEC_func )
-
-call stop_clock("optical spectrum")
+SPEC%func  = SPEC_func
 
 SPEC%average = SPEC%average + SPEC%func
 
-deallocate( peak_ij , trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
+deallocate( SPEC_peaks , SPEC_func )
+
+deallocate( trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
 
 print*, '>> Optical Spectrum done <<'
 
