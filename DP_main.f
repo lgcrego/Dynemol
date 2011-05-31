@@ -135,10 +135,10 @@ If( hole_state /= I_zero ) then
         If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP in DP_main.f <<<"
 
 !$OMP PARALLEL SECTIONS
-    !$OMP SECTION
+        !$OMP SECTION
         hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
 
-    !$OMP SECTION
+        !$OMP SECTION
         excited_DP =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,1) , AO_ket(:,1) , Dual_ket(:,1) )
 !$OMP END PARALLEL SECTIONS
 
@@ -190,7 +190,7 @@ lmult = 1 ! <== DIPOLE MOMENT
 
 forall(i=1:3) DP_matrix_AO(:,:)%dp(i) = 0.d0
 
-do ib = 1  , system%atoms
+do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
 
 ! calculate rotation matrix for the highest l
@@ -219,7 +219,7 @@ do ia = 1 , system%atoms
 
 !               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF ONE-CENTER DISTRIBUTIONS
 
-                qlm = 0.d0   ! check this !!!!
+                qlm = 0.d0  
 
                 call multipoles1c(na, la, expa, nb, lb, expb, lmult, qlm)
 
@@ -227,7 +227,7 @@ do ia = 1 , system%atoms
 
 !               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF TWO-CENTER DISTRIBUTIONS
 
-                qlm = 0.d0   ! check this !!!!!
+                qlm = 0.d0 
 
                 call multipoles2c(na, la, expa, nb, lb, expb, xab, yab, zab, Rab, lmult, rl, rl2, qlm)
 
@@ -283,13 +283,19 @@ allocate( origin_Independent(Fermi_state) )
 
 ! origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
 
-forall( states=1:Fermi_state )
+!$OMP parallel
+    !$OMP single
+    do states = 1 , Fermi_state 
+        !$OMP task untied
+        do i = 1 , n_basis  
+            a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+        end do
 
-    forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-
-    origin_Dependent(states)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
-
-end forall    
+        origin_Dependent(states)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
+        !$OMP end task
+    end do
+    !$OMP end single    
+!$OMP end parallel
 
 ! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 

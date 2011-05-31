@@ -64,43 +64,25 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
 ! Quantum Dynamics ...
 
-call start_clock
  CALL Generate_Structure(1)
-call stop_clock("generate")
 
-call start_clock
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
-call stop_clock("basis")
 
-call start_clock
  If( DP_field_ )CALL Molecular_DPs( Extended_Cell )
-call stop_clock("dp_field")
 
-call start_clock
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
-call stop_clock("eigen")
 
-call start_clock
  CALL Total_DOS( UNI%erg , TDOS )
-call stop_clock("total-dos")
 
-call start_clock
-do nr = 1 , N_of_residues
+ do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
-end do
-call stop_clock("partial-dos")
+ end do
 
-call start_clock
  If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
-call stop_clock("FMO")
 
-call start_clock
  If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
-call stop_clock("DP")
 
-call start_clock
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
-call stop_clock("spec")
 
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )

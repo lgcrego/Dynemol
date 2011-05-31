@@ -203,7 +203,9 @@ real*8           , intent(out)  :: tmp_PDOS_func  (:)
 
 ! local variables ...
 real*8           :: projection , erg_MO 
-integer          :: i , j , n , i1 , i2
+integer          :: i , j , n , i1 , i2 , grid_size
+
+grid_size = size( tmp_PDOS_grid )
 
 i1 = system%BasisPointer(atom(l)) + 1
 i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
@@ -219,7 +221,7 @@ do n = 1 , n_of_DOS_states
 
     erg_MO = QM%erg(j) 
 
-    do i = 1 , 1500
+    do i = 1 , grid_size
 
         if(dabs(tmp_PDOS_grid(i)-erg_MO) < (step/two) ) tmp_PDOS_peaks(i) = tmp_PDOS_peaks(i) + projection 
 

@@ -81,10 +81,14 @@ do j=1,dim_ket
         resonance = QM%erg(trans_DP%bra_PTR(i)) - QM%erg(trans_DP%ket_PTR(j))
         Transition_Strength(i,j) = osc_const * resonance * Transition_Strength(i,j)
 
-        where( dabs(SPEC%grid(:)-resonance) < step ) SPEC_peaks(:) = SPEC_peaks(:) + Transition_Strength(i,j)
+        do k = 1 , npoints
 
-        where( ((SPEC%grid(:)-resonance)**2/two_sigma2) < 25.d0 ) &
-        SPEC_func(:) = SPEC_func(:) + Transition_Strength(i,j) * dexp( -(SPEC%grid(:)-resonance)**2 / two_sigma2 )
+            if( dabs(SPEC%grid(k)-resonance) < step ) SPEC_peaks(k) = SPEC_peaks(k) + Transition_Strength(i,j)
+
+            if( ((SPEC%grid(k)-resonance)**2/two_sigma2) < 25.d0 ) &
+            SPEC_func(k) = SPEC_func(k) + Transition_Strength(i,j) * dexp( -(SPEC%grid(k)-resonance)**2 / two_sigma2 )
+
+        end do
 
     end do
 end do

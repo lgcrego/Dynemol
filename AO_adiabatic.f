@@ -217,9 +217,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL start_clock
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
-CALL stop_clock( "EigenSystem" )
 
 CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , fragment="D" )
 
@@ -335,28 +333,20 @@ select case( instance )
 
     case( "DP_matrix" )
 
-        CALL start_clock
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-        CALL stop_clock( "DP_matrix" )
 
     case( "DP_field" )
 
-        CALL start_clock
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-        CALL stop_clock( "DP_field" )
 
         ! wavepacket component of the dipole vector ...
-        CALL start_clock
         CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
-        CALL stop_clock( "wavepacket_DP" )
 
         CALL Molecular_DPs( Extended_Cell )
 
     case( "DP_moment" )
 
-        CALL start_clock
         CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
-        CALL stop_clock( "DP_moment" )
 
         If( t == t_i ) then
             open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )

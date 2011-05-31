@@ -503,10 +503,10 @@ integer , parameter   :: npoints = 1500
 select case ( flag )
 
     case( "alloc" )
-        allocate( SPEC%grid   (npoints) )
-        allocate( SPEC%func   (npoints) )
-        allocate( SPEC%peaks  (npoints) )
-        allocate( SPEC%average(npoints) , source = 0.d0)
+        allocate( SPEC%grid   (npoints) , source = D_zero )
+        allocate( SPEC%func   (npoints) , source = D_zero )
+        allocate( SPEC%peaks  (npoints) , source = D_zero )
+        allocate( SPEC%average(npoints) , source = D_zero )
 
     case( "dealloc")
         deallocate( SPEC%grid , SPEC%func , SPEC%peaks , SPEC%average )

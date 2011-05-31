@@ -48,7 +48,6 @@
 
  ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
 
- CALL start_clock
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_s = S_matrix
 
@@ -75,7 +74,6 @@
     end do  
 
  end If
- CALL stop_clock("Hamiltonian")
 
  CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
 
