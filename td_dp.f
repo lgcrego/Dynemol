@@ -1,6 +1,7 @@
 module TD_Dipole_m
 
     use type_m
+    use omp_lib
     use constants_m
     use mkl95_blas
     use parameters_m                , only : n_part
@@ -107,7 +108,11 @@ CALL DeAllocate_DPs( molecule , nr_max , flag = "alloc" )
 
 allocate( Qi_Ri(a%atoms,3) , source = D_zero )     
 
+!$OMP parallel default(shared) private( nr , nr_atoms , a , i1 , i2 , i , j , Qi_Ri , total_valence , np )
+!$OMP single
 do nr = first_nr , last_nr 
+
+!$OMP task
 
     ! No of atoms with tag nr ...
     nr_atoms = count( a%nr == nr ) 
@@ -126,6 +131,7 @@ do nr = first_nr , last_nr
     forall(j=1:3) molecule%CC(nr,j) = sum( Qi_Ri(i1:i2,j) ) / total_valence
 
     !-----------------------------------------------------
+
     ! if molecule(nr) is within solvation shell ...
     If( sqrt(dot_product(molecule%CC(nr,:)-origin(:) , molecule%CC(nr,:)-origin(:))) <= solvation_shell ) then
 
@@ -140,9 +146,20 @@ do nr = first_nr , last_nr
 
     end If
 
+!$OMP end task    
+
 end do
 
+!$OMP end single
+!$OMP end parallel
+
 deallocate( Qi_Ri )
+
+
+write(23,*) molecule%CC(:,1)
+write(24,*) molecule%el_DP(:,2)
+write(25,*) molecule%hl_DP(:,3)
+
 
 end subroutine preprocess_wavepacket_DP
 !

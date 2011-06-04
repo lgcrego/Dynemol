@@ -1,6 +1,7 @@
 module diagnostic_m
 
  use type_m
+ use omp_lib
  use constants_m
  use parameters_m               , only : spectrum , DP_Moment , &
                                          survival , DP_Field_ , &
@@ -11,8 +12,11 @@ module diagnostic_m
  use FMO_m                      , only : FMO_analysis
  use QCModel_Huckel             , only : EigenSystem
  use DOS_m
- use Structure_Builder          , only : Generate_Structure ,   &
-                                         Basis_Builder
+ use Structure_Builder          , only : Unit_Cell ,            &
+                                         Extended_Cell ,        &
+                                         Generate_Structure ,   &
+                                         Basis_Builder ,        &
+                                         ExCell_basis
  use GA_QCModel_m               , only : Mulliken
  use DP_main_m                  , only : Dipole_Matrix
  use DP_potential_m             , only : Molecular_DPs

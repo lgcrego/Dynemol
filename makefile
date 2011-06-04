@@ -55,6 +55,7 @@ SOURCE2 = constants_m.o  \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
+		  Coulomb.o \
 		  QCModel_Huckel.o \
 		  data_output.o \
 		  film_STO.o \
@@ -77,7 +78,6 @@ SOURCE2 = constants_m.o  \
 		  Chebyshev_driver.o \
 		  ga_driver.o \
 		  avrg_confgs.o \
-		  Coulomb.o \
  		  main.o
 
 

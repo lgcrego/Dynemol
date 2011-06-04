@@ -1,6 +1,7 @@
 module DOS_m
 
     use type_m
+    use omp_lib    
     use constants_m
     use parameters_m            , only  : sigma ,           &
                                           DOS_range        
@@ -9,6 +10,14 @@ module DOS_m
     use Semi_Empirical_Parms    , the_chemical_atom => atom
 
     public  :: Total_DOS , Partial_DOS
+
+    private
+
+    ! modulo variables ...
+    real*8                :: gauss_norm , two_sigma2 , step
+    integer , allocatable :: list_of_DOS_states(:)
+    integer , allocatable :: atom(:) 
+    integer               :: n_of_DOS_states 
 
  contains
 !
@@ -23,9 +32,9 @@ type(f_grid)                , intent(inout) :: TDOS
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
 ! local variables ...
-real*8  , allocatable :: DOS_partial(:) , erg_MO(:) , peaks(:)
-real*8                :: gauss_norm , sgm , two_sigma2 , step , sub_occupation
-integer               :: i1 , i2 , n_of_DOS_states , npoints, k ,j 
+real*8  , allocatable :: erg_MO(:) , peaks(:) , DOS_partial(:)
+real*8                :: sgm , sub_occupation
+integer               :: i1 , i2 , npoints, k ,j 
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -58,6 +67,7 @@ forall(k=1:npoints) TDOS%grid(k) = (k-1)*step + DOS_range%inicio
 ! the total density of states
 TDOS%peaks(:) = 0.d0
 TDOS%func (:) = 0.d0
+
 do j = 1 , n_of_DOS_states
 
     peaks = 0.d0
@@ -91,9 +101,9 @@ end subroutine Total_DOS
 !
 !
 !
-!===========================================================================
+!=================================================================
 subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
-!===========================================================================
+!=================================================================
 implicit none
 type(structure)             , intent(in)    :: system
 type(C_eigen)               , intent(in)    :: QM
@@ -102,11 +112,9 @@ integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
 ! local variables ...
-real*8                :: gauss_norm , sgm , two_sigma2 , projection , step , erg_MO , sub_occupation
-real*8  , allocatable :: peaks(:) , DOS_partial(:) 
-integer , allocatable :: list_of_DOS_states(:)
-integer               :: i , j , i1 , i2 , n_of_atoms , ioerr , npoints , k , l , n_of_DOS_states , n
-integer               :: atom(system%atoms) 
+real*8  , allocatable :: tmp_PDOS_peaks(:) , tmp_PDOS_func(:) 
+real*8                :: sgm , sub_occupation
+integer               :: i , i1 , i2 , j , n_of_atoms , ioerr , npoints , k , l , n
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -120,9 +128,6 @@ gauss_norm = 1.d0 !  / (sgm*sqrt2PI)    <== for gauss_norm = 1 the gaussians are
 two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
-allocate( peaks      (npoints) )
-allocate( DOS_partial(npoints) )
-
 ! number of states in the range [DOS_range%inicio,DOS_range%fim] ...
 i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) + 1
 i2 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%fim   ) 
@@ -135,7 +140,7 @@ allocate( list_of_DOS_states(n_of_DOS_states) )
 forall( i=1:n_of_DOS_states ) list_of_DOS_states(i) = i1 + (i-1)
 
 ! reads the list of atoms ...
-atom(:) = 0
+allocate( atom(system%atoms) , source=I_zero ) 
 j=1
 do i = 1 , system%atoms
     if( (system%residue(i) == PDOS(nr)%residue) ) then
@@ -149,37 +154,23 @@ n_of_atoms = j-1
 
 forall(k=1:npoints) PDOS(nr)%grid(k) = (k-1)*step + DOS_range%inicio
 
-PDOS(nr)%peaks(:) = 0.d0
-PDOS(nr)%func(:)  = 0.d0
-do l = 1 , n_of_atoms
+allocate( tmp_PDOS_peaks (npoints) , source = D_zero )
+allocate( tmp_PDOS_func  (npoints) , source = D_zero )
 
-    i1   = system%BasisPointer(atom(l)) + 1
-    i2   = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
+!$OMP parallel 
+    !$OMP DO reduction(+ : tmp_PDOS_peaks , tmp_PDOS_func )
+    do l = 1 , n_of_atoms
 
-    do n = 1 , n_of_DOS_states
-
-        j = list_of_DOS_states(n)
-
-        projection = 0.d0
-        do i = i1 , i2
-            projection = projection + QM%L(j,i)*QM%R(i,j)
-        end do
-        
-        erg_MO = QM%erg(j) 
-
-        peaks = 0.d0
-        where( dabs(PDOS(nr)%grid-erg_MO) < (step/two) ) peaks = projection
-
-        PDOS(nr)%peaks = PDOS(nr)%peaks + peaks
-
-        DOS_partial = 0.d0
-        where( ((PDOS(nr)%grid-erg_MO)**2/two_sigma2) < 25.d0 ) DOS_partial = gauss_norm*exp( -(PDOS(nr)%grid-erg_MO)**2 / two_sigma2 )
-
-        PDOS(nr)%func(:) = PDOS(nr)%func(:) + projection*DOS_partial(:)
+        CALL tmp_PDOS( system , QM , l , PDOS(nr)%grid , tmp_PDOS_peaks , tmp_PDOS_func )
 
     end do
+    !$OMP END DO
+!$OMP end parallel
 
-end do
+PDOS(nr)%peaks = tmp_PDOS_peaks
+PDOS(nr)%func  = tmp_PDOS_func
+
+deallocate( tmp_PDOS_peaks , tmp_PDOS_func )
 
 PDOS(nr)%average = PDOS(nr)%average + PDOS(nr)%func
 
@@ -191,11 +182,57 @@ end do
 sub_occupation = underneath_occupation(system,QM,atom,list_of_DOS_states(1))
 PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
 
-DEALLOCATE( peaks , DOS_partial , list_of_DOS_states )
+DEALLOCATE( atom , list_of_DOS_states )
 
 print*, '>> ',PDOS(nr)%residue,' PDOS done <<'
 
 end subroutine Partial_DOS
+!
+!
+!
+!=====================================================================================
+subroutine tmp_PDOS( system , QM , l , tmp_PDOS_grid , tmp_PDOS_peaks, tmp_PDOS_func ) 
+!=====================================================================================
+implicit none
+type(structure)  , intent(in)   :: system
+type(C_eigen)    , intent(in)   :: QM
+integer          , intent(in)   :: l
+real*8           , intent(in)   :: tmp_PDOS_grid  (:)
+real*8           , intent(out)  :: tmp_PDOS_peaks (:)
+real*8           , intent(out)  :: tmp_PDOS_func  (:)
+
+! local variables ...
+real*8           :: projection , erg_MO 
+integer          :: i , j , n , i1 , i2 , grid_size
+
+grid_size = size( tmp_PDOS_grid )
+
+i1 = system%BasisPointer(atom(l)) + 1
+i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
+
+do n = 1 , n_of_DOS_states
+
+    j = list_of_DOS_states(n)
+
+    projection = 0.d0
+    do i = i1 , i2
+        projection = projection + QM%L(j,i)*QM%R(i,j)
+    end do
+
+    erg_MO = QM%erg(j) 
+
+    do i = 1 , grid_size
+
+        if(dabs(tmp_PDOS_grid(i)-erg_MO) < (step/two) ) tmp_PDOS_peaks(i) = tmp_PDOS_peaks(i) + projection 
+
+        if( ((tmp_PDOS_grid(i)-erg_MO)**2/two_sigma2) < 25.d0 ) &
+        tmp_PDOS_func(i) = tmp_PDOS_func(i) + projection*gauss_norm*exp( -(tmp_PDOS_grid(i)-erg_MO)**2 / two_sigma2 )
+
+    end do    
+
+end do
+
+end subroutine tmp_PDOS
 !
 !
 !

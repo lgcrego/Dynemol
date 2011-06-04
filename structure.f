@@ -162,6 +162,10 @@ integer :: ASC_offset_2 = 96
  where( (extended_cell%fragment == 'H') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
  where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset_2 + extended_cell%copy_No) 
 
+! if present, define EXCITON fragment ...
+ where( (extended_cell%fragment == 'E') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
+ where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset_1 + extended_cell%copy_No) 
+
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
 

@@ -10,7 +10,7 @@ module AO_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart           
+                                             restart , Coulomb_          
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -37,6 +37,7 @@ module AO_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
+    use Coulomb_m                   , only : wormhole_to_Coulomb 
 
     public :: AO_adiabatic
 
@@ -76,7 +77,7 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
-t_rate = MD_dt * frame_step
+t_rate = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
 
 do frame = frame_init , size(trj) , frame_step
 
@@ -140,6 +141,8 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
 
+    If( Coulomb_ )          CALL Coulomb_stuff
+
     Deallocate              ( UNI%R , UNI%L , UNI%erg )
 
     CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
@@ -199,7 +202,7 @@ select case ( state_of_matter )
 
 end select
 
-el_hl_ = any( Unit_Cell%fragment == "H")
+el_hl_ = any( (Unit_Cell%fragment == "H") .OR. (Unit_Cell%fragment == "E")) 
  
 CALL Generate_Structure ( 1 )
 
@@ -219,9 +222,9 @@ end If
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , fragment="D" )
+CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="D" )
 
-If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , fragment="H" )
+If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
                           MO_bra   , MO_ket   ,       &
@@ -416,6 +419,27 @@ allocate( phase(size(MO_bra(:,1))) )
 CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
 
 end subroutine Restart_stuff
+!
+!
+!
+! 
+!========================
+ subroutine Coulomb_stuff
+!========================
+implicit none
+
+! LOCAL representation for film STO production ...
+
+! coefs of <k(t)| in AO basis 
+AO_bra = DUAL_bra
+
+! coefs of |k(t)> in AO basis 
+CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' , C_one , C_zero )
+
+! save coefficients in modulo Coulomb_m ...
+CALL wormhole_to_Coulomb( AO_bra , AO_ket )
+
+end subroutine Coulomb_stuff
 !
 !
 !

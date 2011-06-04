@@ -33,14 +33,16 @@ real*8           , allocatable :: Transition_Strength(:,:)
 
 ! . local variables: resonance spectrum
 type(transition)               :: Trans_DP
-real*8           , allocatable :: peak_ij(:) 
-real*8                         :: gauss_norm , sgm , two_sigma2 , step , resonance
+real*8           , allocatable :: SPEC_peaks(:) , SPEC_func(:)
+real*8                         :: gauss_norm , sgm , two_sigma2 , step , resonance , osc_const
 real*8           , parameter   :: one = 1.d0 , zero = 0.d0
-real*8           , parameter   :: osc_const = 1.65338d-4  ! <== (2/3)*(m_e/h_bar*h_bar) ; unit = 1/( eV * (a_B)^2 ) 
+real*8           , parameter   :: osc_const_parameter = 1.65338d-4  ! <== (2/3)*(m_e/h_bar*h_bar) ; unit = 1/( eV * (a_B)^2 ) 
 
 !-------------------------------------------------------------
 ! . Dipole Transition Matrix <bra|r|ket> = <empty|r|occupied>
 !-------------------------------------------------------------
+
+osc_const = osc_const_parameter
 
 npoints = size( SPEC%grid )
 
@@ -66,35 +68,40 @@ two_sigma2 = 2.d0 * sgm*sgm
 
 step = (QM%erg(trans_DP%bra_PTR(dim_bra))-QM%erg(trans_DP%ket_PTR(1))) / float(npoints-1)
 
-allocate( peak_ij(npoints) )
-
 forall(k=1:npoints) SPEC%grid(k) = (k-1)*step 
 
 ! . the optical spectrum : peaks and broadened lines ...
-SPEC%peaks = 0.d0
-SPEC%func  = 0.d0
-do i=1,dim_bra
-    do j=1,dim_ket 
+allocate( SPEC_peaks(npoints) , source = 0.d0 )
+allocate( SPEC_func (npoints) , source = 0.d0 )
+
+!$OMP parallel do private( resonance ) reduction( + : SPEC_peaks , SPEC_func ) 
+do j=1,dim_ket 
+    do i=1,dim_bra
 
         resonance = QM%erg(trans_DP%bra_PTR(i)) - QM%erg(trans_DP%ket_PTR(j))
         Transition_Strength(i,j) = osc_const * resonance * Transition_Strength(i,j)
 
-        peak_ij = 0.d0
-        where( dabs(SPEC%grid-resonance) < step ) peak_ij = Transition_Strength(i,j)
-        SPEC%peaks = SPEC%peaks + peak_ij    
+        do k = 1 , npoints
 
-        peak_ij = 0.d0
-        where( ((SPEC%grid-resonance)**2/two_sigma2) < 25.d0 ) &
-        peak_ij = dexp( -(SPEC%grid-resonance)**2 / two_sigma2 )
+            if( dabs(SPEC%grid(k)-resonance) < step ) SPEC_peaks(k) = SPEC_peaks(k) + Transition_Strength(i,j)
 
-        SPEC%func = SPEC%func + Transition_Strength(i,j) * peak_ij
+            if( ((SPEC%grid(k)-resonance)**2/two_sigma2) < 25.d0 ) &
+            SPEC_func(k) = SPEC_func(k) + Transition_Strength(i,j) * dexp( -(SPEC%grid(k)-resonance)**2 / two_sigma2 )
+
+        end do
 
     end do
 end do
+!$OMP end parallel do
+
+SPEC%peaks = SPEC_peaks
+SPEC%func  = SPEC_func
 
 SPEC%average = SPEC%average + SPEC%func
 
-deallocate( peak_ij , trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
+deallocate( SPEC_peaks , SPEC_func )
+
+deallocate( trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
 
 print*, '>> Optical Spectrum done <<'
 
@@ -168,28 +175,72 @@ allocate( origin_Dependent    ( dim_bra    , dim_ket)    )
 allocate( origin_Independent  ( dim_bra    , dim_ket)    )
 allocate( DP%matrix           ( dim_bra    , dim_ket)    )
 
-!...........................................................................
+!..........................................................................................................
 ! . Origin dependent DP     =   sum{ C[ai] * {R_i + R_j}/2 * S_ij * C[jb] }  ....
 
 ! . Origin independent DP   =   sum{ C[ai] * {DP_matrix_AO[ij](i) + DP_matrix_AO[ji](j)}/2 * C[jb] }  ....
-!...........................................................................
+!..........................................................................................................
 
 allocate( a     ( dim_bra , dim_basis)  )
 allocate( left  ( dim_bra , dim_basis)  )
 allocate( right ( dim_basis  , dim_ket) )
 
 forall(i=1:dim_ket) right(:,i) = real( QM%R(:,DP%ket_PTR(i)) )
-do xyz = 1 , 3
-    forall( j=1:dim_basis , i=1:dim_bra )  left(i,j) = real( QM%L(DP%bra_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
-    forall( j=1:dim_ket   , i=1:dim_bra )  origin_Dependent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) )
-end do
 
-forall( i=1:dim_bra )                  a(i,:)     =  real( QM%L(DP%bra_PTR(i),:) )
-forall( i=1:dim_ket , j=1:dim_basis )  right(j,i) =  real( QM%L(DP%ket_PTR(i),j) )
+!$OMP parallel
+    do xyz = 1 , 3
+
+        !$OMP single
+        do j = 1 , dim_basis 
+            !$OMP task
+            do i = 1 , dim_bra   
+                left(i,j) = real( QM%L(DP%bra_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+
+        !$OMP single
+        do j = 1 , dim_ket   
+            !$OMP task
+            do i = 1 , dim_bra 
+                origin_Dependent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) )
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+
+    end do
+!$OMP end parallel
+
+forall(i=1:dim_bra) a(i,:) = real( QM%L(DP%bra_PTR(i),:) )
+
+!$OMP parallel
+    !$OMP single
+    do i = 1 , dim_ket 
+        !$OMP task
+        do j = 1 , dim_basis   
+            right(j,i) = real( QM%L(DP%ket_PTR(i),j) )
+        end do
+        !$OMP end task
+    end do
+    !$OMP end single
+!$OMP end parallel
+
 do xyz = 1 , 3  
     matrix = DP_matrix_AO%DP(xyz)
     CALL gemm(a,matrix,left,'N','N',one,zero)    
-    forall( j=1:dim_ket , i=1:dim_bra ) origin_Independent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) ) / two
+    !$OMP parallel
+        !$OMP single
+        do j = 1 , dim_ket 
+            !$OMP task
+            do i = 1 , dim_bra  
+                origin_Independent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) ) / two
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+    !$OMP end parallel
 end do
 
 deallocate( a , left , right )
@@ -200,17 +251,62 @@ allocate( left  ( dim_ket , dim_basis)  )
 allocate( right ( dim_basis  , dim_bra) )
 
 forall(i=1:dim_bra) right(:,i) = real( QM%R(:,DP%bra_PTR(i)) )
-do xyz = 1 , 3
-    forall( j=1:dim_basis , i=1:dim_ket )  left(i,j) = real( QM%L(DP%ket_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
-    forall( j=1:dim_ket   , i=1:dim_bra )  origin_Dependent(i,j)%DP(xyz) = origin_Dependent(i,j)%DP(xyz) + sum( left(j,:) * right(:,i) )
-end do
 
-forall( i=1:dim_ket )                  a(i,:)     =  real( QM%L(DP%ket_PTR(i),:) )
-forall( i=1:dim_bra , j=1:dim_basis )  right(j,i) =  real( QM%L(DP%bra_PTR(i),j) )
+!$OMP parallel
+    do xyz = 1 , 3
+
+        !$OMP single
+        do j = 1 , dim_basis  
+            !$OMP task
+            do i = 1 , dim_ket   
+                left(i,j) = real( QM%L(DP%ket_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+
+        !$OMP single
+        do j = 1 , dim_ket   
+            !$OMP task
+            do i = 1 , dim_bra   
+                origin_Dependent(i,j)%DP(xyz) = origin_Dependent(i,j)%DP(xyz) + sum( left(j,:) * right(:,i) )
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+
+    end do
+!$OMP end parallel    
+
+forall( i=1:dim_ket ) a(i,:) = real( QM%L(DP%ket_PTR(i),:) )
+
+!$OMP parallel    
+    !$OMP single
+    do i = 1 , dim_bra 
+        !$OMP task
+        do j = 1 , dim_basis   
+            right(j,i) =  real( QM%L(DP%bra_PTR(i),j) )
+        end do
+        !$OMP end task
+    end do
+    !$OMP end single
+!$OMP end parallel    
+
+
 do xyz = 1 , 3  
     matrix = DP_matrix_AO%DP(xyz)
     CALL gemm(a,matrix,left,'N','N',one,zero)    
-    forall( j=1:dim_ket , i=1:dim_bra ) origin_Independent(i,j)%DP(xyz) = origin_Independent(i,j)%DP(xyz) + sum( left(j,:) * right(:,i) ) / two
+    !$OMP parallel    
+        !$OMP single
+        do j = 1 , dim_ket  
+            !$OMP task
+            do i = 1 , dim_bra  
+                origin_Independent(i,j)%DP(xyz) = origin_Independent(i,j)%DP(xyz) + sum( left(j,:) * right(:,i) ) / two
+            end do
+            !$OMP end task
+        end do
+        !$OMP end single
+    !$OMP end parallel    
 end do
 
 deallocate( a , left , right )

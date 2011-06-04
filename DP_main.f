@@ -1,6 +1,7 @@
 module DP_main_m
 
     use type_m
+    use omp_lib
     use constants_m
     use mkl95_precision
     use mkl95_blas
@@ -95,9 +96,7 @@ real*8          , optional  , intent(out)   :: DP_total (3)
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), hole_DP(3), excited_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
-complex*16      , allocatable :: a(:,:), b(:,:)
 logical         , allocatable :: AO_mask(:)
-type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 
 ! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
@@ -111,45 +110,17 @@ CALL Center_of_Charge( system , R_vector )
 
 Nuclear_DP = D_zero 
 
-! Electronic dipole 
-n_basis      =  size(basis)
-Fermi_state  =  sum( system%Nvalen ) / two
- 
-allocate( a(n_basis,n_basis)              , source = C_zero )
-allocate( b(n_basis,n_basis)              , source = C_zero )
-allocate( origin_Dependent  (Fermi_state) )
-allocate( origin_Independent(Fermi_state) )
+Fermi_state = sum( system%Nvalen ) / two
 
 do xyz = 1 , 3
 
-!   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
-
-    forall( states=1:Fermi_state )
-
-        forall( i=1:n_basis ) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-
-        origin_Dependent(states)%DP(xyz)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
-
-    end forall    
-
-!   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
-
-    b = DP_matrix_AO%DP(xyz)
-
-    CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
-
-    forall( states=1:Fermi_state ) origin_Independent(states)%DP(xyz) = two * real( sum( a(states,:)*L_vec(states,:) , AO_mask ) )
+    Electronic_DP(xyz) = DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state )
 
 end do
-
-deallocate(a,b)
 
 !--------------------------------------------------------------------------------------
 ! Build DP_Moment ...
 !--------------------------------------------------------------------------------------
-
-! contribution from the valence states ...
-forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
 ! contribution from the hole and electronic-wavepackets ... 
 ! excited-state case: hole_state /= 0 ...
@@ -157,17 +128,19 @@ If( hole_state /= I_zero ) then
 
     If( static ) then
 
-        hole_DP    = el_hl_StaticDPs( system , instance="hole" )
-
-        excited_DP = el_hl_StaticDPs( system , instance="electron" )
+        CALL el_hl_StaticDPs( system , hole_DP , excited_DP )
 
     else
 
         If( (eh_tag(1) /= "el") .OR. (eh_tag(2) /= "hl") ) pause ">>> check call to wavepacket_DP in DP_main.f <<<"
 
+!$OMP PARALLEL SECTIONS
+        !$OMP SECTION
         hole_DP    =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,2) , AO_ket(:,2) , Dual_ket(:,2) )
 
+        !$OMP SECTION
         excited_DP =  wavepacket_DP( basis , AO_mask , R_vector , AO_bra(:,1) , AO_ket(:,1) , Dual_ket(:,1) )
+!$OMP END PARALLEL SECTIONS
 
     end If
 
@@ -184,12 +157,162 @@ Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
 If( present(DP_total) ) DP_total = Total_DP
 
 deallocate(R_vector , AO_mask)
-deallocate(origin_Dependent)
-deallocate(origin_Independent)
 
 include 'formats.h'
 
 end subroutine Dipole_Moment
+!
+!
+!
+!============================================
+subroutine Build_DIPOLE_Matrix(system, basis)
+!============================================
+implicit none
+type(structure) , intent(in)    :: system
+type(STO_basis) , intent(in)    :: basis(:)
+
+! local variables
+real*8  :: expa, expb, xab , yab , zab , Rab 
+integer :: AtNo_a , AtNo_b
+integer :: a , b , ia , ib , ja , jb 
+integer :: na , la , ma 
+integer :: nb , lb , mb
+integer :: lmult , i , j
+
+real*8  , parameter :: tol = 1.d-10 
+integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
+real*8  , parameter :: cutoff_Angs = 10.d0
+
+real*8 , dimension((mxmult+1)**2,-mxl:mxl,-mxl:mxl)        :: qlm
+real*8 , dimension(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup) :: rl , rl2
+
+lmult = 1 ! <== DIPOLE MOMENT
+
+forall(i=1:3) DP_matrix_AO(:,:)%dp(i) = 0.d0
+
+do ib = 1 , system%atoms
+do ia = 1 , system%atoms  
+
+! calculate rotation matrix for the highest l
+
+    call RotationMultipoles(system,ia,ib,xab,yab,zab,Rab,lmult,rl,rl2)
+
+    If(Rab*a_Bohr > cutoff_Angs) goto 10
+
+    do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
+    do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
+
+        na = basis(a)%n ;   la = basis(a)%l ;   ma = basis(a)%m
+        nb = basis(b)%n ;   lb = basis(b)%l ;   mb = basis(b)%m
+
+        CALL Multipole_Messages(na,nb,la,lb)
+
+!---------------------------------------------------------------------------------------------------- 
+!       sum over zeta coefficients
+        do i = 1 , basis(a)%Nzeta
+        do j = 1 , basis(b)%Nzeta
+   
+            expa = basis(a)%zeta(i)
+            expb = basis(b)%zeta(j)
+
+            if( ia==ib ) then
+
+!               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF ONE-CENTER DISTRIBUTIONS
+
+                qlm = 0.d0  
+
+                call multipoles1c(na, la, expa, nb, lb, expb, lmult, qlm)
+
+            else 
+
+!               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF TWO-CENTER DISTRIBUTIONS
+
+                qlm = 0.d0 
+
+                call multipoles2c(na, la, expa, nb, lb, expb, xab, yab, zab, Rab, lmult, rl, rl2, qlm)
+
+            end if
+
+!           p_x(a,b) 
+            DP_matrix_AO(a,b)%dp(1) = DP_matrix_AO(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
+!           p_y(a,b)
+            DP_matrix_AO(a,b)%dp(2) = DP_matrix_AO(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
+!           p_z(a,b)
+            DP_matrix_AO(a,b)%dp(3) = DP_matrix_AO(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
+
+        end do
+        end do
+!---------------------------------------------------------------------------------------------------- 
+
+    enddo
+    enddo
+10 end do
+end do
+
+end subroutine Build_DIPOLE_Matrix
+!
+!
+!
+!=================================================================================================
+pure function DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state)
+!=================================================================================================
+implicit none
+integer                  , intent(in) :: xyz
+type(STO_basis)          , intent(in) :: basis    (:)
+complex*16               , intent(in) :: L_vec    (:,:) 
+complex*16               , intent(in) :: R_vec    (:,:)
+real*8                   , intent(in) :: R_vector (:,:)
+logical                  , intent(in) :: AO_mask  (:)
+integer                  , intent(in) :: Fermi_state
+
+real*8 :: DP_Moment_component
+
+! local variables ...
+complex*16 , allocatable :: a(:,:), b(:,:)
+real*8     , allocatable :: origin_Dependent   (:)
+real*8     , allocatable :: origin_Independent (:)
+integer                  :: i , states , n_basis
+
+! Electronic dipole 
+n_basis = size(basis)
+ 
+allocate( a(n_basis,n_basis)              , source = C_zero )
+allocate( b(n_basis,n_basis)              , source = C_zero )
+allocate( origin_Dependent  (Fermi_state) )
+allocate( origin_Independent(Fermi_state) )
+
+! origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
+
+!$OMP parallel
+    !$OMP single
+    do states = 1 , Fermi_state 
+        !$OMP task untied
+        do i = 1 , n_basis  
+            a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+        end do
+
+        origin_Dependent(states)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
+        !$OMP end task
+    end do
+    !$OMP end single    
+!$OMP end parallel
+
+! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
+
+b = DP_matrix_AO%DP(xyz)
+
+CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
+
+forall( states=1:Fermi_state ) origin_Independent(states) = two * real( sum( a(states,:)*L_vec(states,:) , AO_mask ) )
+
+deallocate( a , b )
+
+! contribution from the valence states ...
+DP_Moment_component = sum( origin_Dependent + origin_Independent )
+
+deallocate( origin_Dependent , origin_Independent )
+
+end function DP_Moment_component
 !
 !
 !
@@ -275,95 +398,6 @@ forall( j=1:3 , i=1:a%atoms , mask(i) ) R_vector(i,j) = a%coord(i,j) - a%Center_
 deallocate( Qi_Ri , mask )
 
 end subroutine Center_of_Charge
-!
-!
-!
-!============================================
-subroutine Build_DIPOLE_Matrix(system, basis)
-!============================================
-implicit none
-type(structure) , intent(in)    :: system
-type(STO_basis) , intent(in)    :: basis(:)
-
-! local variables
-real*8  :: expa, expb, xab , yab , zab , Rab 
-integer :: AtNo_a , AtNo_b
-integer :: a , b , ia , ib , ja , jb 
-integer :: na , la , ma 
-integer :: nb , lb , mb
-integer :: lmult , i , j
-
-real*8  , parameter :: tol = 1.d-10 
-integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
-real*8  , parameter :: cutoff_Angs = 10.d0
-
-real*8 , dimension((mxmult+1)**2,-mxl:mxl,-mxl:mxl)        :: qlm
-real*8 , dimension(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup) :: rl , rl2
-
-lmult = 1 ! <== DIPOLE MOMENT
-
-forall(i=1:3) DP_matrix_AO(:,:)%dp(i) = 0.d0
-
-do ib = 1  , system%atoms
-do ia = 1 , system%atoms  
-
-! calculate rotation matrix for the highest l
-
-    call RotationMultipoles(system,ia,ib,xab,yab,zab,Rab,lmult,rl,rl2)
-
-    If(Rab*a_Bohr > cutoff_Angs) goto 10
-
-    do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
-    do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
-
-        na = basis(a)%n ;   la = basis(a)%l ;   ma = basis(a)%m
-        nb = basis(b)%n ;   lb = basis(b)%l ;   mb = basis(b)%m
-
-        CALL Multipole_Messages(na,nb,la,lb)
-
-!---------------------------------------------------------------------------------------------------- 
-!       sum over zeta coefficients
-        do i = 1 , basis(a)%Nzeta
-        do j = 1 , basis(b)%Nzeta
-   
-            expa = basis(a)%zeta(i)
-            expb = basis(b)%zeta(j)
-
-            if( ia==ib ) then
-
-!               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF ONE-CENTER DISTRIBUTIONS
-
-                qlm = 0.d0   ! check this !!!!
-
-                call multipoles1c(na, la, expa, nb, lb, expb, lmult, qlm)
-
-            else 
-
-!               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF TWO-CENTER DISTRIBUTIONS
-
-                qlm = 0.d0   ! check this !!!!!
-
-                call multipoles2c(na, la, expa, nb, lb, expb, xab, yab, zab, Rab, lmult, rl, rl2, qlm)
-
-            end if
-
-!           p_x(a,b) 
-            DP_matrix_AO(a,b)%dp(1) = DP_matrix_AO(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
-!           p_y(a,b)
-            DP_matrix_AO(a,b)%dp(2) = DP_matrix_AO(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
-!           p_z(a,b)
-            DP_matrix_AO(a,b)%dp(3) = DP_matrix_AO(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
-
-        end do
-        end do
-!---------------------------------------------------------------------------------------------------- 
-
-    enddo
-    enddo
-10 end do
-end do
-
-end subroutine Build_DIPOLE_Matrix
 !
 !
 !

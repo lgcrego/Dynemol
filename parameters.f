@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_
+logical                 :: verbose , static , DP_field_ , Coulomb_
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -28,14 +28,14 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "Coulomb"                 ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
+  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO , MO0 , MOt] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
   GaussianCube    = F_                       
   Survival        = T_                       
   SPECTRUM        = F_                          
-  DP_Moment       = T_                       
+  DP_Moment       = F_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
@@ -44,7 +44,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <= structure or trajectory
+  file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -54,7 +54,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
+
+  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -68,7 +70,7 @@ logical :: dynamic
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  90                           ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  29                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 

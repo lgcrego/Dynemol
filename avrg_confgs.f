@@ -7,7 +7,7 @@ module Sampling_m
     use parameters_m        , only : frame_step , spectrum ,        &
                                      survival , state_of_matter ,   &
                                      DP_Moment , DP_Field_ ,        &
-                                     file_type
+                                     file_type , sigma
     use Babel_m             , only : System_Characteristics ,       &
                                      Coords_from_Universe ,         &
                                      trj
@@ -23,7 +23,8 @@ module Sampling_m
     use Structure_Builder   , only : Unit_Cell ,                    &
                                      Extended_Cell ,                &
                                      Generate_Structure ,           &
-                                     Basis_Builder 
+                                     Basis_Builder ,                &
+                                     ExCell_basis
     use DOS_m
     use Oscillator_m        , only : Optical_Transitions
     use DP_main_m           , only : Dipole_Matrix 

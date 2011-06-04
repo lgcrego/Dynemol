@@ -11,6 +11,7 @@
     use mkl95_lapack
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
+    use Coulomb_m                   , only : Build_Coulomb_potential
 
     public :: EigenSystem , Huckel , Huckel_with_FIELDS
 
@@ -36,24 +37,21 @@
  integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
- real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
- real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
- integer               :: i , j , info
+ complex*16 , ALLOCATABLE   :: V_coul(:,:) , V_coul_El(:) , V_coul_Hl(:) 
+ real*8     , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
+ integer                    :: i , j 
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
- CALL Overlap_Matrix(system,basis,S_matrix)
+ CALL Overlap_Matrix( system , basis , S_matrix )
 
- If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
+! CALL Build_Coulomb_potential( S_matrix , basis , V_coul , V_coul_El , V_coul_Hl )
 
- ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
-
-! clone S_matrix because SYGVD will destroy it ... 
- dumb_s = S_matrix
+ ALLOCATE( h(size(basis),size(basis)) )
 
  If( DP_field_ ) then
 
-    !$OMP PARALLEL DO
+!$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
         do i = 1 , j
      
@@ -61,21 +59,59 @@
 
         end do
     end do  
-    !$OMP END PARALLEL DO
+!$OMP END PARALLEL DO
 
  else
  
     do j = 1 , size(basis)
-        do i = 1 , j
+        do i = 1 , j-1
      
-            h(i,j) = huckel(i,j,S_matrix(i,j),basis)
+            h(i,j) = huckel(i,j,S_matrix(i,j),basis) !+ real(V_coul(i,j))
 
         end do
+
+        h(j,j) = huckel(j,j,S_matrix(j,j),basis) !+ real(V_coul_El(j))
+
     end do  
 
  end If
 
- CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+ CALL Build_MO_basis( h , S_matrix , QM , flag1 , flag2 )
+
+!print*, maxval(QM%erg) , maxval(real(V_coul)) , maxval(real(V_coul_El))
+!deallocate( V_coul , V_coul_El , V_coul_Hl )
+
+ end subroutine EigenSystem
+!
+!
+!
+!=====================================================================
+ subroutine Build_MO_basis( H_matrix , S_matrix , QM , flag1 , flag2 )
+!=====================================================================
+ implicit none
+ real*8                      ,  allocatable  , intent(inout) :: H_matrix(:,:)
+ real*8                      ,  allocatable  , intent(inout) :: S_matrix(:,:)
+ type(C_eigen)                               , intent(inout) :: QM
+ integer          , optional                 , intent(inout) :: flag1
+ integer          , optional                 , intent(in)    :: flag2
+
+! local variables ...
+ real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+ real*8  , ALLOCATABLE :: dumb_s(:,:) 
+ integer               :: i , info , basis_size
+
+ basis_size = size( H_matrix(:,1) )
+
+ ALLOCATE( dumb_s(basis_size,basis_size) )
+
+! clone S_matrix because SYGVD will destroy it ... 
+ dumb_s = S_matrix
+
+ If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(basis_size)) 
+
+ CALL SYGVD(H_matrix,dumb_s,QM%erg,1,'V','U',info)
 
  If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
  If ( present(flag1) ) flag1 = info
@@ -90,16 +126,16 @@
 !   Rv = <AO|MO> coefficients
 !     ---------------------------------------------------
 
- ALLOCATE(Lv(size(basis),size(basis)))
+ ALLOCATE( Lv(basis_size,basis_size) )
 
- Lv = h
+ Lv = H_matrix
 
- DEALLOCATE(h)
+ DEALLOCATE(H_matrix)
 
  ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
  If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
- ALLOCATE(Rv(size(basis),size(basis)))
+ ALLOCATE( Rv(basis_size,basis_size) )
 
  CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
 
@@ -108,12 +144,12 @@
 !----------------------------------------------------------
 !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 
- If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
+ If( .NOT. allocated(QM%L) ) ALLOCATE( QM%L(basis_size,basis_size) ) 
 ! eigenvectors in the rows of QM%L
  QM%L = cmplx( transpose(Lv) )
  DEALLOCATE( Lv )
 
- If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
+ If( .NOT. ALLOCATED(QM%R) ) ALLOCATE( QM%R(basis_size,basis_size) )
 ! eigenvectors in the columns of QM%R
  QM%R = cmplx( Rv )
  DEALLOCATE( Rv )
@@ -124,14 +160,14 @@
 
 ! save energies of the TOTAL system 
  OPEN(unit=9,file='system-ergs.dat',status='unknown')
-    do i = 1 , size(basis)
+    do i = 1 , basis_size
         write(9,*) i , QM%erg(i)
     end do
  CLOSE(9)  
 
  If( verbose ) Print*, '>> EigenSystem done <<'
 
- end subroutine EigenSystem
+ end subroutine Build_MO_basis
 !
 !
 !

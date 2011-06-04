@@ -22,7 +22,6 @@ c
 c
 c normalizo todo
 c
-*     print*,'integrales normalizadas'
       rn = rn1*rn2*rn3*rn4
       do 101 m1 = -ll1,ll1
       ang1 = ang(ll1,iabs(m1))

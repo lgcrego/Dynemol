@@ -5,7 +5,8 @@
  use mkl95_precision
  use mkl95_blas
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
-                                         GaussianCube_step ,  DP_Moment , initial_state
+                                         GaussianCube_step ,  DP_Moment , initial_state ,   &
+                                         Coulomb_    
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -13,6 +14,7 @@
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
+ use Coulomb_m                  , only : wormhole_to_Coulomb , Build_Coulomb_potential
 
  public :: Huckel_dynamics , DeAllocate_QDyn
 
@@ -113,6 +115,8 @@ DO it = 1 , n_t
         end do
     end if 
 
+    CALL Coulomb_stuff( AO_bra , AO_ket , basis )
+
 !--------------------------------------------------------------------------
 ! DUAL representation for efficient calculation of survival probabilities ...
 
@@ -151,6 +155,7 @@ character(*)  , intent(in)    :: flag
 ! local variable ...
 integer      :: i , N_of_fragments
 character(1) :: first_in_line
+logical      :: E_flag
 
 select case( flag )
 
@@ -169,10 +174,15 @@ select case( flag )
 
         end if
 
-        ! for the sake of having the donor survival probability in the first column at output ...
+        ! for the sake of having the DONOR or EXCITON survival probability in the first column at output ...
+        E_flag = any(Extended_Cell%list_of_fragments == "E")
         first_in_line = Extended_Cell%list_of_fragments(1)
-        where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
-        Extended_Cell%list_of_fragments(1) = "D"
+        If( E_flag ) then
+            where( Extended_Cell%list_of_fragments == "E" ) Extended_Cell%list_of_fragments = first_in_line
+        else
+            where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
+        end If
+        Extended_Cell%list_of_fragments(1) = merge( "E" , "D" , E_flag ) 
 
         ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
         allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
@@ -188,6 +198,21 @@ select case( flag )
 end select
 
 end subroutine DeAllocate_QDyn
+!
+!
+!
+! 
+!===================================================
+ subroutine Coulomb_stuff( AO_bra , AO_ket , basis )
+!===================================================
+implicit none
+complex*16      , intent(in) :: AO_bra(:,:) , AO_ket(:,:) 
+type(STO_basis) , intent(in) :: basis(:)
+
+! save coefficients in modulo Coulomb_m ...
+CALL wormhole_to_Coulomb( AO_bra , AO_ket )
+
+end subroutine Coulomb_stuff
 !
 !
 !

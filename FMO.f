@@ -29,7 +29,7 @@
 !
 !
 !=================================================================
- subroutine FMO_analysis( system, basis, CR, FMO , MO , fragment )
+ subroutine FMO_analysis( system, basis, CR, FMO , MO , instance )
 !=================================================================
  implicit none
  type(structure)                                , intent(in)    :: system
@@ -37,7 +37,7 @@
  complex*16         , optional  , allocatable   , intent(in)    :: CR(:,:)
  type(C_eigen)                                  , intent(out)   :: FMO
  real*8             , optional  , allocatable   , intent(inout) :: MO(:)
- character(*)       , optional                  , intent(in)    :: fragment
+ character(*)       , optional                  , intent(in)    :: instance
 
 ! local variables ...
  type(structure)               :: FMO_system
@@ -45,23 +45,26 @@
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
  integer                       :: i
+ character(1)                  :: fragment
 
 ! orbitals to be propagated ...
 If( .NOT. done ) then
-
     allocate( orbital(n_part) , eh_tag(n_part) )
 
     orbital(1) = initial_state ; eh_tag(1) = "el"
     orbital(2) = hole_state    ; eh_tag(2) = "hl"  
 
     done = .true.
-
 end If
 
-! FMO_system = fragment
+! setting the fragment ...
+If( .NOT. (any(system%fragment == "D") .AND. any(system%fragment == "H")) ) then
+     fragment = "E"
+else
+     fragment = instance
+end if
 
- If( fragment == "H" ) where( system%DPF ) system%fragment = "H"
-
+! FMO_system = fragment ...
  FMO_system%atoms = count(system%fragment == fragment)
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
@@ -80,7 +83,7 @@ end If
  FMO_system%copy_No    =  0
 
  CALL Basis_Builder( FMO_system , FMO_basis )
- 
+
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
 
 ! get wv_FMO orbital in local representation and leave subroutine ... 
@@ -90,7 +93,6 @@ end If
     allocate( MO(size(FMO_basis)) )
     MO(:) = wv_FMO(orbital(1),:)
 
-    print*, ''
     print*, '>> FMO analysis done <<'
 
     return
@@ -117,7 +119,6 @@ end If
  DeAllocate( FMO_basis )
  CALL DeAllocate_Structures( FMO_system )
 
- print*, ''
  print*, '>> FMO analysis done <<'
 
  include 'formats.h'

@@ -11,7 +11,6 @@ use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
-use Coulomb_m               , only : Int_Coulomb
 
 ! local variables ...
  
@@ -49,7 +48,6 @@ select case ( driver )
         CALL diagnostic
 
     case ( "Coulomb" )
-        CALL Int_Coulomb
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver

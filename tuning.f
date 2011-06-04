@@ -78,6 +78,7 @@ integer  :: i
 ! 
 !   Acceptor    =   A       
 !   Donor       =   D 
+!   Exciton     =   E 
 !   Hole        =   H 
 !   Molecule    =   M
 !   Solvent     =   S
@@ -109,11 +110,11 @@ integer  :: i
             a%atom(i)%solvation_hardcore = 3.d0
 
         case( 'ION') 
-            a%atom(i)%fragment = 'H' 
+            a%atom(i)%fragment = 'I' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case( 'BP1') 
-            a%atom(i)%fragment = 'D' 
+            a%atom(i)%fragment = 'E' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case( 'BP2') 
