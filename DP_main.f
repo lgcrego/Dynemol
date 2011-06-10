@@ -37,7 +37,7 @@ contains
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-complex*16      , optional  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
+real*8          , optional  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , optional  , intent(out)   :: Total_DP(3) 
 
 ! local variables ...
@@ -85,8 +85,8 @@ end subroutine Dipole_Matrix
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-complex*16                  , intent(in)    :: L_vec    (:,:) 
-complex*16                  , intent(in)    :: R_vec    (:,:)
+real*8                      , intent(in)    :: L_vec    (:,:) 
+real*8                      , intent(in)    :: R_vec    (:,:)
 complex*16      , optional  , intent(in)    :: AO_bra   (:,:) 
 complex*16      , optional  , intent(in)    :: AO_ket   (:,:) 
 complex*16      , optional  , intent(in)    :: Dual_ket (:,:)
@@ -259,8 +259,8 @@ pure function DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_m
 implicit none
 integer                  , intent(in) :: xyz
 type(STO_basis)          , intent(in) :: basis    (:)
-complex*16               , intent(in) :: L_vec    (:,:) 
-complex*16               , intent(in) :: R_vec    (:,:)
+real*8                   , intent(in) :: L_vec    (:,:) 
+real*8                   , intent(in) :: R_vec    (:,:)
 real*8                   , intent(in) :: R_vector (:,:)
 logical                  , intent(in) :: AO_mask  (:)
 integer                  , intent(in) :: Fermi_state
@@ -268,7 +268,7 @@ integer                  , intent(in) :: Fermi_state
 real*8 :: DP_Moment_component
 
 ! local variables ...
-complex*16 , allocatable :: a(:,:), b(:,:)
+real*8     , allocatable :: a(:,:), b(:,:)
 real*8     , allocatable :: origin_Dependent   (:)
 real*8     , allocatable :: origin_Independent (:)
 integer                  :: i , states , n_basis
@@ -276,8 +276,8 @@ integer                  :: i , states , n_basis
 ! Electronic dipole 
 n_basis = size(basis)
  
-allocate( a(n_basis,n_basis)              , source = C_zero )
-allocate( b(n_basis,n_basis)              , source = C_zero )
+allocate( a(n_basis,n_basis)              , source = D_zero )
+allocate( b(n_basis,n_basis)              , source = D_zero )
 allocate( origin_Dependent  (Fermi_state) )
 allocate( origin_Independent(Fermi_state) )
 
@@ -291,7 +291,7 @@ allocate( origin_Independent(Fermi_state) )
             a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
         end do
 
-        origin_Dependent(states)  = two * real( sum( a(states,:)*R_vec(:,states) , AO_mask ) )
+        origin_Dependent(states)  = two * sum( a(states,:)*R_vec(:,states) , AO_mask )
         !$OMP end task
     end do
     !$OMP end single    
@@ -301,9 +301,9 @@ allocate( origin_Independent(Fermi_state) )
 
 b = DP_matrix_AO%DP(xyz)
 
-CALL gemm( L_vec , b , a , 'N' , 'N' , C_one , C_zero )    
+CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )    
 
-forall( states=1:Fermi_state ) origin_Independent(states) = two * real( sum( a(states,:)*L_vec(states,:) , AO_mask ) )
+forall( states=1:Fermi_state ) origin_Independent(states) = two * sum( a(states,:)*L_vec(states,:) , AO_mask )
 
 deallocate( a , b )
 

@@ -14,13 +14,44 @@
 
     real*8 , parameter :: fringe = 8.d0
 
+    interface Gaussian_Cube_Format
+        module procedure Gaussian_Cube_Format_Real
+        module procedure Gaussian_Cube_Format_Cmplx
+    end interface  Gaussian_Cube_Format
+
  contains   
 !
 !
 !
-!==============================================================
- subroutine  Gaussian_Cube_Format( bra , ket , it , t , el_hl )
-!==============================================================
+!===================================================================
+ subroutine  gaussian_cube_format_Real( bra , ket , it , t , el_hl )
+!===================================================================
+ implicit none
+ real*8                    , intent(in) :: bra(:), ket(:)
+ real*8                    , intent(in) :: t
+ integer                   , intent(in) :: it 
+ character(*) , optional   , intent(in) :: el_hl
+
+! local variables ...
+complex*16 , allocatable :: C_bra(:), C_ket(:)
+
+allocate( C_bra(size(bra)) )
+allocate( C_ket(size(ket)) )
+
+C_bra = cmplx(bra)
+C_ket = cmplx(ket)
+
+CALL gaussian_cube_format_Cmplx( C_bra , C_ket , it , t , el_hl )
+
+deallocate( C_bra , C_ket )
+
+end subroutine gaussian_cube_format_Real
+!
+!
+!
+!====================================================================
+ subroutine  gaussian_cube_format_Cmplx( bra , ket , it , t , el_hl )
+!====================================================================
  implicit none
  complex*16                , intent(in) :: bra(:), ket(:)
  real*8                    , intent(in) :: t
@@ -168,7 +199,7 @@
 
  include 'formats.h'
 
- end subroutine Gaussian_Cube_Format
+ end subroutine Gaussian_Cube_Format_Cmplx
 !
 !
 !

@@ -7,9 +7,8 @@ module Eigen_driver_m
     use FMO_m                       , only : eh_tag 
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
-    use MO0_adiabatic_m             , only : MO0_adiabatic
-    use MOt_adiabatic_m             , only : MOt_adiabatic
     use AO_adiabatic_m              , only : AO_adiabatic
+    use ElHl_adiabatic_m            , only : ElHl_adiabatic
 
     public :: Eigen_driver
 
@@ -37,11 +36,13 @@ select case ( DRIVER )
 
     case( "slice_MO0" )
 
-        CALL MO0_adiabatic( QDyn , it )
 
     case( "slice_MOt" )
 
-        CALL MOt_adiabatic( QDyn , it )
+
+    case( "slice_ElHl" )
+
+        CALL ElHl_adiabatic ( QDyn , it )
 
     case( "slice_AO" )
 

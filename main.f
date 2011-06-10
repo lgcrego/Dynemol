@@ -32,7 +32,7 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "slice_AO" , "slice_MO0" , "slice_MOt" )
+    case ( "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" )
         CALL Eigen_driver
 
     case ( "slice_Cheb" )

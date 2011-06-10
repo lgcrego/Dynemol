@@ -45,7 +45,7 @@ integer                         :: li , N
 real*8          , allocatable   :: wv_FMO(:) 
 real*8          , allocatable   :: S_matrix(:,:)
 complex*16      , allocatable   :: DUAL_bra(:) , DUAL_ket(:)
-type(C_eigen)                   :: FMO
+type(R_eigen)                   :: FMO
 
 ! prepare  DONOR  state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO )

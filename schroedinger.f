@@ -5,8 +5,7 @@
  use mkl95_precision
  use mkl95_blas
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
-                                         GaussianCube_step ,  DP_Moment , initial_state ,   &
-                                         Coulomb_    
+                                         GaussianCube_step ,  DP_Moment , initial_state 
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -14,7 +13,6 @@
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
- use Coulomb_m                  , only : wormhole_to_Coulomb , Build_Coulomb_potential
 
  public :: Huckel_dynamics , DeAllocate_QDyn
 
@@ -29,12 +27,13 @@
  implicit none
  type(structure)            , intent(inout)    :: system
  type(STO_basis)            , intent(in)       :: basis(:)
- type(C_eigen)              , intent(in)       :: UNI 
- type(C_eigen)              , intent(in)       :: el_FMO 
- type(C_eigen)   , optional , intent(in)       :: hl_FMO 
+ type(R_eigen)              , intent(in)       :: UNI 
+ type(R_eigen)              , intent(in)       :: el_FMO 
+ type(R_eigen)   , optional , intent(in)       :: hl_FMO 
  type(f_time)               , intent(inout)    :: QDyn
 
 ! local variables ...
+integer                             :: mm , nn
 integer                             :: it , i , n 
 real*8                              :: t , t_rate 
 real*8                              :: Total_DP(3)
@@ -55,6 +54,9 @@ CALL Allocate_Brackets( size(UNI%L(1,:))     ,      &
                          AO_bra   , AO_ket   ,      &
                          DUAL_bra , DUAL_ket ,      &
                          bra      , ket      , phase)
+
+mm = size(basis)                          
+nn = n_part
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 ! assuming non-interacting electrons ...
@@ -104,19 +106,16 @@ DO it = 1 , n_t
 ! LOCAL representation for film STO production ...
 
 ! coefs of <k(t)| in AO basis 
-    CALL gemm(UNI%L,MO_bra,AO_bra,'T','N',C_one,C_zero)
+    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , AO_bra , mm )
 
 ! coefs of |k(t)> in AO basis 
-    CALL gemm(UNI%L,MO_ket,AO_ket,'T','N',C_one,C_zero)
+    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
     if( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
         do n = 1 , n_part
             CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
         end do
     end if 
-
-    CALL Coulomb_stuff( AO_bra , AO_ket , basis )
-
 !--------------------------------------------------------------------------
 ! DUAL representation for efficient calculation of survival probabilities ...
 
@@ -124,7 +123,7 @@ DO it = 1 , n_t
    DUAL_bra = AO_bra
 
 ! coefs of |k(t)> in DUAL basis ...
-   CALL gemm(UNI%R,MO_ket,DUAL_ket,'N','N',C_one,C_zero)
+   CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
    Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
@@ -202,18 +201,4 @@ end subroutine DeAllocate_QDyn
 !
 !
 ! 
-!===================================================
- subroutine Coulomb_stuff( AO_bra , AO_ket , basis )
-!===================================================
-implicit none
-complex*16      , intent(in) :: AO_bra(:,:) , AO_ket(:,:) 
-type(STO_basis) , intent(in) :: basis(:)
-
-! save coefficients in modulo Coulomb_m ...
-CALL wormhole_to_Coulomb( AO_bra , AO_ket )
-
-end subroutine Coulomb_stuff
-!
-!
-!
 end module Schroedinger_m

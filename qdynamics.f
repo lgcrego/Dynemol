@@ -41,8 +41,8 @@ implicit none
  integer                        :: nr , N_of_residues
  character(3)                   :: residue
  logical                        :: FMO_ , DIPOLE_ , el_hl_
- type(C_eigen)                  :: UNI
- type(C_eigen)                  :: el_FMO , hl_FMO
+ type(R_eigen)                  :: UNI
+ type(R_eigen)                  :: el_FMO , hl_FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(f_time)                   :: QDyn
@@ -79,7 +79,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , fragment="D")
+ If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="D")
 
  If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
@@ -95,7 +95,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
         case( .true. )
 
-            CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, hl_FMO , fragment="H")
+            CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, hl_FMO , instance="H")
 
             CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, el_FMO , hl_FMO , QDyn )
 

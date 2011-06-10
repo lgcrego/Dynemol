@@ -1,5 +1,5 @@
 ! Subroutine for computing time evolution adiabatic on the AO
-module AO_adiabatic_m
+module ElHl_adiabatic_m
 
     use type_m
     use constants_m
@@ -10,7 +10,7 @@ module AO_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart 
+                                             restart , Coulomb_          
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -30,30 +30,32 @@ module AO_adiabatic_m
     use TD_Dipole_m                 , only : wavepacket_DP                                        
     use DP_potential_m              , only : Molecular_DPs                                              
     use Solvated_M                  , only : Prepare_Solvated_System 
-    use QCModel_Huckel              , only : EigenSystem                                                 
+    use QCModel_Huckel_ElHl         , only : EigenSystem_ElHl                                            
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
     use Data_Output                 , only : Populations
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
+    use Coulomb_m                   , only : wormhole_to_Coulomb 
 
-    public :: AO_adiabatic
+    public :: ElHl_adiabatic
 
     private
 
     ! module variables ...
-    Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket , phase
+    Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase
+    Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket
     type(R_eigen)                             :: UNI , el_FMO , hl_FMO
-    integer                                   :: mm , nn
+    type(R_eigen)                             :: UNI_el , UNI_hl
+    integer                                   :: mm
 
 contains
 !
 !
-!====================================
- subroutine AO_adiabatic( Qdyn , it )
-!====================================
+!======================================
+ subroutine ElHl_adiabatic( Qdyn , it )
+!======================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
@@ -89,16 +91,20 @@ do frame = frame_init , size(trj) , frame_step
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
-    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
+    phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
+    phase(:,2) = cmplx(1.d0)  !cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
 
     forall( j=1:n_part )   
-        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j) 
-        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
+        MO_bra(:,j) = conjg(phase(:,j)) * MO_bra(:,j) 
+        MO_ket(:,j) =       phase(:,j)  * MO_ket(:,j) 
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
+
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
     ! save populations(t + t_rate) ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
@@ -141,13 +147,19 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
 
-    Deallocate              ( UNI%R , UNI%L , UNI%erg )
+    If( Coulomb_ )          CALL Coulomb_stuff
 
-    CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+    Deallocate              ( UNI_el%R , UNI_el%L , UNI_el%erg )
+    Deallocate              ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
+
+    CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , UNI_el , UNI_hl , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , Dual_bra(:,1) , mm , C_zero , MO_bra(:,1) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , Dual_ket(:,1) , mm , C_zero , MO_ket(:,1) , mm )
+
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , Dual_bra(:,2) , mm , C_zero , MO_bra(:,2) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , Dual_ket(:,2) , mm , C_zero , MO_ket(:,2) , mm )
 
     !============================================================================
 
@@ -161,7 +173,7 @@ deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket 
 
 include 'formats.h'
 
-end subroutine AO_adiabatic
+end subroutine ElHl_adiabatic
 !
 !
 !
@@ -174,7 +186,6 @@ integer         , intent(in)     :: it
 
 ! local variables
 integer         :: hole_save , n
-logical         :: el_hl_
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -200,8 +211,6 @@ select case ( state_of_matter )
 
 end select
 
-el_hl_ = any( (Unit_Cell%fragment == "H") .OR. (Unit_Cell%fragment == "E")) 
- 
 CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
@@ -218,11 +227,11 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , UNI_el , UNI_hl , flag2=it )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="D" )
-
-If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
+! build the initial electron-hole wavepacket ...
+CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="D" )
+CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_hl%R , hl_FMO , instance="H" )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
                           MO_bra   , MO_ket   ,       &
@@ -230,8 +239,7 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           DUAL_bra , DUAL_ket ,       &
                           bra      , ket      , phase )
 
-mm = size(ExCell_basis)                          
-nn = n_part
+mm = size(ExCell_basis)                         
 
 ! initial state of the isolated molecule ...
 Print 56 , initial_state     
@@ -261,8 +269,11 @@ do n = 1 , n_part
 end do
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
+CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
+
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
+CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
@@ -300,7 +311,8 @@ integer :: n
 AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
 
 do n = 1 , n_part
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
@@ -331,7 +343,8 @@ real*8  :: Total_DP(3)
 AO_bra = DUAL_bra
 
 ! coefs of |k(t)> in AO basis 
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
 
 select case( instance )
 
@@ -415,7 +428,7 @@ CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
 CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
-allocate( phase(size(MO_bra(:,1))) )
+allocate( phase(size(MO_bra(:,1)),1) )
 
 CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
 
@@ -423,4 +436,27 @@ end subroutine Restart_stuff
 !
 !
 !
-end module AO_adiabatic_m
+! 
+!========================
+ subroutine Coulomb_stuff
+!========================
+implicit none
+
+! LOCAL representation for film STO production ...
+
+! coefs of <k(t)| in AO basis 
+AO_bra = DUAL_bra
+
+! coefs of |k(t)> in AO basis 
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
+
+! save coefficients in modulo Coulomb_m ...
+CALL wormhole_to_Coulomb( AO_bra , AO_ket )
+
+end subroutine Coulomb_stuff
+!
+!
+!
+!
+end module ElHl_adiabatic_m

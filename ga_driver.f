@@ -33,7 +33,7 @@ implicit none
  real*8                         :: DP(3)
  character(3)                   :: residue
  logical                        :: DIPOLE_
- type(C_eigen)                  :: UNI
+ type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(OPT)                      :: REF

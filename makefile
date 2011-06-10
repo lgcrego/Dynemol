@@ -57,23 +57,21 @@ SOURCE2 = constants_m.o  \
 		  dipole_phi.o \
 		  Coulomb.o \
 		  QCModel_Huckel.o \
+		  QCModel_ElHl.o \
 		  data_output.o \
 		  film_STO.o \
 		  DOS_m.o \
 		  oscillator.o \
-		  QOptics.o \
 		  ga_QCModel.o \
 		  ga_routines.o \
 		  solvated_M.o \
 		  schroedinger.o \
-		  rk4.o \
 		  diagnostic.o \
 		  qdynamics.o \
 		  Chebyshev.o \
 		  backup.o \
 		  AO_adiabatic.o \
-		  MO0_adiabatic.o \
-		  MOt_adiabatic.o \
+		  ElHl_adiabatic.o \
 		  eigen_driver.o \
 		  Chebyshev_driver.o \
 		  ga_driver.o \

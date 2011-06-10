@@ -106,7 +106,7 @@ subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
 !=================================================================
 implicit none
 type(structure)             , intent(in)    :: system
-type(C_eigen)               , intent(in)    :: QM
+type(R_eigen)               , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
@@ -195,7 +195,7 @@ subroutine tmp_PDOS( system , QM , l , tmp_PDOS_grid , tmp_PDOS_peaks, tmp_PDOS_
 !=====================================================================================
 implicit none
 type(structure)  , intent(in)   :: system
-type(C_eigen)    , intent(in)   :: QM
+type(R_eigen)    , intent(in)   :: QM
 integer          , intent(in)   :: l
 real*8           , intent(in)   :: tmp_PDOS_grid  (:)
 real*8           , intent(out)  :: tmp_PDOS_peaks (:)
@@ -241,7 +241,7 @@ end subroutine tmp_PDOS
 !==========================================================
 implicit none
 type(structure)             , intent(in)    :: system
-type(C_eigen)               , intent(in)    :: QM
+type(R_eigen)               , intent(in)    :: QM
 integer       , OPTIONAL    , intent(in)    :: atom(:)
 integer                     , intent(in)    :: top
 

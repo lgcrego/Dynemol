@@ -32,7 +32,7 @@ implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
 type(structure)                 , intent(out)   :: Unit_Cell
-type(C_eigen)                   , intent(out)   :: UNI
+type(R_eigen)                   , intent(out)   :: UNI
 complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)

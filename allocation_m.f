@@ -3,6 +3,11 @@
     use type_m
     use parameters_m    , only : n_part
 
+    interface Allocate_BracKets
+        module procedure Allocate_BracKets
+        module procedure Allocate_BracKets_ElHl
+    end interface Allocate_BracKets
+
  contains
 !
 !
@@ -79,6 +84,26 @@
     allocate( phase    (Basis_Size) )
 
  end subroutine Allocate_BracKets
+!
+!
+!
+!
+ subroutine Allocate_BracKets_ElHl(Basis_Size, MO_bra, MO_ket, AO_bra, AO_ket, DUAL_bra, DUAL_ket, bra, ket, phase)
+    implicit none
+    integer                  , intent(in)  :: Basis_Size
+    complex*16 , ALLOCATABLE , intent(out) :: MO_bra   (:,:) , MO_ket   (:,:)
+    complex*16 , ALLOCATABLE , intent(out) :: AO_bra   (:,:) , AO_ket   (:,:) 
+    complex*16 , ALLOCATABLE , intent(out) :: DUAL_ket (:,:) , DUAL_bra (:,:) 
+    complex*16 , ALLOCATABLE , intent(out) :: phase(:,:) 
+    complex*16 , ALLOCATABLE , intent(out) :: bra(:) , ket(:)
+
+    allocate( MO_bra   (Basis_Size,n_part) , MO_ket   (Basis_Size,n_part) )
+    allocate( AO_bra   (Basis_Size,n_part) , AO_ket   (Basis_Size,n_part) )
+    allocate( DUAL_bra (Basis_Size,n_part) , DUAL_ket (Basis_Size,n_part) )
+    allocate( phase    (Basis_Size,n_part)                                )
+    allocate( bra      (Basis_Size)        , ket      (Basis_Size)        )
+
+ end subroutine Allocate_BracKets_ElHl
 !
 !
 !

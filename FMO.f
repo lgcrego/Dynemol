@@ -34,8 +34,8 @@
  implicit none
  type(structure)                                , intent(in)    :: system
  type(STO_basis)                                , intent(in)    :: basis(:)
- complex*16         , optional  , allocatable   , intent(in)    :: CR(:,:)
- type(C_eigen)                                  , intent(out)   :: FMO
+ real*8             , optional  , allocatable   , intent(in)    :: CR(:,:)
+ type(R_eigen)                                  , intent(out)   :: FMO
  real*8             , optional  , allocatable   , intent(inout) :: MO(:)
  character(*)       , optional                  , intent(in)    :: instance
 
@@ -107,7 +107,7 @@ end if
     ! "entropy" of the FMO states with respect to the system 
     OPEN(unit=9,file='entropy.dat',status='unknown')
     do i = 1 , size(FMO_basis)
-        entropy = - sum( cdabs(FMO%L(:,i))*dlog(cdabs(FMO%L(:,i))) ) 
+        entropy = - sum( abs(FMO%L(:,i))*dlog(abs(FMO%L(:,i))) ) 
         write(9,*) FMO%erg(i) , entropy
     end do
     CLOSE(9)   
@@ -131,14 +131,14 @@ end if
  subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
 !----------------------------------------------------------------
  implicit none
- type(C_eigen)                           , intent(inout) :: FMO
- complex*16       , ALLOCATABLE , target , intent(in)    :: CR(:,:)
+ type(R_eigen)                           , intent(inout) :: FMO
+ real*8           , ALLOCATABLE , target , intent(in)    :: CR(:,:)
  character(len=1)                        , intent(in)    :: basis_fragment(:)
  character(len=1)                        , intent(in)    :: fragment
  real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
 
 ! local variables ...
- complex*16 , pointer  :: CR_FMO(:,:) => null()
+ real*8     , pointer  :: CR_FMO(:,:) => null()
  integer               :: ALL_size , FMO_size , i , j , p1 , p2
  real*8                :: check
 
@@ -170,7 +170,7 @@ end if
 
  FMO%R = FMO%L
 
- check = dreal( sum( FMO%L(1:ALL_size,:)*FMO%R(1:ALL_size,:) ) )
+ check = sum( FMO%L(1:ALL_size,:)*FMO%R(1:ALL_size,:) ) 
 
  if( dabs(check-FMO_size) < low_prec ) then
      print*, '>> projection done <<'
@@ -196,7 +196,7 @@ end if
  type(structure)               , intent(in)  :: system
  type(STO_basis)               , intent(in)  :: basis(:)
  real*8          , ALLOCATABLE , intent(out) :: wv_FMO(:,:)
- type(C_eigen)                 , intent(out) :: FMO       
+ type(R_eigen)                 , intent(out) :: FMO       
  character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
@@ -233,7 +233,7 @@ end if
  DeAllocate( s_FMO , h_FMO )
 
 ! save energies of the FMO system 
- If( present(fragment) .AND. fragment=="H" ) then
+ If( present(fragment) .AND. (fragment=="H" .OR. fragment=="E") ) then
     OPEN(unit=9,file='hl_FMO-ergs.dat',status='unknown')
  else
     OPEN(unit=9,file='el_FMO-ergs.dat',status='unknown')

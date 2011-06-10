@@ -23,7 +23,7 @@ subroutine  Optical_Transitions( system , basis , QM , SPEC , internal_sigma )
 !=============================================================================
 type(structure)                , intent(in)     :: system
 type(STO_basis)                , intent(in)     :: basis(:)
-type(C_eigen)                  , intent(in)     :: QM
+type(R_eigen)                  , intent(in)     :: QM
 type(f_grid)                   , intent(inout)  :: SPEC
 real*8          , OPTIONAL     , intent(in)     :: internal_sigma
 
@@ -115,7 +115,7 @@ subroutine  Transition_Dipole_Builder(system, basis, QM, DP)
 !------------------------------------------------------------
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
-type(C_eigen)   , intent(in)    :: QM
+type(R_eigen)   , intent(in)    :: QM
 type(transition), intent(inout) :: DP
 
 ! . local variables
@@ -185,7 +185,7 @@ allocate( a     ( dim_bra , dim_basis)  )
 allocate( left  ( dim_bra , dim_basis)  )
 allocate( right ( dim_basis  , dim_ket) )
 
-forall(i=1:dim_ket) right(:,i) = real( QM%R(:,DP%ket_PTR(i)) )
+forall(i=1:dim_ket) right(:,i) = QM%R(:,DP%ket_PTR(i)) 
 
 !$OMP parallel
     do xyz = 1 , 3
@@ -194,7 +194,7 @@ forall(i=1:dim_ket) right(:,i) = real( QM%R(:,DP%ket_PTR(i)) )
         do j = 1 , dim_basis 
             !$OMP task
             do i = 1 , dim_bra   
-                left(i,j) = real( QM%L(DP%bra_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
+                left(i,j) = QM%L(DP%bra_PTR(i),j) * R_vector(basis(j)%atom,xyz) / two
             end do
             !$OMP end task
         end do
@@ -213,14 +213,14 @@ forall(i=1:dim_ket) right(:,i) = real( QM%R(:,DP%ket_PTR(i)) )
     end do
 !$OMP end parallel
 
-forall(i=1:dim_bra) a(i,:) = real( QM%L(DP%bra_PTR(i),:) )
+forall(i=1:dim_bra) a(i,:) = QM%L(DP%bra_PTR(i),:)
 
 !$OMP parallel
     !$OMP single
     do i = 1 , dim_ket 
         !$OMP task
         do j = 1 , dim_basis   
-            right(j,i) = real( QM%L(DP%ket_PTR(i),j) )
+            right(j,i) = QM%L(DP%ket_PTR(i),j)
         end do
         !$OMP end task
     end do
@@ -250,7 +250,7 @@ allocate( a     ( dim_ket , dim_basis)  )
 allocate( left  ( dim_ket , dim_basis)  )
 allocate( right ( dim_basis  , dim_bra) )
 
-forall(i=1:dim_bra) right(:,i) = real( QM%R(:,DP%bra_PTR(i)) )
+forall(i=1:dim_bra) right(:,i) = QM%R(:,DP%bra_PTR(i))
 
 !$OMP parallel
     do xyz = 1 , 3
@@ -259,7 +259,7 @@ forall(i=1:dim_bra) right(:,i) = real( QM%R(:,DP%bra_PTR(i)) )
         do j = 1 , dim_basis  
             !$OMP task
             do i = 1 , dim_ket   
-                left(i,j) = real( QM%L(DP%ket_PTR(i),j) ) * R_vector(basis(j)%atom,xyz) / two
+                left(i,j) = QM%L(DP%ket_PTR(i),j) * R_vector(basis(j)%atom,xyz) / two
             end do
             !$OMP end task
         end do
@@ -278,14 +278,14 @@ forall(i=1:dim_bra) right(:,i) = real( QM%R(:,DP%bra_PTR(i)) )
     end do
 !$OMP end parallel    
 
-forall( i=1:dim_ket ) a(i,:) = real( QM%L(DP%ket_PTR(i),:) )
+forall( i=1:dim_ket ) a(i,:) = QM%L(DP%ket_PTR(i),:)
 
 !$OMP parallel    
     !$OMP single
     do i = 1 , dim_bra 
         !$OMP task
         do j = 1 , dim_basis   
-            right(j,i) =  real( QM%L(DP%bra_PTR(i),j) )
+            right(j,i) =  QM%L(DP%bra_PTR(i),j)
         end do
         !$OMP end task
     end do
