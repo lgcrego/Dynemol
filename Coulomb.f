@@ -168,13 +168,14 @@ do ib = 1 , system % atoms
                 do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                 do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
 
-                    V_coul_El(indx1,indx2) = V_coul_El(indx1,indx2) + Coul( indx1 , indx2 , indx3 , indx4 )
+                    V_coul_El(indx1,indx2) = V_coul_El(indx1,indx2) + Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do
 
             end do
             end do
+
             ! ===============================================================================================
             ! build HOLE potential ... 
             do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
@@ -185,7 +186,7 @@ do ib = 1 , system % atoms
                 do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
                 do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
 
-                    V_coul_Hl(indx3,indx4) = V_coul_El(indx3,indx4) + Coul( indx1 , indx2 , indx3 , indx4 )
+                    V_coul_Hl(indx3,indx4) = V_coul_Hl(indx3,indx4) + Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do
@@ -204,6 +205,25 @@ do ib = 1 , system % atoms
 
 end do    
 end do  
+
+do i = 1 , size(basis)
+do j = i , size(basis)
+    write(8,*) i,j,V_coul_El(i,j),V_coul_El(j,i)
+    write(9,*) i,j,V_coul_Hl(i,j),V_coul_Hl(j,i)
+end do
+end do
+
+
+
+
+
+
+
+
+
+
+
+
 
 deallocate( Coul , Coul_tmp )
 
