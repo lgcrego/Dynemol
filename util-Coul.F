@@ -1,3 +1,98 @@
+c  ********************************************************************
+c
+      subroutine mete(vbielx,ibielx,i,j,k,l,x)
+      implicit real*8 (a-h,o-z)
+      include 'comun.inc'
+      integer*1 ibielx
+      common / imete / imete
+      common /kincom/ kint, kint1, kint2, isABCC, isABAC, isABCD
+
+      dimension vbielx(mxbuff), ibielx(5*mxbuff)
+
+      kint = kint + 1
+      imete = imete + 1
+
+c conviene ordenar los indices para estar seguros
+
+      if (dabs(x) .gt. 1.d3) then
+         print*, 'Error in the integral of indices = ', i, j, k, l
+         print*, 'Value of the integral = ', x
+         print*, 'Stop'
+         stop
+      endif
+
+      if(i.gt.j) then
+        in=i
+        jn=j
+      else
+        in=j
+        jn=i
+      endif
+      if(k.gt.l) then
+        kn=k
+        ln=l
+      else
+        kn=l
+        ln=k
+      endif
+      ij = ind(in-1) + jn
+      kl = ind(kn-1) + ln
+      if (kl.gt.ij) then
+         m=in
+         in=kn
+         kn=m
+         m=jn
+         jn=ln
+         ln=m
+      endif
+      ijkl=1
+      if(in.eq.jn) ijkl=ijkl+5
+      if(in.eq.kn) ijkl=ijkl+1
+      if(in.eq.ln) ijkl=ijkl-7
+      if(jn.eq.kn) ijkl=ijkl+2
+      if(jn.eq.ln) ijkl=ijkl+3
+      if(kn.eq.ln) ijkl=ijkl+6
+      vbielx(imete) = x
+
+*     Usa los cuatro bits mas significativos del byte ibielx(5+ishft)
+*     para ampliar los indices  in, jn, kn, ln  hasta   511
+*     Esta forma de almacenar los indices condiciona su lectura,
+*     por ello es necesario que el programa que lea las integrales
+*     tenga la estructura apropiada (version rico2000 y ricoop2000
+*     y posteriores; las anteriores no sirven)
+
+      ishft = 5*(imete-1)
+      ijkl = ijkl-128
+      if (in .gt. 255) then
+         ibielx(1+ishft) = in - 384
+         ijkl = ijkl + 128
+      else
+         ibielx(1+ishft) = in - 128
+      endif
+      if (jn .gt. 255) then
+         ibielx(2+ishft) = jn - 384
+         ijkl = ijkl + 64
+      else
+         ibielx(2+ishft) = jn - 128
+      endif
+      if (kn .gt. 255) then
+         ibielx(3+ishft) = kn - 384
+         ijkl = ijkl + 32
+      else
+         ibielx(3+ishft) = kn - 128
+      endif
+      if (ln .gt. 255) then
+         ibielx(4+ishft) = ln - 384
+         ijkl = ijkl + 16
+      else
+         ibielx(4+ishft) = ln - 128
+      endif
+      ibielx(5+ishft) = ijkl
+      if (imete.eq.mxbuff) then
+         imete = 0
+      endif
+      return
+      end
 c
 c   ********************************************************************
 c

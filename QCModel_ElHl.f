@@ -75,7 +75,7 @@ end do
 ! eigensystem for electron-wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , instance="el" )
 
-print*, maxval(QM_el%erg) , maxval(real(V_coul)) , maxval(real(V_coul_El))
+print*, maxval(QM_el%erg) , minval(real(V_coul)) , minval(real(V_coul_El))
 
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
@@ -95,7 +95,7 @@ end do
 
 CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , instance="hl" )
 
-print*, maxval(QM_hl%erg) , maxval(real(V_coul)) , maxval(real(V_coul_Hl))
+print*, maxval(QM_hl%erg) , minval(real(V_coul)) , minval(real(V_coul_Hl))
 
 !-----------------------------------------------------------------------
 

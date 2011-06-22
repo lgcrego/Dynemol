@@ -92,7 +92,7 @@ do frame = frame_init , size(trj) , frame_step
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
     phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
-    phase(:,2) = cmplx(1.d0)  !cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
+    phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
 
     forall( j=1:n_part )   
         MO_bra(:,j) = conjg(phase(:,j)) * MO_bra(:,j) 
