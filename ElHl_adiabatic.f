@@ -37,7 +37,7 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use Coulomb_m                   , only : wormhole_to_Coulomb 
+    use Coulomb_SMILES_m            , only : wormhole_to_Coulomb 
 
     public :: ElHl_adiabatic
 

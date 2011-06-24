@@ -9,45 +9,19 @@ module Coulomb_SMILES_m
                                          ExCell_basis
 
 
-    public  :: Int_Coulomb
+    public  :: Build_Coulomb_potential , wormhole_to_Coulomb
 
     private
 
+    ! module variables ...
+    complex*16 , allocatable , save  :: AO_bra(:,:) , AO_ket(:,:)
+
     ! module parameters ...
-    real*8  , parameter :: umbral = 1.d-10                                      ! Umbral para almacenamiento de las integrales
     integer , parameter :: mxl = 3 , mxbuff = 100000 , mxequiv = 1000
     integer , parameter :: idmrot = (mxl+1)*(2*mxl+1)*(2*mxl+3)/3
     integer , parameter :: idmrotmx = mxequiv * idmrot
 
-!! attention : using atomic units for length  ###########
 contains
-!
-!
-!
-!=======================
-subroutine Int_Coulomb
-!=======================
-implicit none
-
-
-! local variables ...
-integer :: ia , ib , ind_A , ind_B
-
-CALL Generate_Structure(1)
-
-CALL Basis_Builder( Extended_Cell , ExCell_basis )
-
-! atom indices ...
-ia = 1
-ib = 2
-! basis index ...
-ind_A = 3
-ind_B = 8
-
-CALL Coulomb( Extended_Cell , ExCell_basis , ind_A , ind_B )
-
-end subroutine Int_Coulomb
-!
 !
 !========================================================
 !          the order orbitals are stored
@@ -64,14 +38,15 @@ end subroutine Int_Coulomb
 !========================================================
 !
 !
-!=============================================================
- subroutine Coulomb( system , basis , ind_A , ind_B )
-!=============================================================
+!=====================================================================================
+ subroutine Build_Coulomb_Potential( system , basis , V_coul , V_coul_El , V_coul_Hl )
+!=====================================================================================
 implicit none
-type(structure) , intent(in)  :: system 
-type(STO_basis) , intent(in)  :: basis(:)
-integer         , intent(in)  :: ind_A
-integer         , intent(in)  :: ind_B
+type(structure)                 , intent(in)  :: system 
+type(STO_basis)                 , intent(in)  :: basis(:)
+complex*16      , allocatable   , intent(out) :: V_coul    (:,:) 
+complex*16      , allocatable   , intent(out) :: V_coul_El (:) 
+complex*16      , allocatable   , intent(out) :: V_coul_Hl (:)
 
 ! local arrays ...
 real*8  , allocatable                                       :: coul(:,:,:,:) , coul_tmp(:,:,:,:) 
@@ -80,26 +55,36 @@ real*8  , dimension (idmrotmx)                              :: rotmat
 real*8  , dimension (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl)   :: v
 real*8  , dimension (-mxl:mxl)                              :: vaux
 
-real*8  , allocatable :: V_coul_El(:,:) , V_coul_Hl(:,:)
-
 ! local parameters ...
 integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
-real*8  :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , soma
-integer :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4
-integer :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
-integer :: ia, ja1, a1, ja2, a2
-integer :: ib, jb1, b1, jb2, b2
+complex*16  :: coeff_El , coeff_Hl 
+real*8      :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb , deg_m
+integer     :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
+integer     :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
+integer     :: ia, ja1, a1, ja2, a2
+integer     :: ib, jb1, b1, jb2, b2
 
-!-------------------------------------------------
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!       two-center Coulomb potential matrix elements for Electrons and Holes ...
 
+basis_size = size( basis(:) )
 
-allocate( V_coul_El(size(basis),size(basis)) , source=D_zero )
-allocate( V_coul_Hl(size(basis),size(basis)) , source=D_zero )
+! if there is no electron-hole pair leave the subroutine ...
+if( .NOT. allocated(AO_bra) ) then
+    
+    allocate( V_coul_El (basis_size)            , source = C_zero)
+    allocate( V_coul_Hl (basis_size)            , source = C_zero)
+    allocate( V_coul    (basis_size,basis_size) , source = C_zero)
 
+    return
 
+end if
 
+allocate( V_coul_El (basis_size)            , source = C_zero )
+allocate( V_coul_Hl (basis_size)            , source = C_zero )
+allocate( V_coul    (basis_size,basis_size) , source = C_zero )
 
 CALL consta
 
@@ -107,22 +92,22 @@ CALL consta
 allocate( Coul     (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 allocate( Coul_tmp (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 
-do ia = 1 , system % atoms
-do ib = 1 , system % atoms
+do ia = 1    , system % atoms
+do ib =    1 , system % atoms 
 
     ! Coulomb rotation matrix ...
     CALL Rotation_Matrix( system , rotmat , icaso , ia , ib , Rab )
 
     If( Rab < low_prec ) goto 100
 
-    do ja1 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a1 = system%BasisPointer(ia) + ja1
     do ja2 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a2 = system%BasisPointer(ia) + ja2
+    do ja1 = 1 , ja2                         , 3   ;   a1 = system%BasisPointer(ia) + ja1
 
         na_1 = basis(a1)% n     ;       la_1 = basis(a1)% l         
         na_2 = basis(a2)% n     ;       la_2 = basis(a2)% l         
 
-        do jb1 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b1 = system%BasisPointer(ib) + jb1
         do jb2 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b2 = system%BasisPointer(ib) + jb2
+        do jb1 = 1 , jb2                          , 3  ;   b1 = system%BasisPointer(ib) + jb1
 
             Coul = D_zero
 
@@ -149,7 +134,7 @@ do ib = 1 , system % atoms
                 CALL Coul0sim( na_1 , la_1 , x1 , na_2 , la_2 , x2 , nb_1 , lb_1 , x3 , nb_2 , lb_2 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , Coul_tmp )
 
                 ! rotate Coulomb matrix to crystal frame ...
-                CALL Rotate_Coulomb( la_1 , la_2 , lb_1 , lb_2 , rotmat , Coul_tmp )
+                CALL Rotate_Coulomb( la_1 , la_2 , lb_1 , lb_2 , icaso , rotmat , Coul_tmp )
 
                 Coul = Coul + basis(a1)%coef(i) * basis(a2)%coef(j) * basis(b1)%coef(k) * basis(b2)%coef(l) * Coul_tmp
 
@@ -158,35 +143,49 @@ do ib = 1 , system % atoms
             end do  !   j
             end do  !   i
 
+            deg_la = merge( D_one , TWO , la_1==la_2 )
+            deg_lb = merge( D_one , TWO , lb_1==lb_2 )
+
             ! ===============================================================================================
             ! build ELECTRON potential ... 
             do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
             do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
 
-                V_coul_El(indx1,indx2) = D_zero
+                coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
 
                 do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                 do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
 
-                    V_coul_El(indx1,indx2) = V_coul_El(indx1,indx2) + Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
+
+                    If( indx1 <  indx2 ) V_coul(indx1,indx2) = V_coul(indx1,indx2)  &
+                                                             - deg_lb * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                    If( indx1 == indx2 ) V_coul_El(indx1)    = V_coul_El(indx1)     &
+                                                             - deg_lb * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do
 
             end do
             end do
-
             ! ===============================================================================================
             ! build HOLE potential ... 
-            do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
             do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
+            do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
 
-                V_coul_Hl(indx3,indx4) = D_zero
+                coeff_Hl = AO_bra(indx2,2) * AO_ket(indx1,2)
 
-                do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
                 do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
+                do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
 
-                    V_coul_Hl(indx3,indx4) = V_coul_Hl(indx3,indx4) + Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                    coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1)
+
+                    If( indx3  < indx4 ) V_coul(indx4,indx3) = V_coul(indx4,indx3)  &
+                                                             - deg_la * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                    If( indx3 == indx4 ) V_coul_Hl(indx3)    = V_coul_Hl(indx3)     &
+                                                             - deg_la * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do
@@ -206,42 +205,26 @@ do ib = 1 , system % atoms
 end do    
 end do  
 
-do i = 1 , size(basis)
-do j = i , size(basis)
-    write(8,*) i,j,V_coul_El(i,j),V_coul_El(j,i)
-    write(9,*) i,j,V_coul_Hl(i,j),V_coul_Hl(j,i)
-end do
-end do
-
-
-
-
-
-
-
-
-
-
-
-
+! Hartree atomic units => eV
+V_coul_El (:)   = V_coul_El (:)  * Hartree_2_eV 
+V_coul_Hl (:)   = V_coul_Hl (:)  * Hartree_2_eV 
+V_coul    (:,:) = V_coul    (:,:)* Hartree_2_eV 
 
 deallocate( Coul , Coul_tmp )
 
-stop
-
-
-end subroutine Coulomb
+end subroutine Build_Coulomb_Potential
 !
 !
 !
-!==============================================================
- subroutine Rotate_Coulomb( l1 , l2 , l3 , l4 , rotmat , Coul )
-!==============================================================
+!======================================================================
+ subroutine Rotate_Coulomb( l1 , l2 , l3 , l4 , icaso , rotmat , Coul )
+!======================================================================
 implicit none
 integer , intent(in)    :: l1
 integer , intent(in)    :: l2
 integer , intent(in)    :: l3
 integer , intent(in)    :: l4
+integer , intent(in)    :: icaso
 real*8  , intent(in)    :: rotmat(:)
 real*8  , intent(inout) :: Coul(-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) 
 
@@ -252,7 +235,7 @@ real*8  , dimension (-mxl:mxl)                              :: vaux
 ! local variables ...
 real*8  :: soma
 integer :: i , j , k , l , ij 
-integer :: icaso, knt, m1, m2, m3, m4, lmax
+integer :: knt, m1, m2, m3, m4, lmax
 
 
 knt = 0
@@ -370,7 +353,7 @@ end subroutine Rotate_Coulomb
 !=======================================================================
 implicit none
 type(structure) , intent(in)    :: system
-real*8          , intent(out)   :: rotmat(:)
+real*8          , intent(inout) :: rotmat(:)
 integer         , intent(out)   :: icaso
 integer         , intent(in)    :: ia , ib
 real*8          , intent(out)   :: Rab
@@ -389,6 +372,7 @@ integer :: la_max , lb_max , lmax
 ! local parameters ...
 real*8  , parameter :: tol = 1.d-10
 
+rotmat = D_zero
 !------------------------------------------------------------------
 ! Pre-process information for a pair of centers ...
 
@@ -396,17 +380,19 @@ AtNo_a = system%AtNo (ia)
 AtNo_b = system%AtNo (ib)
 
 ! coordinates must be in a.u. 
-xa  = system%coord (ia,1) !/ a_Bohr
-ya  = system%coord (ia,2) !/ a_Bohr
-za  = system%coord (ia,3) !/ a_Bohr
-xb  = system%coord (ib,1) !/ a_Bohr
-yb  = system%coord (ib,2) !/ a_Bohr
-zb  = system%coord (ib,3) !/ a_Bohr
+xa  = system%coord (ia,1) / a_Bohr
+ya  = system%coord (ia,2) / a_Bohr
+za  = system%coord (ia,3) / a_Bohr
+xb  = system%coord (ib,1) / a_Bohr
+yb  = system%coord (ib,2) / a_Bohr
+zb  = system%coord (ib,3) / a_Bohr
 xab = xb - xa
 yab = yb - ya
 zab = zb - za
 xy  = dsqrt(xab*xab + yab*yab)
 Rab = dsqrt(xab*xab + yab*yab + zab*zab) 
+
+If( Rab < low_prec ) RETURN
 
 cosbet = zab / Rab
 cosalf = 1.d0
@@ -553,6 +539,38 @@ real*8  , parameter :: two   = 2.0d0
       return
 
 end subroutine rotar_local
+!
+!
+!
+!===========================================
+ subroutine wormhole_to_Coulomb( bra , ket )
+!===========================================
+implicit none
+complex*16  , intent(in) :: bra(:,:)
+complex*16  , intent(in) :: ket(:,:)
+
+! local variables ...
+integer :: row , column
+
+! save AO_bra and AO_ket in Coulomb_m ...
+
+if( .NOT. allocated(AO_bra) ) then
+
+    row     = size( bra(:,1) )
+    column  = size( bra(1,:) )
+
+    allocate( AO_bra(row,column) , source=bra )
+    allocate( AO_ket(row,column) , source=ket )
+
+else
+
+    AO_bra = bra
+    AO_ket = ket
+
+end if
+
+end subroutine wormhole_to_Coulomb
+!
 !
 !
 !

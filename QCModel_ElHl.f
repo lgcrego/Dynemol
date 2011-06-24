@@ -11,7 +11,7 @@
     use mkl95_lapack
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
-    use Coulomb_m                   , only : Build_Coulomb_potential
+    use Coulomb_SMILES_m            , only : Build_Coulomb_potential
 
     public :: EigenSystem_ElHl
 
@@ -40,7 +40,7 @@
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-CALL Build_Coulomb_Potential( S_matrix , basis , V_coul , V_coul_El , V_coul_Hl )
+CALL Build_Coulomb_Potential( system , basis , V_coul , V_coul_El , V_coul_Hl )
 
 ALLOCATE( h(size(basis),size(basis)) )
 
@@ -75,8 +75,6 @@ end do
 ! eigensystem for electron-wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , instance="el" )
 
-print*, maxval(QM_el%erg) , minval(real(V_coul)) , minval(real(V_coul_El))
-
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
 
@@ -94,8 +92,6 @@ do j = 1 , size(basis)
 end do  
 
 CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , instance="hl" )
-
-print*, maxval(QM_hl%erg) , minval(real(V_coul)) , minval(real(V_coul_Hl))
 
 !-----------------------------------------------------------------------
 
