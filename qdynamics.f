@@ -79,7 +79,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="D")
+ If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="E")
 
  If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 

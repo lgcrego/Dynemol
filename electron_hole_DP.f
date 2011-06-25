@@ -59,6 +59,8 @@ module DP_excited_m
  FMO_system%nr         =  pack( system%nr         , system%DPF )
  FMO_system%MMSymbol   =  pack( system%MMSymbol   , system%DPF )
  FMO_system%DPF        =  pack( system%DPF        , system%DPF )
+ FMO_system%El         =  pack( system%El         , system%DPF )
+ FMO_system%Hl         =  pack( system%Hl         , system%DPF )
  FMO_system%copy_No    =  0
 
  FMO_system%N_of_electrons = sum( FMO_system%Nvalen )

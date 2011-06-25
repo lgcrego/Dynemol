@@ -32,8 +32,8 @@
  subroutine FMO_analysis( system, basis, CR, FMO , MO , instance )
 !=================================================================
  implicit none
- type(structure)                                , intent(in)    :: system
- type(STO_basis)                                , intent(in)    :: basis(:)
+ type(structure)                                , intent(inout) :: system
+ type(STO_basis)                                , intent(inout) :: basis(:)
  real*8             , optional  , allocatable   , intent(in)    :: CR(:,:)
  type(R_eigen)                                  , intent(out)   :: FMO
  real*8             , optional  , allocatable   , intent(inout) :: MO(:)
@@ -45,46 +45,57 @@
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
  integer                       :: i
- character(1)                  :: fragment
+ character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
 
 ! orbitals to be propagated ...
-If( .NOT. done ) then
+ If( .NOT. done ) then
     allocate( orbital(n_part) , eh_tag(n_part) )
 
     orbital(1) = initial_state ; eh_tag(1) = "el"
     orbital(2) = hole_state    ; eh_tag(2) = "hl"  
 
     done = .true.
-end If
+ end If
 
 ! setting the fragment ...
-If( .NOT. (any(system%fragment == "D") .AND. any(system%fragment == "H")) ) then
-     fragment = "E"
-else
-     fragment = instance
-end if
+ allocate(system_fragment (system%atoms) , source = system % fragment )
+ allocate( basis_fragment (size(basis) ) , source =  basis % fragment )
+
+ select case (instance)
+
+    case( "E" )
+        where( system%El ) system % fragment  = instance
+        where( basis%El  ) basis  % fragment  = instance
+
+    case( "H" )
+        where( system%Hl ) system % fragment  = instance
+        where( basis%Hl  ) basis  % fragment  = instance
+
+    case default
+
+ end select 
 
 ! FMO_system = fragment ...
- FMO_system%atoms = count(system%fragment == fragment)
+ FMO_system%atoms = count(system%fragment == instance)
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
 
  forall(i=1:3)
- FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
+ FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == instance ) 
  end forall
- FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
- FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == fragment ) 
- FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
- FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
- FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
- FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
- FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
- FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
+ FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == instance ) 
+ FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == instance ) 
+ FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == instance )
+ FMO_system%symbol     =  pack( system%symbol    , system%fragment == instance )
+ FMO_system%fragment   =  pack( system%fragment  , system%fragment == instance )
+ FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == instance )
+ FMO_system%residue    =  pack( system%residue   , system%fragment == instance )
+ FMO_system%nr         =  pack( system%nr        , system%fragment == instance )
  FMO_system%copy_No    =  0
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
- CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
+ CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , instance )
 
 ! get wv_FMO orbital in local representation and leave subroutine ... 
  if( present(MO) ) then
@@ -102,7 +113,7 @@ end if
 ! wv_FMO needed only for time-propagation of wv_FMO state ...
  If( Survival ) then
      
-     CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
+     CALL projector( FMO , CR , basis%fragment , instance , wv_FMO )
 
     ! "entropy" of the FMO states with respect to the system 
     OPEN(unit=9,file='entropy.dat',status='unknown')
@@ -118,6 +129,11 @@ end if
 
  DeAllocate( FMO_basis )
  CALL DeAllocate_Structures( FMO_system )
+
+ system % fragment = system_fragment
+ basis  % fragment = basis_fragment
+
+ deallocate( system_fragment , basis_fragment )
 
  print*, '>> FMO analysis done <<'
 

@@ -31,6 +31,8 @@ module type_m
         real*8                     :: T_xyz(3)
         logical     , allocatable  :: solute(:)
         logical     , allocatable  :: DPF(:)
+        logical     , allocatable  :: El(:)
+        logical     , allocatable  :: Hl(:)
     end type structure
 
 !-----------------------------------------------------------------------------
@@ -50,6 +52,8 @@ module type_m
         character(1)                  :: fragment
         logical                       :: solute
         logical                       :: DPF
+        logical                       :: El
+        logical                       :: Hl
     end type atomic
 
     type molecular
@@ -65,6 +69,8 @@ module type_m
         character(72)                 :: Solvent_Characteristics
         logical                       :: solute
         logical                       :: DPF
+        logical                       :: El 
+        logical                       :: Hl 
     end type molecular
 
     type universe
@@ -126,6 +132,8 @@ module type_m
         character(len=3) :: residue 
         logical          :: solute
         logical          :: DPF
+        logical          :: El
+        logical          :: Hl
     end type STO_basis
 
 

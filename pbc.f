@@ -41,6 +41,8 @@ contains
  pbc_cell % nr                 (1:cell%atoms)      =  cell % nr 
  pbc_cell % solute             (1:cell%atoms)      =  cell % solute
  pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
+ pbc_cell % El                 (1:cell%atoms)      =  cell % El    
+ pbc_cell % Hl                 (1:cell%atoms)      =  cell % Hl    
  pbc_cell % solvation_hardcore (1:cell%atoms)      =  cell % solvation_hardcore
  pbc_cell % copy_No  (1:cell%atoms)                =  0
 
@@ -74,6 +76,8 @@ contains
             pbc_cell % nr                 (k)   =  cell % nr                 (n) 
             pbc_cell % solute             (k)   =  cell % solute             (n) 
             pbc_cell % DPF                (k)   =  cell % DPF                (n) 
+            pbc_cell % El                 (k)   =  cell % El                 (n) 
+            pbc_cell % Hl                 (k)   =  cell % Hl                 (n) 
             pbc_cell % solvation_hardcore (k)   =  cell % solvation_hardcore (n)
             pbc_cell % copy_No  (k)             =  copy
 

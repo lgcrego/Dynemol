@@ -70,7 +70,7 @@ integer :: i
         case( 'I' ) 
             a(i)%AtNo = 53 
         case default
-            print*, ' >> unknown atom found ; execution terminated  << : ', a(i)%symbol , i
+            print*, ' >> unknown atom found (1); execution terminated  << : ', a(i)%symbol , i
             stop
     end select
 
@@ -118,7 +118,7 @@ DO i = 1 , a%atoms
         case( 'I' ) 
             a%AtNo(i) = 53 
         case default
-            print*, ' >> unknown atom found ; execution terminated << : ', a%symbol(i) , i
+            print*, ' >> unknown atom found (2); execution terminated << : ', a%symbol(i) , i
             stop
     end select
 
@@ -167,7 +167,7 @@ integer :: i
         case( 53 ) 
             a(i)%Symbol = 'I'
         case default
-            print*, ' >> unknown atom found ; execution terminated << : ', a(i)%AtNo , i
+            print*, ' >> unknown atom found (3); execution terminated << : ', a(i)%AtNo , i
             stop
     end select
 
@@ -537,6 +537,8 @@ a % atom % MMsymbol           = "XXX"
 a % atom % fragment           = "X"
 a % atom % solute             = .false.
 a % atom % DPF                = .false.
+a % atom % El                 = .false.
+a % atom % Hl                 = .false.
 
 a % N_of_Surface_Atoms        = 0
 a % N_of_Solvent_Atoms        = 0

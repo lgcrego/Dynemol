@@ -230,7 +230,7 @@ end If
 CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , UNI_el , UNI_hl , flag2=it )
 
 ! build the initial electron-hole wavepacket ...
-CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="D" )
+CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_hl%R , hl_FMO , instance="H" )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
@@ -244,8 +244,7 @@ mm = size(ExCell_basis)
 ! initial state of the isolated molecule ...
 Print 56 , initial_state     
 
-! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
-! assuming non-interacting electrons ...
+! building up the electron and hole wavepackets with expansion coefficients at t = 0 ...
 do n = 1 , n_part                         
     select case( eh_tag(n) )
 

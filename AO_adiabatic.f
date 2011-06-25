@@ -220,7 +220,7 @@ end If
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="D" )
+CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
 If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 

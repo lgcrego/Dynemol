@@ -65,6 +65,8 @@ forall( j=1:unit_cell%atoms )
     unit_cell % MMSymbol           (j)   =  System % atom(j) % MMSymbol
     unit_cell % solute             (j)   =  System % atom(j) % solute  
     unit_cell % DPF                (j)   =  System % atom(j) % DPF     
+    unit_cell % El                 (j)   =  System % atom(j) % El      
+    unit_cell % Hl                 (j)   =  System % atom(j) % Hl      
     unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
 
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
@@ -546,6 +548,8 @@ forall(i = 2:model )
     trj(i) % atom % fragment            =  trj(1) % atom % fragment
     trj(i) % atom % solute              =  trj(1) % atom % solute
     trj(i) % atom % DPF                 =  trj(1) % atom % DPF   
+    trj(i) % atom % El                  =  trj(1) % atom % El    
+    trj(i) % atom % Hl                  =  trj(1) % atom % Hl    
     trj(i) % atom % solvation_hardcore  =  trj(1) % atom % solvation_hardcore   
 
     trj(i) % atom % Nvalen              =  atom(trj(1)%atom%AtNo) % Nvalen

@@ -64,6 +64,8 @@
  FMO_system%nr         =  pack( system%nr        , system%nr == nr )
  FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%nr == nr )
  FMO_system%DPF        =  pack( system%DPF       , system%nr == nr )
+ FMO_system%El         =  pack( system%El        , system%nr == nr )
+ FMO_system%Hl         =  pack( system%Hl        , system%nr == nr )
  FMO_system%copy_No    =  0
 
  FMO_system%N_of_electrons = sum( FMO_system%Nvalen )

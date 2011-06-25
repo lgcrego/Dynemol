@@ -48,6 +48,12 @@ If( present(univ) ) then
 
     univ % atom % solute = univ % atom % DPF        
 
+    where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
+    where( univ % atom % residue == "BP1" .OR.  &
+           univ % atom % residue == "BP2" .OR.  &
+           univ % atom % residue == "BP3" .OR.  &
+           univ % atom % residue == "ION" ) univ % atom % Hl = .true.
+
 end if
 
 !......................................................................
@@ -114,7 +120,7 @@ integer  :: i
             a%atom(i)%solvation_hardcore = 7.d0
 
         case( 'BP1') 
-            a%atom(i)%fragment = 'E' 
+            a%atom(i)%fragment = 'D' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case( 'BP2') 
