@@ -49,10 +49,7 @@ If( present(univ) ) then
     univ % atom % solute = univ % atom % DPF        
 
     where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
-    where( univ % atom % residue == "BP1" .OR.  &
-           univ % atom % residue == "BP2" .OR.  &
-           univ % atom % residue == "BP3" .OR.  &
-           univ % atom % residue == "ION" ) univ % atom % Hl = .true.
+    where( univ % atom % residue == "BP1" ) univ % atom % Hl = .true.
 
 end if
 

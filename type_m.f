@@ -69,8 +69,6 @@ module type_m
         character(72)                 :: Solvent_Characteristics
         logical                       :: solute
         logical                       :: DPF
-        logical                       :: El 
-        logical                       :: Hl 
     end type molecular
 
     type universe

@@ -85,10 +85,6 @@ integer , intent(in) :: frame
 ! local variables ...
 integer :: copy , nr_sum , ix , iy , k , n
 
-! local parameter: offset for ASCII numerical characters ...
-integer :: ASC_offset_1 = 48      
-integer :: ASC_offset_2 = 96      
-
 !----------------------------------------------------------
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
 !----------------------------------------------------------
@@ -157,18 +153,7 @@ integer :: ASC_offset_2 = 96
 
  END FORALL
 
-! define the DONOR fragment ...
- where( (extended_cell%fragment == 'M') .AND. (extended_cell%copy_No == 0) ) extended_cell%fragment = 'D' 
- where( (extended_cell%fragment == 'D') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
- where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset_1 + extended_cell%copy_No) 
-
-! if present, define HOLE fragment ...
- where( (extended_cell%fragment == 'H') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
- where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset_2 + extended_cell%copy_No) 
-
-! if present, define EXCITON fragment ...
- where( (extended_cell%fragment == 'E') .AND. (extended_cell%copy_No /= 0) ) extended_cell%fragment = 'M' 
- where(  extended_cell%fragment == 'M'                                     ) extended_cell%fragment = achar( ASC_offset_1 + extended_cell%copy_No) 
+ CALL fix_fragments( extended_cell )
 
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
@@ -412,6 +397,36 @@ close(4)
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine dump_diagnosis
+!
+!
+!
+!================================
+ subroutine fix_fragments(system)
+!================================
+implicit none
+type(structure) system
+
+! local parameter: offset for ASCII numerical characters ...
+integer :: ASC_offset_1 = 48      
+integer :: ASC_offset_2 = 96      
+
+! separate central structure from replicas ...
+where( (system%El) .AND. (system%copy_No /= 0) ) system%El = .false.
+where( (system%Hl) .AND. (system%copy_No /= 0) ) system%Hl = .false.
+
+! define the DONOR fragment ...
+where( (system%fragment == 'M') .AND. (system%copy_No == 0) ) system%fragment = 'D' 
+where( (system%fragment == 'D') .AND. (system%copy_No /= 0) ) system%fragment = 'M' 
+where(  system%fragment == 'M'                              ) system%fragment = achar( ASC_offset_1 + system%copy_No) 
+
+! if present, define HOLE fragment ...
+where( (system%fragment == 'H') .AND. (system%copy_No /= 0) ) system%fragment = achar( ASC_offset_2 + system%copy_No) 
+
+! if present, define EXCITON fragment ...
+where( (system%fragment == 'E') .AND. (system%copy_No /= 0) ) system%fragment = achar( ASC_offset_1 + system%copy_No) 
+
+end subroutine fix_fragments
+!
 !
 !
 end module Structure_Builder
