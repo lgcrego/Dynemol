@@ -200,7 +200,7 @@ select case ( state_of_matter )
 
 end select
 
-el_hl_ = any( (Unit_Cell%fragment == "H") .OR. (Unit_Cell%fragment == "E")) 
+el_hl_ = any( Unit_Cell%Hl ) 
  
 CALL Generate_Structure ( 1 )
 

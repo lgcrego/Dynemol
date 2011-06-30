@@ -54,6 +54,9 @@
     orbital(1) = initial_state ; eh_tag(1) = "el"
     orbital(2) = hole_state    ; eh_tag(2) = "hl"  
 
+    If( any(system%Hl)          .AND. n_part == 1 )  pause ">> n_part = 1 , but El/Hl is .true.   <<"
+    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  pause ">> n_part = 2 , but El/Hl is .false.  <<"
+
     done = .true.
  end If
 
@@ -249,7 +252,7 @@
  DeAllocate( s_FMO , h_FMO )
 
 ! save energies of the FMO system 
- If( present(fragment) .AND. (fragment=="H" .OR. fragment=="E") ) then
+ If( present(fragment) .AND. (fragment=="H") ) then
     OPEN(unit=9,file='hl_FMO-ergs.dat',status='unknown')
  else
     OPEN(unit=9,file='el_FMO-ergs.dat',status='unknown')

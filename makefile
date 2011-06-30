@@ -65,7 +65,7 @@ SOURCE2 = constants_m.o  \
 		  ga_QCModel.o \
 		  ga_routines.o \
 		  solvated_M.o \
-		  schroedinger.o \
+		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
 		  Chebyshev.o \

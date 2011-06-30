@@ -21,6 +21,7 @@ module qdynamics_m
  use DP_potential_m         , only : Molecular_DPs 
  use Oscillator_m           , only : Optical_Transitions
  use Schroedinger_m         , only : Huckel_dynamics ,      &
+                                     ElHl_dynamics ,        &
                                      DeAllocate_QDyn
  use Data_Output            , only : Dump_stuff
 
@@ -50,7 +51,7 @@ implicit none
  
 ! preprocessing stuff ...................................
 
-el_hl_  = any( Unit_Cell%fragment == "H")
+el_hl_  = any( Unit_Cell%Hl)
 FMO_    = ( spectrum .OR. survival  )
 DIPOLE_ = ( spectrum .OR. DP_Moment )
 
@@ -95,9 +96,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
         case( .true. )
 
-            CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, hl_FMO , instance="H")
+            CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R, hl_FMO , instance="H")
 
-            CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, el_FMO , hl_FMO , QDyn )
+            CALL ElHl_dynamics( Extended_Cell , ExCell_basis , UNI , el_FMO , hl_FMO , QDyn )
 
         end select
 

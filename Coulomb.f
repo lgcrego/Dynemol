@@ -59,7 +59,7 @@ real*8  , dimension (-mxl:mxl)                              :: vaux
 integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
-complex*16  :: coeff_El , coeff_Hl 
+complex*16  :: coeff_El , coeff_Hl , RealCoeff_El , RealCoeff_Hl 
 real*8      :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb , deg_m
 integer     :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
 integer     :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
@@ -92,8 +92,8 @@ CALL consta
 allocate( Coul     (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 allocate( Coul_tmp (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 
-do ia = 1    , system % atoms
-do ib =    1 , system % atoms 
+do ia = 1 , system % atoms
+do ib = 1 , system % atoms 
 
     ! Coulomb rotation matrix ...
     CALL Rotation_Matrix( system , rotmat , icaso , ia , ib , Rab )
@@ -101,13 +101,13 @@ do ib =    1 , system % atoms
     If( Rab < low_prec ) goto 100
 
     do ja2 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a2 = system%BasisPointer(ia) + ja2
-    do ja1 = 1 , ja2                         , 3   ;   a1 = system%BasisPointer(ia) + ja1
+    do ja1 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a1 = system%BasisPointer(ia) + ja1
 
         na_1 = basis(a1)% n     ;       la_1 = basis(a1)% l         
         na_2 = basis(a2)% n     ;       la_2 = basis(a2)% l         
 
         do jb2 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b2 = system%BasisPointer(ib) + jb2
-        do jb1 = 1 , jb2                          , 3  ;   b1 = system%BasisPointer(ib) + jb1
+        do jb1 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b1 = system%BasisPointer(ib) + jb1
 
             Coul = D_zero
 
@@ -143,8 +143,8 @@ do ib =    1 , system % atoms
             end do  !   j
             end do  !   i
 
-            deg_la = merge( D_one , TWO , la_1==la_2 )
-            deg_lb = merge( D_one , TWO , lb_1==lb_2 )
+!            deg_la = merge( D_one , TWO , la_1==la_2 )
+!            deg_lb = merge( D_one , TWO , lb_1==lb_2 )
 
             ! ===============================================================================================
             ! build ELECTRON potential ... 
@@ -156,13 +156,13 @@ do ib =    1 , system % atoms
                 do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                 do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
 
-                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
+                    Coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2) 
 
                     If( indx1 <  indx2 ) V_coul(indx1,indx2) = V_coul(indx1,indx2)  &
-                                                             - deg_lb * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                                                             - coeff_El * Coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                     If( indx1 == indx2 ) V_coul_El(indx1)    = V_coul_El(indx1)     &
-                                                             - deg_lb * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                                                             - coeff_El * Coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do
@@ -179,13 +179,13 @@ do ib =    1 , system % atoms
                 do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
                 do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
 
-                    coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1)
+                    Coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1) 
 
                     If( indx3  < indx4 ) V_coul(indx4,indx3) = V_coul(indx4,indx3)  &
-                                                             - deg_la * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                                                             - Coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                     If( indx3 == indx4 ) V_coul_Hl(indx3)    = V_coul_Hl(indx3)     &
-                                                             - deg_la * coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                                                             - Coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                 end do
                 end do

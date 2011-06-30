@@ -34,8 +34,8 @@ contains
  subroutine preprocess_Chebyshev( system , basis , Psi , QDyn , it )
 !===================================================================
 implicit none
-type(structure)                 , intent(in)    :: system
-type(STO_basis)                 , intent(in)    :: basis(:)
+type(structure)                 , intent(inout) :: system
+type(STO_basis)                 , intent(inout) :: basis(:)
 complex*16      , allocatable   , intent(out)   :: Psi(:)
 type(g_time)                    , intent(inout) :: QDyn
 integer                         , intent(in)    :: it
