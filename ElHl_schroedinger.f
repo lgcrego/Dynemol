@@ -15,7 +15,6 @@
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
- use Coulomb_SMILES_m           , only : wormhole_to_Coulomb
 
     public :: ElHl_dynamics , Huckel_dynamics , DeAllocate_QDyn 
 
@@ -47,6 +46,8 @@ real*8                              :: t , t_rate
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:,:)
 type(R_eigen)                       :: UNI_el , UNI_hl
+
+real*8 :: E_el , E_hl
 
 ! ------------------ preprocess stuff --------------------
 
@@ -111,6 +112,18 @@ DO it = 1 , n_t
         MO_ket(:,n) =       phase(:,n)  * MO_ket(:,n) 
     end forall
 
+
+
+
+    ! calculating energies of electron and hole states ...
+
+    E_el = sum( MO_bra(:,1)*UNI_el%erg(:)*MO_ket(:,1) )
+    E_hl = sum( MO_bra(:,2)*UNI_hl%erg(:)*MO_ket(:,2) )
+
+    print*, E_el , E_hl
+    write(12,*) t ,  E_el , E_hl
+
+
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
     CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
@@ -143,14 +156,11 @@ DO it = 1 , n_t
 
     If( Coulomb_ ) then
 
-        ! save coefficients in modulo Coulomb_SMILES_m ...
-        CALL wormhole_to_Coulomb( AO_bra , AO_ket )
-
         ! saving space for a bit ...
         Deallocate ( UNI_el%R , UNI_el%L , UNI_el%erg )
         Deallocate ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
-        CALL EigenSystem_ElHl( system , basis , UNI_el , UNI_hl )
+        CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl )
 
         ! project back to MO_basis with UNI(t + t_rate)
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , Dual_bra(:,1) , mm , C_zero , MO_bra(:,1) , mm )

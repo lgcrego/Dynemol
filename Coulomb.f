@@ -9,12 +9,9 @@ module Coulomb_SMILES_m
                                          ExCell_basis
 
 
-    public  :: Build_Coulomb_potential , wormhole_to_Coulomb
+    public  :: Build_Coulomb_potential 
 
     private
-
-    ! module variables ...
-    complex*16 , allocatable , save  :: AO_bra(:,:) , AO_ket(:,:)
 
     ! module parameters ...
     integer , parameter :: mxl = 3 , mxbuff = 100000 , mxequiv = 1000
@@ -38,12 +35,14 @@ contains
 !========================================================
 !
 !
-!=====================================================================================
- subroutine Build_Coulomb_Potential( system , basis , V_coul , V_coul_El , V_coul_Hl )
-!=====================================================================================
+!=======================================================================================================
+ subroutine Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
+!=======================================================================================================
 implicit none
 type(structure)                 , intent(in)  :: system 
-type(STO_basis)                 , intent(in)  :: basis(:)
+type(STO_basis)                 , intent(in)  :: basis     (:)
+complex*16      , optional      , intent(in)  :: AO_bra    (:,:) 
+complex*16      , optional      , intent(in)  :: AO_ket    (:,:) 
 complex*16      , allocatable   , intent(out) :: V_coul    (:,:) 
 complex*16      , allocatable   , intent(out) :: V_coul_El (:) 
 complex*16      , allocatable   , intent(out) :: V_coul_Hl (:)
@@ -72,7 +71,7 @@ integer     :: ib, jb1, b1, jb2, b2
 basis_size = size( basis(:) )
 
 ! if there is no electron-hole pair leave the subroutine ...
-if( .NOT. allocated(AO_bra) ) then
+if( .NOT. present(AO_bra) ) then
     
     allocate( V_coul_El (basis_size)            , source = C_zero)
     allocate( V_coul_Hl (basis_size)            , source = C_zero)
@@ -539,37 +538,6 @@ real*8  , parameter :: two   = 2.0d0
       return
 
 end subroutine rotar_local
-!
-!
-!
-!===========================================
- subroutine wormhole_to_Coulomb( bra , ket )
-!===========================================
-implicit none
-complex*16  , intent(in) :: bra(:,:)
-complex*16  , intent(in) :: ket(:,:)
-
-! local variables ...
-integer :: row , column
-
-! save AO_bra and AO_ket in Coulomb_m ...
-
-if( .NOT. allocated(AO_bra) ) then
-
-    row     = size( bra(:,1) )
-    column  = size( bra(1,:) )
-
-    allocate( AO_bra(row,column) , source=bra )
-    allocate( AO_ket(row,column) , source=ket )
-
-else
-
-    AO_bra = bra
-    AO_ket = ket
-
-end if
-
-end subroutine wormhole_to_Coulomb
 !
 !
 !

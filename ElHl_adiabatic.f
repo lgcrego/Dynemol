@@ -37,7 +37,6 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use Coulomb_SMILES_m            , only : wormhole_to_Coulomb 
 
     public :: ElHl_adiabatic
 
@@ -147,12 +146,16 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
 
-    If( Coulomb_ )          CALL Coulomb_stuff
-
     Deallocate              ( UNI_el%R , UNI_el%L , UNI_el%erg )
     Deallocate              ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
-    CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , UNI_el , UNI_hl , flag2=it )
+    ! LOCAL representation for DP calculation ...
+    AO_bra = DUAL_bra
+
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
+
+    CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , Dual_bra(:,1) , mm , C_zero , MO_bra(:,1) , mm )
@@ -227,7 +230,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , UNI_el , UNI_hl , flag2=it )
+CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
 
 ! build the initial electron-hole wavepacket ...
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )
@@ -436,26 +439,4 @@ end subroutine Restart_stuff
 !
 !
 ! 
-!========================
- subroutine Coulomb_stuff
-!========================
-implicit none
-
-! LOCAL representation for film STO production ...
-
-! coefs of <k(t)| in AO basis 
-AO_bra = DUAL_bra
-
-! coefs of |k(t)> in AO basis 
-CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
-CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
-
-! save coefficients in modulo Coulomb_m ...
-CALL wormhole_to_Coulomb( AO_bra , AO_ket )
-
-end subroutine Coulomb_stuff
-!
-!
-!
-!
 end module ElHl_adiabatic_m

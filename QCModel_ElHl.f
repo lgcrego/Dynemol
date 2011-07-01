@@ -21,12 +21,14 @@
 !
 !
 !
-!=============================================================================
- subroutine EigenSystem_ElHl( system , basis , QM_el , QM_hl , flag1 , flag2 )
-!=============================================================================
+!===============================================================================================
+ subroutine EigenSystem_ElHl( system , basis , AO_bra , AO_ket , QM_el , QM_hl , flag1 , flag2 )
+!===============================================================================================
  implicit none
  type(structure)                             , intent(in)    :: system
  type(STO_basis)                             , intent(in)    :: basis(:)
+ complex*16       , optional                 , intent(in)    :: AO_bra(:,:)
+ complex*16       , optional                 , intent(in)    :: AO_ket(:,:)
  type(R_eigen)                               , intent(inout) :: QM_el
  type(R_eigen)                               , intent(inout) :: QM_hl
  integer          , optional                 , intent(inout) :: flag1
@@ -40,7 +42,7 @@
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-CALL Build_Coulomb_Potential( system , basis , V_coul , V_coul_El , V_coul_Hl )
+CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
 
 ALLOCATE( h(size(basis),size(basis)) )
 
