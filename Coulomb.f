@@ -3,18 +3,13 @@ module Coulomb_SMILES_m
     use type_m                  
     use util_m                  , only : fact
     use Semi_Empirical_Parms    , only : atom
-    use Structure_Builder       , only : Extended_Cell              , &
-                                         Generate_Structure         , &
-                                         Basis_Builder              , &
-                                         ExCell_basis
-
 
     public  :: Build_Coulomb_potential 
 
     private
 
     ! module parameters ...
-    integer , parameter :: mxl = 3 , mxbuff = 100000 , mxequiv = 1000
+    integer , parameter :: mxl = 3 , mxbuff = 100000 , mxequiv = 100
     integer , parameter :: idmrot = (mxl+1)*(2*mxl+1)*(2*mxl+3)/3
     integer , parameter :: idmrotmx = mxequiv * idmrot
 
@@ -44,8 +39,8 @@ type(STO_basis)                 , intent(in)  :: basis     (:)
 complex*16      , optional      , intent(in)  :: AO_bra    (:,:) 
 complex*16      , optional      , intent(in)  :: AO_ket    (:,:) 
 complex*16      , allocatable   , intent(out) :: V_coul    (:,:) 
-complex*16      , allocatable   , intent(out) :: V_coul_El (:) 
-complex*16      , allocatable   , intent(out) :: V_coul_Hl (:)
+real*8          , allocatable   , intent(out) :: V_coul_El (:) 
+real*8          , allocatable   , intent(out) :: V_coul_Hl (:)
 
 ! local arrays ...
 real*8  , allocatable                                       :: coul(:,:,:,:) , coul_tmp(:,:,:,:) 
@@ -58,8 +53,8 @@ real*8  , dimension (-mxl:mxl)                              :: vaux
 integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
-complex*16  :: coeff_El , coeff_Hl , RealCoeff_El , RealCoeff_Hl 
-real*8      :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb , deg_m
+complex*16  :: coeff_El , coeff_Hl 
+real*8      :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la 
 integer     :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
 integer     :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
 integer     :: ia, ja1, a1, ja2, a2
@@ -73,16 +68,16 @@ basis_size = size( basis(:) )
 ! if there is no electron-hole pair leave the subroutine ...
 if( .NOT. present(AO_bra) ) then
     
-    allocate( V_coul_El (basis_size)            , source = C_zero)
-    allocate( V_coul_Hl (basis_size)            , source = C_zero)
+    allocate( V_coul_El (basis_size)            , source = D_zero)
+    allocate( V_coul_Hl (basis_size)            , source = D_zero)
     allocate( V_coul    (basis_size,basis_size) , source = C_zero)
 
     return
 
 end if
 
-allocate( V_coul_El (basis_size)            , source = C_zero )
-allocate( V_coul_Hl (basis_size)            , source = C_zero )
+allocate( V_coul_El (basis_size)            , source = D_zero )
+allocate( V_coul_Hl (basis_size)            , source = D_zero )
 allocate( V_coul    (basis_size,basis_size) , source = C_zero )
 
 CALL consta
@@ -108,10 +103,10 @@ do ib = 1 , system % atoms
         do jb2 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b2 = system%BasisPointer(ib) + jb2
         do jb1 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b1 = system%BasisPointer(ib) + jb1
 
-            Coul = D_zero
-
             nb_1 = basis(b1)% n     ;       lb_1 = basis(b1)% l         
             nb_2 = basis(b2)% n     ;       lb_2 = basis(b2)% l         
+
+            Coul = D_zero
 
             do i = 1 , basis(a1)% Nzeta
             do j = 1 , basis(a2)% Nzeta
@@ -142,29 +137,34 @@ do ib = 1 , system % atoms
             end do  !   j
             end do  !   i
 
-!            deg_la = merge( D_one , TWO , la_1==la_2 )
-!            deg_lb = merge( D_one , TWO , lb_1==lb_2 )
-
             ! ===============================================================================================
             ! build ELECTRON potential ... 
             do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
             do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
 
-                coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
+                If( indx1 <= indx2 ) then
 
-                do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
-                do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
+                    coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
 
-                    Coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2) 
+                    do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
+                    do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
 
-                    If( indx1 <  indx2 ) V_coul(indx1,indx2) = V_coul(indx1,indx2)  &
-                                                             - coeff_El * Coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                        coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2) 
 
-                    If( indx1 == indx2 ) V_coul_El(indx1)    = V_coul_El(indx1)     &
-                                                             - coeff_El * Coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                        If( indx1 < indx2 ) then
 
-                end do
-                end do
+                            V_coul(indx1,indx2) = V_coul(indx1,indx2) - coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                        elseIf( indx1 == indx2 ) then
+                
+                            V_coul_El(indx1) = V_coul_El(indx1) - Real(coeff_El * coeff_Hl) * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                        end If
+
+                    end do
+                    end do
+
+                end If
 
             end do
             end do
@@ -173,26 +173,34 @@ do ib = 1 , system % atoms
             do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
             do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
 
-                coeff_Hl = AO_bra(indx2,2) * AO_ket(indx1,2)
+                If( indx4 >= indx3 ) then
 
-                do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
-                do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
+                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
 
-                    Coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1) 
+                    do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
+                    do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
 
-                    If( indx3  < indx4 ) V_coul(indx4,indx3) = V_coul(indx4,indx3)  &
-                                                             - Coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                        coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1) 
 
-                    If( indx3 == indx4 ) V_coul_Hl(indx3)    = V_coul_Hl(indx3)     &
-                                                             - Coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                        If( indx4 > indx3 ) then
 
-                end do
-                end do
+                            V_coul(indx4,indx3) = V_coul(indx4,indx3) - coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                        elseIf( indx3 == indx4 ) then
+                    
+                            V_coul_Hl(indx3) = V_coul_Hl(indx3) - Real(coeff_El * coeff_Hl) * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+
+                        end IF
+
+                    end do
+                    end do
+
+                end IF
 
             end do
             end do
             ! ===============================================================================================
-           
+
         end do
         end do
 

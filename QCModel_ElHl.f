@@ -35,7 +35,8 @@
  integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
- complex*16 , ALLOCATABLE   :: V_coul(:,:) , V_coul_El(:) , V_coul_Hl(:) 
+ complex*16 , ALLOCATABLE   :: V_coul(:,:) 
+ real*8     , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
  real*8     , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
  integer                    :: i , j 
 
@@ -70,7 +71,7 @@ do j = 1 , size(basis)
 
     end do
 
-    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + real(V_coul_El(j))
+    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + V_coul_El(j)
 
 end do  
 
@@ -89,7 +90,7 @@ do j = 1 , size(basis)
 
     end do
 
-    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + real(V_coul_Hl(j))
+    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + V_coul_Hl(j)
 
 end do  
 

@@ -146,14 +146,14 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
 
-    Deallocate              ( UNI_el%R , UNI_el%L , UNI_el%erg )
-    Deallocate              ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
-
-    ! LOCAL representation for DP calculation ...
+    ! LOCAL representation for Coulomb calculation ...
     AO_bra = DUAL_bra
 
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
+
+    Deallocate              ( UNI_el%R , UNI_el%L , UNI_el%erg )
+    Deallocate              ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
     CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
 
