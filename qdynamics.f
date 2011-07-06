@@ -41,7 +41,7 @@ implicit none
 ! local variables ...
  integer                        :: nr , N_of_residues
  character(3)                   :: residue
- logical                        :: FMO_ , DIPOLE_ , el_hl_
+ logical                        :: DIPOLE_ , el_hl_
  type(R_eigen)                  :: UNI
  type(R_eigen)                  :: el_FMO , hl_FMO
  type(f_grid)                   :: TDOS , SPEC
@@ -52,7 +52,6 @@ implicit none
 ! preprocessing stuff ...................................
 
 el_hl_  = any( Unit_Cell%Hl)
-FMO_    = ( spectrum .OR. survival  )
 DIPOLE_ = ( spectrum .OR. DP_Moment )
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
@@ -80,8 +79,6 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="E")
-
  If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
@@ -92,9 +89,13 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
         case( .false. )
 
+            CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="E")
+
             CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, el_FMO , QDyn=QDyn )
 
         case( .true. )
+
+            CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, el_FMO , instance="E")
 
             CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R, hl_FMO , instance="H")
 
