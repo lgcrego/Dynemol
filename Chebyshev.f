@@ -2,14 +2,15 @@ module Chebyshev_m
 
     use type_m              , g_time => f_time  
     use constants_m
-    use parameters_m        , only : t_i , DP_Field_ , frame_step
+    use parameters_m        , only : t_i , t_f , n_t , frame_step , &
+                                     DP_Field_                     
     use mkl95_blas
     use mkl95_lapack
     use ifport
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
-    use QCmodel_Huckel      , only : Huckel ,             &
+    use QCmodel_Huckel      , only : Huckel ,                       &
                                      Huckel_with_FIELDS
     use Data_Output         , only : Populations
 
@@ -18,10 +19,9 @@ module Chebyshev_m
     private
 
 ! module parameters ...
-    integer     , parameter :: order     = 15
-    real*8      , parameter :: delta_t   = 2.5d0
+    integer     , parameter :: order     = 25
     real*8      , parameter :: error     = 1.0d-8
-    real*8      , parameter :: norm_error= 1.0d-8
+    real*8      , parameter :: norm_error= 1.0d-12
 
 ! module variables ...
     real*8  , save :: save_tau 
@@ -46,13 +46,15 @@ real*8          , allocatable   :: wv_FMO(:)
 real*8          , allocatable   :: S_matrix(:,:)
 complex*16      , allocatable   :: DUAL_bra(:) , DUAL_ket(:)
 type(R_eigen)                   :: FMO
+integer :: i
 
 ! prepare  DONOR  state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO )
+CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="D" )
 
 ! place the  DONOR  state in structure Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
 N  = size(wv_FMO)
+
 allocate( Psi(size(basis)) , source=C_zero )
 Psi(li:li+N-1) = cmplx( wv_FMO(:) )
 deallocate( wv_FMO )
@@ -88,8 +90,8 @@ integer          , intent(in)    :: it
 ! local variables...
 complex*16  , allocatable   :: C_Psi(:,:) , Psi_temp(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:) 
 real*8      , allocatable   :: H_prime(:,:) , S_matrix(:,:) 
-real*8                      :: tau , norm_ref , norm_test
-integer                     :: i , j , k_ref , N
+real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
+integer                     :: j , k_ref , N
 logical                     :: OK
 
 ! building  S_matrix  and  H'= S_inv * H ...
@@ -105,15 +107,22 @@ allocate( Dual_ket (N         ) , source=C_zero )
 
 norm_ref = real( dot_product(Psi_t,matmul(S_matrix,Psi_t)) )
 
+delta_t = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+tau_max = delta_t / h_bar
+
 ! constants of evolution ...
+
+! trying to adapt time step for efficient propagation ...
 tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
+! but tau should be never bigger than tau_max ...
+tau = merge( tau_max , tau , tau > tau_max )
 
 ! first convergence: best tau-parameter for k_ref ...
 do
     CALL Convergence( Psi_t , C_k , k_ref , tau , H_prime , S_matrix , norm_ref , OK )
 
     if( OK ) then
-        t = t + tau * h_bar
+        t = t + tau * h_bar 
         save_tau = tau
         exit
     else            
@@ -209,7 +218,7 @@ do
     forall( j=1:N ) Psi_temp(j,2) = Psi_temp(j,1) + C_k(k)*C_Psi(j,k)
 
 !   convergence criteria...
-    l = count( abs(Psi_temp(:,2)-Psi_temp(:,1)) <= error )
+    l = count( abs( (Psi_temp(:,2)-Psi_temp(:,1)) / Psi_temp(:,1) ) <= error )
     if( l == N ) then
 
         norm_temp = dot_product( Psi_temp(:,2) , matmul(S_matrix , Psi_temp(:,2)) )
