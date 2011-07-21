@@ -144,7 +144,7 @@ do ib = 1 , system % atoms
 
                 If( indx1 <= indx2 ) then
 
-                    coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
+                    coeff_El = 1.d0 !AO_bra(indx2,1) * AO_ket(indx1,1)
 
                     do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                     do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
@@ -175,7 +175,7 @@ do ib = 1 , system % atoms
 
                 If( indx4 >= indx3 ) then
 
-                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
+                    coeff_Hl = 1.d0 !AO_bra(indx4,2) * AO_ket(indx3,2)
 
                     do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
                     do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)

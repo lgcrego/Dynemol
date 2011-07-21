@@ -16,6 +16,10 @@
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
 
+ use DOS_m                      , only : Total_DOS ,            &
+                                         Partial_DOS
+
+
     public :: ElHl_dynamics , Huckel_dynamics , DeAllocate_QDyn 
 
     private
@@ -62,6 +66,7 @@ mm = size(basis)
 ! at t=t_i UNI = UNI_el = UNI_hl ...                        
 allocate( UNI_el%L(mm,mm) , UNI_el%R(mm,mm) , UNI_el%erg(mm) )
 allocate( UNI_hl%L(mm,mm) , UNI_hl%R(mm,mm) , UNI_hl%erg(mm) )
+
 UNI_el = UNI
 UNI_hl = UNI
 
@@ -115,6 +120,7 @@ DO it = 1 , n_t
 
 
 
+        !###################################3
     ! calculating energies of electron and hole states ...
 
     E_el = sum( MO_bra(:,1)*UNI_el%erg(:)*MO_ket(:,1) )
@@ -122,6 +128,7 @@ DO it = 1 , n_t
 
     print*, E_el , E_hl
     write(12,*) t ,  E_el , E_hl
+        !###################################3
 
 
     ! DUAL representation for efficient calculation of survival probabilities ...
@@ -156,7 +163,7 @@ DO it = 1 , n_t
 
     If( Coulomb_ ) then
 
-        ! saving space for a bit ...
+        ! saving a little memory space ...
         Deallocate ( UNI_el%R , UNI_el%L , UNI_el%erg )
         Deallocate ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
@@ -168,6 +175,15 @@ DO it = 1 , n_t
 
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , Dual_bra(:,2) , mm , C_zero , MO_bra(:,2) , mm )
         CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , Dual_ket(:,2) , mm , C_zero , MO_ket(:,2) , mm )
+
+
+        !###################################3
+!        CALL Total_DOS(UNI_el%erg)
+
+!        do nr = 1 , 2
+!            CALL Partial_DOS( Extended_Cell , UNI_el , PDOS , nr )            
+!        end do
+        !###################################3
 
     end If
 

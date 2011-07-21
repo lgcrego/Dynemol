@@ -67,7 +67,7 @@ end If
 do j = 1 , size(basis)
     do i = 1 , j-1
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + real(V_coul(i,j))
+        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + V_coul(i,j)
 
     end do
 
@@ -75,7 +75,7 @@ do j = 1 , size(basis)
 
 end do  
 
-! eigensystem for electron-wavepacket ...
+! eigensystem for ELECTRON wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , instance="el" )
 
 !-----------------------------------------------------------------------
@@ -86,7 +86,7 @@ h(:,:) = D_zero
 do j = 1 , size(basis)
     do i = j+1 , size(basis)
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + real(V_coul(i,j))
+        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + V_coul(i,j)
 
     end do
 
@@ -94,6 +94,7 @@ do j = 1 , size(basis)
 
 end do  
 
+! eigensystem for HOLE wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , instance="hl" )
 
 !-----------------------------------------------------------------------
@@ -181,9 +182,9 @@ end subroutine EigenSystem_ElHl
 
 ! save energies of the TOTAL system 
  If( instance == "hl") then
-    OPEN(unit=9,file='hl-UNI-ergs.dat',status='unknown')
+    OPEN(unit=9,file='hl_UNI-ergs.dat',status='unknown')
  else
-    OPEN(unit=9,file='el-UNI-ergs.dat',status='unknown')
+    OPEN(unit=9,file='el_UNI-ergs.dat',status='unknown')
  end IF
  do i = 1 , basis_size
     write(9,*) i , QM%erg(i)

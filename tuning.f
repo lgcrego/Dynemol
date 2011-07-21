@@ -28,8 +28,6 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    where( struct % DPF       ) struct % nr = 1
-    where( .not. struct % DPF ) struct % nr = struct % nr - 3
 
 end If
 
@@ -38,18 +36,8 @@ end If
 
 If( present(univ) ) then
 
-    where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
-
-    where( univ % atom % DPF       ) univ % atom % nr = 1
-    where( .not. univ % atom % DPF ) univ % atom % nr = univ % atom % nr - 3
-
-    univ % atom % solute = univ % atom % DPF        
-
-    where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
-    where( univ % atom % residue == "BP1" ) univ % atom % Hl = .true.
+    where( univ % atom % residue == "TA2" ) univ % atom % El = .true.
+    where( univ % atom % residue == "TA2" ) univ % atom % Hl = .true.
 
 end if
 
@@ -95,14 +83,6 @@ integer  :: i
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
-        case( 'LFT') 
-            a%atom(i)%fragment = 'L' 
-
-        case( 'DON') 
-            a%atom(i)%fragment = 'D' 
-
-        case( 'RGT') 
-            a%atom(i)%fragment = 'R' 
 
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
@@ -112,20 +92,12 @@ integer  :: i
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
 
-        case( 'ION') 
-            a%atom(i)%fragment = 'I' 
+        case( 'CCC') 
+            a%atom(i)%fragment = 'C' 
             a%atom(i)%solvation_hardcore = 7.d0
 
-        case( 'BP1') 
+        case( 'TA2') 
             a%atom(i)%fragment = 'D' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP2') 
-            a%atom(i)%fragment = '1' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP3') 
-            a%atom(i)%fragment = '2' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case default

@@ -5,9 +5,7 @@ module DOS_m
     use constants_m
     use parameters_m            , only  : sigma ,           &
                                           DOS_range        
-    use Structure_Builder
-    use Overlap_Builder
-    use Semi_Empirical_Parms    , the_chemical_atom => atom
+    use Semi_Empirical_Parms    , only  : the_chemical_atom => atom
 
     public  :: Total_DOS , Partial_DOS
 
