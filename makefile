@@ -65,6 +65,7 @@ SOURCE2 = constants_m.o  \
 		  ga_QCModel.o \
 		  ga_routines.o \
 		  solvated_M.o \
+		  DOS_tool.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \

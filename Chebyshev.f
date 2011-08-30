@@ -2,8 +2,7 @@ module Chebyshev_m
 
     use type_m              , g_time => f_time  
     use constants_m
-    use parameters_m        , only : t_i , t_f , n_t , frame_step , &
-                                     DP_Field_                     
+    use parameters_m        , only : t_i , t_f , n_t , frame_step , DP_Field_                     
     use mkl95_blas
     use mkl95_lapack
     use ifport

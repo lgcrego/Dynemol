@@ -15,9 +15,7 @@
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
-
- use DOS_m                      , only : Total_DOS ,            &
-                                         Partial_DOS
+ use PDOS_tool_m                , only : Partial_DOS
 
 
     public :: ElHl_dynamics , Huckel_dynamics , DeAllocate_QDyn 

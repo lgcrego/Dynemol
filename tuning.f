@@ -28,7 +28,6 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-
 end If
 
 
@@ -36,8 +35,8 @@ end If
 
 If( present(univ) ) then
 
-    where( univ % atom % residue == "TA2" ) univ % atom % El = .true.
-    where( univ % atom % residue == "TA2" ) univ % atom % Hl = .true.
+    where( univ % atom % residue == "CAT" ) univ % atom % El = .true.
+    where( univ % atom % residue == "CAT" ) univ % atom % Hl = .true.
 
 end if
 
@@ -83,6 +82,11 @@ integer  :: i
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
+        case( 'SEM') 
+            a%atom(i)%fragment = 'A' 
+
+        case( 'CAT') 
+            a%atom(i)%fragment = 'D' 
 
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
@@ -92,12 +96,20 @@ integer  :: i
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
 
-        case( 'CCC') 
-            a%atom(i)%fragment = 'C' 
+        case( 'ION') 
+            a%atom(i)%fragment = 'I' 
             a%atom(i)%solvation_hardcore = 7.d0
 
-        case( 'TA2') 
-            a%atom(i)%fragment = 'D' 
+        case( 'BP1') 
+            a%atom(i)%fragment = '1' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
+        case( 'BP2') 
+            a%atom(i)%fragment = '2' 
+            a%atom(i)%solvation_hardcore = 7.d0
+
+        case( 'BP3') 
+            a%atom(i)%fragment = '3' 
             a%atom(i)%solvation_hardcore = 7.d0
 
         case default

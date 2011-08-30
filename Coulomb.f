@@ -53,12 +53,16 @@ real*8  , dimension (-mxl:mxl)                              :: vaux
 integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
-complex*16  :: coeff_El , coeff_Hl 
-real*8      :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la 
-integer     :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
-integer     :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
-integer     :: ia, ja1, a1, ja2, a2
-integer     :: ib, jb1, b1, jb2, b2
+complex*16           :: coeff_El , coeff_Hl 
+real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la 
+integer              :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
+integer              :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
+integer              :: ia, ja1, a1, ja2, a2
+integer              :: ib, jb1, b1, jb2, b2
+real*8 , allocatable :: dielectric(:)
+
+allocate(dielectric(size(basis(:))) , source=1.d0)
+where( basis % residue == "SEM" ) dielectric = 3.d1
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !       two-center Coulomb potential matrix elements for Electrons and Holes ...
@@ -144,7 +148,7 @@ do ib = 1 , system % atoms
 
                 If( indx1 <= indx2 ) then
 
-                    coeff_El = 1.d0 !AO_bra(indx2,1) * AO_ket(indx1,1)
+                    coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
 
                     do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                     do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
@@ -175,7 +179,7 @@ do ib = 1 , system % atoms
 
                 If( indx4 >= indx3 ) then
 
-                    coeff_Hl = 1.d0 !AO_bra(indx4,2) * AO_ket(indx3,2)
+                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
 
                     do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
                     do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)

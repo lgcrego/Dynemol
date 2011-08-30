@@ -65,21 +65,21 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  5.0d-1                                ! <== final time in PICOseconds
-  n_t  =  500                                   ! <== number of time steps
+  t_f  =  1.5d-1                                ! <== final time in PICOseconds
+  n_t  =  300                                   ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  87                           ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  21                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  88                           ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  22                           ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-  nnx = 0  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
+  nnx = 1  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 
