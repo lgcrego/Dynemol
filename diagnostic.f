@@ -84,10 +84,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(11,:) , UNI%R(:,11) , 11 , 0.d0 )
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(12,:) , UNI%R(:,12) , 12 , 0.d0 )
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(120,:) , UNI%R(:,120) , 120 , 0.d0 )
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(121,:) , UNI%R(:,121) , 121 , 0.d0 )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

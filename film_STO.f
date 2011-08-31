@@ -63,6 +63,7 @@ end subroutine gaussian_cube_format_Real
  real*8     , allocatable :: xyz(:,:)
  real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2 , dx , dy , dz , a , b , c , r , SlaterOrbital
  integer                  :: AtNo , nx_steps , ny_steps , nz_steps , i , j , ix , iy , iz , k 
+ character(len=2)         :: prefix
  character(len=4)         :: string 
  character(len=23)        :: f_name
 
@@ -72,7 +73,8 @@ end subroutine gaussian_cube_format_Real
  allocate(Psi_bra(size(bra)) , Psi_ket(size(ket)))
 
  write(string,'(i4.4)') it
- f_name = el_hl//'_dens_shot'//string//'.cube'
+ prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
+ f_name = prefix//'_dens_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 

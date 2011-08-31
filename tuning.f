@@ -35,8 +35,9 @@ end If
 
 If( present(univ) ) then
 
-    where( univ % atom % residue == "CAT" ) univ % atom % El = .true.
-    where( univ % atom % residue == "CAT" ) univ % atom % Hl = .true.
+    univ % atom % DPF = .true. 
+    univ % atom % El  = .true. 
+    univ % atom % Hl  = .true. 
 
 end if
 
@@ -85,7 +86,7 @@ integer  :: i
         case( 'SEM') 
             a%atom(i)%fragment = 'A' 
 
-        case( 'CAT') 
+        case( 'FUL') 
             a%atom(i)%fragment = 'D' 
 
         case( 'H2O' , 'SOL' ) 

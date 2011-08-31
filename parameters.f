@@ -32,11 +32,11 @@ logical :: dynamic
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
-  GaussianCube    = F_                       
+  GaussianCube    = T_                       
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
-  OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_basis       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
@@ -70,20 +70,20 @@ logical :: dynamic
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  21                           ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  120                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  22                           ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  121                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-  nnx = 1  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
+  nnx = 0  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 1  ; mmy = 1   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -95,9 +95,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
 !
-  occupied  =  real_interval( -15.50d0 , -9.501d0 )       
+  occupied  =  real_interval( -15.50d0 , -10.50d0 )       
 
-  empty     =  real_interval( -9.500d0 , -4.00d0 )        
+  empty     =  real_interval( -10.49d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
 
