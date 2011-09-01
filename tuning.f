@@ -68,8 +68,9 @@ integer  :: i
 ! fragments are set based on RESIDUE names ...
 ! 
 !   Acceptor    =   A       
-!   Donor       =   D 
-!   Exciton     =   E 
+!   Bridge      =   B       
+!   Donor       =   D  (only electron in this fragment)
+!   Exciton     =   E  (electron and hole in the same fragment)
 !   Hole        =   H 
 !   Molecule    =   M
 !   Solvent     =   S

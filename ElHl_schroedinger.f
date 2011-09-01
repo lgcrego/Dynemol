@@ -228,7 +228,7 @@ mm = size(basis)
 MO_bra( : , 1 ) = el_FMO%L( : , orbital(1) )    
 MO_ket( : , 1 ) = el_FMO%R( : , orbital(1) )   
 
-Print 591, orbital(n) , el_FMO%erg(orbital(1))
+Print 591, orbital(1) , el_FMO%erg(orbital(1))
 
 ! deallocate after use ...
 deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
