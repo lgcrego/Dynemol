@@ -47,6 +47,8 @@ integer :: i
             a(i)%AtNo = 1 
         case( 'LI','Li' ) 
             a(i)%AtNo = 3 
+        case( 'BE','Be' ) 
+            a(i)%AtNo = 4 
         case( 'C' ) 
             a(i)%AtNo = 6 
         case( 'N' ) 
@@ -144,6 +146,8 @@ integer :: i
             a(i)%Symbol = 'H'
         case( 3 ) 
             a(i)%Symbol = 'Li'
+        case( 4 ) 
+            a(i)%Symbol = 'Be'
         case( 6 ) 
             a(i)%Symbol = 'C'
         case( 7 ) 
@@ -210,20 +214,28 @@ character(len=2)    :: element2
     select case( element2 )
         case( 'Ow')
             a(i)%Symbol = 'O' 
-        case( 'Hw' )
+
+        case( 'Hw','HB','HC' )
             a(i)%Symbol = 'H' 
+
         case( 'Ix','Ic' )
             a(i)%Symbol = 'I' 
-        case( 'YC' ) 
+
+        case( 'YC','CM','C=' ) 
             a(i)%Symbol = 'C' 
+
         case( 'YN' ) 
             a(i)%Symbol = 'N' 
+
         case( 'Al' ) 
             a(i)%Symbol = 'Al' 
+
         case( 'Ti' ) 
             a(i)%Symbol = 'Ti' 
+
         case( 'Li' ) 
             a(i)%Symbol = 'Li' 
+
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
     end select
