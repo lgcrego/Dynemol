@@ -19,7 +19,7 @@ module Chebyshev_m
 
 ! module parameters ...
     integer     , parameter :: order     = 25
-    real*8      , parameter :: error     = 1.0d-8
+    real*8      , parameter :: error     = 1.0d-12
     real*8      , parameter :: norm_error= 1.0d-12
 
 ! module variables ...
@@ -48,10 +48,10 @@ type(R_eigen)                   :: FMO
 integer :: i
 
 ! prepare  DONOR  state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="D" )
+CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
 ! place the  DONOR  state in structure Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "D" )
+li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "E" )
 N  = size(wv_FMO)
 
 allocate( Psi(size(basis)) , source=C_zero )

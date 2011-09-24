@@ -28,11 +28,11 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_ElHl"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
-  GaussianCube    = T_                       
+  GaussianCube    = F_                       
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
@@ -44,7 +44,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <= structure or trajectory
+  file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -65,16 +65,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  1.5d-1                                ! <== final time in PICOseconds
-  n_t  =  300                                   ! <== number of time steps
+  t_f  =  1.0d+0                                ! <== final time in PICOseconds
+  n_t  =  1000                                  ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  120                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  3                            ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  121                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  3                            ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters

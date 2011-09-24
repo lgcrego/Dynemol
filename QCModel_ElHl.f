@@ -67,7 +67,7 @@ end If
 do j = 1 , size(basis)
     do i = 1 , j-1
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + V_coul(i,j)
+        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
 
     end do
 
@@ -86,7 +86,7 @@ h(:,:) = D_zero
 do j = 1 , size(basis)
     do i = j+1 , size(basis)
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) + V_coul(i,j)
+        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
 
     end do
 
