@@ -236,6 +236,9 @@ character(len=2)    :: element2
         case( 'Li' ) 
             a(i)%Symbol = 'Li' 
 
+        case( 'Be' ) 
+            a(i)%Symbol = 'Be' 
+
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
     end select
