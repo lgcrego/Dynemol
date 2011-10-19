@@ -1,5 +1,6 @@
 module Coulomb_SMILES_m
     use constants_m             
+    use omp_lib
     use type_m                  
     use util_m                  , only : fact
     use Semi_Empirical_Parms    , only : atom
@@ -54,7 +55,7 @@ integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
 complex*16           :: coeff_El , coeff_Hl 
-real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la 
+real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb
 integer              :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
 integer              :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
 integer              :: ia, ja1, a1, ja2, a2
@@ -99,24 +100,23 @@ do ib = 1 , system % atoms
     If( Rab < low_prec ) goto 100
 
     do ja2 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a2 = system%BasisPointer(ia) + ja2
-    do ja1 = 1 , atom( system%AtNo(ia) )%DOS , 3   ;   a1 = system%BasisPointer(ia) + ja1
+    do ja1 = 1 , ja2                         , 3   ;   a1 = system%BasisPointer(ia) + ja1
 
         na_1 = basis(a1)% n     ;       la_1 = basis(a1)% l         
         na_2 = basis(a2)% n     ;       la_2 = basis(a2)% l         
 
         do jb2 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b2 = system%BasisPointer(ib) + jb2
-        do jb1 = 1 , atom( system%AtNo(ib) )%DOS  , 3  ;   b1 = system%BasisPointer(ib) + jb1
+        do jb1 = 1 , jb2                          , 3  ;   b1 = system%BasisPointer(ib) + jb1
 
             nb_1 = basis(b1)% n     ;       lb_1 = basis(b1)% l         
             nb_2 = basis(b2)% n     ;       lb_2 = basis(b2)% l         
 
             Coul = D_zero
-
+            
             do i = 1 , basis(a1)% Nzeta
             do j = 1 , basis(a2)% Nzeta
             do k = 1 , basis(b1)% Nzeta
             do l = 1 , basis(b2)% Nzeta
-
                 x1 = basis(a1)%  zeta(i)    ;   rn1 = sqrt( (x1+x1)**(na_1+na_1+1)/fact(na_1+na_1) )
                 x2 = basis(a2)%  zeta(j)    ;   rn2 = sqrt( (x2+x2)**(na_2+na_2+1)/fact(na_2+na_2) )
                 x3 = basis(b1)%  zeta(k)    ;   rn3 = sqrt( (x3+x3)**(nb_1+nb_1+1)/fact(nb_1+nb_1) )
@@ -135,14 +135,14 @@ do ib = 1 , system % atoms
                 CALL Rotate_Coulomb( la_1 , la_2 , lb_1 , lb_2 , icaso , rotmat , Coul_tmp )
 
                 Coul = Coul + basis(a1)%coef(i) * basis(a2)%coef(j) * basis(b1)%coef(k) * basis(b2)%coef(l) * Coul_tmp
-
             end do  !   l
             end do  !   k
             end do  !   j
             end do  !   i
-
             ! ===============================================================================================
             ! build ELECTRON potential ... 
+            deg_lb = merge( D_one , TWO , lb_1==lb_2 )
+
             do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
             do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
 
@@ -153,7 +153,7 @@ do ib = 1 , system % atoms
                     do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                     do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
 
-                        coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2) 
+                        coeff_Hl = deg_lb * AO_bra(indx4,2) * AO_ket(indx3,2) 
 
                         If( indx1 < indx2 ) then
 
@@ -165,15 +165,17 @@ do ib = 1 , system % atoms
 
                         end If
 
-                    end do
-                    end do
+                    end do  ! mb_1
+                    end do  ! mb_2
 
                 end If
 
-            end do
-            end do
+            end do  ! ma_1
+            end do  ! ma_2
             ! ===============================================================================================
             ! build HOLE potential ... 
+            deg_la = merge( D_one , TWO , la_1==la_2 )
+
             do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
             do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
 
@@ -184,7 +186,7 @@ do ib = 1 , system % atoms
                     do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
                     do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
 
-                        coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1) 
+                        coeff_El = deg_la * AO_bra(indx2,1) * AO_ket(indx1,1) 
 
                         If( indx4 > indx3 ) then
 
@@ -196,25 +198,25 @@ do ib = 1 , system % atoms
 
                         end IF
 
-                    end do
-                    end do
+                    end do  ! ma_2
+                    end do  ! ma_1
 
                 end IF
 
-            end do
-            end do
+            end do  ! mb_2
+            end do  ! mb_1
             ! ===============================================================================================
 
-        end do
-        end do
+        end do  !jb1
+        end do  !jb2
 
-    end do
-    end do
+    end do  !ja1
+    end do  !ja2
 
 100 continue
 
-end do    
-end do  
+end do  !ib  
+end do  !ia
 
 ! Hartree atomic units => eV
 V_coul_El (:)   = V_coul_El (:)  * Hartree_2_eV 
