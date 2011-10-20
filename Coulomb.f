@@ -117,6 +117,7 @@ do ib = 1 , system % atoms
             do j = 1 , basis(a2)% Nzeta
             do k = 1 , basis(b1)% Nzeta
             do l = 1 , basis(b2)% Nzeta
+
                 x1 = basis(a1)%  zeta(i)    ;   rn1 = sqrt( (x1+x1)**(na_1+na_1+1)/fact(na_1+na_1) )
                 x2 = basis(a2)%  zeta(j)    ;   rn2 = sqrt( (x2+x2)**(na_2+na_2+1)/fact(na_2+na_2) )
                 x3 = basis(b1)%  zeta(k)    ;   rn3 = sqrt( (x3+x3)**(nb_1+nb_1+1)/fact(nb_1+nb_1) )
@@ -139,6 +140,7 @@ do ib = 1 , system % atoms
             end do  !   k
             end do  !   j
             end do  !   i
+
             ! ===============================================================================================
             ! build ELECTRON potential ... 
             deg_lb = merge( D_one , TWO , lb_1==lb_2 )

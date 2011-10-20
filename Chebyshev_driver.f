@@ -22,6 +22,8 @@ module Chebyshev_driver_m
     use Schroedinger_m              , only : DeAllocate_QDyn
     use DP_potential_m              , only : Molecular_DPs     
     use Data_Output                 , only : Dump_stuff 
+    use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
+                                             preprocess_ElHl_Chebyshev
     use Chebyshev_m                 , only : Chebyshev  ,                   &
                                              preprocess_Chebyshev
 
@@ -32,35 +34,80 @@ module Chebyshev_driver_m
 contains
 !
 !
-!===========================
- subroutine Chebyshev_driver
-!===========================
+!
+!==========================
+subroutine Chebyshev_driver
+!==========================
+
+select case( n_part )
+
+    case( 1 )
+        CALL El_Chebyshev_driver
+
+    case( 2 )
+        CALL ElHl_Chebyshev_driver
+
+end select
+
+end subroutine Chebyshev_driver
+!
+!
+!
+!================================
+ subroutine ElHl_Chebyshev_driver
+!================================
 implicit none
 
 ! local variables ...
 integer                     :: it , frame 
 real*8                      :: t 
 real*8       , allocatable  :: QDyn_temp(:,:,:)
-complex*16   , allocatable  :: Psi(:)
-logical                     :: done = .false.
+complex*16   , allocatable  :: Psi_bra(:,:) , Psi_ket(:,:)
 type(f_time)                :: QDyn
 type(universe)              :: Solvated_System
 
-! check point Charlie ...
-If( n_part > 1 ) pause ">>> quit: Chebyshev driver propagates only one wavepacket, check your n_part <<<"
-
 CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
-it = 0
+it = 1
 
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-! time slicing H(t) : Quantum Dynamics & All that Jazz ...
+select case ( state_of_matter )
 
-do frame = 1 , size(trj) , frame_step
+    case( "solvated_sys" )
+
+        CALL Prepare_Solvated_System( Solvated_System , 1 )
+
+        CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
+
+    case( "extended_sys" )
+
+        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+
+    case default
+
+        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+end select
+
+CALL Generate_Structure     ( 1 )
+
+CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+
+If( DP_field_ ) &
+CALL Molecular_DPs          ( Extended_Cell )
+
+CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , it )
+
+do frame = 2 , size(trj) , frame_step
 
     if( (it >= n_t) .OR. (t >= t_f) ) exit
 
     it = it + 1
+
+    CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , t , it )
+
+    CALL DeAllocate_UnitCell   ( Unit_Cell     )
+    CALL DeAllocate_Structures ( Extended_Cell )
+    DeAllocate                 ( ExCell_basis  )
 
     select case ( state_of_matter )
 
@@ -87,20 +134,105 @@ do frame = 1 , size(trj) , frame_step
     If( DP_field_ ) &
     CALL Molecular_DPs          ( Extended_Cell )
 
-    If( .NOT. done ) then
+    print*, frame
 
-        CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , Psi , QDyn , it )
-        done = .true.
+end do
 
-    else
+! prepare data for survival probability ...
+allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 , n_part ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 , : ) )
+CALL move_alloc( from=QDyn_temp , to=QDyn%dyn )
 
-        CALL Chebyshev( Extended_Cell , ExCell_basis , Psi , QDyn , t , it )
+CALL Dump_stuff( QDyn=QDyn )   
 
-    end if
+! final procedures ...
+CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
+
+deallocate( Psi_bra , Psi_ket )
+
+end subroutine ElHl_Chebyshev_driver
+!
+!
+!
+!==============================
+ subroutine El_Chebyshev_driver
+!==============================
+implicit none
+
+! local variables ...
+integer                     :: it , frame 
+real*8                      :: t 
+real*8       , allocatable  :: QDyn_temp(:,:,:)
+complex*16   , allocatable  :: Psi_bra(:) , Psi_ket(:)
+type(f_time)                :: QDyn
+type(universe)              :: Solvated_System
+
+CALL DeAllocate_QDyn( QDyn , flag="alloc" )
+
+it = 1
+
+select case ( state_of_matter )
+
+    case( "solvated_sys" )
+
+        CALL Prepare_Solvated_System( Solvated_System , 1 )
+
+        CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
+
+    case( "extended_sys" )
+
+        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+
+    case default
+
+        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+end select
+
+CALL Generate_Structure     ( 1 )
+
+CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+
+If( DP_field_ ) &
+CALL Molecular_DPs          ( Extended_Cell )
+
+CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , it )
+
+do frame = 2 , size(trj) , frame_step
+
+    if( (it >= n_t) .OR. (t >= t_f) ) exit
+
+    it = it + 1
+
+    CALL Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , t , it )
 
     CALL DeAllocate_UnitCell   ( Unit_Cell     )
     CALL DeAllocate_Structures ( Extended_Cell )
     DeAllocate                 ( ExCell_basis  )
+
+    select case ( state_of_matter )
+
+        case( "solvated_sys" )
+
+            CALL Prepare_Solvated_System( Solvated_System , frame )
+
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+
+        case( "extended_sys" )
+
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+        case default
+
+            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+
+    end select
+
+    CALL Generate_Structure     ( frame )
+
+    CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
+
+    If( DP_field_ ) &
+    CALL Molecular_DPs          ( Extended_Cell )
 
     print*, frame
 
@@ -115,7 +247,9 @@ CALL Dump_stuff( QDyn=QDyn )
 ! final procedures ...
 CALL DeAllocate_QDyn( QDyn , flag="dealloc" )
 
-end subroutine Chebyshev_driver
+deallocate( Psi_bra , Psi_ket )
+
+end subroutine El_Chebyshev_driver
 !
 !
 !

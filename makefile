@@ -69,6 +69,7 @@ SOURCE2 = constants_m.o  \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
+		  ElHl_Chebyshev.o \
 		  Chebyshev.o \
 		  backup.o \
 		  AO_adiabatic.o \
