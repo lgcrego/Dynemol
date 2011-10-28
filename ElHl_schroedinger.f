@@ -81,7 +81,7 @@ do n = 1 , n_part
         
         case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+!            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -94,40 +94,36 @@ end do
 ! deallocate after use ...
 deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
+! DUAL representation for efficient calculation of survival probabilities ...
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
+CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
+
+CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
+CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
+
+! save populations ...
+Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+
+CALL dump_QDyn( QDyn , 1 )
+
 !-------------------------------------------------------------
 !                       Q-DYNAMICS  
 
 t = t_i              
 
 t_rate = (t_f - t_i) / float(n_t)
+    
+DO it = 2 , n_t    
 
-DO it = 1 , n_t    
+    t = t + t_rate
 
-    If( t == t_i ) then 
-        phase = C_one
-    else
-        phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
-        phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
-    end If
+    phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
+    phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
 
     forall( n=1:n_part)   
         MO_bra(:,n) = conjg(phase(:,n)) * MO_bra(:,n) 
         MO_ket(:,n) =       phase(:,n)  * MO_ket(:,n) 
     end forall
-
-
-
-
-        !###################################3
-    ! calculating energies of electron and hole states ...
-
-    E_el = sum( MO_bra(:,1)*UNI_el%erg(:)*MO_ket(:,1) )
-    E_hl = sum( MO_bra(:,2)*UNI_hl%erg(:)*MO_ket(:,2) )
-
-    print*, E_el , E_hl
-    write(12,*) t ,  E_el , E_hl
-        !###################################3
-
 
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
@@ -157,8 +153,6 @@ DO it = 1 , n_t
 
 !    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
-    t = t + t_rate
-
     If( Coulomb_ ) then
 
         ! saving a little memory space ...
@@ -173,15 +167,6 @@ DO it = 1 , n_t
 
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , Dual_bra(:,2) , mm , C_zero , MO_bra(:,2) , mm )
         CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , Dual_ket(:,2) , mm , C_zero , MO_ket(:,2) , mm )
-
-
-        !###################################3
-!        CALL Total_DOS(UNI_el%erg)
-
-!        do nr = 1 , 2
-!            CALL Partial_DOS( Extended_Cell , UNI_el , PDOS , nr )            
-!        end do
-        !###################################3
 
     end If
 
