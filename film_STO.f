@@ -59,10 +59,14 @@ end subroutine gaussian_cube_format_Real
  character(*) , optional   , intent(in) :: el_hl
 
 ! local variables ...
+ integer                  :: many_steps   = 131
+ integer                  :: medium_steps = 89
+ integer                  :: few_steps    = 59  
+ integer                  :: n_xyz_steps(3)
  complex*16 , allocatable :: Psi_bra(:) , Psi_ket(:)
  real*8     , allocatable :: xyz(:,:)
  real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2 , dx , dy , dz , a , b , c , r , SlaterOrbital
- integer                  :: AtNo , nx_steps , ny_steps , nz_steps , i , j , ix , iy , iz , k 
+ integer                  :: AtNo , i , j , ix , iy , iz , k 
  character(len=2)         :: prefix
  character(len=4)         :: string 
  character(len=23)        :: f_name
@@ -80,15 +84,22 @@ end subroutine gaussian_cube_format_Real
 ! bounding box for isosurfaces ... 
  CALL BoundingBox( unit_cell ) 
 
-!! ATTENTION !! must have (n_step+1)mod(6) = 0
- nx_steps = 60 
- ny_steps = 71 
- nz_steps = 110 
+! fix number of steps for each direction according to aspect ratio ... 
+ do i = 1 , 3
+
+    ! default case
+    n_xyz_steps(i) = medium_steps
+
+    If( unit_cell%BoxSides(i) >= 2.5d1 ) n_xyz_steps(i) = many_steps
+
+    If( unit_cell%BoxSides(i) <= 1.2d1 ) n_xyz_steps(i) = few_steps
+
+ end do
 
 !  voxel dimensions
- dx = unit_cell%BoxSides(1) / nx_steps 
- dy = unit_cell%BoxSides(2) / ny_steps 
- dz = unit_cell%BoxSides(3) / nz_steps      
+ dx = unit_cell%BoxSides(1) / n_xyz_steps(1) 
+ dy = unit_cell%BoxSides(2) / n_xyz_steps(2) 
+ dz = unit_cell%BoxSides(3) / n_xyz_steps(3)      
 
 !  translation to the center of mass
  forall(i=1:unit_cell%atoms,j=1:3) xyz(i,j) = unit_cell%coord(i,j) - unit_cell%Center_of_Mass(j)
@@ -103,9 +114,9 @@ end subroutine gaussian_cube_format_Real
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
  write(4,111) unit_cell%atoms , a/aB , b/aB , c/aB
- write(4,111) nx_steps + 1 , dx/aB   , 0.d0 , 0.d0 
- write(4,111) ny_steps + 1 , 0.d0 , dy/aB   , 0.d0
- write(4,111) nz_steps + 1 , 0.d0 , 0.d0 , dz/aB
+ write(4,111) n_xyz_steps(1) + 1 , dx/aB   , 0.d0 , 0.d0 
+ write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/aB   , 0.d0
+ write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/aB
 
  DO i = 1 , unit_cell%atoms
  
@@ -129,13 +140,13 @@ end subroutine gaussian_cube_format_Real
 !       Dx2y2  -->  9   --> l = 2  ,  m = +2        
 !========================================================
  
- DO ix = 0 , nx_steps
+ DO ix = 0 , n_xyz_steps(1)
      x = a + ix * dx
  
- DO iy = 0 , ny_steps
+ DO iy = 0 , n_xyz_steps(2)
      y = b + iy * dy
  
- DO iz = 0 , nz_steps 
+ DO iz = 0 , n_xyz_steps(3) 
      z = c + iz * dz
 
 !:::::::::::::::::::::::::::::::::::::::::::::::::::::::: 
