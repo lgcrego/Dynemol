@@ -296,7 +296,7 @@ do n = 1 , n_part
 
 end do
 
-12 FORMAT(10A9)
+12 FORMAT(10A10)
 13 FORMAT(10F10.5)
 
 end subroutine dump_Qdyn

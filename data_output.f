@@ -178,8 +178,8 @@ end if
 
 10   FORMAT(4F12.5)
 11   FORMAT(3F13.9)
-12   FORMAT(10A9)
-13   FORMAT(F10.5,9F9.4)
+12   FORMAT(10A10)
+13   FORMAT(10F10.5)
 
 end subroutine Dump_stuff
 !
