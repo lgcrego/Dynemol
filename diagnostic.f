@@ -49,8 +49,8 @@ implicit none
  
 ! preprocessing stuff ...................................
 
-FMO_    = ( spectrum .AND. survival  )
-DIPOLE_ = ( FMO_     .OR.  DP_Moment )
+FMO_    = ( spectrum .OR. survival  )
+DIPOLE_ = ( FMO_     .OR. DP_Moment )
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
 
@@ -84,8 +84,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(120,:) , UNI%R(:,120) , 120 , 0.d0 )
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(121,:) , UNI%R(:,121) , 121 , 0.d0 )
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4183,:) , UNI%R(:,4183) , 4183 , 0.d0 )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

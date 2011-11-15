@@ -372,7 +372,7 @@ select case( instance )
         else
             open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
         end If
-        write(51,'(F9.4,4F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
+        write(51,'(5F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
         close(51)
 
 end select
@@ -410,7 +410,7 @@ do n = 1 , n_part
 end do
 
 12 FORMAT(10A9)
-13 FORMAT(10F9.4)
+13 FORMAT(10F10.5)
 
 end subroutine dump_Qdyn
 !
