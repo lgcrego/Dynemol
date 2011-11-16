@@ -63,9 +63,9 @@ end subroutine gaussian_cube_format_Real
  integer                  :: medium_steps = 89
  integer                  :: few_steps    = 59  
  integer                  :: n_xyz_steps(3)
- complex*16 , allocatable :: Psi_bra(:) , Psi_ket(:)
- real*8     , allocatable :: xyz(:,:)
- real*8                   :: x , y , z , x0 , y0 , z0 , Psi_2 , dx , dy , dz , a , b , c , r , SlaterOrbital
+ complex*16               :: TotalPsiBra , TotalPsiKet
+ real*8     , allocatable :: xyz(:,:) , Psi_2(:,:,:)
+ real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
  integer                  :: AtNo , i , j , ix , iy , iz , k 
  character(len=2)         :: prefix
  character(len=4)         :: string 
@@ -74,7 +74,6 @@ end subroutine gaussian_cube_format_Real
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
  allocate(xyz(unit_cell%atoms,3))
- allocate(Psi_bra(size(bra)) , Psi_ket(size(ket)))
 
  write(string,'(i4.4)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
@@ -139,76 +138,99 @@ end subroutine gaussian_cube_format_Real
 !       Dxz    -->  8   --> l = 2  ,  m = +1        
 !       Dx2y2  -->  9   --> l = 2  ,  m = +2        
 !========================================================
- 
+
+ allocate( Psi_2(n_xyz_steps(1)+1,n_xyz_steps(2)+1,n_xyz_steps(3)+1) , source = D_zero ) 
+
+!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,k,j,TotalPsiBra,TotalPsiKet)
+!$OMP single
  DO ix = 0 , n_xyz_steps(1)
-     x = a + ix * dx
+    x = a + ix * dx
+    
+    !$OMP task 
+    DO iy = 0 , n_xyz_steps(2)
+        y = b + iy * dy
  
- DO iy = 0 , n_xyz_steps(2)
-     y = b + iy * dy
- 
- DO iz = 0 , n_xyz_steps(3) 
-     z = c + iz * dz
+    DO iz = 0 , n_xyz_steps(3) 
+        z = c + iz * dz
 
-!:::::::::::::::::::::::::::::::::::::::::::::::::::::::: 
+        i = 0 
+        TotalPsiBra = C_zero 
+        TotalPsiKet = C_zero 
+        DO k = 1 , unit_cell%atoms
 
-   i = 0 
-   DO k = 1 , unit_cell%atoms
+            AtNo = unit_cell%AtNo(k)
 
-     AtNo = unit_cell%AtNo(k)
+            ! distance from the center of the nuclei
 
-! distance from the center of the nuclei
+            r = dsqrt((x-xyz(k,1))*(x-xyz(k,1)) + (y-xyz(k,2))*(y-xyz(k,2)) + (z-xyz(k,3))*(z-xyz(k,3))) 
 
-     r = dsqrt((x-xyz(k,1))*(x-xyz(k,1)) + (y-xyz(k,2))*(y-xyz(k,2)) + (z-xyz(k,3))*(z-xyz(k,3))) 
+            ! coordinates centered on the nuclei   
 
-! coordinates centered on the nuclei   
+            x0 = x - xyz(k,1) 
+            y0 = y - xyz(k,2) 
+            z0 = z - xyz(k,3) 
 
-    x0 = x - xyz(k,1) 
-    y0 = y - xyz(k,2) 
-    z0 = z - xyz(k,3) 
+            do j = 1 , atom(AtNo)%DOS
+                i = i + 1
+                select case (j)
+                    case( 1 ) 
+                        SlaterOrbital = s_orb(r,AtNo)  
+                    case( 2 ) 
+                        SlaterOrbital = p_orb(r,y0,AtNo)
+                    case( 3 ) 
+                        SlaterOrbital = p_orb(r,z0,AtNo)
+                    case( 4 ) 
+                        SlaterOrbital = p_orb(r,x0,AtNo)
+                    case( 5 ) 
+                        SlaterOrbital = d_xyz(r,x0,y0,AtNo)
+                    case( 6 ) 
+                        SlaterOrbital = d_xyz(r,y0,z0,AtNo)
+                    case( 7 ) 
+                        SlaterOrbital = d_z2(r,x0,y0,z0,AtNo)
+                    case( 8 ) 
+                        SlaterOrbital = d_xyz(r,x0,z0,AtNo)
+                    case( 9 ) 
+                        SlaterOrbital = d_x2y2(r,x0,y0,AtNo)
+                end select
+                TotalPsiBra = TotalPsiBra + bra(i) * SlaterOrbital
+                TotalPsiKet = TotalPsiKet + ket(i) * SlaterOrbital
+            end do  ! <== DOS
+        end do  ! <== atoms
 
-     do j = 1 , atom(AtNo)%DOS
-        i = i + 1
-        select case (j)
-            case( 1 ) 
-                SlaterOrbital = s_orb(r,AtNo)  
-            case( 2 ) 
-                SlaterOrbital = p_orb(r,y0,AtNo)
-            case( 3 ) 
-                SlaterOrbital = p_orb(r,z0,AtNo)
-            case( 4 ) 
-                SlaterOrbital = p_orb(r,x0,AtNo)
-            case( 5 ) 
-                SlaterOrbital = d_xyz(r,x0,y0,AtNo)
-            case( 6 ) 
-                SlaterOrbital = d_xyz(r,y0,z0,AtNo)
-            case( 7 ) 
-                SlaterOrbital = d_z2(r,x0,y0,z0,AtNo)
-            case( 8 ) 
-                SlaterOrbital = d_xyz(r,x0,z0,AtNo)
-            case( 9 ) 
-                SlaterOrbital = d_x2y2(r,x0,y0,AtNo)
-        end select
-        Psi_bra(i) = bra(i) * SlaterOrbital
-        Psi_ket(i) = ket(i) * SlaterOrbital
-     end do  ! <== DOS
-   end do  ! <== atoms
+        Psi_2( ix+1 , iy+1 , iz+1 ) = cdabs( cdsqrt( TotalPsiBra * TotalPsiKet ) )
 
-   Psi_2 = cdabs( cdsqrt( sum(Psi_bra)*sum(Psi_ket) ) )
-   
-   write(4,112,advance='no') Psi_2
-
-   If( (mod(iz,6) == 5) ) write(4,'(a)',advance='yes') 
+    END DO          ! <==  Z coord
+    END DO          ! <==  Y coord
+    !$OMP end task 
+ END DO             ! <==  X coord
+!$OMP end single 
+!$OMP end parallel 
 
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
- END DO                                                            ! <==  Z coord
- write(4,'(a)',advance='yes') 
- END DO                                                            ! <==  Y coord
- END DO                                                            ! <==  X coord
+ DO ix = 0 , n_xyz_steps(1)
+ x = a + ix * dx
+ 
+    DO iy = 0 , n_xyz_steps(2)
+    y = b + iy * dy
+ 
+        DO iz = 0 , n_xyz_steps(3) 
+        z = c + iz * dz
+
+            write(4,112,advance='no') Psi_2( ix+1 , iy+1 , iz+1 ) 
+
+            If( (mod(iz,6) == 5) ) write(4,'(a)',advance='yes') 
+
+        END DO                                                       
+        write(4,'(a)',advance='yes') 
+    END DO                                                      
+ END DO                                                     
+
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
  close(4)
 
- deallocate(xyz, Psi_bra, Psi_ket)
+ deallocate(xyz , Psi_2)
 
  include 'formats.h'
 
