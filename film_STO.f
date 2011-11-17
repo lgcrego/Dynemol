@@ -146,7 +146,7 @@ end subroutine gaussian_cube_format_Real
  DO ix = 0 , n_xyz_steps(1)
     x = a + ix * dx
     
-    !$OMP task 
+    !$OMP task untied
     DO iy = 0 , n_xyz_steps(2)
         y = b + iy * dy
  
