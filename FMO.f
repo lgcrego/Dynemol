@@ -48,7 +48,7 @@
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
 
 ! orbitals to be propagated ...
- If( .NOT. done ) then
+ If( (.NOT. done) .AND. Survival ) then
     allocate( orbital(n_part) , eh_tag(n_part) )
 
     orbital(1) = initial_state ; eh_tag(1) = "el"
