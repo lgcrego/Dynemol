@@ -55,16 +55,17 @@ integer :: spdf_indx(0:3) = [1,2,5,10]
 
 ! local variables ...
 complex*16           :: coeff_El , coeff_Hl , coeff_El_deg , coeff_Hl_deg
-real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb
+real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb , kappa
+real*8 , allocatable :: dielectric(:)
 integer              :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
 integer              :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
 integer              :: ia, ja1, a1, ja2, a2
 integer              :: ib, jb1, b1, jb2, b2
-real*8 , allocatable :: dielectric(:)
-
+integer              :: begin_a , end_a , begin_b , end_b
+logical              :: No_Charge_In_Atoms , flag1 , flag2
 
 allocate(dielectric(size(basis(:))) , source=1.d0)
-where( basis % residue == "SEM" ) dielectric = 3.d1
+where( basis % residue == "CCC" ) dielectric = 3.d1
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !       two-center Coulomb potential matrix elements for Electrons and Holes ...
@@ -94,6 +95,16 @@ allocate( Coul_tmp (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 
 do ia = 1       , system % atoms
 do ib = ia + 1  , system % atoms 
+
+    begin_a = system%BasisPointer(ia)       ;       end_a = begin_a + atom( system%AtNo(ia) )%DOS
+    begin_b = system%BasisPointer(ib)       ;       end_b = begin_b + atom( system%AtNo(ib) )%DOS
+
+    flag1 = sum( abs(AO_ket( begin_a : end_a , 1 ))**2 ) * sum( abs(AO_ket( begin_b : end_b , 2 ))**2 ) < high_prec
+    flag2 = sum( abs(AO_ket( begin_b : end_b , 1 ))**2 ) * sum( abs(AO_ket( begin_a : end_a , 2 ))**2 ) < high_prec
+
+    No_Charge_In_Atoms = flag1 .AND. flag2
+
+    If( No_Charge_In_Atoms ) goto 100
 
     ! Coulomb rotation matrix ...
     CALL Rotation_Matrix( system , rotmat , icaso , ia , ib , Rab )
@@ -152,8 +163,10 @@ do ib = ia + 1  , system % atoms
 
                 If( indx1 <= indx2 ) then
 
-                    coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1)
-                    coeff_Hl = AO_bra(indx2,2) * AO_ket(indx1,2)
+                    kappa = sqrt( dielectric(indx1) * dielectric(indx2) )
+
+                    coeff_El = AO_bra(indx2,1) * AO_ket(indx1,1) * kappa
+                    coeff_Hl = AO_bra(indx2,2) * AO_ket(indx1,2) * kappa
 
                     do mb_2 = -lb_2 , lb_2      ;    indx4 = lb_2 + mb_2 + system%BasisPointer(ib) + spdf_indx(lb_2)
                     do mb_1 = -lb_1 , lb_1      ;    indx3 = lb_1 + mb_1 + system%BasisPointer(ib) + spdf_indx(lb_1)
@@ -163,8 +176,8 @@ do ib = ia + 1  , system % atoms
 
                         If( indx1 < indx2 ) then
 
-                            ! if used must be revised for symmetry
-                            V_coul(indx1,indx2) = V_coul(indx1,indx2) - coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                            V_coul(indx1,indx2) = V_coul(indx1,indx2) - coeff_El * real(coeff_Hl_deg) * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                            V_coul(indx2,indx1) = V_coul(indx2,indx1) - coeff_Hl * real(coeff_El_deg) * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                         elseIf( indx1 == indx2 ) then
                 
@@ -191,8 +204,10 @@ do ib = ia + 1  , system % atoms
 
                 If( indx4 >= indx3 ) then
 
-                    coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1)
-                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2)
+                    kappa = sqrt( dielectric(indx3) * dielectric(indx4) )
+
+                    coeff_El = AO_bra(indx4,1) * AO_ket(indx3,1) * kappa
+                    coeff_Hl = AO_bra(indx4,2) * AO_ket(indx3,2) * kappa
 
                     do ma_1 = -la_1 , la_1      ;    indx1 = la_1 + ma_1 + system%BasisPointer(ia) + spdf_indx(la_1)
                     do ma_2 = -la_2 , la_2      ;    indx2 = la_2 + ma_2 + system%BasisPointer(ia) + spdf_indx(la_2)
@@ -202,8 +217,8 @@ do ib = ia + 1  , system % atoms
 
                         If( indx4 > indx3 ) then
 
-                            ! if used must be revised for symmetry
-                            V_coul(indx4,indx3) = V_coul(indx4,indx3) - coeff_El * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                            V_coul(indx3,indx4) = V_coul(indx3,indx4) - coeff_El * real(coeff_Hl_deg) * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
+                            V_coul(indx4,indx3) = V_coul(indx4,indx3) - real(coeff_El_deg) * coeff_Hl * Coul( ma_1 , ma_2 , mb_1 , mb_2 )
 
                         elseIf( indx3 == indx4 ) then
                     
