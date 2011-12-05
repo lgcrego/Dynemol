@@ -17,6 +17,9 @@
 
     private
 
+    ! module variables ...
+    complex*16 , ALLOCATABLE :: V_coul(:,:) 
+
  contains
 !
 !
@@ -35,11 +38,12 @@
  integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
- complex*16 , ALLOCATABLE   :: V_coul(:,:) 
  real*8     , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
  real*8     , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
  integer                    :: i , j 
-
+ logical                    :: PTheory
+  
+PTheory = present(AO_bra) 
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
@@ -76,7 +80,7 @@ do j = 1 , size(basis)
 end do  
 
 ! eigensystem for ELECTRON wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , instance="el" )
+CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , PTheory , instance="el" )
 
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
@@ -95,7 +99,7 @@ do j = 1 , size(basis)
 end do  
 
 ! eigensystem for HOLE wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , instance="hl" )
+CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , PTheory , instance="hl" )
 
 !-----------------------------------------------------------------------
 
@@ -105,15 +109,16 @@ end subroutine EigenSystem_ElHl
 !
 !
 !
-!================================================================================
- subroutine Build_MO_basis( H_matrix , S_matrix , QM , flag1 , flag2 , instance )
-!================================================================================
+!==========================================================================================
+ subroutine Build_MO_basis( H_matrix , S_matrix , QM , flag1 , flag2 , PTheory , instance )
+!==========================================================================================
  implicit none
  real*8                      ,  allocatable  , intent(inout) :: H_matrix(:,:)
  real*8                      ,  allocatable  , intent(inout) :: S_matrix(:,:)
  type(R_eigen)                               , intent(inout) :: QM
  integer          , optional                 , intent(inout) :: flag1
  integer          , optional                 , intent(in)    :: flag2
+ logical                                     , intent(in)    :: PTheory
  character(*)                                , intent(in)    :: instance
 
 ! local variables ...
@@ -179,6 +184,9 @@ end subroutine EigenSystem_ElHl
 !  the order of storage is the ascending order of eigenvalues
 !----------------------------------------------------------
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+! Perturbation terms ...
+If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
 
 ! save energies of the TOTAL system 
  If( instance == "hl") then
@@ -315,6 +323,60 @@ end do
 deallocate( old_Rv )
 
 end subroutine phase_locking
+!
+!
+!
+!===============================================
+ subroutine V_coul_off_diagonal( QM , instance )
+!===============================================
+implicit none
+type(R_eigen)   , intent(inout) :: QM
+character*2     , intent(in)    :: instance
+
+! local variables ...
+integer                   :: i , j , n_basis
+complex*16  , allocatable :: V(:,:) , A(:,:)
+
+n_basis = size(QM%erg)
+
+allocate( V(n_basis,n_basis) , source=V_coul )
+
+select case( instance )
+
+    case( "el" )
+        do j = 1 , n_basis
+            do i = j+1 , n_basis 
+                V(i,j) = conjg( V_coul(j,i) )
+            end do
+            V(j,j) = C_zero
+        end do
+
+    case( "hl" )
+        do j = 1 , n_basis
+            do i = 1 , j-1
+                V(i,j) = conjg( V_coul(j,i) )
+            end do
+            V(j,j) = C_zero
+        end do
+
+end select
+
+!===============================================
+!         FIRST ORDER Perturbation
+!===============================================
+! energy correction ...
+
+allocate( A(n_basis,n_basis)     , source=C_zero )
+
+CALL DZgemm( 'N' , 'N' , n_basis , n_basis , n_basis , C_one , QM%L , n_basis , V , n_basis , C_zero , A , n_basis )
+
+do i = 1 , n_basis
+    QM%erg(i) = QM%erg(i) + real( sum( A(i,:) * QM%L(i,:) ) )
+end do
+
+deallocate( A , V )
+
+end subroutine V_coul_off_diagonal
 !
 !
 !

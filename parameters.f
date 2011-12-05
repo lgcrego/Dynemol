@@ -28,7 +28,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_ElHl"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_ElHl"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
@@ -36,7 +36,7 @@ logical :: dynamic
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
-  OPT_basis       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
@@ -65,16 +65,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  1.0d+0                                ! <== final time in PICOseconds
+  t_f  =  1.5d-1                                ! <== final time in PICOseconds
   n_t  =  1000                                  ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  3                            ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  87                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  3                            ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  88                           ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
@@ -83,21 +83,21 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 1  ; mmy = 1   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
 !
   sigma     =  0.080d0                                     !
 
-  DOS_range = real_interval( -20.d0 , 20.d0 )            
+  DOS_range = real_interval( -17.d0 , -5.d0 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
 !
-  occupied  =  real_interval( -15.50d0 , -10.50d0 )       
+  occupied  =  real_interval( -14.50d0 , -11.00d0 )       
 
-  empty     =  real_interval( -10.49d0 , -4.00d0 )        
+  empty     =  real_interval( -10.99d0 , -7.00d0 )        
 
 !--------------------------------------------------------------------
 

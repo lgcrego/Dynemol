@@ -28,8 +28,7 @@ integer :: i , ioerr
 
 If( present(struct) ) then
 
-    struct % El(1)  = .true. 
-    struct % Hl(55) = .true. 
+    struct % residue(56:57) = "CCC"
 
 end If
 
@@ -38,11 +37,10 @@ end If
 
 If( present(univ) ) then
 
-    univ % atom(1)  % El  = .true. 
-    univ % atom(55) % Hl  = .true. 
+    univ % atom(56:57) % residue = "CCC"
 
-    univ % atom(1:5)   % residue  = "DNR"
-    univ % atom(51:55) % residue  = "ACP"
+    where( univ % atom % residue == "TA2" ) univ % atom % El = .true. 
+    where( univ % atom % residue == "TA2" ) univ % atom % Hl = .true. 
 
 end if
 
@@ -89,13 +87,10 @@ integer  :: i
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
-        case( 'DNR') 
+        case( 'TA2') 
             a%atom(i)%fragment = 'D' 
 
-        case( 'ETH') 
-            a%atom(i)%fragment = 'B' 
-
-        case( 'ACP') 
+        case( 'CCC') 
             a%atom(i)%fragment = 'A' 
 
         case( 'H2O' , 'SOL' ) 
