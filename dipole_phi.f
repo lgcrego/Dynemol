@@ -48,7 +48,7 @@ IF( any( (a%fragment=="S") .AND. (a%solute) ) ) then
 end If
 
 If( any(a%solute) ) then
-    
+  
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
     CALL Build_DP_mols( a , solute  , instance = "solute"  )
 
@@ -68,7 +68,7 @@ If( any(a%solute) ) then
     CALL DeAllocate_DPs( solute  , flag = "dealloc" )
 
 else
-
+ 
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
 
     CALL DeAllocate_DPs( DP_mols , a%N_of_Solvent_Molecules , flag = "alloc" )
@@ -79,7 +79,7 @@ else
 
 end If
 
-! generate period structure of solvent molecules ; if mmx=mmy=mmz=0 ==> DP_mols_pbc = DP_mols ...
+! generate periodic structure of solvent molecules ; if mmx=mmy=mmz=0 ==> DP_mols_pbc = DP_mols ...
 CALL Generate_Periodic_DPs( a ,  DP_mols%CC     , DP_mols%DP     , DP_mols%nr     ,& 
                                  DP_mols_pbc%CC , DP_mols_pbc%DP , DP_mols_pbc%nr )
 

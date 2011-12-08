@@ -39,7 +39,7 @@
 
 ! local variables ...
  real*8     , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
- real*8     , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
+ real*8     , ALLOCATABLE   :: h(:,:) , h0(:,:) , S_matrix(:,:)
  integer                    :: i , j 
  logical                    :: PTheory
   
@@ -49,20 +49,33 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
 
-ALLOCATE( h(size(basis),size(basis)) )
+ALLOCATE( h (size(basis),size(basis)) )
+ALLOCATE( h0(size(basis),size(basis)) )
 
 !-----------------------------------------------------------------------
 
 If( DP_field_ ) then
+
     !$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
         do i = 1 , j
      
-            h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
+            h0(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
 
         end do
     end do  
     !$OMP END PARALLEL DO
+
+else
+
+    do j = 1 , size(basis)
+        do i = 1 , j
+     
+            h0(i,j) = huckel(i,j,S_matrix(i,j),basis)
+
+        end do
+    end do  
+
 end If
 
 !-----------------------------------------------------------------------
@@ -71,12 +84,10 @@ end If
 do j = 1 , size(basis)
     do i = 1 , j-1
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
+        h(i,j) = h0(i,j) 
 
     end do
-
-    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + V_coul_El(j)
-
+    h(j,j) = h0(j,j) + V_coul_El(j)
 end do  
 
 ! eigensystem for ELECTRON wavepacket ...
@@ -90,12 +101,10 @@ h(:,:) = D_zero
 do j = 1 , size(basis)
     do i = j+1 , size(basis)
      
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
+        h(i,j) = h0(j,i) 
 
     end do
-
-    h(j,j) = huckel(j,j,S_matrix(j,j),basis) + V_coul_Hl(j)
-
+    h(j,j) = h0(j,j) + V_coul_Hl(j)
 end do  
 
 ! eigensystem for HOLE wavepacket ...
@@ -103,7 +112,7 @@ CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , PTheory , instance="
 
 !-----------------------------------------------------------------------
 
-deallocate( V_coul , V_coul_El , V_coul_Hl )
+deallocate( V_coul , V_coul_El , V_coul_Hl , h0 )
 
 end subroutine EigenSystem_ElHl
 !
