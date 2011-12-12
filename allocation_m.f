@@ -15,8 +15,8 @@
 !
  subroutine Allocate_UnitCell( unit_cell , n_residues )
  implicit none
- type(structure) , intent(inout) :: unit_cell
- integer         , intent(in)    :: n_residues
+ type(structure)            , intent(inout) :: unit_cell
+ integer         , optional , intent(in)    :: n_residues
 
     allocate( unit_cell % Symbol             (unit_cell%atoms)   )
     allocate( unit_cell % AtNo               (unit_cell%atoms)   )
@@ -32,8 +32,9 @@
     allocate( unit_cell % El                 (unit_cell%atoms)   )
     allocate( unit_cell % Hl                 (unit_cell%atoms)   )
     allocate( unit_cell % solvation_hardcore (unit_cell%atoms)   )
-    allocate( unit_cell % list_of_residues   (n_residues)        )
-    allocate( unit_cell % list_of_fragments  (n_residues)        )
+
+    If( present(n_residues) ) allocate( unit_cell % list_of_residues   (n_residues) )
+    If( present(n_residues) ) allocate( unit_cell % list_of_fragments  (n_residues) )
 
     unit_cell%N_of_Solvent_Molecules = 0
  
@@ -130,9 +131,10 @@
     deallocate( unit_cell % El                 )
     deallocate( unit_cell % Hl                 )
     deallocate( unit_cell % solvation_hardcore )
-    deallocate( unit_cell % list_of_residues   )
-    deallocate( unit_cell % list_of_fragments  )
- 
+
+    If( allocated(unit_cell%list_of_residues ) ) deallocate( unit_cell%list_of_residues  )
+    If( allocated(unit_cell%list_of_fragments) ) deallocate( unit_cell%list_of_fragments )
+
  end subroutine DeAllocate_UnitCell
 !
 !

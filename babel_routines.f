@@ -17,9 +17,19 @@
 
     private
 
+    interface Initialize_System
+        module procedure Initialize_Universe
+        module procedure Initialize_Structure
+    end interface
+
     interface Symbol_2_AtNo
         module procedure Sym_2_AtNo_TRJ
         module procedure Sym_2_AtNo_XYZ
+    end interface
+
+    interface AtNo_2_Symbol
+        module procedure AtNo_2_Symbol_Uni
+        module procedure AtNo_2_Symbol_Struct
     end interface
 
     interface Identify_Fragments
@@ -130,9 +140,9 @@ end subroutine Sym_2_AtNo_XYZ
 !
 !
 !
-!===========================
- subroutine AtNo_2_Symbol(a)
-!===========================
+!===============================
+ subroutine AtNo_2_Symbol_Uni(a)
+!===============================
 implicit none
 type(atomic) , intent(inout) :: a(:)
 
@@ -177,7 +187,58 @@ integer :: i
 
  END DO
 
- end subroutine AtNo_2_Symbol
+ end subroutine AtNo_2_Symbol_Uni
+!
+!
+!
+!==================================
+ subroutine AtNo_2_Symbol_Struct(a)
+!==================================
+implicit none
+type(structure) , intent(inout) :: a
+
+! local variables ...
+integer :: i
+
+ DO i = 1 , a%atoms
+
+    select case( a%Atno(i) )
+        case( 1 ) 
+            a%Symbol(i) = 'H'
+        case( 3 ) 
+            a%Symbol(i) = 'Li'
+        case( 4 ) 
+            a%Symbol(i) = 'Be'
+        case( 6 ) 
+            a%Symbol(i) = 'C'
+        case( 7 ) 
+            a%Symbol(i) = 'N'
+        case( 8 ) 
+            a%Symbol(i) = 'O'
+        case( 9 ) 
+            a%Symbol(i) = 'F'
+        case( 13 ) 
+            a%Symbol(i) = 'Al'
+        case( 16 ) 
+            a%Symbol(i) = 'S '
+        case( 17 ) 
+            a%Symbol(i) = 'Cl '
+        case( 22 ) 
+            a%Symbol(i) = 'Ti '
+        case( 25 ) 
+            a%Symbol(i) = 'Mn'
+        case( 44 ) 
+            a%Symbol(i) = 'Ru'
+        case( 53 ) 
+            a%Symbol(i) = 'I'
+        case default
+            print*, ' >> unknown atom found (4); execution terminated << : ', a%AtNo(i) , i
+            stop
+    end select
+
+ END DO
+
+ end subroutine AtNo_2_Symbol_Struct
 !
 !
 !
@@ -530,9 +591,9 @@ end subroutine Center_of_Gravity
 !
 !
 !
-!================================
-subroutine Initialize_System( a )
-!================================
+!==================================
+subroutine Initialize_Universe( a )
+!==================================
 implicit none
 type(universe)  :: a
 
@@ -562,9 +623,40 @@ a % N_of_Surface_Atoms        = 0
 a % N_of_Solvent_Atoms        = 0
 a % N_of_Solvent_Molecules    = 0
 
-end subroutine Initialize_System
+end subroutine Initialize_Universe
+!
+!
+!
+!===================================
+subroutine Initialize_Structure( a )
+!===================================
+implicit none
+type(structure)  :: a
+
+! local variables ...
+integer :: i
+
+forall( i=1:3 ) 
+    a % coord(:,i)  = 0.d0
+end forall
+
+a % solvation_hardcore        = 2.5d0
+a % AtNo                      = 0
+a % nr                        = 1
+a % residue                   = "XXX"
+a % Symbol                    = "XX"
+a % MMsymbol                  = "XXX"
+a % fragment                  = "X"
+a % solute                    = .false.
+a % DPF                       = .false.
+a % El                        = .false.
+a % Hl                        = .false.
+a % Nvalen                    = 0
+a % N_of_electrons            = 0
+a % N_of_Solvent_Molecules    = 0
+
+end subroutine Initialize_Structure
 !
 !
 !
 end module Babel_routines_m
-

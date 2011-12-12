@@ -107,57 +107,49 @@ end subroutine Coords_from_Universe
  implicit none
  type(structure) , intent(out) :: unit_cell
 
- character(len=1) :: fragment
- character(len=2) :: dumb_char 
- character(len=3) :: residue
- real*8           :: k_WH
- integer          :: i , j , j1 , j2 , n_kWH 
- integer          :: n_residues , N_of_Configurations
+ character(len=1)  :: dumb_char 
+ integer           :: i , j 
 
  OPEN(unit=3,file='xyz.dat',status='old')   
 
 ! start reading the structure characteristics
- read(3,*) System_Characteristics
- read(3,*) N_of_Configurations      ! <== No of configurations 
  read(3,*) unit_cell%atoms          ! <== No of atoms in the ORIGINAL supercell
- read(3,*) n_residues
+ read(3,'(A72)') System_Characteristics
 
 ! allocating arrays ...
- CALL Allocate_UnitCell( Unit_Cell , n_residues )
-
-! residues must be packed together ...
- do i = 1 , n_residues
-    read(3,*) j1 , j2 , residue , fragment
-
-    unit_cell % list_of_residues  (i) = residue
-    unit_cell % list_of_fragments (i) = residue
-
-    forall(j=j1:j2) unit_cell % residue  (j)  = residue
-    forall(j=j1:j2) unit_cell % fragment (j) = fragment
- end do
-
-! defining the k_WH parameter for the atom 
-! No of k_WH to be used 
- read(3,*) n_kWH                    
- do i = 1 , n_kWH
-    read(3,*) j1 , j2 , k_WH
-    forall(j=j1:j2) unit_cell%k_WH(j) = k_WH
- end do
+ CALL Allocate_UnitCell( Unit_Cell )
+ CALL Initialize_System( Unit_Cell )
 
 ! read unit_cell dimensions ...
- read(3,*) unit_cell%T_xyz(1) 
- read(3,*) unit_cell%T_xyz(2)
- read(3,*) unit_cell%T_xyz(3)
+ read(3,*) ( unit_cell%T_xyz(i) , i=1,3 )
+
+! testing for AtNo or Symbol ...
+ read(3,*) dumb_char
+ backspace 3
 
 ! reading coordinates ...
- read(3,*) dumb_char
- DO j = 1 , unit_cell%atoms
-     read(3,*) unit_cell%symbol(j), (unit_cell%coord(j,i), i=1,3)
- END DO   
+ select case ( ichar(dumb_char) )
+
+    ! Atomic Numbers ...    
+    case( 48:57 )
+        DO j = 1 , unit_cell%atoms
+            read(3,*) unit_cell%AtNo(j), (unit_cell%coord(j,i), i=1,3)
+        END DO   
+        CALL AtNo_2_Symbol(Unit_Cell)
+
+    ! Chemical Symbols ...
+    case( 65:122 )
+        DO j = 1 , unit_cell%atoms
+            read(3,*) unit_cell%Symbol(j), (unit_cell%coord(j,i), i=1,3)
+        END DO   
+        CALL Symbol_2_AtNo(Unit_Cell)
+
+ end select
 
  CLOSE(3)
 
- CALL Symbol_2_AtNo(Unit_Cell)
+ Unit_cell % Nvalen (:)   =  atom(unit_cell%AtNo(:)) % Nvalen
+ Unit_cell % MMSymbol     =  Unit_Cell % Symbol
 
  include 'formats.h'
 
