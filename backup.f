@@ -5,6 +5,7 @@ module Backup_m
     use parameters_m        , only : state_of_matter            , &
                                      DP_field_                  , &
                                      DP_Moment                  , &
+                                     Coulomb_                   , &
                                      restart
     use Solvated_M          , only : Prepare_Solvated_System
     use Babel_m             , only : Coords_from_Universe       , &
