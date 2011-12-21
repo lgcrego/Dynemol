@@ -80,7 +80,7 @@ if( DP_field_ ) then
 
 end If
 
-if( any( eh_tag == "hl" ) ) then
+if( Coulomb_ ) then
 
     CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
 
