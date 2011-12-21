@@ -68,6 +68,8 @@ t  = t_i
 
 If( restart ) then
     CALL Restart_stuff( QDyn , t , it , frame_restart )
+    mm = size(ExCell_basis)
+    nn = n_part
 else
     CALL Preprocess( QDyn , it )
 end IF
@@ -157,7 +159,10 @@ do frame = frame_init , size(trj) , frame_step
 
 end do
 
-deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
+deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+
+If( allocated(bra) ) deallocate(bra)
+If( allocated(ket) ) deallocate(ket)
 
 include 'formats.h'
 
@@ -417,7 +422,7 @@ CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket ,
 
 allocate( phase(size(MO_bra(:,1))) )
 
-CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , UNI , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
+CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
 
 end subroutine Restart_stuff
 !
