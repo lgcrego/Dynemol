@@ -155,12 +155,6 @@ end do
 
 deallocate( Qi_Ri )
 
-
-write(23,*) molecule%CC(:,1)
-write(24,*) molecule%el_DP(:,2)
-write(25,*) molecule%hl_DP(:,3)
-
-
 end subroutine preprocess_wavepacket_DP
 !
 !
