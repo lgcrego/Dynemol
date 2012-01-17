@@ -8,7 +8,7 @@ module Sampling_m
                                      survival , state_of_matter ,   &
                                      DP_Moment , DP_Field_ ,        &
                                      file_type , sigma , n_part ,   &
-                                     step_security , restart
+                                     restart
     use Babel_m             , only : System_Characteristics ,       &
                                      Coords_from_Universe ,         &
                                      trj
