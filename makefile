@@ -66,12 +66,12 @@ SOURCE2 = constants_m.o  \
 		  ga_routines.o \
 		  solvated_M.o \
 		  DOS_tool.o \
+		  backup.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
 		  ElHl_Chebyshev.o \
 		  Chebyshev.o \
-		  backup.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
 		  eigen_driver.o \

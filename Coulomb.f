@@ -65,7 +65,7 @@ integer              :: begin_a , end_a , begin_b , end_b
 logical              :: No_Charge_In_Atoms , flag1 , flag2
 
 allocate(dielectric(size(basis(:))) , source=1.d0)
-where( basis % residue == "CCC" ) dielectric = 3.d1
+where( basis % residue == "CCC" ) dielectric = 4.d1
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !       two-center Coulomb potential matrix elements for Electrons and Holes ...

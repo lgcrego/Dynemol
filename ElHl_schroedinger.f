@@ -6,7 +6,7 @@
  use mkl95_blas
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
                                          GaussianCube_step ,  DP_Moment , initial_state ,   &
-                                         Coulomb_
+                                         Coulomb_ , restart
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -16,6 +16,7 @@
  use Data_Output                , only : Populations
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
  use PDOS_tool_m                , only : Partial_DOS
+ use Backup_m                   , only : Security_Copy , Restart_state
 
 
     public :: ElHl_dynamics , Huckel_dynamics , DeAllocate_QDyn 
@@ -43,7 +44,7 @@
 
 ! local variables ...
 integer                             :: mm 
-integer                             :: it , i , n 
+integer                             :: it , i , n , it_init
 real*8                              :: t , t_rate 
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:,:)
@@ -68,52 +69,72 @@ allocate( UNI_hl%L(mm,mm) , UNI_hl%R(mm,mm) , UNI_hl%erg(mm) )
 UNI_el = UNI
 UNI_hl = UNI
 
-! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
-do n = 1 , n_part                         
-    select case( eh_tag(n) )
+! Restart or build up wavepackets ...
+if( restart .AND. Coulomb_ ) then
 
-        case( "el" )
+    deallocate( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket )
 
-            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
-            MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
+    CALL Restart_State( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it )
 
-            Print 591, orbital(n) , el_FMO%erg(orbital(n))
+    Deallocate ( UNI_el%R , UNI_el%L , UNI_el%erg )
+    Deallocate ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
+
+    CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl )
+    
+    it_init = it
+
+else
+
+!   building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
+    do n = 1 , n_part                         
+        select case( eh_tag(n) )
+
+            case( "el" )
+
+                MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
+                MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
+
+                Print 591, orbital(n) , el_FMO%erg(orbital(n))
         
-        case( "hl" )
+            case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
-            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
-            MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
+                MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
+                MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
-            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+                Print 592, orbital(n) , hl_FMO%erg(orbital(n))
 
-        end select
-end do
+            end select
+    end do
 
-! deallocate after use ...
-deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
+!   deallocate after use ...
+    deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
-! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
-CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
+!   DUAL representation for efficient calculation of survival probabilities ...
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
 
-CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
-CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
+    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
+    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
-! save populations ...
-Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+!   save populations ...
+    Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
-CALL dump_QDyn( QDyn , 1 )
+    CALL dump_QDyn( QDyn , 1 )
+
+    t = t_i
+
+    it_init = 2
+
+end if
 
 !-------------------------------------------------------------
 !                       Q-DYNAMICS  
 
-t = t_i              
-
 t_rate = (t_f - t_i) / float(n_t)
-    
-DO it = 2 , n_t    
+
+DO it = it_init , n_t    
 
     t = t + t_rate
 
@@ -167,6 +188,8 @@ DO it = 2 , n_t
 
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , Dual_bra(:,2) , mm , C_zero , MO_bra(:,2) , mm )
         CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , Dual_ket(:,2) , mm , C_zero , MO_ket(:,2) , mm )
+
+        CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it )
 
     end If
 
@@ -360,5 +383,4 @@ end subroutine DeAllocate_QDyn
 !
 !
 !
-! 
 end module Schroedinger_m

@@ -100,15 +100,15 @@ end subroutine Restart_Sys
 subroutine Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 !===================================================================================================
 implicit none
-complex*16  , intent(in)    :: MO_bra   (:,:)
-complex*16  , intent(in)    :: MO_ket   (:,:)
-complex*16  , intent(in)    :: DUAL_bra (:,:)
-complex*16  , intent(in)    :: DUAL_ket (:,:)
-complex*16  , intent(in)    :: AO_bra   (:,:)
-complex*16  , intent(in)    :: AO_ket   (:,:)
-real*8      , intent(in)    :: t
-integer     , intent(in)    :: it
-integer     , intent(in)    :: frame
+complex*16              , intent(in)    :: MO_bra   (:,:)
+complex*16              , intent(in)    :: MO_ket   (:,:)
+complex*16              , intent(in)    :: DUAL_bra (:,:)
+complex*16              , intent(in)    :: DUAL_ket (:,:)
+complex*16              , intent(in)    :: AO_bra   (:,:)
+complex*16              , intent(in)    :: AO_ket   (:,:)
+real*8                  , intent(in)    :: t
+integer                 , intent(in)    :: it
+integer     , optional  , intent(in)    :: frame
 
 ! local variables ...
 integer         :: i , j , basis_size , file_err , n_part
@@ -125,7 +125,7 @@ end if
 
 open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
 
-write(33) frame
+if( present(frame) ) write(33) frame
 write(33) it
 write(33) t
 write(33) size(MO_bra(:,1))
@@ -176,14 +176,14 @@ complex*16  , allocatable   , intent(out) :: AO_bra     (:,:)
 complex*16  , allocatable   , intent(out) :: AO_ket     (:,:)
 real*8                      , intent(out) :: t
 integer                     , intent(out) :: it
-integer                     , intent(out) :: frame
+integer     , optional      , intent(out) :: frame
 
 ! local variables ...
 integer :: i , j , size_r , size_c , file_err , size_eh_tag
 
 open(unit=33, file="Restart_copy.dat", form="unformatted", status="old", action="read" , iostat=file_err , err=11 )
 
-read(33) frame
+if( present(frame) ) read(33) frame
 read(33) it
 read(33) t
 read(33) size_r
@@ -197,7 +197,8 @@ allocate( DUAL_ket ( size_r , size_c ) )
 allocate( AO_bra   ( size_r , size_c ) )
 allocate( AO_ket   ( size_r , size_c ) )
 
-allocate( orbital(size_eh_tag) , eh_tag(size_eh_tag) )
+if( .NOT. allocated( orbital) ) allocate( orbital(size_eh_tag) )
+if( .NOT. allocated( orbital) ) allocate( eh_tag(size_eh_tag) )
 
 do i = 1 , size_eh_tag
     read(33) orbital(i) , eh_tag(i)

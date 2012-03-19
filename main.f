@@ -19,7 +19,7 @@ use Eigen_driver_m          , only : Eigen_driver
 !                   DRIVER ROUTINE
 !========================================================
 
-CALL system( "./env.sh" )
+If( driver /= "avrg_confgs") CALL system( "./env.sh" )
 
 CAll Define_Environment
 

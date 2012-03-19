@@ -578,7 +578,7 @@ end do
 38 format(10x, a1)
 39 format(81x, f7.0)
 40 format(6x, 3f9.3)
-41 format(f10.5)
+41 format(f13.7)
 42 format(a1)
 43 format(a72)
 
