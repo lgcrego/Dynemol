@@ -80,6 +80,7 @@ integer  :: i
 ! fragments are set based on RESIDUE names ...
 ! 
 !   Acceptor    =   A       
+!   Bridge      =   B
 !   Donor       =   D 
 !   Exciton     =   E 
 !   Hole        =   H 
