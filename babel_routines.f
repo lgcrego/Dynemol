@@ -282,7 +282,7 @@ character(len=2)    :: element2
         case( 'Ix','Ic' )
             a(i)%Symbol = 'I' 
 
-        case( 'YC','CM','C=','CC','CS','CTr' ) 
+        case( 'CT','YC','CM','C=','CC','CS','CTr' ) 
             a(i)%Symbol = 'C' 
 
         case( 'YN','NTr','Nx' ) 

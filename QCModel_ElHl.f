@@ -276,7 +276,7 @@ If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
 
  flag = ( abs(S_ij) > mid_prec ) 
 
- IF( flag )  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+! IF( flag )  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
 
 end function Huckel_with_FIELDS
 !

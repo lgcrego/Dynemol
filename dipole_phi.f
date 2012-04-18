@@ -189,10 +189,11 @@ type(STO_basis) , intent(in) :: basis(:)
 ! local variables ...
 integer                 :: i , j , N_of_DP 
 integer , allocatable   :: nr_Mols(:)
-real*8                  :: DP_phi , hard_core , cut_off_radius 
+real*8                  :: hard_core , cut_off_radius 
 real*8                  :: midpoint_ab(3)
+real*8                  :: DP_phi(4)
 real*8  , allocatable   :: distance(:) , distance_ALL(:) , mol_phi(:) 
-real*8  , allocatable   :: vector(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(:,:) 
+real*8  , allocatable   :: vector(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(:,:) , mol_phi2(:,:)
 logical , allocatable   :: mask(:)
 
 ! combination rule for solvation hardcore shell ...
@@ -273,21 +274,36 @@ end if
 ! calculate dipole potential at a-b midpoint ...
 !------------------------------------------------------------------------
 
+allocate( mol_phi2( N_of_DP , 3 ) , source = D_zero )
+
 forall( i=1:N_of_DP )  
 
+!   first order ...
     decay(i,:)  =  vector(i,:) / (distance(i)*distance(i)*distance(i))
 
     ! DP_potential due to dipole i ...
     mol_phi(i)  = - dot_product( DP_Mols(i,:),decay(i,:) )
 
+! second order ...
+    mol_phi2(i,:) = 2.0d0 * DP_Mols(i,:) / (distance(i)*distance(i)*distance(i))
+
 end forall
 
 ! excluding self-interaction ...
-where( (nr_Mols == basis(a)%nr) .OR. (nr_Mols == basis(b)%nr) ) mol_phi = 0.d0
+where( (nr_Mols == basis(a)%nr) .OR. (nr_Mols == basis(b)%nr) ) 
+    mol_phi = 0.d0
+    mol_phi2(:,1) = 0.d0
+    mol_phi2(:,2) = 0.d0
+    mol_phi2(:,3) = 0.d0
+end where
 
+! first order ...
 DP_phi = sum( mol_phi )
 
-deallocate( vector , decay , distance , DP_Mols , nr_Mols , mol_phi )
+! second order ...
+forall( j=1:3 ) DP_phi(j+1) = sum( mol_phi2(:,j) )
+
+deallocate( vector , decay , distance , DP_Mols , nr_Mols , mol_phi , mol_phi2 )
 
 end function DP_phi
 !

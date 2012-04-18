@@ -11,6 +11,7 @@
     use mkl95_lapack
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
+    use DP_main_m                   , only : DP_matrix_AO
 
     public :: EigenSystem , Huckel , Huckel_with_FIELDS
 
@@ -175,6 +176,8 @@
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
+real*8   :: DP(4)
+real*8   :: r0(3) , Ri(3) , vector(3)
  real*8  :: Huckel_with_FIELDS
  real*8  :: k_eff , k_WH , c1 , c2 , c3
  logical :: flag
@@ -197,7 +200,23 @@
 
  flag = ( abs(S_ij) > mid_prec ) 
 
- IF( flag )  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+ IF( flag ) then
+    
+     r0(1) = ( basis(i)%x + basis(j)%x ) / two
+     r0(2) = ( basis(i)%y + basis(j)%y ) / two
+     r0(3) = ( basis(i)%z + basis(j)%z ) / two
+
+     Ri(1) = basis(i)%x
+     Ri(2) = basis(i)%y
+     Ri(3) = basis(i)%z
+
+     vector = DEBYE * DP_matrix_AO(i,j)%dp + S_ij * ( Ri - r0 )    ! <== in Angs
+
+     DP = DP_phi(i,j,basis)
+    
+     huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP(1) + dot_product( vector(1:3) , DP(2:4) )
+
+ end if
 
 end function Huckel_with_FIELDS
 !

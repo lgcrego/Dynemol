@@ -223,6 +223,8 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
+CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
 CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
