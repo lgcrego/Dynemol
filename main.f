@@ -19,9 +19,9 @@ use Eigen_driver_m          , only : Eigen_driver
 !                   DRIVER ROUTINE
 !========================================================
 
-If( driver /= "avrg_confgs") CALL system( "./env.sh" )
-
 CAll Define_Environment
+
+If( driver /= "avrg_confgs") CALL system( "./env.sh" )
 
 CALL read_EHT_parameters
 
