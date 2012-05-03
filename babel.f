@@ -94,9 +94,6 @@ unit_cell % T_xyz =  System % box
 ! standard Wolfgang-Helmholtz parameter ...
 Unit_Cell % k_WH = 1.75d0
 
-! use ad hoc tuning of parameters ...
-If( ad_hoc ) CALL ad_hoc_tuning( unit_cell )
-
 end subroutine Coords_from_Universe
 !
 !
@@ -217,7 +214,7 @@ end do
 close(3)
 
 ! use ad hoc tuning of parameters ...
-If( ad_hoc ) CALL ad_hoc_tuning( univ=system )
+If( ad_hoc ) CALL ad_hoc_tuning( system )
 
 ! convert residues to upper case ...
 forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%atom(i)%residue )
@@ -483,7 +480,7 @@ do j = 1 , model
         end do
 
         ! use ad hoc tuning of parameters ...
-        If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
+        If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
 
         ! convert residues to upper case ...
         forall( i=1:number_of_atoms ) trj(j)%atom(i)%residue = TO_UPPER_CASE( trj(j)%atom(i)%residue )
@@ -673,7 +670,7 @@ do j = 1 , model
     end if
 
     ! use ad hoc tuning of parameters ...
-    If( ad_hoc ) CALL ad_hoc_tuning( univ=trj(j) )
+    If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
 
 end do
 

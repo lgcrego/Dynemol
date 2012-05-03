@@ -14,44 +14,45 @@ module tuning_m
 !
 !
 !
-!=========================================
- subroutine ad_hoc_tuning( struct , univ )
-!=========================================
+!================================
+ subroutine ad_hoc_tuning( univ )
+!================================
 implicit none
-type(structure) , optional  , intent(inout) :: struct
-type(universe)  , optional  , intent(inout) :: univ
+type(universe) , intent(inout) :: univ
 
 ! local variables ...
 integer :: i , ioerr
 
-! edit structure  .....................................................
+! edit structure  ...
 
-If( present(struct) ) then
+!-----------------------------------
+!      define %residue
+!-----------------------------------
 
-    where( struct % DPF       ) struct % nr = 1
-    where( .not. struct % DPF ) struct % nr = struct % nr - 3
+!-----------------------------------
+!      define %nr
+!-----------------------------------
 
-end If
+!------------------------------------
+!      define %DPF (Dipole Fragment) 
+!------------------------------------
 
+ where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
+ where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
+ where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
+ where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
 
-! edit structure  .....................................................
+!-----------------------------------
+!      define %solute 
+!-----------------------------------
 
-If( present(univ) ) then
+!-----------------------------------
+!      define %El 
+!-----------------------------------
 
-    where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
-    where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
-
-    where( univ % atom % DPF       ) univ % atom % nr = 1
-    where( .not. univ % atom % DPF ) univ % atom % nr = univ % atom % nr - 3
-
-    univ % atom % solute = univ % atom % DPF        
-
-    where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
-    where( univ % atom % residue == "ION" ) univ % atom % Hl = .true.
-
-end if
+!-----------------------------------
+!      define %Hl
+!-----------------------------------
 
 !......................................................................
 
