@@ -9,17 +9,14 @@ FREE = -free
 FFLAGS1 = -O3 
 FFLAGS2 = -O3 -openmp -parallel $(FREE) 
 
-#LIB    = -L/usr/lib64 -llapack -lblas -L/home/lrego/lib -lmyblas95
-#INCS   = -I/home/lrego/lib/blas_95
-
 LIB_BLAS   = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
 LIB_LAPACK = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
 #LIB_BLAS   = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lguide -lpthread
 #LIB_LAPACK = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lguide -lpthread
-INCS_MKL   = -I/opt/intel/mkl/10.2.4.032/include/em64t/lp64
+INCS_MKL   = -I/opt/intel/mkl/10.2.4.032/include/em64t/lp64 
 
 LIB  = $(LIB_BLAS) $(LIB_LAPACK)
-INCS = $(INCS_MKL)
+INCS = $(INCS_MKL) 
 
 #-----------------------------------------------------------------------
 # general rules
@@ -94,3 +91,6 @@ a: $(SOURCE1) $(SOURCE2)
  
 clean: 
 	-rm -f *.o *.mod; touch *.f
+
+source: 
+	-source /opt/intel/Compiler/11.1/064/bin/ifortvars.sh intel64

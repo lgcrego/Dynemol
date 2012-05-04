@@ -482,7 +482,14 @@ end subroutine Pack_Residues
 ! local variables ... 
 integer                 :: i ,  j , size_nr_list , last_nr
 integer , allocatable   :: nr_list(:) , indx(:)
+logical , allocatable   :: flag(:)
 
+! check whether a%nr is already sorted ...
+allocate( flag(size(a%nr)) , source = .false. )
+forall( i = 2 : size(a%nr) ) flag(i) =  (a%nr(i) < a%nr(i-1)) .OR. (a%nr(i)-a%nr(i-1)) > 1
+If( .NOT. any(flag) ) return
+
+! the a%nr are not ordered .OR. there's a gap...
 last_nr = 0
 
 ! pack => sort => reset a%nr ...

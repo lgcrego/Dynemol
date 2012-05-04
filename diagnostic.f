@@ -9,7 +9,6 @@ module diagnostic_m
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
- use FMO_m                      , only : FMO_analysis
  use QCModel_Huckel             , only : EigenSystem
  use DOS_m
  use Structure_Builder          , only : Unit_Cell ,            &
@@ -40,17 +39,15 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues
  character(3)                   :: residue
- logical                        :: FMO_ , DIPOLE_
+ logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
- type(R_eigen)                  :: FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 
  
 ! preprocessing stuff ...................................
 
-FMO_    = ( spectrum .OR. survival  )
-DIPOLE_ = ( FMO_     .OR. DP_Moment )
+DIPOLE_ = ( DP_Moment )
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
 
@@ -78,13 +75,11 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
-
  If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4183,:) , UNI%R(:,4183) , 4183 , 0.d0 )
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(87,:) , UNI%R(:,87) , 87 , 0.d0 )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

@@ -118,7 +118,7 @@ do frame = frame_init , size(trj) , frame_step
         CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr , internal_sigma )            
     end do
 
-    If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO )
+    If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO , instance="E" )
 
     If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
 

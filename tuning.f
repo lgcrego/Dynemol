@@ -33,26 +33,40 @@ integer :: i , ioerr
 !      define %nr
 !-----------------------------------
 
+ where( univ % atom % nr <= 4 ) univ % atom % nr = 1
+ where( univ % atom % nr >  4 ) univ % atom % nr = univ % atom % nr - 3
+ 
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
 
+!default: %DPF = F_
  where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
  where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
  where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
  where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
 
-!-----------------------------------
-!      define %solute 
-!-----------------------------------
+!use default: %DPF = %solute  
+ where( univ % atom % DPF ) univ % atom % solute = .true.
 
 !-----------------------------------
-!      define %El 
+!      define %El   : mandatory !!
 !-----------------------------------
 
-!-----------------------------------
-!      define %Hl
-!-----------------------------------
+ where( univ % atom % DPF ) univ % atom % El = .true.
+
+!---------------------------------------------------
+!      define %Hl   : must be T_ for El/Hl calcs ...
+!---------------------------------------------------
+
+ where( univ % atom % residue == "ION" ) univ % atom % Hl = .true.
+
+!------------------------------------------------
+!      define %fragments   : Donor fragment ...
+!------------------------------------------------
+
+!default: %El => DONOR
+ where( univ % atom % El ) univ % atom % fragment = "D"
 
 !......................................................................
 
@@ -76,35 +90,26 @@ type(universe)  , intent(inout) :: a
 ! local variables ...
 integer  :: i 
 
-! ---------- Table of fragments -------------
+! --------- Table of STANDARD fragments ----------------
 !
-! fragments are set based on RESIDUE names ...
+! STANDARD fragments are set based on RESIDUE names ...
 ! 
 !   Acceptor    =   A       
 !   Bridge      =   B
-!   Donor       =   D 
-!   Exciton     =   E 
+!   Donor       =   D  (defined in ad_hoc)
+!   Electron    =   E  (defined in ad_hoc)
 !   Hole        =   H 
 !   Molecule    =   M
 !   Solvent     =   S
-!   Solute      =   R
 !   Cluster     =   C 
-!   ghost       =   #
+!   System      =   #
 !
 ! some typical cases are used below ...
-!--------------------------------------------
+!--------------------------------------------------------
 
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
-        case( 'LFT') 
-            a%atom(i)%fragment = 'L' 
-
-        case( 'DON') 
-            a%atom(i)%fragment = 'D' 
-
-        case( 'RGT') 
-            a%atom(i)%fragment = 'R' 
 
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 

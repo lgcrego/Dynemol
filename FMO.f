@@ -45,60 +45,32 @@
  real*8          , allocatable :: wv_FMO(:,:) 
  real*8                        :: entropy            
  integer                       :: i
+ character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
 
-! orbitals to be propagated ...
- If( (.NOT. done) .AND. Survival ) then
-    allocate( orbital(n_part) , eh_tag(n_part) )
+ CALL preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
 
-    orbital(1) = initial_state ; eh_tag(1) = "el"
-    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
-
-    If( any(system%Hl)          .AND. n_part == 1 )  pause ">> n_part = 1 , but El/Hl is .true.   <<"
-    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  pause ">> n_part = 2 , but El/Hl is .false.  <<"
-
-    done = .true.
- end If
-
-! setting the fragment ...
- allocate(system_fragment (system%atoms) , source = system % fragment )
- allocate( basis_fragment (size(basis) ) , source =  basis % fragment )
-
- select case (instance)
-
-    case( "E" )
-        where( system%El ) system % fragment  = instance
-        where( basis%El  ) basis  % fragment  = instance
-
-    case( "H" )
-        where( system%Hl ) system % fragment  = instance
-        where( basis%Hl  ) basis  % fragment  = instance
-
-    case default
-
- end select 
-
-! FMO_system = fragment ...
- FMO_system%atoms = count(system%fragment == instance)
+!FMO_system = fragment ...
+ FMO_system%atoms = count(system%fragment == fragment)
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
 
  forall(i=1:3)
- FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == instance ) 
+ FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
  end forall
- FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == instance ) 
- FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == instance ) 
- FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == instance )
- FMO_system%symbol     =  pack( system%symbol    , system%fragment == instance )
- FMO_system%fragment   =  pack( system%fragment  , system%fragment == instance )
- FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == instance )
- FMO_system%residue    =  pack( system%residue   , system%fragment == instance )
- FMO_system%nr         =  pack( system%nr        , system%fragment == instance )
+ FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
+ FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == fragment ) 
+ FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
+ FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
+ FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
+ FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
+ FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
+ FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
  FMO_system%copy_No    =  0
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
- CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , instance )
+ CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
 
 ! get wv_FMO orbital in local representation and leave subroutine ... 
  if( present(MO) ) then
@@ -116,7 +88,7 @@
 ! wv_FMO needed only for time-propagation of wv_FMO state ...
  If( Survival ) then
      
-     CALL projector( FMO , CR , basis%fragment , instance , wv_FMO )
+     CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
 
     ! "entropy" of the FMO states with respect to the system 
     OPEN(unit=9,file='entropy.dat',status='unknown')
@@ -143,6 +115,66 @@
  include 'formats.h'
 
  end subroutine FMO_analysis
+!
+!
+!
+!==============================================================================================
+ subroutine preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
+!==============================================================================================
+implicit none
+ type(structure)                            , intent(inout) :: system
+ type(STO_basis)                            , intent(inout) :: basis(:)
+ character(1)    , allocatable              , intent(out)   :: system_fragment(:) 
+ character(1)    , allocatable              , intent(out)   :: basis_fragment(:)
+ character(1)                               , intent(out)   :: fragment
+ character(*)                   , optional  , intent(in)    :: instance
+
+! orbitals to be propagated ...
+ If( (.NOT. done) .AND. Survival ) then
+    allocate( orbital(n_part) , eh_tag(n_part) )
+
+    orbital(1) = initial_state ; eh_tag(1) = "el"
+    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
+
+    If( any(system%Hl)          .AND. n_part == 1 )  stop ">> n_part = 1 , but El/Hl is .true.   <<"
+    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
+
+    done = .true.
+ end If
+
+! setting the fragment ...
+ allocate(system_fragment (system%atoms) , source = system % fragment )
+ allocate( basis_fragment (size(basis) ) , source =  basis % fragment )
+
+ If( .not. present(instance) ) then
+
+        ! entire system ...
+        fragment = "#"       
+        system % fragment  = fragment
+        basis  % fragment  = fragment
+
+    else
+
+    fragment = instance
+
+    select case (instance)
+
+        case( "D" )
+            where( system%El ) system % fragment  = instance
+            where( basis%El  ) basis  % fragment  = instance
+
+        case( "E" )
+            where( system%El ) system % fragment  = instance
+            where( basis%El  ) basis  % fragment  = instance
+
+        case( "H" )
+            where( system%Hl ) system % fragment  = instance
+            where( basis%Hl  ) basis  % fragment  = instance
+    end select 
+
+ end if
+
+ end subroutine preprocess
 !
 !
 !
