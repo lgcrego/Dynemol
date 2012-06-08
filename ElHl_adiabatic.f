@@ -234,7 +234,9 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
+CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+
+CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
 
 ! build the initial electron-hole wavepacket ...
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )
@@ -264,7 +266,7 @@ do n = 1 , n_part
         
         case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+!            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   

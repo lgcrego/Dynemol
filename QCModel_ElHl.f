@@ -12,147 +12,152 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
+    use DP_main_m                   , only : DP_matrix_AO
 
     public :: EigenSystem_ElHl
 
     private
 
     ! module variables ...
-    complex*16 , ALLOCATABLE :: V_coul(:,:) 
+    complex*16  , allocatable   :: V_coul(:,:)
+    real*8      , allocatable   :: H_DP(:,:)
+    logical                     :: PTheory
 
- contains
+contains
 !
 !
 !
-!===============================================================================================
- subroutine EigenSystem_ElHl( system , basis , AO_bra , AO_ket , QM_el , QM_hl , flag1 , flag2 )
-!===============================================================================================
- implicit none
- type(structure)                             , intent(in)    :: system
- type(STO_basis)                             , intent(in)    :: basis(:)
- complex*16       , optional                 , intent(in)    :: AO_bra(:,:)
- complex*16       , optional                 , intent(in)    :: AO_ket(:,:)
- type(R_eigen)                               , intent(inout) :: QM_el
- type(R_eigen)                               , intent(inout) :: QM_hl
- integer          , optional                 , intent(inout) :: flag1
- integer          , optional                 , intent(in)    :: flag2
+!==============================================================================================
+subroutine EigenSystem_ElHl( system , basis , AO_bra , AO_ket , QM_el , QM_hl , flag1 , flag2 )
+!==============================================================================================
+implicit none
+type(structure)                            , intent(in)    :: system
+type(STO_basis)                            , intent(in)    :: basis(:)
+complex*16      , optional                 , intent(in)    :: AO_bra(:,:)
+complex*16      , optional                 , intent(in)    :: AO_ket(:,:)
+type(R_eigen)                              , intent(inout) :: QM_el
+type(R_eigen)                              , intent(inout) :: QM_hl
+integer         , optional                 , intent(inout) :: flag1
+integer         , optional                 , intent(in)    :: flag2
 
 ! local variables ...
- real*8     , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
- real*8     , ALLOCATABLE   :: h(:,:) , h0(:,:) , S_matrix(:,:)
- integer                    :: i , j 
- logical                    :: PTheory
-  
+real*8  , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
+real*8  , ALLOCATABLE   :: h(:,:) , h0(:,:) , S_matrix(:,:)
+integer                 :: i , j 
+ 
 PTheory = present(AO_bra) 
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
 CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
 
-ALLOCATE( h (size(basis),size(basis)) )
-ALLOCATE( h0(size(basis),size(basis)) )
-
+ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
+ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
+ 
 !-----------------------------------------------------------------------
 
-If( DP_field_ ) then
+if( DP_field_ ) then
 
-    !$OMP PARALLEL DO schedule( GUIDED , 10 )
-    do j = 1 , size(basis)
-        do i = 1 , j
-     
-            h0(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
+    ALLOCATE( H_DP(size(basis),size(basis)) , source = D_zero )
 
-        end do
-    end do  
-    !$OMP END PARALLEL DO
+    CALL FIELDS( basis , S_matrix , H_DP )
 
-else
+end if
 
-    do j = 1 , size(basis)
-        do i = 1 , j
-     
-            h0(i,j) = huckel(i,j,S_matrix(i,j),basis)
-
-        end do
-    end do  
-
-end If
+CALL Huckel( basis , S_matrix , h0 )
 
 !-----------------------------------------------------------------------
 !           Electron Hamiltonian : upper triangle of V_coul ...
 
-do j = 1 , size(basis)
-    do i = 1 , j-1
-     
-        h(i,j) = h0(i,j) 
+if( DP_field_ ) then
 
-    end do
-    h(j,j) = h0(j,j) + V_coul_El(j)
-end do  
+    h = h0 + H_DP
+    if( PTheory ) then
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) + AO_bra(j,1) * AO_ket(j,1) * H_DP(j,j) + V_coul_El(j)
+    else
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) + H_DP(j,j) + V_coul_El(j)
+    end if
+
+else
+
+    h = h0
+    forall( j=1:size(basis) ) h(j,j) = h(j,j) + V_coul_El(j)
+
+end if
 
 ! eigensystem for ELECTRON wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_el , flag1 , flag2 , PTheory , instance="el" )
+CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , instance="el" )
 
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
 
 h(:,:) = D_zero
 
-do j = 1 , size(basis)
-    do i = j+1 , size(basis)
-     
-        h(i,j) = h0(j,i) 
+if( DP_field_ ) then
 
-    end do
-    h(j,j) = h0(j,j) + V_coul_Hl(j)
-end do  
+    h = transpose(h0) + transpose(H_DP)
+    if( PTheory ) then
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) - AO_bra(j,2) * AO_ket(j,2) * H_DP(j,j) + V_coul_Hl(j)
+    else
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) + H_DP(j,j) + V_coul_Hl(j)
+    end if
+
+else
+
+    h = transpose(h0)
+    forall( j=1:size(basis) ) h(j,j) = h(j,j) + V_coul_Hl(j)
+
+end if
+
+deallocate( h0 , V_coul_El , V_coul_Hl )
 
 ! eigensystem for HOLE wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_hl , flag1 , flag2 , PTheory , instance="hl" )
+CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , flag2 , instance="hl" )
 
-!-----------------------------------------------------------------------
+deallocate( V_coul )
 
-deallocate( V_coul , V_coul_El , V_coul_Hl , h0 )
+if( DP_field_ ) deallocate( H_DP )
 
 end subroutine EigenSystem_ElHl
 !
 !
 !
-!==========================================================================================
- subroutine Build_MO_basis( H_matrix , S_matrix , QM , flag1 , flag2 , PTheory , instance )
-!==========================================================================================
- implicit none
- real*8                      ,  allocatable  , intent(inout) :: H_matrix(:,:)
- real*8                      ,  allocatable  , intent(inout) :: S_matrix(:,:)
- type(R_eigen)                               , intent(inout) :: QM
- integer          , optional                 , intent(inout) :: flag1
- integer          , optional                 , intent(in)    :: flag2
- logical                                     , intent(in)    :: PTheory
- character(*)                                , intent(in)    :: instance
+!=================================================================================================
+subroutine Build_MO_basis( H_matrix , S_matrix , QM , AO_bra , AO_ket , flag1 , flag2 , instance )
+!=================================================================================================
+implicit none
+real*8                      ,  allocatable  , intent(inout) :: H_matrix(:,:)
+real*8                      ,  allocatable  , intent(inout) :: S_matrix(:,:)
+type(R_eigen)                               , intent(inout) :: QM
+complex*16      , optional                  , intent(in)    :: AO_bra(:,:)
+complex*16      , optional                  , intent(in)    :: AO_ket(:,:)
+integer         , optional                  , intent(inout) :: flag1
+integer         , optional                  , intent(in)    :: flag2
+character(*)                                , intent(in)    :: instance
 
 ! local variables ...
- real*8         , ALLOCATABLE   :: Lv(:,:) , Rv(:,:) 
- real*8         , ALLOCATABLE   :: dumb_s(:,:) 
- integer                        :: i , info , basis_size
- character(1)                   :: uplo
+real*8         , ALLOCATABLE   :: Lv(:,:) , Rv(:,:) 
+real*8         , ALLOCATABLE   :: dumb_s(:,:) 
+integer                        :: i , info , basis_size
+character(1)                   :: uplo
 
- uplo = merge( 'U' , 'L' , instance == "el" )
+uplo = merge( 'U' , 'L' , instance == "el" )
 
- basis_size = size( H_matrix(:,1) )
+basis_size = size( H_matrix(:,1) )
 
- ALLOCATE( dumb_s(basis_size,basis_size) )
+ALLOCATE( dumb_s(basis_size,basis_size) )
 
 ! clone S_matrix because SYGVD will destroy it ... 
- dumb_s = S_matrix
+dumb_s = S_matrix
 
- If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(basis_size)) 
+If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(basis_size)) 
 
- CALL SYGVD( H_matrix , dumb_s , QM%erg , 1 , 'V' , uplo , info )
+CALL SYGVD( H_matrix , dumb_s , QM%erg , 1 , 'V' , uplo , info )
 
- If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
- If ( present(flag1) ) flag1 = info
+If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+If ( present(flag1) ) flag1 = info
 
- DEALLOCATE(dumb_s)
+DEALLOCATE(dumb_s)
 
 !     ---------------------------------------------------
 !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
@@ -162,123 +167,174 @@ end subroutine EigenSystem_ElHl
 !   Rv = <AO|MO> coefficients
 !     ---------------------------------------------------
 
- ALLOCATE( Lv(basis_size,basis_size) )
+ALLOCATE( Lv(basis_size,basis_size) )
 
- Lv = H_matrix
+Lv = H_matrix
 
- If( instance == "hl" ) DEALLOCATE(H_matrix)
+If( instance == "hl" ) DEALLOCATE(H_matrix)
 
- ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
+If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
- ALLOCATE( Rv(basis_size,basis_size) )
+ALLOCATE( Rv(basis_size,basis_size) )
 
- CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
 
- If( instance == "hl" ) DEALLOCATE( S_matrix )
+If( instance == "hl" ) DEALLOCATE( S_matrix )
 
 !----------------------------------------------------------
 !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 
- If( .NOT. allocated(QM%L) ) ALLOCATE( QM%L(basis_size,basis_size) ) 
+If( .NOT. allocated(QM%L) ) ALLOCATE( QM%L(basis_size,basis_size) ) 
 ! eigenvectors in the rows of QM%L
- QM%L = transpose(Lv)
- DEALLOCATE( Lv )
+QM%L = transpose(Lv)
+DEALLOCATE( Lv )
 
- If( .NOT. ALLOCATED(QM%R) ) ALLOCATE( QM%R(basis_size,basis_size) )
+If( .NOT. ALLOCATED(QM%R) ) ALLOCATE( QM%R(basis_size,basis_size) )
 ! eigenvectors in the columns of QM%R
- QM%R = Rv
- DEALLOCATE( Rv )
+QM%R = Rv
+DEALLOCATE( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
 !----------------------------------------------------------
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ! Perturbation terms ...
+! electron-hole interaction ...
 If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
+! dipole potential interaction ...
+If( PTheory ) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
 
 ! save energies of the TOTAL system 
- If( instance == "hl") then
+If( instance == "hl") then
     OPEN(unit=9,file='hl_UNI-ergs.dat',status='unknown')
- else
+else
     OPEN(unit=9,file='el_UNI-ergs.dat',status='unknown')
- end IF
- do i = 1 , basis_size
+end IF
+do i = 1 , basis_size
     write(9,*) i , QM%erg(i)
- end do
- CLOSE(9)  
+end do
+CLOSE(9)  
 
- If( verbose ) Print*, '>> EigenSystem done <<'
+If( verbose ) Print*, '>> EigenSystem done <<'
 
- end subroutine Build_MO_basis
+end subroutine Build_MO_basis
 !
 !
 !
-!====================================
- pure function Huckel(i,j,S_ij,basis)
-!====================================
- implicit none
- integer         , intent(in) :: i , j
- real*8          , intent(in) :: S_ij
- type(STO_basis) , intent(in) :: basis(:)
+!===============================================
+subroutine Huckel( basis , S_matrix , H_Huckel )
+!===============================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
+real*8          , intent(inout) :: H_Huckel(:,:)
 
 ! local variables ... 
- real*8  :: Huckel
- real*8  :: k_eff , k_WH , c1 , c2 , c3
+real*8  :: k_eff , k_WH , c1 , c2 , c3
+integer :: i , j
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
- 
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+do j = 1 , size(basis)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+    do i = 1 , j - 1
 
- k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+        c1 = basis(i)%IP - basis(j)%IP
+        c2 = basis(i)%IP + basis(j)%IP
 
- huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
+        c3 = (c1/c2)*(c1/c2)
 
- IF(i == j) huckel = basis(i)%IP
+        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- end function Huckel
+        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+
+        H_Huckel(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
+
+    end do
+
+    H_Huckel(j,j) = basis(j)%IP
+
+end do
+
+end subroutine Huckel
 !
 !
-!================================================
- pure function Huckel_with_FIELDS(i,j,S_ij,basis)
-!================================================
- implicit none
- integer         , intent(in) :: i , j
- real*8          , intent(in) :: S_ij
- type(STO_basis) , intent(in) :: basis(:)
+!
+!===============================================
+subroutine FIELDS( basis , S_matrix , H_FIELDS )
+!===============================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
+real*8          , intent(out)   :: H_FIELDS(:,:)
 
 ! local variables ... 
- real*8  :: Huckel_with_FIELDS
- real*8  :: k_eff , k_WH , c1 , c2 , c3
- logical :: flag
+real*8  :: DP(4)
+real*8  :: vector(3)
+integer :: i , j
+logical :: flag
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
-    
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+!$OMP PARALLEL DO schedule( GUIDED , 10 )
+do j = 1 , size(basis)
+    do i = 1 , j
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+        flag = ( abs(S_matrix(i,j)) > mid_prec )
 
- k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+        if( flag ) then
 
- huckel_with_FIELDS = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
+            DP = DP_phi(i,j,basis)
 
- IF( i == j ) huckel_with_FIELDS = basis(i)%IP 
+            vector = DEBYE * DP_matrix_AO(i,j)%dp + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
 
- flag = ( abs(S_ij) > mid_prec ) 
+            H_FIELDS(i,j) = S_matrix(i,j) * DP(1) + dot_product( vector(1:3) , DP(2:4) )
 
-! IF( flag )  huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP_phi(i,j,basis)
+        end if
 
-end function Huckel_with_FIELDS
+    end do
+end do  
+!$OMP END PARALLEL DO
+
+end subroutine FIELDS
+!
+!
+!
+!==================================
+pure function r0( basisi , basisj )
+!==================================
+implicit none
+type(STO_basis) , intent(in)    :: basisi
+type(STO_basis) , intent(in)    :: basisj
+
+! local variables ...
+real*8  :: r0(3)
+
+r0(1) = ( basisi%x + basisj%x ) / two
+r0(2) = ( basisi%y + basisj%y ) / two
+r0(3) = ( basisi%z + basisj%z ) / two
+
+end function r0
+!
+!
+!
+!========================
+pure function Ri( basis )
+!========================
+implicit none
+type(STO_basis) , intent(in)    :: basis
+
+! local variables ...
+real*8  :: Ri(3)
+
+Ri(1) = basis%x
+Ri(2) = basis%y
+Ri(3) = basis%z
+
+end function Ri
 !
 !
 !
@@ -335,9 +391,67 @@ end subroutine phase_locking
 !
 !
 !
+!==============================================================
+subroutine V_DP_off_diagonal( QM , AO_bra , AO_ket , instance )
+!==============================================================
+implicit none
+type(R_eigen)   , intent(inout) :: QM
+complex*16      , intent(in)    :: AO_bra(:,:)
+complex*16      , intent(in)    :: AO_ket(:,:)
+character*2     , intent(in)    :: instance
+
+! local variables ...
+integer                   :: i , j , n_basis
+complex*16  , allocatable :: V(:,:) , A(:,:)
+
+n_basis = size(QM%erg)
+
+allocate( V(n_basis,n_basis) , source=C_zero )
+
+select case( instance )
+
+    case( "el" )
+        do j = 1 , n_basis
+            do i = 1 , j - 1
+                V(i,j) = AO_bra(i,1) * AO_ket(j,1) * H_DP(i,j)
+                V(j,i) = conjg( V(i,j) )
+            end do
+            V(j,j) = C_zero
+        end do
+
+    case( "hl" )
+        do j = 1 , n_basis
+            do i = 1 , j - 1
+                V(i,j) = - AO_bra(i,2) * AO_ket(j,2) * H_DP(i,j)
+                V(j,i) =   conjg( V(i,j) )
+            end do
+            V(j,j) = C_zero
+        end do
+
+end select
+
 !===============================================
- subroutine V_coul_off_diagonal( QM , instance )
+!         FIRST ORDER Perturbation
 !===============================================
+! energy correction ...
+
+allocate( A(n_basis,n_basis)     , source=C_zero )
+
+CALL DZgemm( 'N' , 'N' , n_basis , n_basis , n_basis , C_one , QM%L , n_basis , V , n_basis , C_zero , A , n_basis )
+
+do i = 1 , n_basis
+    QM%erg(i) = QM%erg(i) + real( sum( A(i,:) * QM%L(i,:) ) )
+end do
+
+deallocate( A , V )
+
+end subroutine V_DP_off_diagonal
+!
+!
+!
+!==============================================
+subroutine V_coul_off_diagonal( QM , instance )
+!==============================================
 implicit none
 type(R_eigen)   , intent(inout) :: QM
 character*2     , intent(in)    :: instance

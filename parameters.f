@@ -28,7 +28,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
@@ -56,7 +56,7 @@ logical :: dynamic
 !
   DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -65,8 +65,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  5.0d0                                 ! <== final time in PICOseconds
-  n_t  =  1000                                  ! <== number of time steps
+  t_f  =  2.5d-1                                ! <== final time in PICOseconds
+  n_t  =  500                                   ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -83,7 +83,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 0  ; mmy = 0   ; mmz = 1              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 1  ; mmy = 1   ; mmz = 1              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

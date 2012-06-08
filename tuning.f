@@ -47,13 +47,13 @@ integer :: i , ioerr
  where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
 
 !use default: %DPF = %solute  
- where( univ % atom % DPF ) univ % atom % solute = .true.
+! where( univ % atom % DPF ) univ % atom % solute = .true.
 
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % DPF ) univ % atom % El = .true.
+ where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...

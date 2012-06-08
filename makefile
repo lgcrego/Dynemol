@@ -91,6 +91,3 @@ a: $(SOURCE1) $(SOURCE2)
  
 clean: 
 	-rm -f *.o *.mod; touch *.f
-
-source: 
-	-source /opt/intel/Compiler/11.1/064/bin/ifortvars.sh intel64
