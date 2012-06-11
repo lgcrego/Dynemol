@@ -198,7 +198,7 @@ allocate( AO_bra   ( size_r , size_c ) )
 allocate( AO_ket   ( size_r , size_c ) )
 
 if( .NOT. allocated( orbital) ) allocate( orbital(size_eh_tag) )
-if( .NOT. allocated( orbital) ) allocate( eh_tag(size_eh_tag) )
+if( .NOT. allocated( eh_tag ) ) allocate( eh_tag(size_eh_tag) )
 
 do i = 1 , size_eh_tag
     read(33) orbital(i) , eh_tag(i)
