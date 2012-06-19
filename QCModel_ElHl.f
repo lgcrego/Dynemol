@@ -55,7 +55,7 @@ ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
 ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
  
 !-----------------------------------------------------------------------
-
+  
 if( DP_field_ ) then
 
     ALLOCATE( H_DP(size(basis),size(basis)) , source = D_zero )
@@ -203,7 +203,7 @@ DEALLOCATE( Rv )
 ! electron-hole interaction ...
 If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
 ! dipole potential interaction ...
-If( PTheory ) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
+If( PTheory .and. DP_Field_) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
 
 ! save energies of the TOTAL system 
 If( instance == "hl") then
