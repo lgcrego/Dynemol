@@ -51,8 +51,8 @@ integer :: i
 ! prepare  DONOR  state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the  DONOR  state in structure Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "E" )
+! place the  DONOR  state in Structure's hilbert space ...
+li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
 allocate( Psi(size(basis)) , source=C_zero )

@@ -49,34 +49,33 @@ integer                         , intent(in)    :: it
 !local variables ...
 integer                         :: li , N 
 real*8          , allocatable   :: wv_FMO(:) 
-complex*16      , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , ElHl_Psi(:,:)
 real*8          , allocatable   :: S_matrix(:,:)
+complex*16      , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 integer :: i
 
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
-
+!========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the slectron state in structure Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "E" )
+! place the electron state in Structure's hilbert space ...
+li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
 ELHl_Psi(li:li+N-1,1) = cmplx( wv_FMO(:) )
-
 deallocate( wv_FMO )
-
+!========================================================================
 ! prepare hole state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
 ! place the hole state in structure Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%fragment == "H" )
+li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
 N  = size(wv_FMO)
 
 ElHl_Psi(li:li+N-1,2) = cmplx( wv_FMO(:) )
-
 deallocate( wv_FMO )
+!========================================================================
 
 ! prepare DUAL basis for local properties ...
 allocate( Dual_bra ( size(basis) , n_part ), source=C_zero )

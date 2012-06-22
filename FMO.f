@@ -72,37 +72,21 @@
 
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
 
-! get wv_FMO orbital in local representation and leave subroutine ... 
- if( present(MO) ) then
+ If( present(MO) ) then
 
+    ! get wv_FMO orbital in local representation and leave subroutine ... 
     ! MO vector used at Chebyshev propagator ...
     allocate( MO(size(FMO_basis)) )
     MO(:) = wv_FMO(orbital(1),:)
 
-    print*, '>> FMO analysis done <<'
+ else If( Survival ) then
 
-    return
-
- end if
-
-! wv_FMO needed only for time-propagation of wv_FMO state ...
- If( Survival ) then
-     
-     CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
-
-    ! "entropy" of the FMO states with respect to the system 
-    OPEN(unit=9,file='entropy.dat',status='unknown')
-    do i = 1 , size(FMO_basis)
-        entropy = - sum( abs(FMO%L(:,i))*dlog(abs(FMO%L(:,i))) ) 
-        write(9,*) FMO%erg(i) , entropy
-    end do
-    CLOSE(9)   
-
-    DeAllocate( wv_FMO )
+    ! wv_FMO needed only for time-propagation of wv_FMO state ...
+    CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
 
  end IF
 
- DeAllocate( FMO_basis )
+ DeAllocate( FMO_basis , wv_FMO )
  CALL DeAllocate_Structures( FMO_system )
 
  system % fragment = system_fragment
