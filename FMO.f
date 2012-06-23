@@ -77,7 +77,13 @@
     ! get wv_FMO orbital in local representation and leave subroutine ... 
     ! MO vector used at Chebyshev propagator ...
     allocate( MO(size(FMO_basis)) )
-    MO(:) = wv_FMO(orbital(1),:)
+
+    select case(instance)
+        case ("E","D")
+        MO(:) = wv_FMO(orbital(1),:)
+        case ("H")
+        MO(:) = wv_FMO(orbital(2),:)
+    end select
 
  else If( Survival ) then
 

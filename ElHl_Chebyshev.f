@@ -113,7 +113,7 @@ integer          , intent(in)    :: it
 
 ! local variables...
 complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:)
-real*8      , allocatable   :: H_prime(:,:,:)
+real*8      , allocatable   :: H_prime(:,:)
 integer                     :: i
 
 ! building  S_matrix  and  H'= S_inv * H ...
@@ -122,7 +122,7 @@ CALL Build_Hprime( system , basis , Psi_t_bra , Psi_t_ket , H_prime , it )
 ! proceed evolution with best tau ...
 do i = 1 , n_part
 
-    CALL Propagation( system , basis , H_prime(:,:,i) , Psi_t_bra(:,i) , Psi_t_ket(:,i) , t , it )
+    CALL Propagation( system , basis , H_prime(:,:) , Psi_t_bra(:,i) , Psi_t_ket(:,i) , t , it )
     
 end do
 
@@ -138,7 +138,7 @@ DUAL_ket = Psi_t_bra
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 ! clean and exit ...
-deallocate( H_prime , DUAL_bra , DUAL_ket , S_inv )
+deallocate( H_prime , DUAL_bra , DUAL_ket )
 
 Print 186, t
 
@@ -148,22 +148,22 @@ end subroutine ElHl_Chebyshev
 !
 !
 !
-!===================================================================================
- subroutine Propagation( system , basis , H_prime , Psi_t_bra , Psi_t_ket , t , it )
-!===================================================================================
+!======================================================================================
+ subroutine Propagation( system , basis , H_prime , Psi_t_bra , Psi_t_ket , time , it )
+!======================================================================================
 implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: H_prime(:,:)
 complex*16      , intent(inout) :: Psi_t_bra(:)
 complex*16      , intent(inout) :: Psi_t_ket(:)
-real*8          , intent(in)    :: t
+real*8          , intent(in)    :: time
 integer         , intent(in)    :: it
 
 ! local variables...
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
-real*8                      :: norm_ref , norm_test , delta_t , tau , tau_max , t_tmp
+real*8                      :: norm_ref , norm_test , delta_t , tau , tau_max , t
 integer                     :: i , j , N , k_ref
 logical                     :: OK
 
@@ -177,7 +177,6 @@ allocate( Psi_tmp_ket ( N         ) , source=C_zero )
 allocate( C_k         (     order ) , source=C_zero )
 
 norm_ref = dot_product( Psi_t_bra , Psi_t_ket )
-print*, norm_ref
 
 delta_t = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
 tau_max = delta_t / h_bar
@@ -189,11 +188,11 @@ tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
 tau = merge( tau_max , tau , tau > tau_max )
 
 ! first convergence: best tau-parameter for k_ref ...
-t_tmp = t
+t = time
 do
     CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
     if( OK ) then
-        t_tmp = t_tmp + tau*h_bar
+        t = t + tau*h_bar
         save_tau = tau
         exit
     else
@@ -201,15 +200,15 @@ do
     end if
 end do
 
-if( MD_dt*frame_step*(it-1)-t_tmp < tau*h_bar ) then
-    tau = ( MD_dt*frame_step*(it-1) - t_tmp ) / h_bar
+if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
+    tau = ( MD_dt*frame_step*(it-1) - t ) / h_bar
     C_k = coefficient(tau,order)
 end if
 
 ! proceed evolution with best tau ...
 do
 
-    if( t_tmp >= MD_dt*frame_step*(it-1) ) exit
+    if( t >= MD_dt*frame_step*(it-1) ) exit
         
     C_Psi_bra(:,1) = Psi_t_bra                                                  ;   C_Psi_ket(:,1) = Psi_t_ket
 
@@ -225,7 +224,7 @@ do
 
 !   convergence criteria ...
     norm_test = dot_product( Psi_tmp_bra , Psi_tmp_ket )
-    if( abs( norm_test - norm_ref ) < error ) then
+    if( abs( norm_test - norm_ref ) < norm_error ) then
         Psi_t_bra = Psi_tmp_bra                                                 ;   Psi_t_ket = Psi_tmp_ket
     else
         do
@@ -236,12 +235,12 @@ do
         end do
     end if
 
-    t_tmp = t_tmp + (tau * h_bar)
+    t = t + (tau * h_bar)
 
-    if( t_tmp >= MD_dt*frame_step*(it-1) ) exit
+    if( t >= MD_dt*frame_step*(it-1) ) exit
 
-    if( MD_dt*frame_step*(it-1)-t_tmp < tau*h_bar ) then
-        tau = ( MD_dt*frame_step*(it-1)-t_tmp ) / h_bar
+    if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
+        tau = ( MD_dt*frame_step*(it-1)-t ) / h_bar
         C_k = coefficient(tau,order)
     end if
 
@@ -336,96 +335,73 @@ type(structure)                 , intent(in)    :: system
 type(STO_basis)                 , intent(in)    :: basis(:)
 complex*16                      , intent(in)    :: Psi_bra(:,:)
 complex*16                      , intent(in)    :: Psi_ket(:,:)
-real*8          , allocatable   , intent(out)   :: H_prime(:,:,:)
+real*8          , allocatable   , intent(out)   :: H_prime(:,:)
 integer                         , intent(in)    :: it
 
 ! local variables...
-complex*16  , allocatable   :: V_coul(:,:)
-complex*16  , allocatable   :: AO_bra(:,:) , AO_ket(:,:)
-real*8      , allocatable   :: HT(:,:,:)
-real*8      , allocatable   :: S_matrix(:,:)
-real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:)
-integer                     :: i , j
+real*8  , allocatable   :: Hamiltonian(:,:)
+real*8  , allocatable   :: S(:,:) , S_inv(:,:)
+integer                 :: i , j , N
 
-CALL Overlap_Matrix( system , basis , S_matrix )
+N = size(basis)
 
-! compute S_inverse...
-CALL Invertion_Matrix( S_matrix , S_inv , size(basis) )
+! compute S and S_inverse ...
+CALL Overlap_Matrix     ( system , basis , S )
+CALL Invertion_Matrix   ( S , S_inv )
 
-if( it == 2 ) S_inv_0 = S_inv
+allocate( Hamiltonian(N,N) )
 
-allocate( HT ( size(basis) , size(basis) , n_part ) , source=D_zero )
-
-if( it <= 2 ) then
-    
-    do j = 1 , size(basis)
+If( DP_field_ ) then
+ 
+    do j = 1 , N
         do i = 1 , j
-                     
-            HT(i,j,1) = huckel(i,j,S_matrix(i,j),basis)
-            HT(j,i,1) = HT(i,j,1)
-            
+     
+            Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
+            Hamiltonian(j,i) = Hamiltonian(i,j)
+
         end do
-    end do
-    HT(:,:,2) = HT(:,:,1)
+    end do  
 
 else
 
-    allocate( AO_bra ( size(basis) , n_part ) )
-    allocate( AO_ket ( size(basis) , n_part ) )
-!    AO_bra = conjg( matmul( S_inv_0 , Psi_bra ) )
-!    AO_ket = Psi_ket
-
-    AO_bra = conjg( matmul( S_inv , Psi_bra ) )
-    AO_ket = Psi_ket
-
-    CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
-
-    do i = 1 , size(basis)
-    
-        do j = 1 , j-1
-
-            HT(i,j,1) = huckel(i,j,S_matrix(i,j),basis)
-            HT(j,i,1) = HT(i,j,1)
-            HT(i,j,2) = HT(i,j,1)
-            HT(j,i,2) = HT(i,j,2)
+    do j = 1 , N
+        do i = 1 , j
+     
+            Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
+            Hamiltonian(j,i) = Hamiltonian(i,j)
 
         end do
+    end do  
 
-        HT(i,i,1)  = huckel(i,i,S_matrix(i,i),basis) + V_coul_El(i)
-        HT(i,i,2)  = huckel(i,i,S_matrix(i,i),basis) + V_coul_Hl(i)
+end If
 
-    end do
-
-    deallocate( AO_bra , AO_ket , V_coul_El , V_coul_Hl , V_coul )
-
-end if
-
-deallocate( S_matrix )
+deallocate( S )
 
 ! allocate and compute H' = S_inv * H ...
-allocate( H_prime ( size(basis) , size(basis) , n_part ) , source=D_zero )
+allocate( H_prime(N,N) )
 
-forall( i=1:n_part ) H_prime(:,:,i) = matmul(S_inv,HT(:,:,i))
+H_prime = matmul(S_inv,Hamiltonian)
 
-deallocate( HT )
+deallocate( S_inv , Hamiltonian )
 
 end subroutine Build_Hprime
 !
 !
 !
-!=====================================================
-subroutine Invertion_Matrix( matrix , matrix_inv , N )
-!=====================================================
+!=================================================
+subroutine Invertion_Matrix( matrix , matrix_inv )
+!=================================================
 implicit none
 real*8                  , intent(in)  :: matrix(:,:)
 real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
-integer                 , intent(in)  :: N
 
 ! local variables...
 real*8  , allocatable   :: work(:)
 integer , allocatable   :: ipiv(:)
 real*8                  :: n_null
-integer                 :: i , j , info , sparse
+integer                 :: i , j , info , sparse , N
+
+N = size( matrix(:,1) )
 
 ! compute inverse of S_matrix...
 allocate( ipiv       ( N     ) )

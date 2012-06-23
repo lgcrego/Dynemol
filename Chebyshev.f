@@ -111,11 +111,8 @@ allocate( C_Psi_ket   (N , order ) , source=C_zero )
 allocate( C_k         (order     ) , source=C_zero )
 allocate( Psi_tmp_bra (N         ) , source=C_zero )
 allocate( Psi_tmp_ket (N         ) , source=C_zero )
-allocate( Dual_bra    (N         ) , source=C_zero )
-allocate( Dual_ket    (N         ) , source=C_zero )
 
 norm_ref = dot_product( Psi_t_bra , Psi_t_ket )
-print*, norm_ref
 
 delta_t = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
 tau_max = delta_t / h_bar
@@ -185,6 +182,8 @@ do
 end do
 
 ! prepare DUAL basis for local properties ...
+allocate( Dual_bra (N) , source=C_zero )
+allocate( Dual_ket (N) , source=C_zero )
 DUAL_bra = conjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
@@ -320,13 +319,14 @@ end If
 
 ! compute S_inverse...
 CALL Invertion_Matrix( S , S_inv , size(basis) )
+deallocate( S )
 
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime ( size(basis) , size(basis) ) )
 
 H_prime = matmul(S_inv,Hamiltonian)
 
-deallocate( S , S_inv , Hamiltonian )
+deallocate( S_inv , Hamiltonian )
 
 end subroutine Build_Hprime
 !
