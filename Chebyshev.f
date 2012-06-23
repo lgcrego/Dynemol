@@ -201,9 +201,9 @@ end subroutine Chebyshev
 !
 !
 !
-!===================================================================================================
+!========================================================================================
 subroutine Convergence( Psi_bra , Psi_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
-!===================================================================================================
+!========================================================================================
 implicit none
 complex*16  , intent(inout) :: Psi_bra(:)
 complex*16  , intent(inout) :: Psi_ket(:)
@@ -318,7 +318,7 @@ else
 end If
 
 ! compute S_inverse...
-CALL Invertion_Matrix( S , S_inv , size(basis) )
+CALL Invertion_Matrix( S , S_inv )
 deallocate( S )
 
 ! allocate and compute H' = S_inv * H ...
@@ -332,19 +332,20 @@ end subroutine Build_Hprime
 !
 !
 !
-!=====================================================
-subroutine Invertion_Matrix( matrix , matrix_inv , N )
-!=====================================================
+!=================================================
+subroutine Invertion_Matrix( matrix , matrix_inv )
+!=================================================
 implicit none
 real*8                  , intent(in)  :: matrix(:,:)
 real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
-integer                 , intent(in)  :: N
 
 ! local variables...
 real*8  , allocatable   :: work(:)
 integer , allocatable   :: ipiv(:)
 real*8                  :: n_null
-integer                 :: i , j , info , sparse
+integer                 :: i , j , info , sparse , N
+
+N = size( matrix(:,1) )
 
 ! compute inverse of S_matrix...
 allocate( ipiv       ( N     ) )
