@@ -116,6 +116,7 @@ complex*16  , allocatable   :: V_coul(:,:)
 real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) 
 real*8      , allocatable   :: H_prime(:,:) , h(:,:) , h0(:,:) , S_matrix(:,:) , S_inv(:,:)
 integer                     :: i , j , N
+logical                     :: done = .false.
 
 N = size(basis)
 
@@ -130,13 +131,26 @@ CALL Invertion_Matrix   ( S_matrix , S_inv )
 deallocate (S_matrix)
 
 If( Coulomb_ ) then
-    allocate   ( AO_bra(N,n_part) , source = C_zero )
-    allocate   ( AO_ket(N,n_part) , source = C_zero )
-    AO_bra = conjg( matmul(S_inv,Psi_t_bra) )
-    AO_ket = Psi_t_ket
 
-    CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
-    deallocate( V_Coul , AO_bra , AO_ket )
+    If( done ) then
+
+        allocate   ( AO_bra(N,n_part) , source = C_zero )
+        allocate   ( AO_ket(N,n_part) , source = C_zero )
+        AO_bra = conjg( matmul(S_inv,Psi_t_bra) )
+        AO_ket = Psi_t_ket
+
+        CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
+        deallocate( V_Coul , AO_bra , AO_ket )
+
+    else
+
+        allocate   ( V_coul_El(N) , source = D_zero )
+        allocate   ( V_coul_Hl(N) , source = D_zero )
+
+        done = .true.
+
+    end If
+
 end If    
  
 !-----------------------------------------------------------------------
