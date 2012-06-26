@@ -3,15 +3,15 @@ module ElHl_Chebyshev_m
     use type_m              , g_time => f_time  
     use constants_m
     use parameters_m        , only : t_i , t_f , n_t , frame_step , &
-                                     DP_Field_ , n_part
+                                     DP_Field_ , Coulomb_ , n_part
     use mkl95_blas
     use mkl95_lapack
     use ifport
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
-    use QCmodel_Huckel      , only : Huckel ,                       &
-                                     Huckel_with_FIELDS
+    use QCModel_Huckel_ElHl , only : Huckel ,                       &
+                                     FIELDS
     use Data_Output         , only : Populations
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
 
@@ -25,11 +25,10 @@ module ElHl_Chebyshev_m
     real*8      , parameter :: norm_error   = 1.0d-12
 
 ! module variables ...
-    real*8  , save          :: save_tau
-    real*8  , allocatable   :: S_inv(:,:)
-
-    complex*16  , save  :: S_inv_0(112,112)
-
+    real*8      ,   save          :: save_tau
+    real*8      ,   allocatable   :: S_inv(:,:)
+    real*8      ,   allocatable   :: V_Coul_El(:) , V_Coul_Hl(:)
+    complex*16  ,   allocatable   :: V_Coul(:,:)
 
 contains
 !
@@ -69,7 +68,7 @@ deallocate( wv_FMO )
 ! prepare hole state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
-! place the hole state in structure Hilbert space ...
+! place the hole state in Structure's hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
 N  = size(wv_FMO)
 
@@ -112,25 +111,119 @@ real*8           , intent(out)   :: t
 integer          , intent(in)    :: it
 
 ! local variables...
-complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:)
-real*8      , allocatable   :: H_prime(:,:)
-integer                     :: i
+complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , AO_bra(:,:) , AO_ket(:,:) 
+complex*16  , allocatable   :: V_coul(:,:) 
+real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) 
+real*8      , allocatable   :: H_prime(:,:) , h(:,:) , h0(:,:) , S_matrix(:,:) , S_inv(:,:)
+integer                     :: i , j , N
 
-! building  S_matrix  and  H'= S_inv * H ...
-CALL Build_Hprime( system , basis , Psi_t_bra , Psi_t_ket , H_prime , it )
+N = size(basis)
 
-! proceed evolution with best tau ...
-do i = 1 , n_part
+! compute S and S_inverse ...
+CALL Overlap_Matrix     ( system , basis , S_matrix )
 
-    CALL Propagation( system , basis , H_prime(:,:) , Psi_t_bra(:,i) , Psi_t_ket(:,i) , t , it )
-    
-end do
+ALLOCATE                ( h0(N,N) , source = D_zero )
+CALL Huckel             ( basis , S_matrix , h0 )
+
+CALL Invertion_Matrix   ( S_matrix , S_inv )
+
+deallocate (S_matrix)
+
+If( Coulomb_ ) then
+    allocate   ( AO_bra(N,n_part) , source = C_zero )
+    allocate   ( AO_ket(N,n_part) , source = C_zero )
+    AO_bra = conjg( matmul(S_inv,Psi_t_bra) )
+    AO_ket = Psi_t_ket
+
+    CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
+    deallocate( V_Coul , AO_bra , AO_ket )
+end If    
+ 
+!-----------------------------------------------------------------------
+!           Electron Hamiltonian : upper triangle of V_coul ...
+
+ALLOCATE( h(N,N), source = D_zero )
+
+if( Coulomb_ ) then
+
+    h = h0
+    do j = 1 , N
+        do i = 1 , j-1
+     
+            h(j,i) = h0(i,j)
+
+        end do
+    end do  
+    forall( j=1:N ) h(j,j) = h(j,j) + V_coul_El(j)
+
+else
+
+    h = h0
+    do j = 1 , N
+        do i = 1 , j-1
+     
+            h(j,i) = h0(i,j)
+
+        end do
+    end do  
+
+end if
+
+! allocate and compute H' = S_inv * H ...
+allocate( H_prime(N,N) )
+
+H_prime = matmul( S_inv , h )
+
+! proceed evolution of ELECTRON wapacket with best tau ...
+CALL Propagation( system , basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t , it )
+
+!-----------------------------------------------------------------------
+!            Hole Hamiltonian : lower triangle of V_coul ...
+
+h(:,:)       = D_zero
+H_prime(:,:) = D_zero
+
+if( Coulomb_ ) then
+
+    h = h0
+    do j = 1 , N
+        do i = 1 , j-1
+     
+            h(j,i) = h0(i,j)
+
+        end do
+    end do  
+    forall( j=1:N ) h(j,j) = h(j,j) + V_coul_Hl(j)
+
+else
+
+    h = h0
+    do j = 1 , N
+        do i = 1 , j-1
+     
+            h(j,i) = h0(i,j)
+
+        end do
+    end do  
+
+end if
+
+deallocate( h0 )
+If( Coulomb_ ) deallocate( V_coul_El , V_coul_Hl )
+
+H_prime = matmul( S_inv , h )
+deallocate(h,S_inv)
+
+! proceed evolution of HOLE wapacket with best tau ...
+CALL Propagation( system , basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t , it )
+
+!-----------------------------------------------------------------------
 
 t = t + MD_dt*frame_step
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra ( size(basis) , n_part ), source=C_zero )
-allocate( Dual_ket ( size(basis) , n_part ), source=C_zero )
+allocate( Dual_bra ( N , n_part ), source=C_zero )
+allocate( Dual_ket ( N , n_part ), source=C_zero )
 DUAL_bra = conjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
@@ -324,67 +417,6 @@ k_ref = k
 deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
 
 end subroutine Convergence
-!
-!
-!
-!===========================================================================
-subroutine Build_Hprime( system , basis , Psi_bra , Psi_ket , H_prime , it )
-!===========================================================================
-implicit none
-type(structure)                 , intent(in)    :: system
-type(STO_basis)                 , intent(in)    :: basis(:)
-complex*16                      , intent(in)    :: Psi_bra(:,:)
-complex*16                      , intent(in)    :: Psi_ket(:,:)
-real*8          , allocatable   , intent(out)   :: H_prime(:,:)
-integer                         , intent(in)    :: it
-
-! local variables...
-real*8  , allocatable   :: Hamiltonian(:,:)
-real*8  , allocatable   :: S(:,:) , S_inv(:,:)
-integer                 :: i , j , N
-
-N = size(basis)
-
-! compute S and S_inverse ...
-CALL Overlap_Matrix     ( system , basis , S )
-CALL Invertion_Matrix   ( S , S_inv )
-
-allocate( Hamiltonian(N,N) )
-
-If( DP_field_ ) then
- 
-    do j = 1 , N
-        do i = 1 , j
-     
-            Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
-            Hamiltonian(j,i) = Hamiltonian(i,j)
-
-        end do
-    end do  
-
-else
-
-    do j = 1 , N
-        do i = 1 , j
-     
-            Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
-            Hamiltonian(j,i) = Hamiltonian(i,j)
-
-        end do
-    end do  
-
-end If
-
-deallocate( S )
-
-! allocate and compute H' = S_inv * H ...
-allocate( H_prime(N,N) )
-
-H_prime = matmul(S_inv,Hamiltonian)
-
-deallocate( S_inv , Hamiltonian )
-
-end subroutine Build_Hprime
 !
 !
 !

@@ -14,7 +14,7 @@
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
     use DP_main_m                   , only : DP_matrix_AO
 
-    public :: EigenSystem_ElHl
+    public :: EigenSystem_ElHl , Huckel , Fields
 
     private
 

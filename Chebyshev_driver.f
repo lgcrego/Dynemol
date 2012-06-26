@@ -95,7 +95,7 @@ CALL Basis_Builder          ( Extended_Cell , ExCell_basis )
 If( DP_field_ ) &
 CALL Molecular_DPs          ( Extended_Cell )
 
-CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , it )
+CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , Psi_bra , Psi_ket , QDyn , it=1 )
 
 do frame = 2 , size(trj) , frame_step
 
