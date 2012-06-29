@@ -29,23 +29,17 @@ integer :: i , ioerr
 !      define %residue
 !-----------------------------------
 
+ univ % atom(49:50) % residue = "CCC"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
 
- where( univ % atom % nr <= 4 ) univ % atom % nr = 1
- where( univ % atom % nr >  4 ) univ % atom % nr = univ % atom % nr - 3
- 
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
 
 !default: %DPF = F_
- where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
-
 !use default: %DPF = %solute  
 ! where( univ % atom % DPF ) univ % atom % solute = .true.
 
@@ -53,16 +47,16 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
+ where( univ % atom % residue == "TA1" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 
- where( univ % atom % residue == "ION" ) univ % atom % Hl = .true.
+ where( univ % atom % residue == "TA1" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
-!      define %fragments   : Donor fragment ...
+!      define %fragments   : Donor fragment define here ...
 !------------------------------------------------
 
 !default: %El => DONOR
@@ -96,7 +90,6 @@ integer  :: i
 ! 
 !   Acceptor    =   A       
 !   Bridge      =   B
-!   Donor       =   D  (defined in ad_hoc)
 !   Electron    =   E  (defined in ad_hoc)
 !   Hole        =   H 
 !   Molecule    =   M
@@ -111,6 +104,9 @@ integer  :: i
  
     select case(a%atom(i)%residue)
 
+        case( 'CCC') 
+            a%atom(i)%fragment = 'A' 
+
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 2.0d0
@@ -118,25 +114,6 @@ integer  :: i
         case( 'ACN') 
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
-
-        case( 'ION') 
-            a%atom(i)%fragment = 'I' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP1') 
-            a%atom(i)%fragment = 'D' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP2') 
-            a%atom(i)%fragment = '1' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP3') 
-            a%atom(i)%fragment = '2' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case default
-            a%atom(i)%fragment = '#' 
 
     end select
 
