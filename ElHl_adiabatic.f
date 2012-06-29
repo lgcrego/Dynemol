@@ -234,6 +234,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
+If(DP_Field_ ) &
 CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
