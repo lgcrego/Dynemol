@@ -204,7 +204,7 @@ do xyz = 1 , 3
 
     ! origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
 
-    b = DP_matrix_AO%DP(xyz)
+    b = DP_matrix_AO(:,:,xyz)
 
     CALL gemv( b , ket , a , C_one , C_zero )    
 

@@ -210,7 +210,7 @@ real*8   :: r0(3) , Ri(3) , vector(3)
      Ri(2) = basis(i)%y
      Ri(3) = basis(i)%z
 
-     vector = DEBYE * DP_matrix_AO(i,j)%dp + S_ij * ( Ri - r0 )    ! <== in Angs
+     vector = DEBYE * DP_matrix_AO(i,j,:) + S_ij * ( Ri - r0 )    ! <== in Angs
 
      DP = DP_phi(i,j,basis)
     

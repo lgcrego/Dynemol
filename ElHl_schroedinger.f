@@ -38,8 +38,8 @@
  type(structure) , intent(inout)    :: system
  type(STO_basis) , intent(in)       :: basis(:)
  type(R_eigen)   , intent(in)       :: UNI 
- type(R_eigen)   , intent(in)       :: el_FMO 
- type(R_eigen)   , intent(in)       :: hl_FMO 
+ type(R_eigen)   , intent(inout)    :: el_FMO 
+ type(R_eigen)   , intent(inout)    :: hl_FMO 
  type(f_time)    , intent(inout)    :: QDyn
 
 ! local variables ...
@@ -213,7 +213,7 @@ end subroutine ElHl_dynamics
  type(structure) , intent(inout)    :: system
  type(STO_basis) , intent(in)       :: basis(:)
  type(R_eigen)   , intent(in)       :: UNI 
- type(R_eigen)   , intent(in)       :: el_FMO 
+ type(R_eigen)   , intent(inout)    :: el_FMO 
  type(f_time)    , intent(inout)    :: QDyn
 
 ! local variables ...

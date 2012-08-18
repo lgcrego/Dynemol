@@ -1,21 +1,20 @@
 #
 .SUFFIXES: .f .F .for
 
-FC=/opt/intel/Compiler/11.1/064/bin/intel64/ifort 
+FC=/opt2/intel/bin/ifort 
 FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
 
 FFLAGS1 = -O3 
-FFLAGS2 = -O3 -openmp -parallel $(FREE) 
+FFLAGS2 = -O3 -openmp -parallel $(FREE) -static
 
-LIB_BLAS   = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
-LIB_LAPACK = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
-#LIB_BLAS   = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lguide -lpthread
-#LIB_LAPACK = -L/opt/intel/mkl/10.2.4.032/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lguide -lpthread
-INCS_MKL   = -I/opt/intel/mkl/10.2.4.032/include/em64t/lp64 
+LIB_BLAS   = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
+LIB_LAPACK = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
+LIB_OMP    = -L/opt2/intel/lib/intel64 -liomp5 -lmatmul
+INCS_MKL   = -I/opt2/intel/composer_xe_2011_sp1.9.293/mkl/include/intel64/lp64 
 
-LIB  = $(LIB_BLAS) $(LIB_LAPACK)
+LIB  = $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
 INCS = $(INCS_MKL) 
 
 #-----------------------------------------------------------------------

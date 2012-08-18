@@ -228,7 +228,7 @@ forall(i=1:dim_bra) a(i,:) = QM%L(DP%bra_PTR(i),:)
 !$OMP end parallel
 
 do xyz = 1 , 3  
-    matrix = DP_matrix_AO%DP(xyz)
+    matrix = DP_matrix_AO(:,:,xyz)
     CALL gemm(a,matrix,left,'N','N',one,zero)    
     !$OMP parallel
         !$OMP single
@@ -294,7 +294,7 @@ forall( i=1:dim_ket ) a(i,:) = QM%L(DP%ket_PTR(i),:)
 
 
 do xyz = 1 , 3  
-    matrix = DP_matrix_AO%DP(xyz)
+    matrix = DP_matrix_AO(:,:,xyz)
     CALL gemm(a,matrix,left,'N','N',one,zero)    
     !$OMP parallel    
         !$OMP single

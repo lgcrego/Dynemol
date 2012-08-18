@@ -35,7 +35,7 @@ logical :: dynamic
   GaussianCube    = F_                       
   Survival        = T_                       
   SPECTRUM        = F_                          
-  DP_Moment       = T_                       
+  DP_Moment       = F_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
@@ -66,11 +66,11 @@ logical :: dynamic
 !
   t_i  =  0.d0                               
   t_f  =  2.5d-1                                ! <== final time in PICOseconds
-  n_t  =  500                                   ! <== number of time steps
+  n_t  =  3000                                  ! <== number of time steps
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  5                            ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  29                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
@@ -83,7 +83,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 1  ; mmy = 1   ; mmz = 1              ! <== PBC replicas : 1 = yes , 0 = no
+  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

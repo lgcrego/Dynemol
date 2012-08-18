@@ -10,8 +10,7 @@ module ElHl_Chebyshev_m
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
-    use QCModel_Huckel_ElHl , only : Huckel ,                       &
-                                     FIELDS
+    use QCModel_Huckel_ElHl , only : Huckel 
     use Data_Output         , only : Populations
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
 

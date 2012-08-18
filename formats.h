@@ -32,7 +32,7 @@
 
 56    FORMAT(/,1x,'Initial state of the isolated molecule => ',I3)
  
-57    FORMAT(1x,'checking normalization of wave-packet =',F8.6,',',F8.6)
+57    FORMAT(1x,'checking normalization of wave-packet =',F9.6,',',F9.6)
 
 58    FORMAT(1x,'Electrons in the Slater determinant = ',F9.3)
 
@@ -40,7 +40,7 @@
 
 592   FORMAT(/,1x,'Energy of Hl-packet state(',I3,') = ',F10.5)
 
-60    FORMAT(1x,'norm of Psi(t) = ',F9.7)     
+60    FORMAT(1x,'norm of Psi(t) = ',F10.7)     
 
 61    FORMAT(1x,'>> AO_preprocess done <<')
 

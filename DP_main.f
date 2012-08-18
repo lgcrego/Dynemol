@@ -20,7 +20,7 @@ module DP_main_m
     use FMO_m                   , only  : eh_tag
 
 
-    type(R3_vector) , allocatable , public , protected :: DP_matrix_AO(:,:)
+    Real*8 , allocatable , public , protected :: DP_matrix_AO(:,:,:)
 
     public :: Dipole_Matrix 
     public :: Dipole_Moment
@@ -54,11 +54,11 @@ If( verbose ) Print 153
 M_size = sum(atom(system%AtNo)%DOS)
 
 If( allocated(DP_matrix_AO) ) deallocate( DP_matrix_AO )
-allocate(DP_matrix_AO(M_size,M_size))
+allocate( DP_matrix_AO(M_size,M_size,3) )
 
 CALL Build_DIPOLE_Matrix(system,basis)
 
-forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:)%dp(i) /= 0.d0)
+forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:,i) /= D_zero)
 
 Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
@@ -188,7 +188,7 @@ real*8 , dimension(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup) :: rl , rl2
 
 lmult = 1 ! <== DIPOLE MOMENT
 
-forall(i=1:3) DP_matrix_AO(:,:)%dp(i) = 0.d0
+DP_matrix_AO = D_zero
 
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
@@ -234,11 +234,11 @@ do ia = 1 , system%atoms
             end if
 
 !           p_x(a,b) 
-            DP_matrix_AO(a,b)%dp(1) = DP_matrix_AO(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
+            DP_matrix_AO(a,b,1) = DP_matrix_AO(a,b,1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
 !           p_y(a,b)
-            DP_matrix_AO(a,b)%dp(2) = DP_matrix_AO(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
+            DP_matrix_AO(a,b,2) = DP_matrix_AO(a,b,2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
 !           p_z(a,b)
-            DP_matrix_AO(a,b)%dp(3) = DP_matrix_AO(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
+            DP_matrix_AO(a,b,3) = DP_matrix_AO(a,b,3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
 
         end do
         end do
@@ -299,7 +299,7 @@ allocate( origin_Independent(Fermi_state) )
 
 ! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
-b = DP_matrix_AO%DP(xyz)
+b = DP_matrix_AO(:,:,xyz)
 
 CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )    
 
@@ -348,7 +348,7 @@ do xyz = 1 , 3
 
         ! origin independent DP = sum{bra * vec{DP_matrix_AO(i,j)} * ket}
 
-        b = DP_matrix_AO%DP(xyz)
+        b = DP_matrix_AO(:,:,xyz)
 
         CALL gemv( b , ket , a , C_one , C_zero )    
 

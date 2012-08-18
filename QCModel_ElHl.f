@@ -14,13 +14,13 @@
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
     use DP_main_m                   , only : DP_matrix_AO
 
-    public :: EigenSystem_ElHl , Huckel , Fields
+    public :: EigenSystem_ElHl , Huckel 
 
     private
 
     ! module variables ...
     complex*16  , allocatable   :: V_coul(:,:)
-    real*8      , allocatable   :: H_DP(:,:)
+    real*8      , allocatable   :: h0(:,:) , H_DP(:,:)
     logical                     :: PTheory
 
 contains
@@ -42,7 +42,7 @@ integer         , optional                 , intent(in)    :: flag2
 
 ! local variables ...
 real*8  , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
-real*8  , ALLOCATABLE   :: h(:,:) , h0(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
 integer                 :: i , j 
  
 PTheory = present(AO_bra) 
@@ -51,29 +51,20 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
 
-ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
-ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
- 
-!-----------------------------------------------------------------------
-  
-if( DP_field_ ) then
-
-    ALLOCATE( H_DP(size(basis),size(basis)) , source = D_zero )
-
-    CALL FIELDS( basis , S_matrix , H_DP )
-
-end if
-
-CALL Huckel( basis , S_matrix , h0 )
-
 !-----------------------------------------------------------------------
 !           Electron Hamiltonian : upper triangle of V_coul ...
+  
+CALL Huckel( basis , S_matrix )
+
+ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
 
 if( DP_field_ ) then
+
+    CALL H_DP_Builder( basis , S_matrix )
 
     h = h0 + H_DP
     if( PTheory ) then
-        forall( j=1:size(basis) ) h(j,j) = h(j,j) + AO_bra(j,1) * AO_ket(j,1) * H_DP(j,j) + V_coul_El(j)
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) + ( AO_bra(j,1)*AO_ket(j,1) * H_DP(j,j) ) + V_coul_El(j)
     else
         forall( j=1:size(basis) ) h(j,j) = h(j,j) + H_DP(j,j) + V_coul_El(j)
     end if
@@ -85,6 +76,8 @@ else
 
 end if
 
+deallocate( h0 )
+
 ! eigensystem for ELECTRON wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , instance="el" )
 
@@ -93,11 +86,15 @@ CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , in
 
 h(:,:) = D_zero
 
+CALL Huckel( basis , S_matrix )
+
 if( DP_field_ ) then
+
+    CALL H_DP_Builder( basis , S_matrix )
 
     h = transpose(h0) + transpose(H_DP)
     if( PTheory ) then
-        forall( j=1:size(basis) ) h(j,j) = h(j,j) - AO_bra(j,2) * AO_ket(j,2) * H_DP(j,j) + V_coul_Hl(j)
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) - ( AO_bra(j,2)*AO_ket(j,2) * H_DP(j,j) ) + V_coul_Hl(j)
     else
         forall( j=1:size(basis) ) h(j,j) = h(j,j) + H_DP(j,j) + V_coul_Hl(j)
     end if
@@ -115,8 +112,6 @@ deallocate( h0 , V_coul_El , V_coul_Hl )
 CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , flag2 , instance="hl" )
 
 deallocate( V_coul )
-
-if( DP_field_ ) deallocate( H_DP )
 
 end subroutine EigenSystem_ElHl
 !
@@ -200,10 +195,13 @@ DEALLOCATE( Rv )
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ! Perturbation terms ...
-! electron-hole interaction ...
-If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
 ! dipole potential interaction ...
 If( PTheory .and. DP_Field_) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
+If( allocated(H_DP) ) deallocate( H_DP )
+
+! electron-hole interaction ...
+If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
+
 
 ! save energies of the TOTAL system 
 If( instance == "hl") then
@@ -222,13 +220,12 @@ end subroutine Build_MO_basis
 !
 !
 !
-!===============================================
-subroutine Huckel( basis , S_matrix , H_Huckel )
-!===============================================
+!====================================
+subroutine Huckel( basis , S_matrix )
+!====================================
 implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
-real*8          , intent(inout) :: H_Huckel(:,:)
 
 ! local variables ... 
 real*8  :: k_eff , k_WH , c1 , c2 , c3
@@ -236,6 +233,8 @@ integer :: i , j
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+
+ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
 
 do j = 1 , size(basis)
 
@@ -250,11 +249,11 @@ do j = 1 , size(basis)
 
         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-        H_Huckel(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
+        h0(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
 
     end do
 
-    H_Huckel(j,j) = basis(j)%IP
+    h0(j,j) = basis(j)%IP
 
 end do
 
@@ -262,13 +261,12 @@ end subroutine Huckel
 !
 !
 !
-!===============================================
-subroutine FIELDS( basis , S_matrix , H_FIELDS )
-!===============================================
+!==========================================
+subroutine H_DP_Builder( basis , S_matrix )
+!==========================================
 implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
-real*8          , intent(out)   :: H_FIELDS(:,:)
 
 ! local variables ... 
 real*8  :: DP(4)
@@ -278,6 +276,8 @@ logical :: flag
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+
+ALLOCATE( H_DP(size(basis),size(basis)) , source = D_zero )
 
 !$OMP PARALLEL DO schedule( GUIDED , 10 )
 do j = 1 , size(basis)
@@ -289,9 +289,9 @@ do j = 1 , size(basis)
 
             DP = DP_phi(i,j,basis)
 
-            vector = DEBYE * DP_matrix_AO(i,j)%dp + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
+            vector = DEBYE * DP_matrix_AO(i,j,:) + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
 
-            H_FIELDS(i,j) = S_matrix(i,j) * DP(1) + dot_product( vector(1:3) , DP(2:4) )
+            H_DP(i,j) = S_matrix(i,j) * DP(1) + dot_product( vector(1:3) , DP(2:4) )
 
         end if
 
@@ -299,7 +299,7 @@ do j = 1 , size(basis)
 end do  
 !$OMP END PARALLEL DO
 
-end subroutine FIELDS
+end subroutine H_DP_Builder
 !
 !
 !
@@ -430,12 +430,14 @@ select case( instance )
 
 end select
 
+deallocate( H_DP )
+
 !===============================================
 !         FIRST ORDER Perturbation
 !===============================================
 ! energy correction ...
 
-allocate( A(n_basis,n_basis)     , source=C_zero )
+allocate( A(n_basis,n_basis) , source=C_zero )
 
 CALL DZgemm( 'N' , 'N' , n_basis , n_basis , n_basis , C_one , QM%L , n_basis , V , n_basis , C_zero , A , n_basis )
 
@@ -489,7 +491,7 @@ end select
 !===============================================
 ! energy correction ...
 
-allocate( A(n_basis,n_basis)     , source=C_zero )
+allocate( A(n_basis,n_basis) , source=C_zero )
 
 CALL DZgemm( 'N' , 'N' , n_basis , n_basis , n_basis , C_one , QM%L , n_basis , V , n_basis , C_zero , A , n_basis )
 

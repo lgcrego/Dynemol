@@ -21,7 +21,7 @@ module DP_excited_m
 
     private
 
-    type(R3_vector) , allocatable :: moiety_DP_matrix_AO(:,:)
+    Real*8 , allocatable :: moiety_DP_matrix_AO(:,:,:)
 
  contains
 !
@@ -156,7 +156,7 @@ do xyz = 1 , 3
 
     ! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
-    b = moiety_DP_matrix_AO%DP(xyz)
+    b = moiety_DP_matrix_AO(:,:,xyz)
 
     forall(i=1:n_basis) a(i) = sum( L_vec(target_state,:)*b(:,i) )
 
@@ -310,9 +310,7 @@ real*8 , dimension(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup) :: rl , rl2
 
 lmult = 1 ! <== DIPOLE MOMENT
 
-allocate( moiety_DP_matrix_AO(size(basis),size(basis)) )
-
-forall(i=1:3) moiety_DP_matrix_AO(:,:)%dp(i) = 0.d0
+allocate( moiety_DP_matrix_AO(size(basis),size(basis),3) , source = D_zero )
 
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
@@ -358,11 +356,11 @@ do ia = 1 , system%atoms
             end if
 
 !           p_x(a,b) 
-            moiety_DP_matrix_AO(a,b)%dp(1) = moiety_DP_matrix_AO(a,b)%dp(1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
+            moiety_DP_matrix_AO(a,b,1) = moiety_DP_matrix_AO(a,b,1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
 !           p_y(a,b)
-            moiety_DP_matrix_AO(a,b)%dp(2) = moiety_DP_matrix_AO(a,b)%dp(2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
+            moiety_DP_matrix_AO(a,b,2) = moiety_DP_matrix_AO(a,b,2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
 !           p_z(a,b)
-            moiety_DP_matrix_AO(a,b)%dp(3) = moiety_DP_matrix_AO(a,b)%dp(3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
+            moiety_DP_matrix_AO(a,b,3) = moiety_DP_matrix_AO(a,b,3) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(3,ma,mb)
 
         end do
         end do
