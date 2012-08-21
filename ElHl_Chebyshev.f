@@ -10,7 +10,6 @@ module ElHl_Chebyshev_m
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis                   
-    use QCModel_Huckel_ElHl , only : Huckel 
     use Data_Output         , only : Populations
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
 
@@ -122,7 +121,6 @@ N = size(basis)
 ! compute S and S_inverse ...
 CALL Overlap_Matrix     ( system , basis , S_matrix )
 
-ALLOCATE                ( h0(N,N) , source = D_zero )
 CALL Huckel             ( basis , S_matrix , h0 )
 
 CALL Invertion_Matrix   ( S_matrix , S_inv )
@@ -499,6 +497,48 @@ do k = 2 , k_max
 end do
 
 end function coefficient
+!
+!
+!
+!=========================================
+subroutine Huckel( basis , S_matrix , h0 )
+!=========================================
+implicit none
+type(STO_basis)               , intent(in)  :: basis(:)
+real*8                        , intent(in)  :: S_matrix(:,:)
+real*8          , allocatable , intent(out) :: h0(:,:)
+
+! local variables ... 
+real*8  :: k_eff , k_WH , c1 , c2 , c3
+integer :: i , j
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+
+ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
+
+do j = 1 , size(basis)
+
+    do i = 1 , j - 1
+
+        c1 = basis(i)%IP - basis(j)%IP
+        c2 = basis(i)%IP + basis(j)%IP
+
+        c3 = (c1/c2)*(c1/c2)
+
+        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+
+        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+
+        h0(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
+
+    end do
+
+    h0(j,j) = basis(j)%IP
+
+end do
+
+end subroutine Huckel
 !
 !
 !

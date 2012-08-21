@@ -219,6 +219,7 @@ do generation = 1 , N_generations
 
     do i = Pop_start , Pop_Size
 
+        ! intent(in):basis ; intent(inout):GA_basis ...    
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
 
         info = 0
@@ -262,6 +263,7 @@ end do
 !-----------------------------------------------
 
 ! optimized Huckel parameters are ...
+! intent(in):basis ; intent(inout):GA_basis ...    
 CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
 
 ! saving the optimized parameters ...

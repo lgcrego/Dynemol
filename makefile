@@ -7,7 +7,7 @@ FREE = -free
 #FREE = -ffree-form 
 
 FFLAGS1 = -O3 
-FFLAGS2 = -O3 -openmp -parallel $(FREE) -static
+FFLAGS2 = -O1 -openmp -parallel $(FREE) -static
 
 LIB_BLAS   = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
 LIB_LAPACK = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread

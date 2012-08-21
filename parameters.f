@@ -56,7 +56,7 @@ logical :: dynamic
 !
   DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  T_                          ! <== use Coulomb interaction among wavepackets
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
