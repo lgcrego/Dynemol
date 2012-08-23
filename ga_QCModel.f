@@ -237,7 +237,7 @@ end function C_Mulliken
  subroutine GA_DP_Analysis( system , basis , L_vec , R_vec , Total_DP )
 !======================================================================
 implicit none
-type(structure) , intent(inout) :: system
+type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , intent(out)   :: Total_DP(3)
@@ -342,14 +342,14 @@ end subroutine Build_DIPOLE_Matrix
  subroutine Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
 !=====================================================================
 implicit none
-type(structure) , intent(inout) :: system
+type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , intent(out)   :: Total_DP(3)
 
 ! local variables ...
 integer                       :: i, j, states, xyz, n_basis, Fermi_state
-real*8                        :: Nuclear_DP(3), Electronic_DP(3) 
+real*8                        :: Nuclear_DP(3), Electronic_DP(3), Center_of_Charge(3)
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:), b(:,:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
@@ -358,11 +358,11 @@ type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
 real*8          , parameter   :: Debye_unit = 4.803204d0
 real*8          , parameter   :: one = 1.d0 , zero = 0.d0
 
-CALL Center_of_Charge(system)
+Center_of_Charge = C_of_C(system)
 
 ! atomic positions measured from the Center of Charge ...
 allocate(R_vector(system%atoms,3))
-forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - system%Center_of_Charge(xyz)
+forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
 forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen(:) * R_vector(:,xyz) )
@@ -442,15 +442,15 @@ end subroutine Dipole_Moment
 !
 !
 !
-!=============================
-subroutine Center_of_Charge(a)
-!=============================
+!================================================
+ function C_of_C(a)    result( Center_of_Charge )
+!================================================
 implicit none
-type(structure) , intent(inout) :: a
+type(structure) , intent(in) :: a
 
 ! local variables
 real*8 , allocatable :: Qi_Ri(:,:) 
-real*8               :: total_valence
+real*8               :: total_valence , Center_of_Charge(3)
 integer              :: i , j
 
 ! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
@@ -461,11 +461,11 @@ integer              :: i , j
 
  total_valence = sum( a%Nvalen )
 
- forall(j=1:3) a%Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
+ forall(j=1:3) Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
 
  deallocate(Qi_Ri)
 
-end subroutine Center_of_Charge
+end function C_of_C
 !
 !
 !
