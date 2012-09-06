@@ -176,7 +176,7 @@ PDOS(nr)%occupation(1) = two * PDOS(nr)%peaks(1)
 do k = 2 , npoints 
     PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k-1) + two*PDOS(nr)%peaks(k) 
 end do
-sub_occupation = underneath_occupation(system,QM,atom,list_of_DOS_states(1))
+sub_occupation = underneath_occupation( system , QM , atom , list_of_DOS_states(1) )
 PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
 
 DEALLOCATE( atom , list_of_DOS_states )

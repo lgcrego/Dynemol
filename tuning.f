@@ -97,8 +97,8 @@ integer  :: i
 ! 
 !   Acceptor    =   A       
 !   Bridge      =   B
-!   Donor       =   D  (defined in ad_hoc)
-!   Electron    =   E  (defined in ad_hoc)
+!   Donor       =   D  (defined ONLY in ad_hoc)
+!   Electron    =   E  (defined ONLY in ad_hoc)
 !   Hole        =   H 
 !   Molecule    =   M
 !   Solvent     =   S
@@ -135,9 +135,6 @@ integer  :: i
         case( 'BP3') 
             a%atom(i)%fragment = '2' 
             a%atom(i)%solvation_hardcore = 7.d0
-
-        case default
-            a%atom(i)%fragment = '#' 
 
     end select
 
