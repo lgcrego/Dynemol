@@ -42,6 +42,7 @@ real*8           , parameter   :: osc_const_parameter = 1.65338d-4  ! <== (2/3)*
 ! . Dipole Transition Matrix <bra|r|ket> = <empty|r|occupied>
 !-------------------------------------------------------------
 
+
 osc_const = osc_const_parameter
 
 npoints = size( SPEC%grid )
@@ -57,6 +58,7 @@ dim_ket = size(trans_DP%ket_PTR)
 allocate( Transition_Strength (dim_bra,dim_ket) )
 
 forall(i=1:dim_bra,j=1:dim_ket)  Transition_Strength(i,j) = sum(Trans_DP%matrix(i,j)%DP**2)
+
 
 ! . the gaussians are not normalized ...
 if( present(internal_sigma) ) then 
@@ -99,9 +101,15 @@ SPEC%func  = SPEC_func
 
 SPEC%average = SPEC%average + SPEC%func
 
+
 deallocate( SPEC_peaks , SPEC_func )
 
+
+
 deallocate( trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
+
+
+
 
 print*, '>> Optical Spectrum done <<'
 
@@ -187,12 +195,12 @@ allocate( right ( dim_basis  , dim_ket) )
 
 forall(i=1:dim_ket) right(:,i) = QM%R(:,DP%ket_PTR(i)) 
 
-!$OMP parallel
+!$OMP parallel 
     do xyz = 1 , 3
 
         !$OMP single
         do j = 1 , dim_basis 
-            !$OMP task
+            !$OMP task shared(left,QM,R_vector)
             do i = 1 , dim_bra   
                 left(i,j) = QM%L(DP%bra_PTR(i),j) * R_vector(basis(j)%atom,xyz) / two
             end do
@@ -202,7 +210,7 @@ forall(i=1:dim_ket) right(:,i) = QM%R(:,DP%ket_PTR(i))
 
         !$OMP single
         do j = 1 , dim_ket   
-            !$OMP task
+            !$OMP task shared(origin_Dependent,left,right)
             do i = 1 , dim_bra 
                 origin_Dependent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) )
             end do
@@ -215,10 +223,10 @@ forall(i=1:dim_ket) right(:,i) = QM%R(:,DP%ket_PTR(i))
 
 forall(i=1:dim_bra) a(i,:) = QM%L(DP%bra_PTR(i),:)
 
-!$OMP parallel
+!$OMP parallel 
     !$OMP single
     do i = 1 , dim_ket 
-        !$OMP task
+        !$OMP task shared(right)
         do j = 1 , dim_basis   
             right(j,i) = QM%L(DP%ket_PTR(i),j)
         end do
@@ -230,10 +238,10 @@ forall(i=1:dim_bra) a(i,:) = QM%L(DP%bra_PTR(i),:)
 do xyz = 1 , 3  
     matrix = DP_matrix_AO(:,:,xyz)
     CALL gemm(a,matrix,left,'N','N',one,zero)    
-    !$OMP parallel
+    !$OMP parallel 
         !$OMP single
         do j = 1 , dim_ket 
-            !$OMP task
+            !$OMP task shared(origin_Independent,left,right)
             do i = 1 , dim_bra  
                 origin_Independent(i,j)%DP(xyz) = sum( left(i,:) * right(:,j) ) / two
             end do
@@ -257,7 +265,7 @@ forall(i=1:dim_bra) right(:,i) = QM%R(:,DP%bra_PTR(i))
 
         !$OMP single
         do j = 1 , dim_basis  
-            !$OMP task
+            !$OMP task shared(left,QM,R_vector)
             do i = 1 , dim_ket   
                 left(i,j) = QM%L(DP%ket_PTR(i),j) * R_vector(basis(j)%atom,xyz) / two
             end do
@@ -267,7 +275,7 @@ forall(i=1:dim_bra) right(:,i) = QM%R(:,DP%bra_PTR(i))
 
         !$OMP single
         do j = 1 , dim_ket   
-            !$OMP task
+            !$OMP task shared(origin_Dependent,left,right)
             do i = 1 , dim_bra   
                 origin_Dependent(i,j)%DP(xyz) = origin_Dependent(i,j)%DP(xyz) + sum( left(j,:) * right(:,i) )
             end do
@@ -283,7 +291,7 @@ forall( i=1:dim_ket ) a(i,:) = QM%L(DP%ket_PTR(i),:)
 !$OMP parallel    
     !$OMP single
     do i = 1 , dim_bra 
-        !$OMP task
+        !$OMP task shared(right)
         do j = 1 , dim_basis   
             right(j,i) =  QM%L(DP%bra_PTR(i),j)
         end do
@@ -291,7 +299,6 @@ forall( i=1:dim_ket ) a(i,:) = QM%L(DP%ket_PTR(i),:)
     end do
     !$OMP end single
 !$OMP end parallel    
-
 
 do xyz = 1 , 3  
     matrix = DP_matrix_AO(:,:,xyz)
