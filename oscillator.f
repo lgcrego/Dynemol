@@ -42,7 +42,6 @@ real*8           , parameter   :: osc_const_parameter = 1.65338d-4  ! <== (2/3)*
 ! . Dipole Transition Matrix <bra|r|ket> = <empty|r|occupied>
 !-------------------------------------------------------------
 
-
 osc_const = osc_const_parameter
 
 npoints = size( SPEC%grid )
@@ -58,7 +57,6 @@ dim_ket = size(trans_DP%ket_PTR)
 allocate( Transition_Strength (dim_bra,dim_ket) )
 
 forall(i=1:dim_bra,j=1:dim_ket)  Transition_Strength(i,j) = sum(Trans_DP%matrix(i,j)%DP**2)
-
 
 ! . the gaussians are not normalized ...
 if( present(internal_sigma) ) then 
@@ -101,15 +99,9 @@ SPEC%func  = SPEC_func
 
 SPEC%average = SPEC%average + SPEC%func
 
-
 deallocate( SPEC_peaks , SPEC_func )
 
-
-
 deallocate( trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
-
-
-
 
 print*, '>> Optical Spectrum done <<'
 
