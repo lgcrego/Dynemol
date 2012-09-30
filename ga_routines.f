@@ -213,7 +213,7 @@ If( CG_ ) then
     allocate( OPT_basis (size(basis)) )
     OPT_basis = CG_basis
 
-    deallocate( GA_basis , CG_basis)
+    deallocate( GA_basis , CG_basis )
 
 else
 

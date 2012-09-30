@@ -36,7 +36,7 @@ implicit none
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
- type(STO_basis) , allocatable  :: GA_basis(:)
+ type(STO_basis) , allocatable  :: OPT_basis(:)
 
  
 ! preprocessing stuff ...................................
@@ -63,10 +63,10 @@ CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 If( DIPOLE_ ) CALL Util_multipoles
 
 ! Optimization of Huckel parameters ... 
-CALL Genetic_Algorithm( Extended_Cell, ExCell_basis, GA_basis )
+CALL Genetic_Algorithm( Extended_Cell, ExCell_basis, OPT_basis )
 
 ! calculations with new parameters ...
-CALL EigenSystem( Extended_Cell, GA_basis, UNI )
+CALL EigenSystem( Extended_Cell, OPT_basis, UNI )
 
 CALL Total_DOS( UNI%erg, TDOS )
 
@@ -74,9 +74,9 @@ do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
 end do
 
-If( DIPOLE_ ) CALL Dipole_Matrix( Extended_Cell, GA_basis, UNI%L, UNI%R, DP )  
+If( DIPOLE_ ) CALL Dipole_Matrix( Extended_Cell, OPT_basis, UNI%L, UNI%R, DP )  
 
-If( spectrum ) CALL Optical_Transitions( Extended_Cell, GA_basis, UNI , SPEC )
+If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 !----------------------------------------------
 ! print zone ...
