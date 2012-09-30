@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -28,23 +28,23 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
-  GaussianCube    = F_                       
-  Survival        = T_                       
+  GaussianCube    = T_                       
+  Survival        = F_                       
   SPECTRUM        = F_                          
-  DP_Moment       = F_                       
-  OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc          = T_                        ! <== ad hoc tuning of parameters
+  DP_Moment       = T_                       
+  OPT_basis       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  ad_hoc          = F_                        ! <== ad hoc tuning of parameters
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <= structure or trajectory
+  file_type    =  "structure"                 ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -54,9 +54,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  T_                          ! <== use Coulomb interaction among wavepackets
+  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -100,6 +100,11 @@ logical :: dynamic
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
+!           OPTIMIZATION parameters
+!
+  CG_ = T_                                  ! <== use conjugate gradient method after genetic algorithm
+
+!--------------------------------------------------------------------
 
 select case( DRIVER )
 
@@ -120,7 +125,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = .true. !(DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
 
 end subroutine Define_Environment
 !

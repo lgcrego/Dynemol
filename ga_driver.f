@@ -36,7 +36,6 @@ implicit none
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
- type(OPT)                      :: REF
  type(STO_basis) , allocatable  :: GA_basis(:)
 
  
@@ -63,12 +62,8 @@ CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
 If( DIPOLE_ ) CALL Util_multipoles
 
-allocate( REF%erg(size(UNI%erg)) )
-REF%erg = UNI%erg
-REF%DP  = [ 0.00 , 0.0 , 0.0 ]
-
 ! Optimization of Huckel parameters ... 
-CALL Genetic_Algorithm( Extended_Cell, ExCell_basis, REF , GA_basis )
+CALL Genetic_Algorithm( Extended_Cell, ExCell_basis, GA_basis )
 
 ! calculations with new parameters ...
 CALL EigenSystem( Extended_Cell, GA_basis, UNI )
@@ -87,18 +82,18 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, GA_basis, UNI , SPEC )
 ! print zone ...
 Print 154, DP, sqrt( dot_product(DP,DP) )
 Print*, " " 
-Print*, UNI%erg(5) - UNI%erg(4)
-Print*, UNI%erg(5) - UNI%erg(3)
-Print*, UNI%erg(4) - UNI%erg(3)
-Print*, UNI%erg(4) - UNI%erg(2)
+Print*, UNI%erg(16) - UNI%erg(15)
+Print*, UNI%erg(17) - UNI%erg(15)
+Print*, UNI%erg(17) - UNI%erg(16)
+Print*, UNI%erg(15) - UNI%erg(14)
 Print*, " "
 
 ! Population analysis ...
 
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(09,:) , UNI%R(:,09) , 09 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(10,:) , UNI%R(:,10) , 10 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(11,:) , UNI%R(:,11) , 11 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(12,:) , UNI%R(:,12) , 12 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(14,:) , UNI%R(:,14) , 14 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(15,:) , UNI%R(:,15) , 15 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(16,:) , UNI%R(:,16) , 16 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(17,:) , UNI%R(:,17) , 17 , 0.d0 )
 !----------------------------------------------
 
 CALL Dump_stuff( TDOS , PDOS , SPEC )

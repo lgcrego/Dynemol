@@ -59,6 +59,10 @@ SOURCE2 = constants_m.o  \
 		  DOS_m.o \
 		  oscillator.o \
 		  ga_QCModel.o \
+		  cost_tuning.o \
+		  CG_class.o \
+		  nonlinearCG.o \
+		  CG_routines.o \
 		  ga_routines.o \
 		  solvated_M.o \
 		  DOS_tool.o \

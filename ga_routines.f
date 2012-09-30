@@ -2,20 +2,23 @@ module GA_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : DP_Moment , F_ , T_
+    use parameters_m            , only : DP_Moment , F_ , T_ , CG_
     use Semi_Empirical_Parms    , only : element => atom 
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,         &
                                          GA_DP_Analysis ,   &
                                          Mulliken
+    use cost_tuning_m           , only : evaluate_cost                                         
+    use CG_driver_m             , only : CG_driver
+
 
     public :: Genetic_Algorithm , Mulliken
 
     private 
 
-    integer , parameter :: Pop_Size       =   400         
-    integer , parameter :: N_generations  =   140        
-    integer , parameter :: Top_Selection  =   70           ! <== top selection < Pop_Size
+    integer , parameter :: Pop_Size       =   40         
+    integer , parameter :: N_generations  =   100
+    integer , parameter :: Top_Selection  =   11           ! <== top selection < Pop_Size
     real*8  , parameter :: Pop_range      =   0.15d0       ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.2           
     logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
@@ -23,66 +26,6 @@ module GA_m
     type(OPT) :: GA
 
 contains
-
-!==============================================
- function evaluate_cost( GA_UNI , basis , REF )
-!==============================================
-implicit none
-type(R_eigen)   , intent(in)  :: GA_UNI
-type(STO_basis) , intent(in)  :: basis(:)
-type(OPT)       , intent(in)  :: REF
-real*8                        :: evaluate_cost
-
-! local variables ...
-real*8   :: chi(20) , weight(20)
-real*8   :: middle_gap
-integer  :: k , HOMO , LUMO
-
-! general definitions ...
-chi(:) = 0.d0   ;   weight(:) = 0.d0
-
-!============================================================
-! IODIDES ...
-! HOMO-LUMO gaps ...
-
-chi(1) = ( GA%erg(91) - GA%erg(90) ) - 2.6515d0    ; weight(1) = 2.0d0
-
-chi(2) = ( GA%erg(90) - GA%erg(89) ) - 0.2515d0    ; weight(2) = 2.0d0
-
-chi(3) = ( GA%erg(89) - GA%erg(88) ) - 0.0000d0    ; weight(3) = 1.0d0
-
-chi(4) = ( GA%erg(92) - GA%erg(91) ) - 0.1000d0    ; weight(4) = 1.0d0 
-
-chi(5) = ( GA%erg(93) - GA%erg(92) ) - 0.0000d0    ; weight(5) = 1.0d0 
-
-! Population analysis ...
-
-chi(6) =  Mulliken(GA_UNI,basis,MO=93,atom=1) - 0.05d0      ; weight(6) =  1.0d0
-
-chi(7) =  Mulliken(GA_UNI,basis,MO=92,atom=1) - 0.05d0      ; weight(7) =  1.0d0
-
-chi(8) =  Mulliken(GA_UNI,basis,MO=91,atom=1) - 0.00d0      ; weight(8) =  2.0d0
-
-
-chi(9)   =  Mulliken(GA_UNI,basis,MO=90,atom=1) - 0.85d0    ; weight(9)  =  3.0d0
-
-chi(10)  =  Mulliken(GA_UNI,basis,MO=89,atom=1) - 0.75d0    ; weight(10) =  3.0d0
-
-chi(11)  =  Mulliken(GA_UNI,basis,MO=88,atom=1) - 0.75d0    ; weight(11) =  3.0d0
-
-chi(12)  =  Mulliken(GA_UNI,basis,MO=87,atom=1) - 0.00d0    ; weight(12) =  1.0d0
-
-chi(13)  =  Mulliken(GA_UNI,basis,MO=86,atom=1) - 0.00d0    ; weight(13) =  1.0d0
-
-! Total DIPOLE moment ...
-chi(14)  = dot_product( GA%DP , GA%DP ) - dot_product( REF%DP , REF%DP )     ; weight(14) = 3.d0
-!============================================================
-
-! apply weight on chi and evaluate cost ...
-chi = chi * weight
-evaluate_cost = sqrt( dot_product(chi,chi) )
-
-end function evaluate_cost
 !
 !
 !
@@ -171,14 +114,13 @@ end subroutine modify_EHT_parameters
 !
 !
 !
-!========================================================= 
-subroutine Genetic_Algorithm(system, basis, REF, GA_basis)
-!========================================================= 	
+!===================================================== 
+subroutine Genetic_Algorithm(system, basis, OPT_basis)
+!=====================================================	
 implicit none
 type(structure)                 , intent(in)  :: system
 type(STO_basis)                 , intent(in)  :: basis(:)
-type(OPT)                       , intent(in)  :: REF
-type(STO_basis) , allocatable   , intent(out) :: GA_basis(:)
+type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 
 ! local variables ...
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,:) , pot(:,:) , Custo(:) 
@@ -186,6 +128,7 @@ real*8                          :: GA_DP(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , j , l , generation , info , Pop_start
 type(R_eigen)                   :: GA_UNI
+type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:)
 
 ! reading input-GA key ...
 CALL Read_GA_key
@@ -209,8 +152,7 @@ indx = [ ( i , i=1,Pop_Size ) ]
 !-----------------------------------------------
 
 ! create new basis ...
-allocate( GA_basis  (size(basis)) )
-allocate( GA%erg    (size(basis)) )
+allocate( GA_basis (size(basis)) )
 GA_basis = basis
 
 allocate( custo(Pop_size) )
@@ -219,8 +161,8 @@ do generation = 1 , N_generations
 
     do i = Pop_start , Pop_Size
 
-        ! intent(in):basis ; intent(inout):GA_basis ...    
-        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
+        ! intent(in):basis ; intent(inout):GA_basis ...
+        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
 
         info = 0
         CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
@@ -233,9 +175,7 @@ do generation = 1 , N_generations
         If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
 
 !       gather data and evaluate population cost ...
-        GA%erg   =  GA_UNI%erg
-        GA%DP    =  GA_DP
-        custo(i) =  evaluate_cost( GA_UNI , GA_basis , REF )
+        custo(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP )
 
     end do
 
@@ -262,14 +202,33 @@ end do
 
 !-----------------------------------------------
 
-! optimized Huckel parameters are ...
-! intent(in):basis ; intent(inout):GA_basis ...    
+! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
 CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
 
-! saving the optimized parameters ...
-CALL Dump_OPT_parameters( GA_basis )
+If( CG_ ) then
 
-deallocate( GA%erg , GA_UNI%L , GA_UNI%R , GA_UNI%erg )
+    CALL CG_driver( Extended_Cell , GA , GA_basis , CG_basis )
+
+    ! create OPT basis ...
+    allocate( OPT_basis (size(basis)) )
+    OPT_basis = CG_basis
+
+    deallocate( GA_basis , CG_basis)
+
+else
+
+    ! create OPT basis ...
+    allocate( OPT_basis (size(basis)) )
+    OPT_basis = GA_basis
+
+    deallocate( GA_basis )
+
+end if
+
+! saving the optimized parameters ...
+CALL Dump_OPT_parameters( OPT_basis )
+
+deallocate( GA_UNI%L , GA_UNI%R , GA_UNI%erg )
 deallocate( Pop , indx , Old_Pop ) 
 
 include 'formats.h'
@@ -436,11 +395,11 @@ end subroutine Read_GA_key
 !
 !
 !
-!==========================================
- subroutine Dump_OPT_parameters( GA_basis )
-!==========================================
+!===========================================
+ subroutine Dump_OPT_parameters( OPT_basis )
+!===========================================
 implicit none
-type(STO_basis) , intent(inout) :: GA_basis(:)
+type(STO_basis) , intent(inout) :: OPT_basis(:)
 
 ! local variables ...
 integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
@@ -454,8 +413,8 @@ N_of_EHSymbol = size( GA%EHSymbol )
 
 allocate( indx_EHS(N_of_EHSymbol) )
 
-! locate position of the first appearance of EHS-atoms in GA_basis
-indx_EHS = [ ( minloc(GA_basis%EHSymbol , 1 , GA_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
+! locate position of the first appearance of EHS-atoms in OPT_basis
+indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
 ! creating file OPT_eht_parameters.output.dat with the optimized parameters ...
 open( unit=13, file='OPT_eht_parameters.output.dat', status='unknown' )
@@ -467,25 +426,25 @@ do n_EHS = 1 , N_of_EHSymbol
 
     i = indx_EHS(n_EHS)
 
-    AngMax = element(GA_basis(i)%AtNo)%AngMax
+    AngMax = element(OPT_basis(i)%AtNo)%AngMax
 
     do L = 0 , AngMax
 
         j = (i-1) + DOS(L)
     
-        write(13,17)    GA_basis(j)%Symbol          ,   &
-                        GA_basis(j)%EHSymbol        ,   &
-                        GA_basis(j)%AtNo            ,   &
-                element(GA_basis(j)%AtNo)%Nvalen    ,   &
-                        GA_basis(j)%Nzeta           ,   &
-                        GA_basis(j)%n               ,   &
-                 Lquant(GA_basis(j)%l)              ,   &
-                        GA_basis(j)%IP              ,   &
-                        GA_basis(j)%zeta(1)         ,   &
-                        GA_basis(j)%zeta(2)         ,   &
-                        GA_basis(j)%coef(1)         ,   &
-                        GA_basis(j)%coef(2)         ,   &
-                        GA_basis(j)%k_WH
+        write(13,17)    OPT_basis(j)%Symbol          ,   &
+                        OPT_basis(j)%EHSymbol        ,   &
+                        OPT_basis(j)%AtNo            ,   &
+                element(OPT_basis(j)%AtNo)%Nvalen    ,   &
+                        OPT_basis(j)%Nzeta           ,   &
+                        OPT_basis(j)%n               ,   &
+                 Lquant(OPT_basis(j)%l)              ,   &
+                        OPT_basis(j)%IP              ,   &
+                        OPT_basis(j)%zeta(1)         ,   &
+                        OPT_basis(j)%zeta(2)         ,   &
+                        OPT_basis(j)%coef(1)         ,   &
+                        OPT_basis(j)%coef(2)         ,   &
+                        OPT_basis(j)%k_WH
     end do
 
 enddo
