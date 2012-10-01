@@ -46,12 +46,12 @@ type(CG_OPT) :: me
 
 me % DP = GA % DP
 
-allocate( me % basis    (size(GA_basis)                     ) , source=GA_basis       )
+allocate( me % basis    (size(GA_basis)                     ) , source=GA_basis    )
 allocate( me % erg      (size(GA%erg)                       ) , source=GA%erg      )
 allocate( me % EHSymbol (size(GA%EHSymbol)                  ) , source=GA%EHSymbol )
 allocate( me % key      (size(GA%key(:,1)),size(GA%key(1,:))) , source=GA%key      )
 
-allocate( me % p(GA%GeneSize) , source=D_zero )
+allocate( me % p(GA%GeneSize) , source=D_zero ) 
 
 end function preprocess
 !
@@ -70,9 +70,8 @@ integer     :: info
 real*8      :: CG_DP(3)
 
 If( .NOT. allocated(CG_basis) ) allocate( CG_basis(size(me%basis)) , source = me%basis)
-!print*, me%basis(1)%k_WH , me%p
+
 call me % modify_EHT_parameters( )
-!print*, me%basis(1)%k_WH 
 
 info = 0
 CALL GA_eigen( Extended_Cell , me%basis , CG_UNI , info )

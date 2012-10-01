@@ -10,7 +10,7 @@ module NonlinearCG_m
         private
 
         ! module parameters ...
-        integer   , parameter :: ITMAX = 300    ! <== this value is a good compromise of accuracy and safety
+        integer   , parameter :: ITMAX = 50     ! <== 100-300 is a good compromise of accuracy and safety
 
         ! module types ...
         type f1com

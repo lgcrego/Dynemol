@@ -19,9 +19,10 @@ MODULE constants_m
 	REAL*8     , PARAMETER :: Hartree_2_eV=27.21138386d0        
     REAL*8     , PARAMETER :: h_bar=6.58264d-4                  ! <== Planck's  constant  (eV * ps)
     REAL*8     , PARAMETER :: debye = 2.0822678d-1              ! <== e*Angs
-    REAL*8     , PARAMETER :: low_prec  = 1.1d-7
-    REAL*8     , PARAMETER :: mid_prec  = 1.d-10
-    REAL*8     , PARAMETER :: high_prec = 1.d-14
+    REAL*8     , PARAMETER :: low_prec   = 1.1d-7
+    REAL*8     , PARAMETER :: mid_prec   = 1.d-10
+    REAL*8     , PARAMETER :: high_prec  = 1.d-14
+    REAL*8     , PARAMETER :: real_large = 1.d+10
 
     complex*16 , parameter :: zi = (0.d0,1.d0)
 

@@ -16,10 +16,10 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   40         
+    integer , parameter :: Pop_Size       =   80         
     integer , parameter :: N_generations  =   100
-    integer , parameter :: Top_Selection  =   11           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.15d0       ! <== range of variation of parameters
+    integer , parameter :: Top_Selection  =   20           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.5d0        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.2           
     logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
@@ -128,7 +128,7 @@ real*8                          :: GA_DP(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , j , l , generation , info , Pop_start
 type(R_eigen)                   :: GA_UNI
-type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:)
+type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
 ! reading input-GA key ...
 CALL Read_GA_key
@@ -200,22 +200,32 @@ do generation = 1 , N_generations
 
 end do
 
-!-----------------------------------------------
-
-! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
-
+!----------------------------------------------------------------
+! Prepare grid of parameters for CG fine tuning optimization ...
+!----------------------------------------------------------------
 If( CG_ ) then
 
-    CALL CG_driver( Extended_Cell , GA , GA_basis , CG_basis )
+    allocate( GA_Selection( size(basis) , Top_Selection ) )
+
+    do i = 1 , Top_Selection 
+        ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
+        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
+
+        GA_Selection(:,i) = GA_basis
+    end do
+
+    CALL CG_driver( Extended_Cell , GA , GA_Selection , CG_basis )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
     OPT_basis = CG_basis
 
-    deallocate( GA_basis , CG_basis )
+    deallocate( GA_basis , CG_basis , GA_Selection )
 
 else
+
+    ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
+    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
