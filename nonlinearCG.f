@@ -58,7 +58,10 @@ real*8  :: g(N),h(N),xi(N)
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
-           If( profiling ) Print*, its , local_minimum
+           If( profiling ) then
+               Print*, its , local_minimum
+               write(32,*) its , local_minimum
+           end If
 
            if( (2.d0*abs(local_minimum-fp)) <= prec*(abs(local_minimum)+abs(fp)+prec) )  goto 100
 

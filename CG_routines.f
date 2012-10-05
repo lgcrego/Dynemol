@@ -2,6 +2,7 @@ module CG_driver_m
 
     use type_m
     use constants_m
+    use parameters_m            , only : profiling
     use CG_class_m              , only : CG_OPT
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
 
@@ -29,6 +30,8 @@ type(STO_basis) , allocatable   , intent(out)   :: CG_basis(:)
 ! local variables ...
 integer                 :: i , GlobalMinimum
 real*8  , allocatable   :: local_minimum(:) , InitialCost(:)
+
+If( profiling ) OPEN( unit=32 , file='CG-log.dat' , status='unknown' )
 
 Top_Selection = min( Top_Selection , size(GA_Selection(1,:)) )
 
@@ -60,6 +63,8 @@ print*, GlobalMinimum
 
 allocate( CG_basis (size(CG%basis)) )
 CG_basis = GA_Selection(:,GlobalMinimum)
+
+If( profiling ) close(32)
 
 end subroutine CG_driver
 !
