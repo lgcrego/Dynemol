@@ -40,7 +40,7 @@ contains
 !=================================================
 implicit none
 type(STO_basis) , intent(in)  :: GA_basis(:)
-type(OPT)       , intent(in)  :: GA
+type(OPT)       , intent(in)  :: GA!
 
 type(CG_OPT) :: me
 

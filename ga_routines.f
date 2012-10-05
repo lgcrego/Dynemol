@@ -18,8 +18,8 @@ module GA_m
 
     integer , parameter :: Pop_Size       =   80         
     integer , parameter :: N_generations  =   100
-    integer , parameter :: Top_Selection  =   20           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.5d0        ! <== range of variation of parameters
+    integer , parameter :: Top_Selection  =   10           ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.2d0        ! <== range of variation of parameters
     real*8  , parameter :: Mutation_rate  =   0.2           
     logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 

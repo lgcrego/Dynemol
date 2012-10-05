@@ -1,6 +1,7 @@
 module NonlinearCG_m
 
         use constants_m         , only: prec => mid_prec 
+        use parameters_m        , only: profiling
         use CG_class_m          , only: CG_OPT
 
         implicit none
@@ -21,6 +22,7 @@ module NonlinearCG_m
 
         ! module variables ...
         integer     :: NMAX  
+        real*8      :: BracketSize = 1.d-3      ! <== this value may vary between 1.0d-3 and 1.0d-5
         type(f1com) :: f1
 
 contains      
@@ -55,8 +57,9 @@ real*8  :: g(N),h(N),xi(N)
            iter=its
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
-print*, its, local_minimum
-write(32,*) its, local_minimum
+
+           If( profiling ) Print*, its , local_minimum
+
            if( (2.d0*abs(local_minimum-fp)) <= prec*(abs(local_minimum)+abs(fp)+prec) )  goto 100
 
            fp=local_minimum
@@ -106,7 +109,7 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
 
 ! Initial guess for brackets.
  ax=0.0d0                                            
- xx=1.0d-3                                              ! <== this value may vary between 1.0d-3 and 1.0d-4
+ xx=BracketSize
 
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 

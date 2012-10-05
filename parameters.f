@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -103,6 +103,8 @@ logical :: dynamic
 !           OPTIMIZATION parameters
 !
   CG_ = T_                                  ! <== use conjugate gradient method after genetic algorithm
+
+  profiling = T_                            ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 
