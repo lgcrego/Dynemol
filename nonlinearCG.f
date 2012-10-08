@@ -1,6 +1,6 @@
 module NonlinearCG_m
 
-        use constants_m         , only: prec => mid_prec 
+        use constants_m         , only: real_large , prec => mid_prec 
         use parameters_m        , only: profiling
         use CG_class_m          , only: CG_OPT
 
@@ -62,6 +62,11 @@ real*8  :: g(N),h(N),xi(N)
                Print*, its , local_minimum
                write(32,*) its , local_minimum
            end If
+
+           if( local_minimum > fp ) then
+               local_minimum = real_large
+               goto 100
+           end if
 
            if( (2.d0*abs(local_minimum-fp)) <= prec*(abs(local_minimum)+abs(fp)+prec) )  goto 100
 
