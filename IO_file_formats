@@ -21,7 +21,7 @@ CRYST1      T_x    T_y    T_z
 MODEL       integer                                                   fmt(a4)
 ATOM      1  MMSymbol  residue    nr     x    y    z   
 ATOM      2     .         .       .      .    .    .      
-ATOM      3     .         .       .      .    .    .                  fmt(13x, a3, t18, a3, t24, i7, t33, f6.3, t41, f6.3, t49, f6.3)
+ATOM      3     .         .       .      .    .    .                  fmt(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 ATOM      .     .         .       .      .    .    .      
 ATOM      .     .         .       .      .    .    .     
 TER
@@ -33,7 +33,7 @@ CRYST1      T_x    T_y    T_z
 MODEL       integer                                                   fmt(a4)
 ATOM      1  MMSymbol  residue    nr     x    y    z   
 ATOM      2     .         .       .      .    .    .      
-ATOM      3     .         .       .      .    .    .                  fmt(13x, a3, t18, a3, t24, i7, t33, f6.3, t41, f6.3, t49, f6.3)
+ATOM      3     .         .       .      .    .    .                  fmt(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 ATOM      .     .         .       .      .    .    .      
 ATOM      .     .         .       .      .    .    .     
   .       .     .         .       .      .    .    .
