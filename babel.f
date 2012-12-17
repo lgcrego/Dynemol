@@ -571,7 +571,7 @@ end do
 33 format(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 35 format(a4)
 36 format(7x, i7)
-37 format(32x, f6.3, t41, f6.3, t49, f6.3)
+37 format(t31,f8.3,t39,f8.3,t47,f8.3)
 38 format(10x, a1)
 39 format(81x, f7.0)
 40 format(6x, 3f9.3)
