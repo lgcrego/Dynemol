@@ -5,7 +5,7 @@
     use parameters_m            , only : initial_state
     use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
-    use Structure_Builder       , only : Unit_Cell
+    use Structure_Builder       , only : Extended_Cell
     use Slater_Type_Orbitals    , only : s_orb , p_orb , d_x2y2 , d_z2 , d_xyz  
 
     public :: Gaussian_Cube_Format 
@@ -47,7 +47,7 @@
 
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
- allocate(xyz(unit_cell%atoms,3))
+ allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i4.4)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
@@ -55,7 +55,7 @@
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
- CALL BoundingBox( unit_cell ) 
+ CALL BoundingBox( extended_cell ) 
 
 ! fix number of steps for each direction according to aspect ratio ... 
  do i = 1 , 3
@@ -63,19 +63,19 @@
     ! default case
     n_xyz_steps(i) = medium_steps
 
-    If( unit_cell%BoxSides(i) >= 2.5d1 ) n_xyz_steps(i) = many_steps
+    If( extended_cell%BoxSides(i) >= 2.5d1 ) n_xyz_steps(i) = many_steps
 
-    If( unit_cell%BoxSides(i) <= 1.2d1 ) n_xyz_steps(i) = few_steps
+    If( extended_cell%BoxSides(i) <= 1.2d1 ) n_xyz_steps(i) = few_steps
 
  end do
 
 !  voxel dimensions
- dx = unit_cell%BoxSides(1) / n_xyz_steps(1) 
- dy = unit_cell%BoxSides(2) / n_xyz_steps(2) 
- dz = unit_cell%BoxSides(3) / n_xyz_steps(3)      
+ dx = extended_cell%BoxSides(1) / n_xyz_steps(1) 
+ dy = extended_cell%BoxSides(2) / n_xyz_steps(2) 
+ dz = extended_cell%BoxSides(3) / n_xyz_steps(3)      
 
 !  translation to the center of mass
- forall(i=1:unit_cell%atoms,j=1:3) xyz(i,j) = unit_cell%coord(i,j) - unit_cell%Center_of_Mass(j)
+ forall(i=1:extended_cell%atoms,j=1:3) xyz(i,j) = extended_cell%coord(i,j) - extended_cell%Center_of_Mass(j)
 
 ! initial corner of the volume Box 
  a = minval(xyz(:,1)) - fringe / two
@@ -86,14 +86,14 @@
  write(4,*) System_Characteristics
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
- write(4,111) unit_cell%atoms , a/aB , b/aB , c/aB
+ write(4,111) extended_cell%atoms , a/aB , b/aB , c/aB
  write(4,111) n_xyz_steps(1) + 1 , dx/aB   , 0.d0 , 0.d0 
  write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/aB   , 0.d0
  write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/aB
 
- DO i = 1 , unit_cell%atoms
+ DO i = 1 , extended_cell%atoms
  
-    write(4,113) unit_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
+    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
 
  END DO
 
@@ -129,9 +129,9 @@
 
         i = 0 
         TotalPsiKet = C_zero 
-        DO k = 1 , unit_cell%atoms
+        DO k = 1 , extended_cell%atoms
 
-            AtNo = unit_cell%AtNo(k)
+            AtNo = extended_cell%AtNo(k)
 
             ! distance from the center of the nuclei
 
@@ -234,7 +234,7 @@
 
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
- allocate(xyz(unit_cell%atoms,3))
+ allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i4.4)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
@@ -242,7 +242,7 @@
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
- CALL BoundingBox( unit_cell ) 
+ CALL BoundingBox( extended_cell ) 
 
 ! fix number of steps for each direction according to aspect ratio ... 
  do i = 1 , 3
@@ -250,19 +250,19 @@
     ! default case
     n_xyz_steps(i) = medium_steps
 
-    If( unit_cell%BoxSides(i) >= 2.5d1 ) n_xyz_steps(i) = many_steps
+    If( extended_cell%BoxSides(i) >= 2.5d1 ) n_xyz_steps(i) = many_steps
 
-    If( unit_cell%BoxSides(i) <= 1.2d1 ) n_xyz_steps(i) = few_steps
+    If( extended_cell%BoxSides(i) <= 1.2d1 ) n_xyz_steps(i) = few_steps
 
  end do
 
 !  voxel dimensions
- dx = unit_cell%BoxSides(1) / n_xyz_steps(1) 
- dy = unit_cell%BoxSides(2) / n_xyz_steps(2) 
- dz = unit_cell%BoxSides(3) / n_xyz_steps(3)      
+ dx = extended_cell%BoxSides(1) / n_xyz_steps(1) 
+ dy = extended_cell%BoxSides(2) / n_xyz_steps(2) 
+ dz = extended_cell%BoxSides(3) / n_xyz_steps(3)      
 
 !  translation to the center of mass
- forall(i=1:unit_cell%atoms,j=1:3) xyz(i,j) = unit_cell%coord(i,j) - unit_cell%Center_of_Mass(j)
+ forall(i=1:extended_cell%atoms,j=1:3) xyz(i,j) = extended_cell%coord(i,j) - extended_cell%Center_of_Mass(j)
 
 ! initial corner of the volume Box 
  a = minval(xyz(:,1)) - fringe / two
@@ -273,14 +273,14 @@
  write(4,*) System_Characteristics
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
- write(4,111) unit_cell%atoms , a/aB , b/aB , c/aB
+ write(4,111) extended_cell%atoms , a/aB , b/aB , c/aB
  write(4,111) n_xyz_steps(1) + 1 , dx/aB   , 0.d0 , 0.d0 
  write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/aB   , 0.d0
  write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/aB
 
- DO i = 1 , unit_cell%atoms
+ DO i = 1 , extended_cell%atoms
  
-    write(4,113) unit_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
+    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
 
  END DO
 
@@ -317,9 +317,9 @@
         i = 0 
         TotalPsiBra = C_zero 
         TotalPsiKet = C_zero 
-        DO k = 1 , unit_cell%atoms
+        DO k = 1 , extended_cell%atoms
 
-            AtNo = unit_cell%AtNo(k)
+            AtNo = extended_cell%AtNo(k)
 
             ! distance from the center of the nuclei
 
