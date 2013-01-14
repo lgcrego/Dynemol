@@ -25,6 +25,7 @@ module type_m
         real*8       , allocatable :: coord(:,:)
         real*8       , allocatable :: k_WH(:)
         real*8       , allocatable :: solvation_hardcore(:)
+        real*8       , allocatable :: polar(:)
         real*8                     :: BoxSides(3)
         real*8                     :: Center_of_Mass(3)
         real*8                     :: Center_of_Charge(3)
@@ -41,6 +42,7 @@ module type_m
         real*8                        :: mass
         real*8                        :: charge
         real*8                        :: solvation_hardcore
+        real*8                        :: polar
         integer                       :: AtNo
         integer                       :: Nvalen
         integer                       :: nr
@@ -103,6 +105,7 @@ module type_m
         real*8           :: coef(0:3,2)
         real*8           :: k_WH(0:3)
         integer          :: DOS 
+        real*8           :: polar
     end type EHT     
 
 

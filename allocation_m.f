@@ -32,6 +32,7 @@
     allocate( unit_cell % El                 (unit_cell%atoms)   )
     allocate( unit_cell % Hl                 (unit_cell%atoms)   )
     allocate( unit_cell % solvation_hardcore (unit_cell%atoms)   )
+    allocate( unit_cell % polar              (unit_cell%atoms)   )
 
     If( present(n_residues) ) allocate( unit_cell % list_of_residues   (n_residues) )
     If( present(n_residues) ) allocate( unit_cell % list_of_fragments  (n_residues) )
@@ -66,6 +67,7 @@
     allocate( System % El                 (System_size)   )
     allocate( System % Hl                 (System_size)   )
     allocate( System % solvation_hardcore (System_size)   )
+    allocate( System % polar              (System_size)   )
  
     System%N_of_Solvent_Molecules = 0
 
@@ -131,6 +133,7 @@
     deallocate( unit_cell % El                 )
     deallocate( unit_cell % Hl                 )
     deallocate( unit_cell % solvation_hardcore )
+    deallocate( unit_cell % polar              )
 
     If( allocated(unit_cell%list_of_residues ) ) deallocate( unit_cell%list_of_residues  )
     If( allocated(unit_cell%list_of_fragments) ) deallocate( unit_cell%list_of_fragments )
@@ -160,6 +163,7 @@
     deallocate( System % El                 )
     deallocate( System % Hl                 )
     deallocate( System % solvation_hardcore )
+    deallocate( System % polar              )
 
     If( allocated(System%list_of_residues ) ) deallocate( System%list_of_residues  )
     If( allocated(System%list_of_fragments) ) deallocate( System%list_of_fragments )

@@ -659,6 +659,7 @@ a % DPF                       = .false.
 a % El                        = .false.
 a % Hl                        = .false.
 a % Nvalen                    = 0
+a % polar                     = 0
 a % N_of_electrons            = 0
 a % N_of_Solvent_Molecules    = 0
 

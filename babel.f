@@ -70,6 +70,7 @@ forall( j=1:unit_cell%atoms )
     unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
 
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
+    unit_cell % polar    (j)   =  atom(unit_cell%AtNo(j))%polar
 
 end forall
 
@@ -146,6 +147,7 @@ end subroutine Coords_from_Universe
  CLOSE(3)
 
  Unit_cell % Nvalen (:)   =  atom(unit_cell%AtNo(:)) % Nvalen
+ Unit_cell % polar  (:)   =  atom(unit_cell%AtNo(:)) % polar 
  Unit_cell % MMSymbol     =  Unit_Cell % Symbol
 
  include 'formats.h'
@@ -490,6 +492,7 @@ do j = 1 , model
         CALL Setting_Fragments  ( trj(j)      )
 
         trj(j)%atom%Nvalen    =  atom(trj(j)%atom%AtNo)%Nvalen
+        trj(j)%atom%polar     =  atom(trj(j)%atom%AtNo)%polar 
 
     else
 
@@ -542,6 +545,7 @@ forall(i = 2:model )
     trj(i) % atom % solvation_hardcore  =  trj(1) % atom % solvation_hardcore   
 
     trj(i) % atom % Nvalen              =  atom(trj(1)%atom%AtNo) % Nvalen
+    trj(i) % atom % polar               =  atom(trj(1)%atom%AtNo) % polar 
 
 end forall
 
@@ -572,6 +576,7 @@ end do
 35 format(a4)
 36 format(7x, i7)
 37 format(t31,f8.3,t39,f8.3,t47,f8.3)
+38 format(10x, a1)
 39 format(81x, f7.0)
 40 format(6x, 3f9.3)
 41 format(f13.7)
