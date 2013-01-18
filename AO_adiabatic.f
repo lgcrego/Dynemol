@@ -102,7 +102,7 @@ do frame = frame_init , size(trj) , frame_step
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
 
-!    write(30,*) t , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
+    write(30,*) t , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -277,7 +277,7 @@ do n = 1 , n_part
         end select
 end do
 
-!write(*,*) 0.0 , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
+write(30,*) 0.0 , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
