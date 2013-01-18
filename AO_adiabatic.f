@@ -7,6 +7,7 @@ module AO_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , state_of_matter , &
                                              DP_Field_ , DP_Moment ,        &
+                                             Induced_ ,                     &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
@@ -29,6 +30,7 @@ module AO_adiabatic_m
                                              Dipole_Moment
     use TD_Dipole_m                 , only : wavepacket_DP                                        
     use DP_potential_m              , only : Molecular_DPs                                              
+    use Polarizability_m            , only : Build_Induced_DP
     use Solvated_M                  , only : Prepare_Solvated_System 
     use QCModel_Huckel              , only : EigenSystem                                                 
     use Schroedinger_m              , only : DeAllocate_QDyn
@@ -83,6 +85,8 @@ t_rate = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) 
 
 do frame = frame_init , size(trj) , frame_step
 
+    write(22,*) t , -sum( ( MO_bra(:,1)*MO_ket(:,1) ) * log( MO_bra(:,1)*MO_ket(:,1) ) ) 
+
     t = t + t_rate 
 
     if( (it >= n_t) .OR. (t >= t_f) ) exit    
@@ -97,6 +101,8 @@ do frame = frame_init , size(trj) , frame_step
         MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j) 
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
+
+!    write(30,*) t , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -142,6 +148,8 @@ do frame = frame_init , size(trj) , frame_step
     CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
+
+    If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
 
     Deallocate              ( UNI%R , UNI%L , UNI%erg )
 
@@ -211,6 +219,8 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
+If( Induced_  ) CALL Build_Induced_DP( instance = "allocate" )
+
 If( DP_field_ ) then
     hole_save  = hole_state
     hole_state = 0
@@ -266,6 +276,8 @@ do n = 1 , n_part
 
         end select
 end do
+
+!write(*,*) 0.0 , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -366,6 +378,12 @@ select case( instance )
         end If
         write(51,'(5F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
         close(51)
+
+    case( "Induced_DP" ) 
+
+        If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
+        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 end select
 

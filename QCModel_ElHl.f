@@ -289,7 +289,7 @@ do j = 1 , size(basis)
 
             DP = DP_phi(i,j,basis)
 
-            vector = DEBYE * DP_matrix_AO(i,j,:) + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
+            vector = DEBYE_inv * DP_matrix_AO(i,j,:) + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
 
             H_DP(i,j) = S_matrix(i,j) * DP(1) + dot_product( vector(1:3) , DP(2:4) )
 

@@ -298,7 +298,7 @@ where( (nr_Mols == basis(a)%nr) .OR. (nr_Mols == basis(b)%nr) )
 end where
 
 ! first order ...
-DP_phi = sum( mol_phi )
+DP_phi(1) = sum( mol_phi )
 
 ! second order ...
 forall( j=1:3 ) DP_phi(j+1) = sum( mol_phi2(:,j) )

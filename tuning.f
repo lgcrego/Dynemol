@@ -29,22 +29,25 @@ integer :: i , ioerr
 !      define %residue
 !-----------------------------------
 
+!univ % atom (1:65)% residue = "C60"
+!univ % atom (67)% residue = "C60"
+!univ % atom (206:209)% residue = "C60"
+
+!univ % atom (68:182)% residue = "PPH"
+!univ % atom (66)% residue = "PPH"
+
+!univ % atom (183:205)% residue = "LIG"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
 
- where( univ % atom % nr <= 4 ) univ % atom % nr = 1
- where( univ % atom % nr >  4 ) univ % atom % nr = univ % atom % nr - 3
  
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
 
 !default: %DPF = F_
- where( univ % atom % residue == "ION" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP1" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP2" ) univ % atom % DPF = .true.
- where( univ % atom % residue == "BP3" ) univ % atom % DPF = .true.
 
 !use default: %DPF = %solute  
 ! where( univ % atom % DPF ) univ % atom % solute = .true.
@@ -53,14 +56,13 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
+ where( univ % atom % residue == "PPH" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 
-! where( univ % atom % residue == "ION" ) univ % atom % Hl = .true.
- where( univ % atom % residue == "BP1" ) univ % atom % Hl = .true.
+ where( univ % atom % residue == "PPH" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
@@ -120,21 +122,16 @@ integer  :: i
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
 
-        case( 'ION') 
-            a%atom(i)%fragment = 'I' 
-            a%atom(i)%solvation_hardcore = 7.d0
+        case( 'PPH') 
+            a%atom(i)%solvation_hardcore = 2.d0
 
-        case( 'BP1') 
-            a%atom(i)%fragment = 'D' 
-            a%atom(i)%solvation_hardcore = 7.d0
+        case( 'C60') 
+            a%atom(i)%fragment = '0' 
+            a%atom(i)%solvation_hardcore = 2.d0
 
-        case( 'BP2') 
+        case( 'LIG') 
             a%atom(i)%fragment = '1' 
-            a%atom(i)%solvation_hardcore = 7.d0
-
-        case( 'BP3') 
-            a%atom(i)%fragment = '2' 
-            a%atom(i)%solvation_hardcore = 7.d0
+            a%atom(i)%solvation_hardcore = 2.d0
 
     end select
 

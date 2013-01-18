@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -28,23 +28,23 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
-  GaussianCube    = T_                       
-  Survival        = F_                       
+  GaussianCube    = F_                       
+  Survival        = T_                       
   SPECTRUM        = F_                          
-  DP_Moment       = T_                       
-  OPT_basis       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc          = F_                        ! <== ad hoc tuning of parameters
+  DP_Moment       = F_                       
+  OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <= structure or trajectory
+  file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -57,6 +57,8 @@ logical :: dynamic
   DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
+
+  Induced_     =  T_                          ! <== use dipole potential for solvent molecules
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -70,11 +72,11 @@ logical :: dynamic
 
   n_part = 2                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  29                           ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  143                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  30                           ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  146                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters

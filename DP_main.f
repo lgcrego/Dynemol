@@ -99,7 +99,7 @@ real*8          , allocatable :: R_vector(:,:)
 logical         , allocatable :: AO_mask(:)
 
 ! local parameters ...
-real*8          , parameter   :: Debye_unit = 4.803204d0
+real*8          , parameter   :: Debye_unit = 4.803204d0    ! <== e[C]*d[Angs]*4.803204 = p[Debye]
 
 ! define system for DP_Moment calculation ...
 allocate( AO_mask(size(basis)) , source = .true. )

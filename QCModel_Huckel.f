@@ -4,6 +4,7 @@
     use omp_lib
     use constants_m
     use parameters_m                , only : DP_Field_  ,       &
+                                             Induced_ ,         &
                                              driver ,           &
                                              verbose
     use mkl95_precision
@@ -12,6 +13,7 @@
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use DP_main_m                   , only : DP_matrix_AO
+    use polarizability_m            , only : Induced_DP_phi
 
     public :: EigenSystem , Huckel , Huckel_with_FIELDS
 
@@ -47,12 +49,13 @@
 
  If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
 
- ALLOCATE(h(size(basis),size(basis)),dumb_s(size(basis),size(basis)))
+ ALLOCATE( h     (size(basis),size(basis)) , source=D_zero)
+ ALLOCATE( dumb_s(size(basis),size(basis)) , source=D_zero)
 
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_s = S_matrix
 
- If( DP_field_ ) then
+ If( DP_field_ .OR. Induced_ ) then
 
 !$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
@@ -76,7 +79,7 @@
 
  end If
 
- CALL SYGVD(h,dumb_s,QM%erg,1,'V','U',info)
+ CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'U' , info )
 
  If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
  If ( present(flag1) ) flag1 = info
@@ -167,6 +170,7 @@
  end function Huckel
 !
 !
+!
 !================================================
  pure function Huckel_with_FIELDS(i,j,S_ij,basis)
 !================================================
@@ -176,8 +180,8 @@
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
-real*8   :: DP(4)
-real*8   :: r0(3) , Ri(3) , vector(3)
+ real*8   :: DP(4)
+ real*8   :: r0(3) , Ri(3) , vector(3)
  real*8  :: Huckel_with_FIELDS
  real*8  :: k_eff , k_WH , c1 , c2 , c3
  logical :: flag
@@ -210,10 +214,12 @@ real*8   :: r0(3) , Ri(3) , vector(3)
      Ri(2) = basis(i)%y
      Ri(3) = basis(i)%z
 
-     vector = DEBYE * DP_matrix_AO(i,j,:) + S_ij * ( Ri - r0 )    ! <== in Angs
+     vector = DEBYE_inv * DP_matrix_AO(i,j,:) + S_ij * ( Ri - r0 )    ! <== in Angs
 
-     DP = DP_phi(i,j,basis)
+!     DP = DP_phi(i,j,basis)
     
+     DP = Induced_DP_phi(i,j,basis)
+
      huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP(1) + dot_product( vector(1:3) , DP(2:4) )
 
  end if

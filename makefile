@@ -52,6 +52,7 @@ SOURCE2 = constants_m.o  \
 		  DP_FMO.o \
 		  dipole_phi.o \
 		  Coulomb.o \
+		  polarizability.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
 		  data_output.o \
