@@ -42,14 +42,14 @@
  real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
  integer                  :: AtNo , i , j , ix , iy , iz , k 
  character(len=2)         :: prefix
- character(len=4)         :: string 
- character(len=21)        :: f_name
+ character(len=5)         :: string 
+ character(len=22)        :: f_name
 
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
  allocate(xyz(extended_cell%atoms,3))
 
- write(string,'(i4.4)') it
+ write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
  f_name = prefix//'_MO_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
@@ -229,14 +229,14 @@
  real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
  integer                  :: AtNo , i , j , ix , iy , iz , k 
  character(len=2)         :: prefix
- character(len=4)         :: string 
- character(len=23)        :: f_name
+ character(len=5)         :: string 
+ character(len=22)        :: f_name
 
  real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
 
  allocate(xyz(extended_cell%atoms,3))
 
- write(string,'(i4.4)') it
+ write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
  f_name = prefix//'_dens_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
