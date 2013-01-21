@@ -113,7 +113,7 @@ do frame = frame_init , size(trj) , frame_step
 
     CALL dump_Qdyn( Qdyn , it )
 
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( it , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
