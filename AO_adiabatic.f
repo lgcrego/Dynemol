@@ -147,7 +147,7 @@ do frame = frame_init , size(trj) , frame_step
 
     CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
+    If( DP_field_ )         CALL DP_stuff ( t , "DP_field"   )
 
     If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
 
@@ -217,9 +217,9 @@ el_hl_ = any( Unit_Cell%Hl )
  
 CALL Generate_Structure ( 1 )
 
-CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_  ) CALL Build_Induced_DP( instance = "allocate" )
+If( Induced_ ) CALL Build_Induced_DP( instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -290,9 +290,11 @@ CALL dump_Qdyn( Qdyn , it )
 
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix" )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment" )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
+
+If( Induced_     ) CALL DP_stuff ( t_i , "Induced_DP" )
 
 !..........................................................................
 
@@ -336,8 +338,8 @@ end subroutine Send_to_GaussianCube
  subroutine DP_stuff( t , instance )
 !===================================
 implicit none
-real*8          , intent(in)    :: t
-character(*)    , intent(in)    :: instance
+real*8        , intent(in)    :: t
+character(*)  , intent(in)    :: instance
 
 !local variables ...
 integer :: i
@@ -383,7 +385,7 @@ select case( instance )
 
         If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t )
 
 end select
 

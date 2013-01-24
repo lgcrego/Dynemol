@@ -2,35 +2,37 @@
 
     use type_m
     use constants_m
-    use parameters_m            , only : file_type
+    use parameters_m            , only : file_type ,                &
+                                         CH_and_DP ,                &
+                                         CH_and_DP_step
+    use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
     use Structure_Builder       , only : system => Extended_Cell    
 
     public :: Build_Induced_DP , Induced_DP_phi
-
     
     ! module variables ...       
-    real*8 , allocatable , save :: Induced_DP(:,:)
-
+    integer              , save :: counter = 0
+    real*8 , allocatable , save :: Induced_DP(:,:) , net_charge(:)
     
 contains
 !
 !
 !
-!=====================================================================
- subroutine Build_Induced_DP( basis , Dual_bra , Dual_ket , instance )
-!=====================================================================
+!=========================================================================
+ subroutine Build_Induced_DP( basis , Dual_bra , Dual_ket , t , instance )
+!=========================================================================
 implicit none
 type(STO_basis)   , optional    , intent(in)    :: basis(:)
 complex*16        , optional    , intent(in)    :: Dual_bra(:,:)
 complex*16        , optional    , intent(in)    :: Dual_ket(:,:)
+real*8            , optional    , intent(in)    :: t
 character(*)      , optional    , intent(in)    :: instance
 
 ! local variables ...
 integer                 :: ati , atj , N_of_atoms
 real*8                  :: distance , decay , charge_El , charge_Hl 
 real*8                  :: vector(3)
-real*8  , allocatable   :: net_charge(:) 
 real*8  , allocatable   :: local_E_field(:,:)  
 
 ! local parameters ...
@@ -42,12 +44,11 @@ N_of_atoms = system%atoms
 ! setup of Induced_DP ... 
 If( instance == "allocate" ) then
     allocate( Induced_DP (N_of_atoms,3) , source = D_zero )
+    allocate( net_charge (N_of_atoms)   , source = D_zero )
     return
 end If
 
 ! calculate atomic net charges due to wavepacket ...
-allocate( net_charge(N_of_atoms) , source = D_zero )
-
 do ati = 1 , N_of_atoms
 
     charge_El = abs( sum( Dual_bra(:,1)*Dual_ket(:,1) , basis(:)%atom == ati ) )
@@ -90,7 +91,11 @@ end do
 ! NOTICE: dipole moment is multiplied by DP_potential_factor ...
 Induced_DP = Induced_DP * DP_potential_factor * half
 
-deallocate( net_charge , local_E_field )
+If( CH_and_DP .AND. (mod(counter,CH_and_DP_step)==0) ) CALL visualize_Induced_DP (t)
+
+counter = counter + 1
+
+deallocate( local_E_field )
 
 end subroutine Build_Induced_DP
 !
@@ -194,6 +199,65 @@ deallocate( vector , decay , distance , DP_Mols , id_atom , mol_phi , mol_phi2 )
 
 end function Induced_DP_phi
 !
+!
+!
+!=====================================
+ subroutine visualize_Induced_DP ( t )
+!=====================================
+implicit none
+real*8  , intent(in) :: t
+
+! local variables ...
+integer :: ati , i , j , N_of_DP
+real*8  , allocatable   :: mod_p(:) 
+
+N_of_DP = size(Induced_DP(:,1))
+
+allocate( mod_p(N_of_DP) )
+
+do ati = 1 , N_of_DP
+    mod_p(ati) = sqrt( sum(Induced_DP(ati,:)*Induced_DP(ati,:)) )
+end do
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN(unit=114 , file="tmp_data/dipole-frames.pdb" , status = "unknown", action = "write" , position = "append" )
+
+If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
+
+write(114,4) 'REMARK' , 'manipulated by charge-transfer'
+write(114,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
+write(114,4) 'REMARK' , 'manipulated by charge-transfer'
+write(114,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+write(114,3) 'MODEL'  , counter
+
+do i = 1 , system%atoms
+
+            write(114,2)'HETATM'                        ,  &    ! <== non-standard atom
+                        i                               ,  &    ! <== global number
+                        system%Symbol(i)                ,  &    ! <== atom type
+                        system%residue(i)               ,  &    ! <== residue name
+                        system%nr(i)                    ,  &    ! <== residue sequence number
+                        ( system%coord(i,j) , j=1,3 )   ,  &    ! <== xyz coordinates
+                        net_charge(i)                   ,  &    ! <== wavepacket occupancy
+                        mod_p(i)                        ,  &    ! <== modulus of atomic dipole moment
+                        system%Symbol(i)                        ! <== chemical element symbol
+
+end do
+
+write(114,'(a)') 'TER'
+write(114,'(a)') 'ENDMDL'
+
+close(114)
+
+1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
+2 FORMAT(a6,i5,t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t56,f8.5,t65,f8.5,t77,a2)
+3 FORMAT(a6,i9,11i7)
+4 FORMAT(a6,t15,a31)
+5 FORMAT(a5,t15,a39,f9.5)
+6 FORMAT(a6,a72)
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+end subroutine visualize_Induced_DP
 !
 !
 !

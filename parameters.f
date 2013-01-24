@@ -3,7 +3,7 @@ MODULE parameters_m
 use type_m
 
 integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
-integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step
+integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 real*8                  :: t_i , t_f , sigma
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -32,20 +32,25 @@ logical :: dynamic
 !			
   state_of_matter = "extended_sys"            ! <== solvated_sys , extended_sys 
 !			
-  GaussianCube    = F_                       
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
   OPT_basis       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
-  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
-
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
   file_type    =  "trajectory"                ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
+!--------------------------------------------------------------------
+!           VISUALIZATION flags
+!
+  GaussianCube      = F_                       
+  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
+
+  CH_and_DP         = T_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
+  CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
