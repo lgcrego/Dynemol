@@ -4,6 +4,8 @@
     use omp_lib
     use constants_m
     use parameters_m                , only : DP_Field_  ,       &
+                                             Induced_ ,         &
+                                             Coulomb_ ,         &
                                              driver ,           &
                                              verbose
     use mkl95_precision
@@ -13,6 +15,7 @@
     use DP_potential_m              , only : DP_phi
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
     use DP_main_m                   , only : DP_matrix_AO
+    use Polarizability_m            , only : Induced_DP_phi
 
     public :: EigenSystem_ElHl , Huckel 
 
@@ -49,7 +52,16 @@ PTheory = present(AO_bra)
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
+If ( Coulomb_ ) then
+
+    CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
+
+else
+    ! does not calculate V_coul further ...
+    allocate( V_coul_El (size(basis)) , source = D_zero )
+    allocate( V_coul_Hl (size(basis)) , source = D_zero )
+
+end If
 
 !-----------------------------------------------------------------------
 !           Electron Hamiltonian : upper triangle of V_coul ...
@@ -58,7 +70,7 @@ CALL Huckel( basis , S_matrix )
 
 ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
 
-if( DP_field_ ) then
+if( DP_field_ .OR. Induced_ ) then
 
     CALL H_DP_Builder( basis , S_matrix )
 
@@ -88,13 +100,13 @@ h(:,:) = D_zero
 
 CALL Huckel( basis , S_matrix )
 
-if( DP_field_ ) then
+if( DP_field_ .OR. Induced_ ) then
 
     CALL H_DP_Builder( basis , S_matrix )
 
     h = transpose(h0) + transpose(H_DP)
     if( PTheory ) then
-        forall( j=1:size(basis) ) h(j,j) = h(j,j) - ( AO_bra(j,2)*AO_ket(j,2) * H_DP(j,j) ) + V_coul_Hl(j)
+        forall( j=1:size(basis) ) h(j,j) = h(j,j) - ( AO_bra(j,2)*AO_ket(j,2) * H_DP(j,j) )  + V_coul_Hl(j)
     else
         forall( j=1:size(basis) ) h(j,j) = h(j,j) + H_DP(j,j) + V_coul_Hl(j)
     end if
@@ -111,7 +123,7 @@ deallocate( h0 , V_coul_El , V_coul_Hl )
 ! eigensystem for HOLE wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , flag2 , instance="hl" )
 
-deallocate( V_coul )
+If( allocated(V_coul) ) deallocate( V_coul )
 
 end subroutine EigenSystem_ElHl
 !
@@ -196,11 +208,11 @@ DEALLOCATE( Rv )
 
 ! Perturbation terms ...
 ! dipole potential interaction ...
-If( PTheory .and. DP_Field_) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
+If( PTheory .and. DP_Field_ ) CALL V_DP_off_Diagonal( QM , AO_bra , AO_ket , instance )
 If( allocated(H_DP) ) deallocate( H_DP )
 
 ! electron-hole interaction ...
-If( PTheory ) CALL V_Coul_off_Diagonal( QM , instance )
+If( PTheory .and. Coulomb_  ) CALL V_Coul_off_Diagonal( QM , instance )
 
 
 ! save energies of the TOTAL system 
@@ -287,7 +299,9 @@ do j = 1 , size(basis)
 
         if( flag ) then
 
-            DP = DP_phi(i,j,basis)
+!            DP = DP_phi(i,j,basis)
+
+            DP = Induced_DP_phi(i,j,basis)
 
             vector = DEBYE_inv * DP_matrix_AO(i,j,:) + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
 

@@ -1,0 +1,13 @@
+set mol [mol new DipoleFrames.pdb waitfor all] 
+set sel [atomselect $mol all] 
+set nf [molinfo $mol get numframes] 
+set atm [molinfo $mol get numatoms]
+set fp [open DipoleSize.inpt r] 
+set line ""
+for {set i 0} {$i < $nf} {incr i} { 
+  gets $fp line 
+  $sel frame $i 
+  $sel set user $line 
+} 
+close $fp 
+$sel delete 

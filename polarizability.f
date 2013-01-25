@@ -219,8 +219,25 @@ do ati = 1 , N_of_DP
     mod_p(ati) = sqrt( sum(Induced_DP(ati,:)*Induced_DP(ati,:)) )
 end do
 
+
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=114 , file="tmp_data/dipole-frames.pdb" , status = "unknown", action = "write" , position = "append" )
+!saving net_charge ...
+OPEN(unit=112 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+do ati = 1 , N_of_DP
+    write(112,'(F9.5)',advance='no') net_charge(ati) 
+end do
+close(112)
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+!saving Induced atomic dipole sizes ...
+OPEN(unit=113 , file="tmp_data/DipoleSize.inpt" , status = "unknown", action = "write" , position = "append" )
+do ati = 1 , N_of_DP
+    write(113,'(F9.5)',advance='no') mod_p(ati) 
+end do
+close(113)
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN(unit=114 , file="tmp_data/DipoleFrames.pdb" , status = "unknown", action = "write" , position = "append" )
 
 If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
 

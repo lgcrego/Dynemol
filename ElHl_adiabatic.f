@@ -7,6 +7,7 @@ module ElHl_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , state_of_matter , &
                                              DP_Field_ , DP_Moment ,        &
+                                             Induced_ ,                     &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
@@ -29,6 +30,7 @@ module ElHl_adiabatic_m
                                              Dipole_Moment
     use TD_Dipole_m                 , only : wavepacket_DP                                        
     use DP_potential_m              , only : Molecular_DPs                                              
+    use Polarizability_m            , only : Build_Induced_DP
     use Solvated_M                  , only : Prepare_Solvated_System 
     use QCModel_Huckel_ElHl         , only : EigenSystem_ElHl                                            
     use Schroedinger_m              , only : DeAllocate_QDyn
@@ -99,6 +101,8 @@ do frame = frame_init , size(trj) , frame_step
         MO_ket(:,j) =       phase(:,j)  * MO_ket(:,j) 
     end forall
 
+    write(30,*) t , Real(sum(UNI_el%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI_hl%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
+
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
     CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
@@ -111,7 +115,7 @@ do frame = frame_init , size(trj) , frame_step
 
     CALL dump_Qdyn( Qdyn , it )
 
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( it , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
@@ -145,7 +149,9 @@ do frame = frame_init , size(trj) , frame_step
 
     CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )         CALL DP_stuff ( t , "DP_field" )
+    If( DP_field_ )         CALL DP_stuff ( t , "DP_field"   )
+
+    If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
 
     ! LOCAL representation for Coulomb calculation ...
     AO_bra = DUAL_bra
@@ -220,7 +226,9 @@ end select
 
 CALL Generate_Structure ( 1 )
 
-CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+
+If( Induced_ ) CALL Build_Induced_DP ( instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -234,8 +242,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-If(DP_Field_ ) &
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+If (DP_Field_ .OR. Induced_) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
 
@@ -294,6 +301,8 @@ If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix" )
 
 If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment" )
+
+If( Induced_     ) CALL DP_stuff ( t_i , "Induced_DP" )
 
 !..........................................................................
 
@@ -381,6 +390,12 @@ select case( instance )
         end If
         write(51,'(5F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
         close(51)
+
+    case( "Induced_DP" ) 
+
+        If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
+        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t )
 
 end select
 
