@@ -274,7 +274,7 @@ DO it = 1 , n_t
    DUAL_bra = AO_bra
    CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
-   Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+   Pops(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
 
    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 

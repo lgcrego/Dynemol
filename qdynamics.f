@@ -3,7 +3,8 @@ module qdynamics_m
  use type_m
  use constants_m
  use parameters_m           , only : spectrum , DP_Moment , &
-                                     survival , DP_Field_ 
+                                     survival , DP_Field_ , &
+                                     NetCharge
  use Solvated_M             , only : DeAllocate_TDOS ,      &
                                      DeAllocate_PDOS ,      &
                                      DeAllocate_SPEC 
@@ -23,7 +24,8 @@ module qdynamics_m
  use Schroedinger_m         , only : Huckel_dynamics ,      &
                                      ElHl_dynamics ,        &
                                      DeAllocate_QDyn
- use Data_Output            , only : Dump_stuff
+ use Data_Output            , only : Dump_stuff ,           &
+                                     Net_Charge
 
  public :: qdynamics
 
@@ -66,6 +68,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 ! Quantum Dynamics ...
 
  CALL Generate_Structure(1)
+
+ If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 

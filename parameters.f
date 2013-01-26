@@ -11,7 +11,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -49,7 +49,8 @@ logical :: dynamic
   GaussianCube      = F_                       
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  CH_and_DP         = T_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
+  NetCharge         = T_                      ! <== pdb format charge Occupancy ONLY
+  CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
   CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -135,6 +136,8 @@ static = .not. dynamic
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
+
+If ( NetCharge .AND. Ch_and_DP ) stop ">>> NetCharge and Ch_and_DP should not be set simultaneously <<< "
 
 end subroutine Define_Environment
 !

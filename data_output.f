@@ -3,16 +3,24 @@
     use type_m
     use parameters_m        , only  : n_part ,      &
                                       spectrum ,    &
-                                      survival
+                                      survival ,    &
+                                      NetCharge ,   &
+                                      CH_and_DP_step
     use FMO_m               , only  : eh_tag                                      
-
-    public :: Populations   , Dump_stuff
+    use Babel_m             , only  : System_Characteristics    
+    use Structure_Builder   , only  : system => Extended_Cell    
 
     private
+
+    public :: Populations , Dump_stuff , Net_Charge
 
     interface Populations
         module procedure Populations_vct , Populations_mtx
     end interface Populations
+
+    ! module variables ...
+    integer                , save :: counter = 0
+    real*8  , allocatable  , save :: Net_Charge(:)
 
  contains
 !
@@ -29,7 +37,7 @@
  real*8                        :: Populations_vct( 0:size(QDyn_fragments)+1 )
 
 ! local variables ...
-integer             :: nf , N_of_fragments
+integer             :: nf , N_of_fragments , ati
 character(len=1)    :: fragment 
 
 !-------------------------------------------------------------
@@ -57,6 +65,19 @@ end do
 ! total population ...
 Populations_vct(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
 
+! atomic net-charge ...
+If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
+
+    do ati = 1 , system%atoms
+        Net_Charge(ati) = abs( sum( bra(:)*ket(:) , basis(:)%atom == ati ) )
+    end do
+
+    CALL dump_NetCharge (t) 
+
+    counter = counter + 1
+
+end If
+
 !---------------------------------------------------- 
 
 end function Populations_vct
@@ -74,7 +95,8 @@ end function Populations_vct
  real*8                        :: Populations_mtx( 0:size(QDyn_fragments)+1 , n_part)
 
 ! local variables ...
-integer             :: n , nf , N_of_fragments
+integer             :: n , nf , N_of_fragments , ati
+real*8              :: charge_El , charge_Hl
 character(len=1)    :: fragment 
 
 !-----------------------------------------------------------------------
@@ -105,6 +127,22 @@ do n = 1 , n_part
     Populations_mtx( N_of_fragments+1 , n ) = pop_Slater( basis , bra(:,n) , ket(:,n) )
 
 end do
+
+! atomic net-charge ...
+If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
+
+    do ati = 1 , system%atoms
+        charge_El = abs( sum( bra(:,1)*ket(:,1) , basis(:)%atom == ati ) )
+        charge_Hl = abs( sum( bra(:,2)*ket(:,2) , basis(:)%atom == ati ) )
+
+        Net_Charge(ati) = charge_HL - charge_EL
+    end do
+
+    CALL dump_NetCharge (t) 
+
+    counter = counter + 1
+
+end If
 
 !---------------------------------------------------- 
 
@@ -208,6 +246,66 @@ end if
 pop_Slater = real( pop )
 
 end function
+!
+!
+!
+!===============================
+ subroutine dump_NetCharge ( t )
+!===============================
+implicit none
+real*8  , intent(in) :: t
+
+! local variables ...
+integer :: ati , i , j , N_of_atoms
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+!saving net_charge ...
+OPEN(unit=112 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+do ati = 1 , system%atoms
+    write(112,'(F9.5)',advance='no') net_charge(ati) 
+end do
+close(112)
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+OPEN(unit=114 , file="tmp_data/DipoleFrames.pdb" , status = "unknown", action = "write" , position = "append" )
+
+If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
+
+write(114,4) 'REMARK' , 'manipulated by charge-transfer'
+write(114,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
+write(114,4) 'REMARK' , 'manipulated by charge-transfer'
+write(114,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+write(114,3) 'MODEL'  , counter
+
+do i = 1 , system%atoms
+
+            write(114,2)'HETATM'                        ,  &    ! <== non-standard atom
+                        i                               ,  &    ! <== global number
+                        system%Symbol(i)                ,  &    ! <== atom type
+                        system%residue(i)               ,  &    ! <== residue name
+                        system%nr(i)                    ,  &    ! <== residue sequence number
+                        ( system%coord(i,j) , j=1,3 )   ,  &    ! <== xyz coordinates
+                        net_charge(i)                   ,  &    ! <== wavepacket occupancy
+                        0.d0                            ,  &    ! <== modulus of atomic dipole moment
+                        system%Symbol(i)                        ! <== chemical element symbol
+
+end do
+
+write(114,'(a)') 'TER'
+write(114,'(a)') 'ENDMDL'
+
+close(114)
+
+1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
+2 FORMAT(a6,i5,t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t56,f8.5,t65,f8.5,t77,a2)
+3 FORMAT(a6,i9,11i7)
+4 FORMAT(a6,t15,a31)
+5 FORMAT(a5,t15,a39,f9.5)
+6 FORMAT(a6,a72)
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+end subroutine dump_NetCharge
+!
 !
 !
 end module Data_Output

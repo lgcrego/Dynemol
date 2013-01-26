@@ -7,7 +7,7 @@ module ElHl_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , state_of_matter , &
                                              DP_Field_ , DP_Moment ,        &
-                                             Induced_ ,                     &
+                                             Induced_ , NetCharge ,         &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
@@ -35,7 +35,8 @@ module ElHl_adiabatic_m
     use QCModel_Huckel_ElHl         , only : EigenSystem_ElHl                                            
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations
+    use Data_Output                 , only : Populations ,                  &
+                                             Net_Charge
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
@@ -225,6 +226,8 @@ select case ( state_of_matter )
 end select
 
 CALL Generate_Structure ( 1 )
+
+If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
