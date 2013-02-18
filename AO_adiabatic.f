@@ -40,6 +40,7 @@ module AO_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
+    use MM_dynamics_m               , only : Molecular_Mechanic_dt
 
     public :: AO_adiabatic
 
@@ -62,9 +63,9 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-integer                :: j , frame , frame_init , frame_restart
-real*8                 :: t , t_rate 
-type(universe)         :: Solvated_System
+type(universe)          :: Solvated_System
+real*8                  :: t , t_rate
+integer                 :: j , frame , frame_init , frame_end , frame_restart
 
 it = 1
 t  = t_i
@@ -81,12 +82,21 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
+if( state_of_matter == "MDynamic" ) then
+    t_rate    = t_f / float(n_t)
+    frame_end = n_t
+else
+    t_rate    = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+    frame_end = size(trj)
+end if
 
-t_rate = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+print*, t_rate
 
-do frame = frame_init , size(trj) , frame_step
+frame_init = 1
+frame_end  = 20
+t_rate = 1.0d-15
 
-    write(22,*) t , -sum( ( MO_bra(:,1)*MO_ket(:,1) ) * log( MO_bra(:,1)*MO_ket(:,1) ) ) 
+do frame = frame_init , frame_end , frame_step
 
     t = t + t_rate 
 
@@ -99,11 +109,9 @@ do frame = frame_init , size(trj) , frame_step
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
     forall( j=1:n_part )   
-        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j) 
+        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
-
-    write(30,*) t , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -118,7 +126,7 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    CALL DeAllocate_UnitCell    ( Unit_Cell     )
+    if( state_of_matter /= "MDynamic" ) CALL DeAllocate_UnitCell ( Unit_Cell )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
@@ -136,6 +144,10 @@ do frame = frame_init , size(trj) , frame_step
         case( "extended_sys" )
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+        case( "MDynamic" )
+            
+            CALL Molecular_Mechanic_dt( t_rate , frame )
 
         case default
 
@@ -167,6 +179,7 @@ do frame = frame_init , size(trj) , frame_step
     print*, frame 
 
 end do
+stop
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -206,6 +219,8 @@ select case ( state_of_matter )
     case( "extended_sys" )
 
         CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+
+    case( "MDynamic" )
 
     case default
 
@@ -267,7 +282,7 @@ do n = 1 , n_part
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
 
             Print 591, orbital(n) , el_FMO%erg(orbital(n))
-        
+       
         case( "hl" )
 
             If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
@@ -279,8 +294,6 @@ do n = 1 , n_part
 
         end select
 end do
-
-write(30,*) 0.0 , Real(sum(UNI%erg(:)*MO_bra(:,1)*MO_ket(:,1))) ,  Real(sum(UNI%erg(:)*MO_bra(:,2)*MO_ket(:,2)))
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )

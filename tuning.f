@@ -56,13 +56,13 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "PPH" ) univ % atom % El = .true.
+ where( univ % atom % residue == "XXX" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 
- where( univ % atom % residue == "PPH" ) univ % atom % Hl = .true.
+! where( univ % atom % residue == "HH1" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
@@ -133,6 +133,10 @@ integer  :: i
             a%atom(i)%fragment = '1' 
             a%atom(i)%solvation_hardcore = 2.d0
 
+        case( 'XXX') 
+            a%atom(i)%fragment = 'D' 
+            a%atom(i)%solvation_hardcore = 2.d0
+
     end select
 
  END DO
@@ -140,5 +144,122 @@ integer  :: i
 end subroutine Setting_Fragments
 
 end module tuning_m 
+!
+!
+!
+module tuning_routines
 
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+use project             , only : MM_atomic
+
+contains
+
+!==================================
+subroutine ad_hoc_tuning_MD(system)
+!==================================
+implicit none
+type(MM_atomic)  , intent(inout) :: system(:)
+
+! local variables ...
+integer :: i 
+
+
+!----------------------------------
+!      define SPECIAL atoms 
+!----------------------------------
+
+!----------------------------------
+!      define MM atom types 
+!----------------------------------
+
+!----------------------------------
+!      define my_species
+!----------------------------------
+
+!----------------------------------
+!      define resid's
+!----------------------------------
+
+!----------------------------------
+!      define nresid's
+!----------------------------------
+
+
+!----------------------------------
+!     Selective_Dynamics
+!----------------------------------
+
+!where(system % Symbol /= "H") system % free = .false.
+
+!----------------------------------
+!       charge of the atoms 
+!----------------------------------
+
+!----------------------------------
+!CALL Information_from_ITP( system ) 
+!----------------------------------
+
+end subroutine ad_hoc_tuning_MD
+
+end module tuning_routines
+!
+!
+!
+module syst
+ real*8                                 :: temper, press, talt, talp, Initial_density
+ real*8                                 :: Ekin     = 0.d0
+ real*8                                 :: DensTot  = 0.d0
+ real*8                                 :: TempTot  = 0.d0
+ real*8                                 :: PressTot = 0.d0
+end module syst
+!
+!
+!
+module for_force
+ integer                               :: forcefield
+ real*8                                :: rcut, vrecut, frecut, rcutsq, pot, ecoul, eintra, evdw, bdpot, angpot, dihpot
+ real*8, dimension(:,:)  , allocatable :: vscut, fscut
+ real*8, dimension(:,:,:), allocatable :: tmp_fsr, tmp_fch
+ real*8, dimension(:,:)  , allocatable :: erfkr
+ real*8                                :: KAPPA, vself, lj14pot, coul14pot, pot2
+ character(4)                          :: Dihedral_Potential_Type
+end module for_force
+!
+!
+!
+module atomicmass
+ real*8, dimension(1:107) :: atmas = (/                               &
+    1.008,   4.003,   6.939,   9.012,  10.811,  12.011,  14.007,      &
+   15.999,  18.998,  20.183,  22.989,  24.312,  26.982,  28.086,      &
+   30.974,  32.064,  35.453,  39.948,  39.102,  40.080,  44.956,      &
+   47.900,  50.942,  51.996,  54.938,  55.847,  58.933,  58.710,      &
+   63.540,  65.370,  69.720,  72.590,  74.922,  78.960,  79.909,      &
+   83.800,  85.470,  87.620,  88.905,  91.220,  92.906,  95.940,      &
+   98.000, 101.070, 102.905, 106.400, 107.870, 112.400, 114.820,      &
+  118.690, 121.750, 127.600, 126.904, 131.300, 132.905, 137.340,      &
+  138.910, 140.120, 140.907, 144.240, 147.000, 150.350, 151.960,      &
+  157.250, 158.924, 162.500, 164.930, 167.260, 168.934, 173.040,      &
+  174.970, 178.490, 180.948, 183.850, 186.200, 190.200, 192.200,      &
+  195.090, 196.967, 200.590, 204.370, 207.190, 208.980, 210.000,      &
+  210.000, 222.000, 223.000, 226.000, 227.000, 232.038, 231.000,      &
+  238.030, 237.000, 242.000, 243.000, 247.000, 247.000, 249.000,      &
+  254.000, 253.000, 256.000, 254.000, 257.000,  13.019,  14.027,      &
+   15.035,  15.035  /)
+
+ character*2, dimension(1:107) :: aicon = (/                          &
+     ' H',    'HE',    'LI',    'BE',    ' B',    ' C',    ' N',      &
+     ' O',    ' F',    'NE',    'NA',    'MG',    'AL',    'SI',      &
+     ' P',    ' S',    'CL',    'AR',    ' K',    'CA',    'SC',      &
+     'TI',    ' V',    'CR',    'MN',    'FE',    'CO',    'NI',      &
+     'CU',    'ZN',    'GA',    'GE',    'AS',    'SE',    'BR',      &
+     'KR',    'RB',    'SR',    ' Y',    'ZR',    'NB',    'MO',      &
+     'TC',    'RU',    'RH',    'PD',    'AG',    'CD',    'IN',      &
+     'SN',    'SB',    'TE',    ' I',    'XE',    'CS',    'BA',      &
+     'LA',    'CE',    'PR',    'ND',    'PM',    'SM',    'EU',      &
+     'GD',    'TB',    'DY',    'HO',    'ER',    'TM',    'YB',      &
+     'LU',    'HF',    'TA',    ' W',    'RE',    'OS',    'IR',      &
+     'PT',    'AU',    'HG',    'TL',    'PB',    'BI',    'PO',      &
+     'AT',    'RN',    'FR',    'RA',    'AC',    'TH',    'PA',      &
+     ' U',    'NP',    'PU',    'AM',    'CM',    'BK',    'CF',      &
+     'ES',    'FM',    'MD',    'NO',    'LW',    ' C',    ' C',      &
+     ' C',    ' C'  /)
+end module atomicmass

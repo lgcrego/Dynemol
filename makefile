@@ -33,6 +33,7 @@ SOURCE1 = integ-Coul.o \
 SOURCE2 = constants_m.o  \
 		  exec_time.o  \
 		  type_m.o  \
+		  types_MM.o \
 		  parameters.o  \
 		  allocation_m.o  \
 		  util.o  \
@@ -71,6 +72,13 @@ SOURCE2 = constants_m.o  \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
+		  md_read.o	\
+		  f_intra.o \
+		  f_inter.o \
+		  md_setup.o \
+		  md_output.o \
+		  md_dynamics.o \
+		  MM_dynamics.o \
 		  ElHl_Chebyshev.o \
 		  Chebyshev.o \
 		  AO_adiabatic.o \
