@@ -55,6 +55,7 @@ module AO_adiabatic_m
 contains
 !
 !
+!
 !====================================
  subroutine AO_adiabatic( Qdyn , it )
 !====================================
@@ -133,6 +134,7 @@ do frame = frame_init , frame_end , frame_step
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
+    print*, 10
     select case ( state_of_matter )
 
         case( "solvated_sys" )
@@ -147,7 +149,9 @@ do frame = frame_init , frame_end , frame_step
 
         case( "MDynamic" )
             
+            print*, 11
             CALL Molecular_Mechanic_dt( t_rate , frame )
+            print*, 12
 
         case default
 
@@ -229,7 +233,7 @@ select case ( state_of_matter )
 
 end select
 
-el_hl_ = any( Unit_Cell%Hl ) 
+el_hl_ = any( Unit_Cell%Hl )
  
 CALL Generate_Structure ( 1 )
 
