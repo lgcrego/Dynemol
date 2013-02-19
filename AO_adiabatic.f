@@ -123,7 +123,7 @@ do frame = frame_init , frame_end , frame_step
 
     CALL dump_Qdyn( Qdyn , it )
 
-    If( GaussianCube .AND. mod(frame,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( frame , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
@@ -134,7 +134,6 @@ do frame = frame_init , frame_end , frame_step
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
-    print*, 10
     select case ( state_of_matter )
 
         case( "solvated_sys" )
@@ -149,9 +148,7 @@ do frame = frame_init , frame_end , frame_step
 
         case( "MDynamic" )
             
-            print*, 11
             CALL Molecular_Mechanic_dt( t_rate , frame )
-            print*, 12
 
         case default
 
@@ -183,7 +180,6 @@ do frame = frame_init , frame_end , frame_step
     print*, frame 
 
 end do
-stop
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
