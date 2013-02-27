@@ -40,7 +40,7 @@ module AO_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use MM_dynamics_m               , only : Molecular_Mechanic_dt
+    use MM_dynamics_m               , only : MolecularDynamics
 
     public :: AO_adiabatic
 
@@ -127,7 +127,7 @@ do frame = frame_init , frame_end , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    if( state_of_matter /= "MDynamic" ) CALL DeAllocate_UnitCell ( Unit_Cell )
+    if( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell ( Unit_Cell )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
@@ -146,9 +146,9 @@ do frame = frame_init , frame_end , frame_step
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
-        case( "MDynamic" )
+        case( "MDynamics" )
             
-            CALL Molecular_Mechanic_dt( t_rate , frame )
+            CALL MolecularDynamics( t_rate , frame )
 
         case default
 
@@ -176,8 +176,6 @@ do frame = frame_init , frame_end , frame_step
     !============================================================================
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
-
-    print*, frame 
 
 end do
 
@@ -220,7 +218,7 @@ select case ( state_of_matter )
 
         CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
 
-    case( "MDynamic" )
+    case( "MDynamics" )
 
     case default
 

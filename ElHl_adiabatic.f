@@ -40,7 +40,6 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-!    use MM_dynamics_m               , only : Mechanic_Molecular_dt
 
     public :: ElHl_adiabatic
 
@@ -140,15 +139,7 @@ do frame = frame_init , size(trj) , frame_step
 
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
-        case( "MDynamic" )
-
-!            print*, 1
-!            CALL Mechanic_Molecular_dt
-
-!            print*, 2
-!            stop
-
-            CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+        case( "MDynamics" )
 
         case default
 
@@ -229,11 +220,7 @@ select case ( state_of_matter )
 
         CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
 
-    case( "MDynamic" )
-
-!        print*, 23
-
-!        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+    case( "MDynamics" )
 
     case default
 
@@ -242,17 +229,13 @@ select case ( state_of_matter )
 
 end select
 
-print*, 1
 CALL Generate_Structure ( 1 )
-print*, 2
 
 If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
-print*, 3
 
 If( Induced_ ) CALL Build_Induced_DP ( instance = "allocate" )
-print*, 4
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -269,28 +252,22 @@ end If
 If (DP_Field_ .OR. Induced_) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
-print*, 5
 
 ! build the initial electron-hole wavepacket ...
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )
-print*, 1324
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_hl%R , hl_FMO , instance="H" )
 
-print*, 32435
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
                           MO_bra   , MO_ket   ,       &
                           AO_bra   , AO_ket   ,       &
                           DUAL_bra , DUAL_ket ,       &
                           bra      , ket      , phase )
 
-print*, 9
 mm = size(ExCell_basis)                         
 
-print*, 10
 ! initial state of the isolated molecule ...
 Print 56 , initial_state     
 
-print*, 11
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0 ...
 do n = 1 , n_part                         
     select case( eh_tag(n) )
@@ -316,8 +293,6 @@ do n = 1 , n_part
         end select
 end do
 
-print*, 6
-
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )
 CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm , C_zero , DUAL_ket(:,1) , mm )
@@ -325,7 +300,6 @@ CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , MO_ket(:,1) , mm 
 CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
 CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
-print*, 7
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 

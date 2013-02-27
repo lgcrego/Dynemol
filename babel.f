@@ -54,12 +54,10 @@ select case( file_type )
 CALL Allocate_UnitCell( Unit_Cell , n_residues )
 
 ! coordinates and other info from input data ...
-!forall( j=1:unit_cell%atoms )
-do j = 1 , Unit_Cell % atoms
+forall( j=1:unit_cell%atoms )
 
     unit_cell % coord              (j,:) =  System % atom(j) % xyz(:)
     unit_cell % AtNo               (j)   =  System % atom(j) % AtNo  
-!    print*, Unit_Cell % AtNo(j)
     unit_cell % fragment           (j)   =  System % atom(j) % fragment
     unit_cell % Symbol             (j)   =  System % atom(j) % Symbol
     unit_cell % residue            (j)   =  System % atom(j) % residue
@@ -74,9 +72,7 @@ do j = 1 , Unit_Cell % atoms
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
     unit_cell % polar    (j)   =  atom(unit_cell%AtNo(j))%polar
 
-end do
-!end forall
-!stop
+end forall
 
 unit_cell%N_of_Solvent_Molecules = System%N_of_Solvent_Molecules
 

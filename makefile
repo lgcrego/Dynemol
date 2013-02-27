@@ -42,6 +42,13 @@ SOURCE2 = constants_m.o  \
 		  babel_routines.o  \
 		  babel.o  \
 		  structure.o  \
+		  md_read.o	\
+		  f_intra.o \
+		  f_inter.o \
+		  md_setup.o \
+		  md_output.o \
+		  md_dynamics.o \
+		  MM_dynamics.o \
 		  pbc.o  \
 		  overlap_D.o  \
 		  STO.o \
@@ -72,13 +79,6 @@ SOURCE2 = constants_m.o  \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-		  md_read.o	\
-		  f_intra.o \
-		  f_inter.o \
-		  md_setup.o \
-		  md_output.o \
-		  md_dynamics.o \
-		  MM_dynamics.o \
 		  ElHl_Chebyshev.o \
 		  Chebyshev.o \
 		  AO_adiabatic.o \

@@ -8,14 +8,13 @@ module MD_read_m
     use project             , only : MM_system , MM_molecular , MM_atomic
     use Structure_Builder   , only : Unit_Cell
 
-    public :: Reading , RESTRT , MM , atom , molecule , species , FF
-
-    private
-
-    ! local variables ...
     type(MM_system)                     :: MM
     type(MM_molecular) , allocatable    :: species(:) , molecule(:)
     type(MM_atomic)    , allocatable    :: atom(:) , FF(:)
+
+    public :: Reading , RESTRT , MM , atom , molecule , species , FF
+
+    private
 
 contains
 !
@@ -33,11 +32,13 @@ logical         :: exist
 character(10)   :: string
 
 !=======================  reading  system.inpt  ============================= 
+CALL allocate_MM
+
  open (10, file='system.inpt', status='old')
     read (10,*) MM % N_of_molecules                     !       total number of molecules
     read (10,*) MM % N_of_species                       !       total number of species
-    
-    allocate ( species(MM % N_of_species) )
+   
+    CALL allocate_species( MM % N_of_species )
 
     do i = 1 , MM % N_of_species
         read (10,*) species(i) % N_of_molecules         !  Number of molecules of species i
@@ -59,7 +60,8 @@ character(10)   :: string
 
 !============================================================================ 
 ! types of molecules ...
-allocate ( molecule ( MM % N_of_molecules ) )
+CALL allocate_molecule( MM % N_of_molecules )
+
 MM % N_of_atoms = 0
 l = 1
 do i = 1 , MM % N_of_species
@@ -121,7 +123,8 @@ CALL Symbol_2_AtNo( atom )
 115 FORMAT(t8,i4,t14,a3,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 
 !=======================  reading  potential.inpt  ============================= 
- allocate( FF(atmax) )
+ CALL allocate_FF( atmax )
+
  open (30, file='potential.inpt', status='old')
 
     read(30,*) forcefield
@@ -134,7 +137,7 @@ CALL Symbol_2_AtNo( atom )
         case( 2 ) 
         ! L-J potential ...   
             do i = 1, atmax
-                read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
+               read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
                 FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
                 FF(i) % eps = FF(i) % eps * 1.d26 * imol
                 FF(i) % eps = SQRT( FF(i) % eps )
@@ -146,7 +149,7 @@ CALL Symbol_2_AtNo( atom )
                 where( atom % MMSymbol == FF(i) % MMSymbol ) atom % MM_charge = FF(i) % MM_charge
                  
             end do
-    end select 
+    end select
 
     ! Internal bondig parameters ...
     do a = 1 , MM % N_of_species
@@ -315,6 +318,128 @@ end subroutine Reading
 !
 !
 !
+!=====================
+subroutine allocate_MM
+!=====================
+implicit none
+
+MM % box            = 0.0d0
+MM % ibox           = 0.0d0
+MM % N_of_atoms     = 0
+MM % N_of_species   = 0
+MM % N_of_molecules = 0
+
+end subroutine allocate_MM
+!
+!
+!
+!===============================
+subroutine allocate_species( N )
+!===============================
+implicit none
+integer , intent(in)    :: N
+
+! local variables ...
+integer :: i
+
+allocate( species ( N ) )
+
+do i = 1 , N
+    species(i) % my_species     = 0
+    species(i) % N_of_atoms     = 0
+    species(i) % N_of_molecules = "XXX"
+    species(i) % cm(:)          = 0.0d0
+    species(i) % mass           = 0.0d0
+    species(i) % flex           = .false.
+    species(i) % resid          = "XXX"
+    species(i) % nresid         = 0
+    species(i) % Nbonds         = 0
+    species(i) % bonds          = 0.0d0
+    species(i) % Nangs          = 0
+    species(i) % Ndiheds        = 0
+    species(i) % Nharm          = 0
+    species(i) % Nbonds14       = 0
+    species(i) % fact14         = 0.0d0
+end do
+
+end subroutine allocate_species
+!
+!
+!
+!================================
+subroutine allocate_molecule( N )
+!================================
+implicit none
+integer , intent(in)    :: N
+
+! local variables ...
+integer :: i
+
+allocate( molecule ( N ) )
+
+do i = 1 , N
+    molecule(i) % my_species     = 0
+    molecule(i) % N_of_atoms     = 0
+    molecule(i) % N_of_molecules = "XXX"
+    molecule(i) % cm(:)          = 0.0d0
+    molecule(i) % mass           = 0.0d0
+    molecule(i) % flex           = .false.
+    molecule(i) % resid          = "XXX"
+    molecule(i) % nresid         = 0
+    molecule(i) % Nbonds         = 0
+    molecule(i) % bonds          = 0.0d0
+    molecule(i) % Nangs          = 0
+    molecule(i) % Ndiheds        = 0
+    molecule(i) % Nharm          = 0
+    molecule(i) % Nbonds14       = 0
+    molecule(i) % fact14         = 0.0d0
+end do
+
+end subroutine allocate_molecule
+!
+!
+!
+!==========================
+subroutine allocate_FF( N )
+!==========================
+implicit none
+integer , intent(in)    :: N
+
+! local variables ...
+integer :: i
+
+allocate( FF ( N ) )
+
+do i = 1 , N
+    FF(i) % AtNo       = 0
+    FF(i) % my_id      = 0
+    FF(i) % my_species = 0
+    FF(i) % nresid     = 0
+    FF(i) % resid      = "XXX"
+    FF(i) % Symbol     = "XXX"
+    FF(i) % MMSymbol   = "XXX"
+    FF(i) % xyz(:)     = 0.0d0
+    FF(i) % vel(:)     = 0.0d0
+    FF(i) % fbond(:)   = 0.0d0
+    FF(i) % fang(:)    = 0.0d0
+    FF(i) % fdihed(:)  = 0.0d0
+    FF(i) % fnonbd(:)  = 0.0d0
+    FF(i) % fnonch(:)  = 0.0d0
+    FF(i) % ftotal(:)  = 0.0d0
+    FF(i) % fch(:)     = 0.0d0
+    FF(i) % fsr(:)     = 0.0d0
+    FF(i) % mass       = 0.0d0
+    FF(i) % charge     = 0.0d0
+    FF(i) % MM_charge  = 0.0d0
+    FF(i) % eps        = 0.0d0
+    FF(i) % sig        = 0.0d0
+    FF(i) % free       = .false.
+end do
+
+end subroutine allocate_FF
+!
+!
+!
 !=================
  subroutine RESTRT
 !=================
@@ -407,6 +532,7 @@ MM % ibox =  D_one / MM % box
 do i = 1 , MM % N_of_atoms
     atom(i) % AtNo       = Unit_Cell % AtNo(i)
     atom(i) % my_id      = i
+!    atom(i) % my_species = 0
     atom(i) % nresid     = Unit_Cell % nr(i)
     atom(i) % resid      = Unit_Cell % residue(i)
     atom(i) % Symbol     = Unit_Cell % Symbol(i)
@@ -422,9 +548,8 @@ do i = 1 , MM % N_of_atoms
     atom(i) % fch(:)     = 0.d0
     atom(i) % fsr(:)     = 0.d0
     atom(i) % mass       = 0.d0
-    atom(i) % MM_charge  = 0.d0
-!    atom(i) % Net_charge = 0.d0
     atom(i) % charge     = 0.d0
+    atom(i) % MM_charge  = 0.d0
     atom(i) % eps        = 0.d0
     atom(i) % sig        = 0.d0
     atom(i) % free       = .true.

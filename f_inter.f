@@ -180,7 +180,7 @@ implicit none
 
 !$OMP end parallel do
 ! ################################################################################3
- 
+
  pot = pot - vself
 
  stressr(1,1) = stressr11; stressr(2,2) = stressr22
@@ -195,12 +195,11 @@ implicit none
 
  do i = 1, MM % N_of_atoms
     do k = 1 , numthr
-       atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
-       atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
+        atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
+        atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
     atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * 1.d-10
  end do
-
 
  deallocate ( tmp_fsr , tmp_fch , erfkr )
 

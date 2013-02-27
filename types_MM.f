@@ -39,7 +39,6 @@ module project
         real*8                              :: fdihed(3)
         real*8                              :: fnonbd(3)
         real*8                              :: fnonch(3)
-        real*8                              :: fgeraldih(3)
         real*8                              :: ftotal(3)
         real*8                              :: fch(3)
         real*8                              :: fsr(3)
@@ -52,14 +51,11 @@ module project
     end type MM_atomic
 
     type MM_system
-        type(MM_atomic)     , allocatable   :: atom(:)
-        type(MM_molecular)  , allocatable   :: molecule(:)
         real*8                              :: box(3)
         real*8                              :: ibox(3)
         integer                             :: N_of_atoms
         integer                             :: N_of_species
         integer                             :: N_of_molecules
-        character(72)                       :: System_Characteristics
     end type MM_system
 
 end module project

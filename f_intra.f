@@ -27,11 +27,11 @@ implicit none
  rtwopi = 1.d0/twopi
 
  do j = 1 , MM % N_of_atoms
-    atom(j) % fnonbd(:)  = 0.d0           ! Non-bonded
-    atom(j) % fbond(:)   = 0.d0           ! Stretching/Bonding 
-    atom(j) % fang(:)    = 0.d0           ! Bending/Angular
-    atom(j) % fdihed(:)  = 0.d0           ! Dihedral
-    atom(j) % fnonch(:)  = 0.d0           ! Non-bonded coulomb 1-4
+    atom(j) % fnonbd(:) = 0.d0           ! Non-bonded
+    atom(j) % fbond(:)  = 0.d0           ! Stretching/Bonding 
+    atom(j) % fang(:)   = 0.d0           ! Bending/Angular
+    atom(j) % fdihed(:) = 0.d0           ! Dihedral
+    atom(j) % fnonch(:) = 0.d0           ! Non-bonded coulomb 1-4
  end do
 
 ! new stretch ...

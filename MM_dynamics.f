@@ -2,7 +2,7 @@ module MM_dynamics_m
 
     use constants_m
     use parameters_m        , only : restart
-    use MD_read_m           , only : atom , Reading , restrt , MM
+    use MD_read_m           , only : atom , Reading , restrt , MM , species , molecule , FF
     use setup_m             , only : setup, cmzero, cmass
     use MD_dump_m           , only : output , cleanup , saving
     use F_inter_m           , only : FORCEINTER
@@ -13,20 +13,20 @@ module MM_dynamics_m
     use Structure_Builder   , only : Unit_Cell
     use Data_Output         , only : Net_Charge
 
-    public :: Molecular_Mechanic_dt
+    public :: MolecularDynamics
 
     private
 
     ! module variables ...
-    logical , save  :: init
+    logical , save  :: done = .false.
 
 contains
 !
 !
 !
-!=============================================
-subroutine Molecular_Mechanic_dt( dt , frame )
-!=============================================
+!=========================================
+subroutine MolecularDynamics( dt , frame )
+!=========================================
 implicit none
 real*8  , intent(in)    :: dt
 integer , intent(in)    :: frame
@@ -35,15 +35,8 @@ integer , intent(in)    :: frame
 real*8  :: Ttrans , pressure , density
 integer :: i
 
-if( init == .false. ) then
-    CALL preprocess_DM
-    init = .true.
-end if
+if( .NOT. done ) CALL preprocess_DM
 
-write(4,*) atom % charge
-write(4,*) "XXXXXXXXXXXXX"
-
-! pass the liquid charge to MD ...
 do i = 1 , size(atom)
     atom(i) % charge = atom(i) % MM_charge !+Net_Charge(i)
 end do
@@ -66,7 +59,7 @@ CALL output( Ttrans , dt )
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom(i) % xyz(:)
 
-end subroutine Molecular_Mechanic_dt
+end subroutine MolecularDynamics
 !
 !
 !
@@ -78,6 +71,10 @@ implicit none
 integer :: i
 
 CALL Reading
+
+do i = 1 , size(atom)
+    atom(i) % charge = atom(i) % MM_charge !+Net_Charge(i)
+end do
 
 CALL Setup
 CALL cmzero
@@ -91,6 +88,8 @@ else
     CALL ForceInter
     CALL ForceIntra
 endif
+
+done = .true.
 
 end subroutine preprocess_DM
 !

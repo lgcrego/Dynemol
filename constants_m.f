@@ -34,7 +34,7 @@ MODULE constants_m
     real*8     , parameter :: D_one =  1.d0
     integer    , parameter :: I_one =  1
 
-!   Dynamic molecular contants ...
+!   Molecular dynamics constants ...
     real*8  , parameter :: ee      = 1.60219d-19                    ! in Coulomb
     real*8  , parameter :: rsqpi   = 0.56418958354d0                ! sqrt(pi)
     real*8  , parameter :: mol     = 6.02214129d26                  ! mol X 1000

@@ -2,7 +2,7 @@ MODULE parameters_m
 
 use type_m
 
-integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security , isave
+integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 real*8                  :: t_i , t_f , sigma
 type (real_interval)    :: occupied , empty , DOS_range 
@@ -30,7 +30,7 @@ logical :: dynamic
 !
   DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
-  state_of_matter = "MDynamic"            ! <== solvated_sys , extended_sys , MDynamic
+  state_of_matter = "MDynamics"            ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival        = T_                       
   SPECTRUM        = F_                          
@@ -41,7 +41,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                ! <= structure , trajectory , MDynamic
+  file_type    =  "structure"                ! <= structure , trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
@@ -49,7 +49,7 @@ logical :: dynamic
   GaussianCube      = F_                       
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = T_                      ! <== pdb format charge Occupancy ONLY
+  NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
   CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
   CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
 !--------------------------------------------------------------------
