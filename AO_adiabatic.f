@@ -94,7 +94,7 @@ end if
 print*, t_rate
 
 frame_init = 1
-frame_end  = 20
+frame_end  = 5000
 t_rate = 1.0d-15
 
 do frame = frame_init , frame_end , frame_step
@@ -107,29 +107,29 @@ do frame = frame_init , frame_end , frame_step
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
-    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
+!    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-    forall( j=1:n_part )   
-        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
-        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
-    end forall
+!    forall( j=1:n_part )   
+!        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
+!        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
+!    end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+!    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+!    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
     ! save populations(t + t_rate) ...
-    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
+!    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
-    CALL dump_Qdyn( Qdyn , it )
+!    CALL dump_Qdyn( Qdyn , it )
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
     if( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell ( Unit_Cell )
-    CALL DeAllocate_Structures  ( Extended_Cell )
-    DeAllocate                  ( ExCell_basis  )
+!    CALL DeAllocate_Structures  ( Extended_Cell )
+!    DeAllocate                  ( ExCell_basis  )
 
     ! build new UNI(t + t_rate) ...
     !============================================================================
@@ -157,27 +157,28 @@ do frame = frame_init , frame_end , frame_step
 
     end select
 
-    CALL Generate_Structure ( frame )
+!    CALL Generate_Structure ( frame )
 
-    CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+!    CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ )         CALL DP_stuff ( t , "DP_field"   )
 
     If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
 
-    Deallocate              ( UNI%R , UNI%L , UNI%erg )
+!    Deallocate              ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+!    CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+!    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+!    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
     !============================================================================
 
-    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+!    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
 end do
+stop
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -229,11 +230,11 @@ end select
 
 el_hl_ = any( Unit_Cell%Hl )
  
-CALL Generate_Structure ( 1 )
+!CALL Generate_Structure ( 1 )
 
 If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
 
-CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+!CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( instance = "allocate" )
 
@@ -249,58 +250,58 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+!CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
 
-CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+!CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
+!CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
 If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
-CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
-                          MO_bra   , MO_ket   ,       &
-                          AO_bra   , AO_ket   ,       &
-                          DUAL_bra , DUAL_ket ,       &
-                          bra      , ket      , phase )
+!CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
+!                          MO_bra   , MO_ket   ,       &
+!                          AO_bra   , AO_ket   ,       &
+!                          DUAL_bra , DUAL_ket ,       &
+!                          bra      , ket      , phase )
 
-mm = size(ExCell_basis)                          
-nn = n_part
+!mm = size(ExCell_basis)                          
+!nn = n_part
 
 ! initial state of the isolated molecule ...
 Print 56 , initial_state     
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 ! assuming non-interacting electrons ...
-do n = 1 , n_part                         
-    select case( eh_tag(n) )
+!do n = 1 , n_part                         
+!    select case( eh_tag(n) )
 
-        case( "el" )
+!        case( "el" )
 
-            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
-            MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
+!            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
+!            MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
 
-            Print 591, orbital(n) , el_FMO%erg(orbital(n))
+!            Print 591, orbital(n) , el_FMO%erg(orbital(n))
        
-        case( "hl" )
+!        case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+!            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
-            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
-            MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
+!            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
+!            MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
-            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+!            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
 
-        end select
-end do
+!        end select
+!end do
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+!CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+!CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
 ! save populations ...
-QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+!QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 
-CALL dump_Qdyn( Qdyn , it )
+!CALL dump_Qdyn( Qdyn , it )
 
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 

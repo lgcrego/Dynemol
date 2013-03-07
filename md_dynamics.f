@@ -110,8 +110,8 @@ subroutine VV2( Ttrans , step , dt )
     do j = j1 , j2
         if ( atom(j) % free ) then
             massa = mol / atmas( atom(j) % AtNo )
-            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
-!            atom(j) % vel(1:3) = atom(j) % vel(1:3)  + ( dt_half * atom(j) % ftotal(1:3) ) * massa
+!            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
+            atom(j) % vel(1:3) = atom(j) % vel(1:3)  + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
         end if
     end do

@@ -33,9 +33,16 @@ contains
   ! Born-Mayer
  else
   ! Lennard-Jones
-  do i = 1, atmax
-     do j = 1, atmax
-       sr2 = ( (FF(i) % sig + FF(j) % sig ) * (FF(i) % sig + FF(j) % sig ) ) / rcutsq
+ do i = 1, atmax
+    do j = 1, atmax
+       select case ( MM % CombinationRule )
+            case (2)
+            ! AMBER FF :: GMX COMB-RULE 2 
+            sr2 = ( (FF(i) % sig + FF(j) % sig ) * (FF(i) % sig + FF(j) % sig ) ) / rcutsq 
+            case (3)
+            ! OPLS  FF :: GMX COMB-RULE 3  
+            sr2 = ( (FF(i) % sig * FF(j) % sig ) * (FF(j) % sig * FF(i) % sig ) ) / rcutsq  
+       end select
        sr6 = sr2 * sr2 * sr2
        sr12 = sr6 * sr6
        vscut(i,j) = 4.d0 * ( FF(i) % eps * FF(j) % eps * 1.d-20 ) * (sr12 - sr6)

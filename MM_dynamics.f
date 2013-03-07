@@ -49,7 +49,7 @@ CALL ForceIntra
 CALL VV2 ( Ttrans , frame , dt )
 
 CALL Summat( density ) 
-CALL Press_Boundary( pressure , dt )
+!CALL Press_Boundary( pressure , dt )
 
 if (mod(frame,1) == 0) CALL Saving( frame , dt )
 if (mod(frame,1) == 0) write (*,'(I7,4F15.5)') frame, Ttrans, pot*mol*1.d-6 / dfloat(MM % N_of_molecules), pressure, density

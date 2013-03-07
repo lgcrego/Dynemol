@@ -56,7 +56,7 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "XXX" ) univ % atom % El = .true.
+ where( univ % atom % residue == "BE2" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
@@ -133,7 +133,15 @@ integer  :: i
             a%atom(i)%fragment = '1' 
             a%atom(i)%solvation_hardcore = 2.d0
 
-        case( 'XXX') 
+        case( 'BE1') 
+            a%atom(i)%fragment = 'B' 
+            a%atom(i)%solvation_hardcore = 2.d0
+
+        case( 'ETH') 
+            a%atom(i)%fragment = 'L' 
+            a%atom(i)%solvation_hardcore = 2.d0
+
+        case( 'BE2') 
             a%atom(i)%fragment = 'D' 
             a%atom(i)%solvation_hardcore = 2.d0
 
@@ -188,7 +196,10 @@ integer :: i
 !     Selective_Dynamics
 !----------------------------------
 
-!where(system % Symbol /= "H") system % free = .false.
+where(system % my_id == 50 ) system % free = .false.
+where(system % my_id == 52 ) system % free = .false.
+where(system % my_id ==  2 ) system % free = .false.
+where(system % my_id == 51 ) system % free = .false.
 
 !----------------------------------
 !       charge of the atoms 

@@ -20,12 +20,15 @@ use Eigen_driver_m          , only : Eigen_driver
 !========================================================
 
 CAll Define_Environment
+print*, 1
 
 If( driver /= "avrg_confgs") CALL system( "./env.sh" )
 
 CALL read_EHT_parameters
+print*, 2
 
 CALL Read_Structure
+print*, 3
 
 select case ( driver )
 

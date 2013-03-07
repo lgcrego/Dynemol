@@ -128,6 +128,7 @@ CALL Symbol_2_AtNo( atom )
  open (30, file='potential.inpt', status='old')
 
     read(30,*) forcefield
+    read(30,*) MM % CombinationRule
 
     select case( forcefield )
 
@@ -137,12 +138,17 @@ CALL Symbol_2_AtNo( atom )
         case( 2 ) 
         ! L-J potential ...   
             do i = 1, atmax
-               read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
+                read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
                 FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
                 FF(i) % eps = FF(i) % eps * 1.d26 * imol
                 FF(i) % eps = SQRT( FF(i) % eps )
-                FF(i) % sig = FF(i) % sig * 1.d1 
-                FF(i) % sig = FF(i) % sig / TWO
+                FF(i) % sig = ( FF(i) % sig * 1.d1 )
+                select case ( MM % CombinationRule )
+                     case (2) 
+                     FF(i) % sig = FF(i) % sig / TWO
+                     case (3)
+                     FF(i) % sig = sqrt ( FF(i) % sig )
+                end select
               
                 where( atom % MMSymbol == FF(i) % MMSymbol ) atom % eps       = FF(i) % eps
                 where( atom % MMSymbol == FF(i) % MMSymbol ) atom % sig       = FF(i) % sig

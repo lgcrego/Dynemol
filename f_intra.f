@@ -1,8 +1,8 @@
 module F_intra_m
    
+    use constants_m
     use for_force 
     use MD_read_m   , only : atom , molecule , MM
-    use constants_m
     use project     , only : MM_system , MM_molecular , MM_atomic
 
     public :: FORCEINTRA
@@ -44,7 +44,7 @@ implicit none
             rij(:) = rij(:) - MM % box(:) * ANINT( rij(:) * MM % ibox(:) )
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             rijsq  = SQRT(rijq)
-            qterm = 0.5d0 * molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )**2 
+            qterm  = 0.5d0 * molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )**2
             coephi = molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )/rijsq
             atom(atj) % fbond(:) = atom(atj) % fbond(:) - coephi*rij(:)
             atom(ati) % fbond(:) = atom(ati) % fbond(:) + coephi*rij(:)
@@ -190,7 +190,7 @@ implicit none
            C0 = molecule(i) % kdihed0(j,1) ; C1 = molecule(i) % kdihed0(j,2) ; C2 = molecule(i) % kdihed0(j,3) 
            C3 = molecule(i) % kdihed0(j,4) ; C4 = molecule(i) % kdihed0(j,5) ; C5 = molecule(i) % kdihed0(j,6) 
            pterm = C0 - C1 * eme + C2 * eme**2 - C3 * eme**3 + C4 * eme**4 - C5 * eme**5 
-           gamma = ( -C1 + 2.d0 * C2 * eme - 3.d0 * C3 * eme**2 + 4.d0 * C4 * eme**3 - 5.d0 * C5 * eme**4 ) * rijkj * rjkkl
+           gamma = - ( -C1 + 2.d0 * C2 * eme - 3.d0 * C3 * eme**2 + 4.d0 * C4 * eme**3 - 5.d0 * C5 * eme**4 ) * rijkj * rjkkl
 
         case('opls') ! V = A0 + 1/2{A1[1 + cos(phi)] + A2[1 - cos(2.phi)] + A3[1 + cos(3.phi)]}
            dphi  = phi - molecule(i) % kdihed0(j,5)
@@ -263,8 +263,13 @@ implicit none
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * ANINT( rij(:) * MM % ibox(:) )
             rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
-            !  Lennard Jones ...
-            sig   =  atom(ati) % sig + atom(atj) % sig  
+            ! Lennard Jones ...
+            select case ( MM % CombinationRule )
+                 case (2) 
+                 sig = atom(ati) % sig + atom(atj) % sig    ! AMBER FF :: GMX COMB-RULE 2
+                 case (3)
+                 sig = atom(ati) % sig * atom(atj) % sig    ! AMBER FF :: GMX COMB-RULE 3
+            end select
             eps   =  atom(ati) % eps * atom(atj) % eps 
             rklsq = sqrt(rklq)
             sr2   = sig * sig / rklq

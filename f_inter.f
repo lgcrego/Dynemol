@@ -1,9 +1,9 @@
 module F_inter_m
- 
-    use MD_read_m   , only : atom , MM , molecule
+
+    use constants_m
     use omp_lib
     use for_force 
-    use constants_m
+    use MD_read_m   , only : atom , MM , molecule
     use project     , only : MM_system , MM_molecular , MM_atomic
 
     public :: FORCEINTER
@@ -128,7 +128,14 @@ implicit none
                 atl   = (l + molecule(nresidl) % N_of_atoms) - nresidl * molecule(nresidl) % N_of_atoms
 
                 rklsq = SQRT(rklq)
-                sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
+                select case ( MM % CombinationRule )
+                     case (2) 
+                     ! AMBER FF :: GMX COMB-RULE 2
+                     sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
+                     case (3)
+                     ! OPLS  FF :: GMX COMB-RULE 3
+                     sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
+                end select
                 sr6   = sr2 * sr2 * sr2
                 sr12  = sr6 * sr6
                 fs    = 24.d0 * ( atom(k) % eps * atom(l) % eps * 1.d-20 ) * ( 2.d0 * sr12 - sr6 )

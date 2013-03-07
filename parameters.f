@@ -74,7 +74,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                               
   t_f  =  2.5d-1                                ! <== final time in PICOseconds
-  n_t  =  3000                                  ! <== number of time steps
+  n_t  =  5000                                  ! <== number of time steps
 
   n_part = 1                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 

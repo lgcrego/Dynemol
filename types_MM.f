@@ -56,6 +56,7 @@ module project
         integer                             :: N_of_atoms
         integer                             :: N_of_species
         integer                             :: N_of_molecules
+        integer                             :: CombinationRule
     end type MM_system
 
 end module project
