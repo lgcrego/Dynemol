@@ -74,9 +74,8 @@ If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
 
     CALL dump_NetCharge (t) 
 
-    counter = counter + 1
-
 end If
+counter = counter + 1
 
 !---------------------------------------------------- 
 
@@ -140,9 +139,8 @@ If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
 
     CALL dump_NetCharge (t) 
 
-    counter = counter + 1
-
 end If
+counter = counter + 1
 
 !---------------------------------------------------- 
 

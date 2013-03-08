@@ -38,7 +38,7 @@ integer :: i
 if( .NOT. done ) CALL preprocess_DM
 
 do i = 1 , size(atom)
-    atom(i) % charge = atom(i) % MM_charge !+Net_Charge(i)
+    atom(i) % charge = atom(i) % MM_charge + Net_Charge(i)
 end do
 
 ! Molecuar dynamic ...
@@ -73,7 +73,7 @@ integer :: i
 CALL Reading
 
 do i = 1 , size(atom)
-    atom(i) % charge = atom(i) % MM_charge !+Net_Charge(i)
+    atom(i) % charge = atom(i) % MM_charge + Net_Charge(i)
 end do
 
 CALL Setup

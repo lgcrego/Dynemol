@@ -49,7 +49,7 @@ logical :: dynamic
   GaussianCube      = F_                       
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
+  NetCharge         = T_                      ! <== pdb format charge Occupancy ONLY
   CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
   CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
 !--------------------------------------------------------------------
@@ -73,8 +73,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  2.5d-1                                ! <== final time in PICOseconds
-  n_t  =  5000                                  ! <== number of time steps
+  t_f  =  1.5d2                                ! <== final time in PICOseconds
+  n_t  =  150000                               ! <== number of time steps
 
   n_part = 1                                    ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -82,7 +82,7 @@ logical :: dynamic
                                                 ! <== case STATIC & DP_calcs = hole state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  7                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  3                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                                 ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters

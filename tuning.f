@@ -29,19 +29,9 @@ integer :: i , ioerr
 !      define %residue
 !-----------------------------------
 
-!univ % atom (1:65)% residue = "C60"
-!univ % atom (67)% residue = "C60"
-!univ % atom (206:209)% residue = "C60"
-
-!univ % atom (68:182)% residue = "PPH"
-!univ % atom (66)% residue = "PPH"
-
-!univ % atom (183:205)% residue = "LIG"
-
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-
  
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
@@ -50,7 +40,6 @@ integer :: i , ioerr
 !default: %DPF = F_
 
 !use default: %DPF = %solute  
-! where( univ % atom % DPF ) univ % atom % solute = .true.
 
 !-----------------------------------
 !      define %El   : mandatory !!
@@ -114,36 +103,11 @@ integer  :: i
  
     select case(a%atom(i)%residue)
 
-        case( 'H2O' , 'SOL' ) 
-            a%atom(i)%fragment = 'S' 
-            a%atom(i)%solvation_hardcore = 2.0d0
-        
-        case( 'ACN') 
-            a%atom(i)%fragment = 'S' 
-            a%atom(i)%solvation_hardcore = 3.d0
-
-        case( 'PPH') 
-            a%atom(i)%solvation_hardcore = 2.d0
-
-        case( 'C60') 
-            a%atom(i)%fragment = '0' 
-            a%atom(i)%solvation_hardcore = 2.d0
-
-        case( 'LIG') 
-            a%atom(i)%fragment = '1' 
-            a%atom(i)%solvation_hardcore = 2.d0
-
         case( 'BE1') 
-            a%atom(i)%fragment = 'B' 
-            a%atom(i)%solvation_hardcore = 2.d0
+            a%atom(i)%fragment = '1' 
 
         case( 'ETH') 
-            a%atom(i)%fragment = 'L' 
-            a%atom(i)%solvation_hardcore = 2.d0
-
-        case( 'BE2') 
-            a%atom(i)%fragment = 'D' 
-            a%atom(i)%solvation_hardcore = 2.d0
+            a%atom(i)%fragment = 'B' 
 
     end select
 
