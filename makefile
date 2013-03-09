@@ -1,7 +1,7 @@
 #
 .SUFFIXES: .f .F .for
 
-FC=/opt2/intel/bin/ifort 
+FC=/opt/intel/bin/ifort 
 FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
@@ -9,10 +9,10 @@ FREE = -free
 FFLAGS1 = -O3 
 FFLAGS2 = -O1 -openmp -parallel $(FREE) -static
 
-LIB_BLAS   = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
-LIB_LAPACK = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
-LIB_OMP    = -L/opt2/intel/lib/intel64 -liomp5 -lmatmul
-INCS_MKL   = -I/opt2/intel/composer_xe_2011_sp1.9.293/mkl/include/intel64/lp64 
+LIB_BLAS   = -L/opt/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
+LIB_LAPACK = -L/opt/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
+LIB_OMP    = -L/opt/intel/lib/intel64 -liomp5 -lmatmul
+INCS_MKL   = -I/opt/intel/composer_xe_2011_sp1.9.293/mkl/include/intel64/lp64 
 
 LIB  = $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
 INCS = $(INCS_MKL) 
@@ -47,8 +47,6 @@ SOURCE2 = constants_m.o  \
 		  f_inter.o \
 		  md_setup.o \
 		  md_output.o \
-		  md_dynamics.o \
-		  MM_dynamics.o \
 		  pbc.o  \
 		  overlap_D.o  \
 		  STO.o \
@@ -64,6 +62,8 @@ SOURCE2 = constants_m.o  \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
 		  data_output.o \
+		  md_dynamics.o \
+		  MM_dynamics.o \
 		  film_STO.o \
 		  DOS_m.o \
 		  oscillator.o \
