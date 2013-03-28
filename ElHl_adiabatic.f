@@ -40,6 +40,7 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
+    use MM_dynamics_m               , only : MolecularDynamics
 
     public :: ElHl_adiabatic
 
@@ -63,8 +64,8 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-integer                :: j , frame , frame_init , frame_restart
-real*8                 :: t , t_rate 
+integer                :: j , frame , frame_init , frame_end , frame_restart
+real*8                 :: t , t_rate , t_rate_MM
 type(universe)         :: Solvated_System
 
 it = 1
@@ -75,20 +76,27 @@ If( restart ) then
     mm = size(ExCell_basis)
 else
     CALL Preprocess( QDyn , it )
-end IF
+end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
+If( state_of_matter == "MDynamics" ) then
+    t_rate    = t_f / float(n_t)
+    frame_end = n_t
+else
+    t_rate    = merge( t_f / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+    frame_end = size(trj)
+end If
 
-t_rate = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+t_rate_MM = 1.0d-12 * t_rate
 
-do frame = frame_init , size(trj) , frame_step
+do frame = frame_init , frame_end , frame_step
 
     t = t + t_rate 
 
-    if( (it >= n_t) .OR. (t >= t_f) ) exit    
+    If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
 
@@ -120,7 +128,7 @@ do frame = frame_init , size(trj) , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    CALL DeAllocate_UnitCell    ( Unit_Cell     )
+    If( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
@@ -141,6 +149,8 @@ do frame = frame_init , size(trj) , frame_step
 
         case( "MDynamics" )
 
+            CALL MolecularDynamics( t_rate_MM , frame )
+            
         case default
 
             Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
@@ -249,7 +259,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-If (DP_Field_ .OR. Induced_) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
+If( DP_Field_ .OR. Induced_ ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
 

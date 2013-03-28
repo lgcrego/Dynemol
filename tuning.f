@@ -51,7 +51,7 @@ integer :: i , ioerr
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 
-! where( univ % atom % residue == "HH1" ) univ % atom % Hl = .true.
+ where( univ % atom % residue == "BE1" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
@@ -103,8 +103,8 @@ integer  :: i
  
     select case(a%atom(i)%residue)
 
-        case( 'BE1') 
-            a%atom(i)%fragment = '1' 
+!        case( 'BE1') 
+!            a%atom(i)%fragment = '1' 
 
         case( 'ETH') 
             a%atom(i)%fragment = 'B' 

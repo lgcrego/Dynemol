@@ -77,19 +77,19 @@ If( restart ) then
     nn = n_part
 else
     CALL Preprocess( QDyn , it )
-end IF
+end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
-if( state_of_matter == "MDynamics" ) then
+If( state_of_matter == "MDynamics" ) then
     t_rate    = t_f / float(n_t)
     frame_end = n_t
 else
     t_rate    = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
     frame_end = size(trj)
-end if
+end If
 
 t_rate_MM = 1.0d-12 * t_rate
 
@@ -97,7 +97,7 @@ do frame = frame_init , frame_end , frame_step
 
     t = t + t_rate 
 
-    if( (it >= n_t) .OR. (t >= t_f) ) exit    
+    If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
 
@@ -123,7 +123,7 @@ do frame = frame_init , frame_end , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    if( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell ( Unit_Cell )
+    If( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell ( Unit_Cell )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
@@ -174,7 +174,6 @@ do frame = frame_init , frame_end , frame_step
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
 end do
-stop
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -246,7 +245,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+If( DP_field_ .OR. Induced_ ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
