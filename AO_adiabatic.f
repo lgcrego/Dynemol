@@ -245,7 +245,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-If( DP_field_ .OR. Induced_ ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
+CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
