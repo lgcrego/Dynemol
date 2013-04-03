@@ -10,7 +10,7 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: state_of_matter
-logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_basis , ad_hoc , restart
+logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
@@ -28,20 +28,20 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_ElHl"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
-  state_of_matter = "MDynamics"            ! <== solvated_sys , extended_sys , MDynamics
+  state_of_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
-  OPT_basis       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                ! <= structure , trajectory
+  file_type    =  "structure"                 ! <= structure or trajectory
   file_format  =  "pdb"                       ! <= xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
@@ -64,7 +64,7 @@ logical :: dynamic
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
-  Induced_     =  F_                          ! <== use dipole potential for solvent molecules
+  Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !

@@ -4,8 +4,8 @@ module MD_read_m
     use atomicmass 
     use syst 
     use for_force           , only : KAPPA, Dihedral_potential_type, forcefield, rcut
-    use tuning_routines     , only : ad_hoc_tuning_MD
-    use project             , only : MM_system , MM_molecular , MM_atomic
+    use MM_tuning_routines  , only : ad_hoc_MM_tuning
+    use MM_types            , only : MM_system , MM_molecular , MM_atomic
     use Structure_Builder   , only : Unit_Cell
 
     type(MM_system)                     :: MM
@@ -89,8 +89,8 @@ CALL pass_structure_to_MD
 KAPPA = KAPPA / MM % box(3)
 
 do i = 1 , MM % N_of_atoms
-    nresid = atom(i) % nresid
-    molecule(nresid) % nresid = nresid
+    nresid = atom(i) % nr
+    molecule(nresid) % nr = nresid
 end do
 
 !----------------------
@@ -164,10 +164,10 @@ CALL Symbol_2_AtNo( atom )
         ! species(a) is flexible ...
 
             ! Intramolecular nonbonding pairs 1-4 for species(a) ...
-            read(30,*) species(a) % resid
+            read(30,*) species(a) % residue
             read(30,*,iostat = ioerr) species(a) % Nbonds14
             If( ioerr > 0 ) then
-               string = species(a) % resid // '.inpt14'
+               string = species(a) % residue // '.inpt14'
                open (70, file=string, status='old',iostat=ioerr,err=101)
                read (70,*) species(a) % Nbonds14 
                allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 )   )
@@ -318,7 +318,7 @@ CALL Symbol_2_AtNo( atom )
      k = k + molecule(i) % N_of_atoms
  end do
  
- CALL ad_hoc_tuning_MD(atom)
+ CALL ad_hoc_MM_tuning(atom)
 
 end subroutine Reading
 !
@@ -357,8 +357,8 @@ do i = 1 , N
     species(i) % cm(:)          = 0.0d0
     species(i) % mass           = 0.0d0
     species(i) % flex           = .false.
-    species(i) % resid          = "XXX"
-    species(i) % nresid         = 0
+    species(i) % residue        = "XXX"
+    species(i) % nr             = 0
     species(i) % Nbonds         = 0
     species(i) % bonds          = 0.0d0
     species(i) % Nangs          = 0
@@ -390,8 +390,8 @@ do i = 1 , N
     molecule(i) % cm(:)          = 0.0d0
     molecule(i) % mass           = 0.0d0
     molecule(i) % flex           = .false.
-    molecule(i) % resid          = "XXX"
-    molecule(i) % nresid         = 0
+    molecule(i) % residue        = "XXX"
+    molecule(i) % nr             = 0
     molecule(i) % Nbonds         = 0
     molecule(i) % bonds          = 0.0d0
     molecule(i) % Nangs          = 0
@@ -420,8 +420,8 @@ do i = 1 , N
     FF(i) % AtNo       = 0
     FF(i) % my_id      = 0
     FF(i) % my_species = 0
-    FF(i) % nresid     = 0
-    FF(i) % resid      = "XXX"
+    FF(i) % nr         = 0
+    FF(i) % residue    = "XXX"
     FF(i) % Symbol     = "XXX"
     FF(i) % MMSymbol   = "XXX"
     FF(i) % xyz(:)     = 0.0d0
@@ -538,9 +538,8 @@ MM % ibox =  D_one / MM % box
 do i = 1 , MM % N_of_atoms
     atom(i) % AtNo       = Unit_Cell % AtNo(i)
     atom(i) % my_id      = i
-!    atom(i) % my_species = 0
-    atom(i) % nresid     = Unit_Cell % nr(i)
-    atom(i) % resid      = Unit_Cell % residue(i)
+    atom(i) % nr         = Unit_Cell % nr(i)
+    atom(i) % residue    = Unit_Cell % residue(i)
     atom(i) % Symbol     = Unit_Cell % Symbol(i)
     atom(i) % MMSymbol   = Unit_Cell % MMSymbol(i)
     atom(i) % xyz(:)     = Unit_Cell % coord(i,:)

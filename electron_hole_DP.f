@@ -4,7 +4,7 @@ module DP_excited_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use parameters_m            , only : OPT_basis ,                    &
+    use parameters_m            , only : OPT_parms ,                    &
                                          hole_state ,                   &
                                          excited_state => initial_state         
     use Allocation_m            , only : Allocate_Structures
@@ -67,7 +67,7 @@ module DP_excited_m
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
- If( OPT_basis ) CALL Include_OPT_parameters( FMO_basis )
+ If( OPT_parms ) CALL Include_OPT_parameters( FMO_basis )
 
  CALL eigen_FMO( FMO_system , FMO_basis , FMO )
 

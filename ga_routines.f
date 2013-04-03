@@ -3,7 +3,7 @@ module GA_m
     use type_m
     use constants_m
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_
-    use Semi_Empirical_Parms    , only : element => atom 
+    use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,         &
                                          GA_DP_Analysis ,   &
@@ -16,11 +16,11 @@ module GA_m
 
     private 
 
-    integer , parameter :: Pop_Size       =   80         
-    integer , parameter :: N_generations  =   100
-    integer , parameter :: Top_Selection  =   10           ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.2d0        ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.2           
+    integer , parameter :: Pop_Size       =   10         
+    integer , parameter :: N_generations  =   20
+    integer , parameter :: Top_Selection  =   5            ! <== top selection < Pop_Size
+    real*8  , parameter :: Pop_range      =   0.3d0        ! <== range of variation of parameters
+    real*8  , parameter :: Mutation_rate  =   0.3           
     logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
@@ -72,7 +72,7 @@ do  L = 0 , 2
 
         ! changes VSIP ...
         gene = gene + GA%key(4,EHS)
-        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene)/2.d0 + basis%IP
+        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
 
         ! single STO orbitals ...
         gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
@@ -280,6 +280,9 @@ do i = Pop_start , Pop_size
     end do
 end do
 
+! truncate variations to 1.d-5 ...
+Pop = Pop * 1.d5 ; Pop = int(Pop) ; Pop = Pop * 1.d-5
+
 deallocate( a , seed , pot )
 
 !-----------------------------------------------
@@ -373,7 +376,7 @@ end do
 
 N_of_EHSymbol = nr - 1
 
-! allocatting EH_keys ...
+! allocatting EH_keys: [s,p,d,IP,zeta,coef,k_WH] ...
 allocate( GA%EHSymbol    ( N_of_EHSymbol) )
 allocate( GA%key      (7 , N_of_EHSymbol) )
 
@@ -436,7 +439,7 @@ do n_EHS = 1 , N_of_EHSymbol
 
     i = indx_EHS(n_EHS)
 
-    AngMax = element(OPT_basis(i)%AtNo)%AngMax
+    AngMax = atom(OPT_basis(i)%AtNo)%AngMax
 
     do L = 0 , AngMax
 
@@ -445,7 +448,7 @@ do n_EHS = 1 , N_of_EHSymbol
         write(13,17)    OPT_basis(j)%Symbol          ,   &
                         OPT_basis(j)%EHSymbol        ,   &
                         OPT_basis(j)%AtNo            ,   &
-                element(OPT_basis(j)%AtNo)%Nvalen    ,   &
+                   atom(OPT_basis(j)%AtNo)%Nvalen    ,   &
                         OPT_basis(j)%Nzeta           ,   &
                         OPT_basis(j)%n               ,   &
                  Lquant(OPT_basis(j)%l)              ,   &

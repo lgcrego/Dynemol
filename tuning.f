@@ -26,6 +26,15 @@ integer :: i , ioerr
 ! edit structure  ...
 
 !-----------------------------------
+!      define %atom
+!-----------------------------------
+
+ where( univ % atom % AtNo == 1 ) univ % atom % hardcore = 2.04d0
+ where( univ % atom % AtNo == 6 ) univ % atom % hardcore = 2.45d0
+ where( univ % atom % AtNo == 7 ) univ % atom % hardcore = 2.04d0
+ where( univ % atom % AtNo == 8 ) univ % atom % hardcore = 1.75d0
+
+!-----------------------------------
 !      define %residue
 !-----------------------------------
 
@@ -40,6 +49,7 @@ integer :: i , ioerr
 !default: %DPF = F_
 
 !use default: %DPF = %solute  
+! where( univ % atom % DPF ) univ % atom % solute = .true.
 
 !-----------------------------------
 !      define %El   : mandatory !!
@@ -103,11 +113,30 @@ integer  :: i
  
     select case(a%atom(i)%residue)
 
-!        case( 'BE1') 
-!            a%atom(i)%fragment = '1' 
+        case( 'BE1') 
+            a%atom(i)%fragment = '1' 
 
         case( 'ETH') 
             a%atom(i)%fragment = 'B' 
+
+        case( 'H2O' , 'SOL' ) 
+            a%atom(i)%fragment = 'S' 
+            a%atom(i)%solvation_hardcore = 2.0d0
+        
+        case( 'ACN') 
+            a%atom(i)%fragment = 'S' 
+            a%atom(i)%solvation_hardcore = 3.d0
+
+        case( 'PPH') 
+            a%atom(i)%solvation_hardcore = 2.d0
+
+        case( 'C60') 
+            a%atom(i)%fragment = '0' 
+            a%atom(i)%solvation_hardcore = 2.d0
+
+        case( 'LIG') 
+            a%atom(i)%fragment = '1' 
+            a%atom(i)%solvation_hardcore = 2.d0
 
     end select
 
@@ -119,21 +148,21 @@ end module tuning_m
 !
 !
 !
-module tuning_routines
+!
+module MM_tuning_routines
 
-use project             , only : MM_atomic
+use MM_types , only : MM_atomic
 
 contains
 
 !==================================
-subroutine ad_hoc_tuning_MD(system)
+subroutine ad_hoc_MM_tuning(system)
 !==================================
 implicit none
 type(MM_atomic)  , intent(inout) :: system(:)
 
 ! local variables ...
 integer :: i 
-
 
 !----------------------------------
 !      define SPECIAL atoms 
@@ -169,13 +198,9 @@ where(system % my_id == 51 ) system % free = .false.
 !       charge of the atoms 
 !----------------------------------
 
-!----------------------------------
-!CALL Information_from_ITP( system ) 
-!----------------------------------
+end subroutine ad_hoc_MM_tuning
 
-end subroutine ad_hoc_tuning_MD
-
-end module tuning_routines
+end module MM_tuning_routines
 !
 !
 !

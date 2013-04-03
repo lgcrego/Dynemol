@@ -10,11 +10,22 @@
     use Structure_Builder       , only : system => Extended_Cell    
 
     public :: Build_Induced_DP , Induced_DP_phi
+
+    private
     
     ! module variables ...       
     integer              , save :: counter = 0
     real*8 , allocatable , save :: Induced_DP(:,:) , net_charge(:)
-    
+
+    ! module parameters ...
+    real*8  , parameter :: c0 = 1.5d0               ,&   ! 3/2
+                           c1 = 8.888888888888d-2   ,&   ! 4/45
+                           c2 = 7.5d0               ,&   ! 15/2
+                           c3 = 15.d0               ,&
+                           c4 = 22.5d0              ,&   ! 45/2
+                           c5 = 11.25d0             ,&   ! 45/4
+                           c0_inv = 1.d0/c0
+
 contains
 !
 !
@@ -30,7 +41,7 @@ real*8            , optional    , intent(in)    :: t
 character(*)      , optional    , intent(in)    :: instance
 
 ! local variables ...
-integer                 :: ati , atj , N_of_atoms
+integer                 :: ati , atj , N_of_atoms 
 real*8                  :: distance , decay , charge_El , charge_Hl 
 real*8                  :: vector(3)
 real*8  , allocatable   :: local_E_field(:,:)  
@@ -38,6 +49,7 @@ real*8  , allocatable   :: local_E_field(:,:)
 ! local parameters ...
 real*8  , parameter     :: DP_factor = 4.803204d0               ! <== alpha[10^(-24)cm^3] * e / (4*Pi*epsilon_0) * 10^(20)  : Debye
 real*8  , parameter     :: DP_potential_factor = 2.9979255d0    ! <== e*p[Debye]/(4*Pi*epsilon_0)                           : eV * Angs^2
+
 
 N_of_atoms = system%atoms
 
@@ -64,7 +76,7 @@ print*, " --> net_charge = " , sum(net_charge)
 ! calculate induced atomic DP moment ...
 allocate( local_E_field (N_of_atoms,3) , source = D_zero )
 
-    do ati = 1 , N_of_atoms
+do ati = 1 , N_of_atoms
 
     do atj = 1 , N_of_atoms
 
@@ -76,9 +88,7 @@ allocate( local_E_field (N_of_atoms,3) , source = D_zero )
 
             decay = D_one / (distance*distance*distance)
 
-            If( distance < system%solvation_hardcore(ati) ) decay = 0.d0
-
-            local_E_field(ati,:) = local_E_field(ati,:) + net_charge(atj) * vector(:) * decay
+            local_E_field(ati,:) = local_E_field(ati,:) + net_charge(atj) * vector(:) * decay * exclusion(ati,distance)
 
         end If
 
@@ -111,7 +121,7 @@ type(STO_basis) , intent(in) :: basis(:)
 ! local variables ...
 integer                 :: i , j , N_of_DP 
 integer , allocatable   :: id_atom(:)
-real*8                  :: hard_core 
+real*8                  :: hardcore 
 real*8                  :: midpoint_ab(3)
 real*8                  :: Induced_DP_phi(4)
 real*8  , allocatable   :: distance(:) , distance_ALL(:) , mol_phi(:) 
@@ -119,7 +129,7 @@ real*8  , allocatable   :: vector(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(
 logical , allocatable   :: mask(:)
 
 ! combination rule for solvation hardcore shell ...
-hard_core = ( basis(a)%solvation_hardcore + basis(b)%solvation_hardcore ) / two
+hardcore = ( basis(a) % hardcore + basis(b) % hardcore ) / two
 
 ! midpoint between atoms a & b ...
 midpoint_ab(1) = ( basis(a)%x + basis(b)%x ) / two
@@ -140,7 +150,7 @@ do i = 1 , N_of_DP
     distance_ALL(i) = sqrt( sum( vector_ALL(i,:)*vector_ALL(i,:) ) )
 end do
 
-mask = ( distance_ALL > hard_core )
+mask = ( distance_ALL > hardcore )
 
 ! keep only the DPs outside hardcore ...
 N_of_DP = count( mask ) 
@@ -275,6 +285,64 @@ close(114)
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine visualize_Induced_DP
+!
+!
+!
+!=============================
+ function exclusion( ati , r )
+!=============================
+implicit none
+integer , intent(in) :: ati
+real*8  , intent(in) :: r
+
+! local variables ...
+integer :: N_level
+real*8  :: a, a2, a3, a4, a5, a6
+real*8  :: r2, r3, r4, r5, r6
+real*8  :: exclusion
+
+! N quantum number of s orbital ...
+N_level = atom( system%AtNo(ati) ) % NQuant(0)
+
+! zeta parameter of s orbital ...
+a = atom( system%AtNo(ati) ) % zeta(0,1)
+
+r2 = r*r
+a2 = a*a
+
+select case ( N_level )
+
+    case( 1 )
+
+        exclusion = -two*a2*exp(-two*r*a)*( r2 + r/a + D_one/(two*a2) ) + D_one 
+
+    case( 2 )
+
+        r3 = r2*r
+        r4 = r2*r2
+        
+        a3 = a2*a
+        a4 = a2*a2
+
+        exclusion = -c0_inv*a4*exp(-two*r*a) * (r4 + two*r3/a + three*r2/a2 + three*r/a3 + c0/a4) + D_one
+
+    case( 3 )
+
+        r3 = r2*r
+        r4 = r2*r2
+        r5 = r4*r
+        r6 = r3*r3
+
+        a3 = a2*a
+        a4 = a2*a2
+        a5 = a4*a
+        a6 = a3*a3
+
+        exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one
+
+end select 
+
+end function exclusion
 !
 !
 !

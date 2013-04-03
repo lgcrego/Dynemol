@@ -4,7 +4,7 @@
     use mkl95_blas
     use mkl95_lapack
     use mkl95_precision
-    use parameters_m            , only : OPT_basis ,                    &
+    use parameters_m            , only : OPT_parms ,                    &
                                          static ,                       &
                                          hole_state ,                   &
                                          excited_state => initial_state
@@ -72,7 +72,7 @@
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
- If( OPT_basis ) CALL Include_OPT_parameters( FMO_basis )
+ If( OPT_parms ) CALL Include_OPT_parameters( FMO_basis )
 
  CALL DP_eigen_FMO( FMO_system , FMO_basis , FMO )
 

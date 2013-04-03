@@ -4,7 +4,7 @@ module F_inter_m
     use omp_lib
     use for_force 
     use MD_read_m   , only : atom , MM , molecule
-    use project     , only : MM_system , MM_molecular , MM_atomic
+    use MM_types    , only : MM_system , MM_molecular , MM_atomic
 
     public :: FORCEINTER
     
@@ -55,7 +55,7 @@ implicit none
 ! vself part of the Coulomb calculation
 
  do i = 1, MM % N_of_atoms 
-    nresid = atom(i) % nresid
+    nresid = atom(i) % nr
     if ( molecule(nresid) % N_of_atoms > 1 ) then
        j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1 
        j2 = nresid * molecule(nresid) % N_of_atoms
@@ -77,7 +77,7 @@ implicit none
 
  do i = 1, MM % N_of_atoms
     vself = vself + pikap * atom(i) % charge * atom(i) % charge
-    nresid = atom(i) % nresid 
+    nresid = atom(i) % nr
     if ( molecule(nresid) % N_of_atoms > 1 ) then
        j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
        j2 = nresid * molecule(nresid) % N_of_atoms
@@ -101,12 +101,12 @@ implicit none
 
  do k = 1 , MM % N_of_atoms - 1
     do l = k , MM % N_of_atoms
-       if ( atom(k) % nresid /= atom(l) % nresid ) then
+       if ( atom(k) % nr /= atom(l) % nr ) then
 
           ithr    = OMP_get_thread_num() + 1
 
-          nresidk = atom(k) % nresid 
-          nresidl = atom(l) % nresid             
+          nresidk = atom(k) % nr
+          nresidl = atom(l) % nr
           rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
           rij(:)  = rij(:) - MM % box * ANINT( rij(:) * MM % ibox(:) )
           chrgk   = atom(k) % charge

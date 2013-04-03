@@ -1,6 +1,6 @@
 MODULE constants_m
-    INTEGER    , parameter :: ABOVE=+100000000
-    INTEGER    , parameter :: BELOW=-100000000
+    integer    , parameter :: ABOVE=+100000000
+    integer    , parameter :: BELOW=-100000000
 	real*8     , parameter :: PI=3.141592653589793238462643383279502884197d0 
 	real*8     , parameter :: PIO2=1.57079632679489661923132169163975144209858d0 
 	real*8     , parameter :: TWOPI=6.283185307179586476925286766559005768394d0 

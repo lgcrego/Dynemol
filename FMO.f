@@ -186,22 +186,19 @@ implicit none
  ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
  FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
 
- Allocate( FMO%L (ALL_size,FMO_size) )
- Allocate( FMO%R (ALL_size,FMO_size) )
+ Allocate( FMO%L (ALL_size,FMO_size) , source=D_zero )
+ Allocate( FMO%R (ALL_size,FMO_size) , source=D_zero )
  Allocate( CR_FMO(FMO_size,ALL_size) )
 
  p1 =  minloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
  p2 =  maxloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
 
-! . the fragment basis MUST correspond to a contiguous window ... 
+!the fragment basis MUST correspond to a contiguous window ... 
  CR_FMO => CR(p1:p2,:)
 
 !--------------------------------------------------------------------------------------
 !             writes the isolated FMO eigenfunctions in the MO basis 
 ! the isolated orbitals are stored in the "ROWS of wv_FMO" and in the "COLUMNS of FMO"
-
- FMO%L = ( 0.d0 , 0.d0 )
- FMO%R = ( 0.d0 , 0.d0 )
 
  forall( j=1:FMO_size, i=1:ALL_size )
 

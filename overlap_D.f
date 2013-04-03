@@ -31,6 +31,7 @@ contains
  type(STO_basis) , allocatable :: pbc_basis(:)
  integer                       :: NonZero , S_size
  real*8                        :: Sparsity
+ logical                       :: GACG_flag
 
  CALL util_overlap     
 
@@ -42,10 +43,19 @@ contains
 
         CALL Build_Overlap_Matrix( system, basis, system, basis, S_matrix )
 
-    case default
-!----------------------------------------------------------
-!       Overlap Matrix S(a,b) of the system
+    case('GA-CG')
 
+        ! if no PBC pbc_system = system ; do NOT use OPT_parms ...
+        CALL Generate_Periodic_Structure( system, basis, pbc_system, pbc_basis ) 
+
+        CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix )
+
+        CALL Deallocate_Structures(pbc_system)
+        If( allocated(pbc_basis) ) deallocate(pbc_basis)
+
+    case default
+
+        ! Overlap Matrix S(a,b) of the system ...
         If( verbose ) Print 53
 
         If( verbose ) then
@@ -56,7 +66,7 @@ contains
             end If
         end If
 
-!       if no PBC pbc_system = system 
+        ! if no PBC pbc_system = system ...
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
 
         CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix )
@@ -72,7 +82,6 @@ contains
             Print 55
             print*, '>> Overlap done <<'
         end If    
-!----------------------------------------------------------
 
  end select
 

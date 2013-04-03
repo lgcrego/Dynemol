@@ -64,7 +64,7 @@ subroutine VV2( Ttrans , step , dt )
 ! VV2 and thermostat ...
  do i = 1 , MM % N_of_molecules
     vi(1:3) = 0.0d0
-    nresid = molecule(i) % nresid
+    nresid = molecule(i) % nr
     j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
     j2 = nresid * molecule(i) % N_of_atoms
     do j = j1 , j2
@@ -104,7 +104,7 @@ subroutine VV2( Ttrans , step , dt )
  sumtemp = 0.d0
  do i = 1 , MM % N_of_molecules
     vi(1:3) = 0.0d0
-    nresid = molecule(i) % nresid
+    nresid = molecule(i) % nr
     j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
     j2 = nresid * molecule(i) % N_of_atoms
     do j = j1 , j2
@@ -186,7 +186,7 @@ real*8  , intent(in)    :: dt
  MM % box(1:3) = MM % box(1:3) * mip
  
  do i = 1 , MM % N_of_molecules
-    nresid = molecule(i) % nresid
+    nresid = molecule(i) % nr
     j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
     j2 = nresid * molecule(i) % N_of_atoms
     do j = j1 , j2

@@ -2,7 +2,8 @@
 
     use type_m                  
     use parameters_m            , only : file_type,             &
-                                         ad_hoc
+                                         ad_hoc ,               &
+                                         driver
     use Allocation_m            , only : Allocate_UnitCell
     use tuning_m                , only : Setting_fragments ,    &
                                          ad_hoc_tuning
@@ -67,10 +68,11 @@ forall( j=1:unit_cell%atoms )
     unit_cell % DPF                (j)   =  System % atom(j) % DPF     
     unit_cell % El                 (j)   =  System % atom(j) % El      
     unit_cell % Hl                 (j)   =  System % atom(j) % Hl      
+    unit_cell % hardcore           (j)   =  System % atom(j) % hardcore
     unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
 
-    unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j))%Nvalen
-    unit_cell % polar    (j)   =  atom(unit_cell%AtNo(j))%polar
+    unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j)) % Nvalen
+    unit_cell % polar    (j)   =  atom(unit_cell%AtNo(j)) % polar
 
 end forall
 
@@ -146,9 +148,9 @@ end subroutine Coords_from_Universe
 
  CLOSE(3)
 
- Unit_cell % Nvalen (:)   =  atom(unit_cell%AtNo(:)) % Nvalen
- Unit_cell % polar  (:)   =  atom(unit_cell%AtNo(:)) % polar 
- Unit_cell % MMSymbol     =  Unit_Cell % Symbol
+ Unit_cell % Nvalen   (:)   =  atom(unit_cell%AtNo(:)) % Nvalen
+ Unit_cell % polar    (:)   =  atom(unit_cell%AtNo(:)) % polar 
+ Unit_cell % MMSymbol       =  Unit_Cell % Symbol
 
  include 'formats.h'
 
@@ -231,8 +233,17 @@ CALL Setting_Fragments  ( system      )
 CALL Identify_Fragments ( system      )
 CALL Pack_Residues      ( system%atom , system%list_of_residues )
 
-! transfer structure <-- universe 
-CALL Coords_from_Universe( Unit_Cell , system )
+If( verify(driver,'slice') == 6 ) then
+
+    ! replicate system throughout trj ...
+    CALL input_2_frames( system , trj )
+
+else
+
+    ! transfer Unit_Cell(structure) <-- system(universe) 
+    CALL Coords_from_Universe( Unit_Cell , system )
+
+end if
 
 deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 11 if( file_err > 0 ) stop "input.pdb file not found; terminating execution"
@@ -481,9 +492,6 @@ do j = 1 , model
             trj(j) % atom(i) % MMSymbol = adjustl(MMSymbol_char)
         end do
 
-        ! use ad hoc tuning of parameters ...
-        If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
-
         ! convert residues to upper case ...
         forall( i=1:number_of_atoms ) trj(j)%atom(i)%residue = TO_UPPER_CASE( trj(j)%atom(i)%residue )
 
@@ -491,8 +499,11 @@ do j = 1 , model
         CALL Symbol_2_AtNo      ( trj(j)%atom )
         CALL Setting_Fragments  ( trj(j)      )
 
-        trj(j)%atom%Nvalen    =  atom(trj(j)%atom%AtNo)%Nvalen
-        trj(j)%atom%polar     =  atom(trj(j)%atom%AtNo)%polar 
+        ! use ad hoc tuning of parameters ...
+        If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
+
+        trj(j)%atom % Nvalen    =  atom(trj(j)%atom%AtNo) % Nvalen
+        trj(j)%atom % polar     =  atom(trj(j)%atom%AtNo) % polar 
 
     else
 
@@ -542,6 +553,7 @@ forall(i = 2:model )
     trj(i) % atom % DPF                 =  trj(1) % atom % DPF   
     trj(i) % atom % El                  =  trj(1) % atom % El    
     trj(i) % atom % Hl                  =  trj(1) % atom % Hl    
+    trj(i) % atom % hardcore            =  trj(1) % atom % hardcore   
     trj(i) % atom % solvation_hardcore  =  trj(1) % atom % solvation_hardcore   
 
     trj(i) % atom % Nvalen              =  atom(trj(1)%atom%AtNo) % Nvalen
@@ -697,6 +709,7 @@ forall(i = 2:model )
     trj(i) % atom % Symbol   = trj(1) % atom % Symbol
     trj(i) % atom % fragment = trj(1) % atom % fragment
     trj(i) % atom % residue  = trj(1) % atom % residue
+    trj(i) % atom % hardcore = trj(1) % atom % hardcore   
 end forall
 
 ! GROUP residues ...
@@ -710,6 +723,40 @@ end do
 23 format(3x, f8.5, t13, f8.5, t22, f8.5)
 
 end subroutine Read_XYZ
+!
+!
+!
+!=========================================
+ subroutine input_2_frames( system , trj )
+!=========================================
+use parameters_m  , only: t_i , t_f , n_t  
+implicit none
+type(universe)                    , intent(in)    :: system
+type(universe)    , allocatable   , intent(out)   :: trj(:)
+
+! local variables ...
+integer :: i  
+real*8  :: delta_t
+
+delta_t = ( t_f - t_i ) / float(n_t)
+
+! Molecular Dynamics time step (pico-sec) ...
+MD_dt = delta_t 
+
+! allocate array of frames ...
+allocate( trj(n_t) )
+
+do i = 1 , n_t
+
+    allocate( trj(i)%atom(system%N_of_atoms) )
+    CALL Initialize_System( trj(i) )
+
+end do
+
+! Copy information from input.pdb to trj(:) ...
+forall( i = 1:n_t ) trj(i) = system
+
+end subroutine input_2_frames
 !
 !
 !

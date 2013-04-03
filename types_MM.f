@@ -1,4 +1,4 @@
-module project
+module MM_types
 
     type MM_molecular
         integer                             :: my_species
@@ -7,8 +7,8 @@ module project
         real*8                              :: cm(3)
         real*8                              :: mass
         logical                             :: flex
-        character(3)                        :: resid
-        integer                             :: nresid
+        character(3)                        :: residue
+        integer                             :: nr
         integer                             :: Nbonds
         integer             , allocatable   :: bonds(:,:)
         real*8              , allocatable   :: kbond0(:,:)
@@ -28,8 +28,8 @@ module project
         integer                             :: AtNo
         integer                             :: my_id
         integer                             :: my_species
-        integer                             :: nresid
-        character(3)                        :: resid
+        integer                             :: nr
+        character(3)                        :: residue
         character(2)                        :: Symbol
         character(3)                        :: MMSymbol
         real*8                              :: xyz(3)
@@ -59,5 +59,5 @@ module project
         integer                             :: CombinationRule
     end type MM_system
 
-end module project
+end module MM_types
 !

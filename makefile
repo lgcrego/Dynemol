@@ -32,7 +32,7 @@ SOURCE1 = integ-Coul.o \
 
 SOURCE2 = constants_m.o  \
 		  exec_time.o  \
-		  type_m.o  \
+		  types_EHT.o  \
 		  types_MM.o \
 		  parameters.o  \
 		  allocation_m.o  \

@@ -3,7 +3,7 @@ module F_intra_m
     use constants_m
     use for_force 
     use MD_read_m   , only : atom , molecule , MM
-    use project     , only : MM_system , MM_molecular , MM_atomic
+    use MM_types    , only : MM_system , MM_molecular , MM_atomic
 
     public :: FORCEINTRA
 

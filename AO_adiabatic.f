@@ -5,7 +5,7 @@ module AO_adiabatic_m
     use constants_m
     use mkl95_blas
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
-                                             frame_step , state_of_matter , &
+                                             frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
                                              Induced_ , NetCharge ,         &
                                              GaussianCube , static ,        &
@@ -66,7 +66,7 @@ integer         , intent(out)   :: it
 ! local variables ...
 type(universe)          :: Solvated_System
 real*8                  :: t , t_rate , t_rate_MM
-integer                 :: j , frame , frame_init , frame_end , frame_restart
+integer                 :: j , frame , frame_init , frame_final , frame_restart
 
 it = 1
 t  = t_i
@@ -83,17 +83,18 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
-If( state_of_matter == "MDynamics" ) then
-    t_rate    = t_f / float(n_t)
-    frame_end = n_t
+
+! time is PICOseconds in EHT & seconds in MM ... 
+If( nuclear_matter == "MDynamics" ) then
+    t_rate      = t_f / float(n_t)
+    frame_final = n_t
+    t_rate_MM   = 1.0d-12 * t_rate
 else
-    t_rate    = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
-    frame_end = size(trj)
+    t_rate      = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+    frame_final = size(trj)
 end If
 
-t_rate_MM = 1.0d-12 * t_rate
-
-do frame = frame_init , frame_end , frame_step
+do frame = frame_init , frame_final , frame_step
 
     t = t + t_rate 
 
@@ -123,23 +124,24 @@ do frame = frame_init , frame_end , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    If( state_of_matter /= "MDynamics" ) CALL DeAllocate_UnitCell ( Unit_Cell )
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
 
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
-    select case ( state_of_matter )
+    select case ( nuclear_matter )
 
         case( "solvated_sys" )
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
+            CALL DeAllocate_UnitCell ( Unit_Cell )
             CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
 
         case( "extended_sys" )
 
+            CALL DeAllocate_UnitCell ( Unit_Cell )
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
         case( "MDynamics" )
@@ -148,7 +150,7 @@ do frame = frame_init , frame_end , frame_step
 
         case default
 
-            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
             stop
 
     end select
@@ -202,7 +204,7 @@ type(universe)  :: Solvated_System
 
 CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
-select case ( state_of_matter )
+select case ( nuclear_matter )
 
     case( "solvated_sys" )
 
@@ -218,7 +220,7 @@ select case ( state_of_matter )
 
     case default
 
-        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+        Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
         stop
 
 end select

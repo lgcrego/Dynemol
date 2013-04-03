@@ -6,7 +6,7 @@
                                              file_format ,              &
                                              nnx , nny ,                &
                                              hole_state ,               &
-                                             OPT_basis
+                                             OPT_parms
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
                                              Read_from_PDB ,            &
@@ -121,6 +121,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             extended_cell % DPF                (k+n)   =  unit_cell % DPF      (n)
             extended_cell % El                 (k+n)   =  unit_cell % El       (n)
             extended_cell % Hl                 (k+n)   =  unit_cell % Hl       (n)
+            extended_cell % hardcore           (k+n)   =  unit_cell % hardcore (n)
             extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
             extended_cell % copy_No  (k+n)             =  copy
         
@@ -150,6 +151,7 @@ integer :: copy , nr_sum , ix , iy , k , n
     extended_cell % DPF                (k+n)      =  unit_cell % DPF      (n)
     extended_cell % El                 (k+n)      =  unit_cell % El       (n)
     extended_cell % Hl                 (k+n)      =  unit_cell % Hl       (n)
+    extended_cell % hardcore           (k+n)      =  unit_cell % hardcore (n)
     extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
     extended_cell % copy_No  (k+n)                =  0
 
@@ -166,7 +168,7 @@ integer :: copy , nr_sum , ix , iy , k , n
  extended_cell%T_xyz(2) = (2*nny+1)*unit_cell%T_xyz(2)
  extended_cell%T_xyz(3) = unit_cell%T_xyz(3)
 
- If( OPT_basis ) CALL Include_OPT_parameters( extended_cell )
+ If( OPT_parms ) CALL Include_OPT_parameters( extended_cell )
 
  if( frame == 1 ) CALL diagnosis( Extended_Cell )
 
@@ -192,12 +194,13 @@ integer :: copy , nr_sum , ix , iy , k , n
 !
 !
 !
-!==========================================
- subroutine Basis_Builder( system , basis )
-!==========================================
+!=======================================================
+ subroutine Basis_Builder( system , basis , GACG_flag )
+!=======================================================
  implicit none
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
+ logical         , optional    , intent(in)    :: GACG_flag
 
 ! local variables ...
  integer :: k , i , l , m , AtNo , N_of_orbitals
@@ -231,6 +234,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             basis(k) % DPF                 =  system % DPF      (i)
             basis(k) % El                  =  system % El       (i)
             basis(k) % Hl                  =  system % Hl       (i)
+            basis(k) % hardcore            =  system % hardcore (i)
             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
             basis(k) % n        =  atom(AtNo) % Nquant(l)
@@ -257,7 +261,8 @@ integer :: copy , nr_sum , ix , iy , k , n
     end do
  end do
 
- If( OPT_basis ) CALL Include_OPT_parameters( basis )
+! during GACG cannot use OPT_eht_paremeters ...
+ If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
 
  end subroutine Basis_Builder
 !

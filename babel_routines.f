@@ -77,6 +77,8 @@ integer :: i
             a(i)%AtNo = 22 
         case( 'MN','Mn' ) 
             a(i)%AtNo = 25 
+        case( 'ZN','Zn' ) 
+            a(i)%AtNo = 30 
         case( 'Ru' ) 
             a(i)%AtNo = 44 
         case( 'I' ) 
@@ -125,6 +127,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 22 
         case( 'MN','Mn' ) 
             a%AtNo(i) = 25 
+        case( 'ZN','Zn' ) 
+            a%AtNo(i) = 30 
         case( 'Ru' ) 
             a%AtNo(i) = 44 
         case( 'I' ) 
@@ -176,6 +180,8 @@ integer :: i
             a(i)%Symbol = 'Ti '
         case( 25 ) 
             a(i)%Symbol = 'Mn'
+        case( 30 ) 
+            a(i)%Symbol = 'Zn'
         case( 44 ) 
             a(i)%Symbol = 'Ru'
         case( 53 ) 
@@ -227,6 +233,8 @@ integer :: i
             a%Symbol(i) = 'Ti '
         case( 25 ) 
             a%Symbol(i) = 'Mn'
+        case( 30 ) 
+            a%Symbol(i) = 'Zn'
         case( 44 ) 
             a%Symbol(i) = 'Ru'
         case( 53 ) 
@@ -615,6 +623,7 @@ end forall
 a % atom % mass               = 0.d0
 a % atom % charge             = 0.d0
 a % atom % solvation_hardcore = 2.5d0
+a % atom % hardcore           = 2.5d0
 a % atom % AtNo               = 0
 a % atom % nr                 = 0
 a % atom % residue            = "XXX"
@@ -648,6 +657,7 @@ forall( i=1:3 )
 end forall
 
 a % solvation_hardcore        = 2.5d0
+a % hardcore                  = 2.5d0
 a % AtNo                      = 0
 a % nr                        = 1
 a % residue                   = "XXX"

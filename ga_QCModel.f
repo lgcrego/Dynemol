@@ -170,7 +170,7 @@ end function C_Mulliken
 
 !-----------------------------------------------------------------------
 
- CALL Overlap_Matrix( system, basis, S_FMO )
+ CALL Overlap_Matrix( system, basis, S_FMO, "GA-CG" )
 
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO

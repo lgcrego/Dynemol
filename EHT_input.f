@@ -1,7 +1,7 @@
 module Semi_Empirical_Parms
 
     use type_m
-    use parameters_m    , only  : OPT_basis
+    use parameters_m    , only  : OPT_parms
 
     type(EHT)                   , public    , protected :: atom(300) 
     real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
@@ -10,7 +10,7 @@ module Semi_Empirical_Parms
 
     private
 
-    type(EHT)   , allocatable   :: EH_atom(:)
+    type(EHT)   , allocatable   , save :: EH_atom(:)
 
     interface Include_OPT_parameters 
         module procedure Basis_OPT_parameters
@@ -76,7 +76,9 @@ module Semi_Empirical_Parms
 
  end do    
 
- If( OPT_basis ) CALL read_OPT_parameters
+ close(3)
+
+ If( OPT_parms ) CALL read_OPT_parameters
 
  end subroutine read_EHT_parameters
 ! 
@@ -201,7 +203,7 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (basis%EHSymbol == EH_atom(i)%EHSymbol) .AND. (basis%l == EH_atom(i)%l) ) 
+    where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) .AND. (basis%l == EH_atom(i)%l) ) 
         
         basis%IP        =  EH_atom(i)%IP    (0)
         basis%Nzeta     =  EH_atom(i)%Nzeta (0)
@@ -230,7 +232,7 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (system%MMSymbol == EH_atom(i)%EHSymbol) ) 
+    where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol) ) 
         
         system%Nvalen = EH_atom(i)%Nvalen
 

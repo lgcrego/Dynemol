@@ -137,9 +137,9 @@ integer :: i , j , l , step
              write(14,992)  atom(i) % my_id          , &     ! <== global number
                             atom(i) % MMSymbol       , &     ! <== atom type  
                             ' '                      , &     ! <== alternate location indicator
-                            atom(i) % resid          , &     ! <== residue name
+                            atom(i) % residue        , &     ! <== residue name
                             ' '                      , &     ! <== chain identifier
-                            atom(i) % nresid         , &     ! <== residue sequence number
+                            atom(i) % nr             , &     ! <== residue sequence number
                             ' '                      , &     ! <== code for insertion of residues
                             ( atom(i) % xyz(l) , l=1,3 )   , &     ! <== xyz coordinates
                             1.00                     , &     ! <== occupancy
@@ -183,7 +183,7 @@ integer :: i, j, xyz , j1, j2, nresid
 real*8  :: CartesianDistance
 
  do i = 1 , MM % N_of_molecules
-    nresid = molecule(i) % nresid
+    nresid = molecule(i) % nr
     j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
     j2 = nresid * molecule(i) % N_of_atoms
     do j = j1 , j2

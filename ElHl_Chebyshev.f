@@ -1,16 +1,19 @@
 module ElHl_Chebyshev_m
 
     use type_m              , g_time => f_time  
-    use constants_m
-    use parameters_m        , only : t_i , t_f , n_t , frame_step , &
-                                     DP_Field_ , Coulomb_ , n_part
     use mkl95_blas
     use mkl95_lapack
+    use constants_m
     use ifport
+    use parameters_m        , only : t_i , t_f , n_t , frame_step , &
+                                     DP_Field_ , Coulomb_ , n_part, &
+                                     file_type , NetCharge
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis                   
-    use Data_Output         , only : Populations
+    use FMO_m               , only : FMO_analysis ,                 &
+                                     eh_tag    
+    use Data_Output         , only : Populations ,                  &
+                                     Net_Charge
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev
@@ -24,7 +27,9 @@ module ElHl_Chebyshev_m
 
 ! module variables ...
     real*8      ,   save          :: save_tau
-    real*8      ,   allocatable   :: S_inv(:,:)
+    logical     ,   save          :: done = .false.
+    logical     ,   save          :: necessary = .true.
+    real*8      ,   allocatable   :: h0(:,:) , S_inv(:,:)
     real*8      ,   allocatable   :: V_Coul_El(:) , V_Coul_Hl(:)
     complex*16  ,   allocatable   :: V_Coul(:,:)
 
@@ -86,8 +91,12 @@ allocate( Psi_ket ( size(basis) , n_part ), source=C_zero )
 forall( i=1:n_part ) Psi_bra(:,i) = matmul( ElHl_Psi(:,i) , S_matrix )
 Psi_ket = ElHl_Psi
 
+If( NetCharge ) allocate( Net_Charge(system%atoms) )
+
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+
+CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
 deallocate( DUAL_ket , S_matrix , DUAL_bra )
@@ -112,20 +121,27 @@ integer          , intent(in)    :: it
 complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , AO_bra(:,:) , AO_ket(:,:) 
 complex*16  , allocatable   :: V_coul(:,:) 
 real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) 
-real*8      , allocatable   :: H_prime(:,:) , h(:,:) , h0(:,:) , S_matrix(:,:) , S_inv(:,:)
+real*8      , allocatable   :: H_prime(:,:) , h(:,:) , S_matrix(:,:) 
 integer                     :: i , j , N
-logical                     :: done = .false.
 
 N = size(basis)
 
-! compute S and S_inverse ...
-CALL Overlap_Matrix     ( system , basis , S_matrix )
+If ( necessary ) then
 
-CALL Huckel             ( basis , S_matrix , h0 )
+    ! compute S and S_inverse ...
+    CALL Overlap_Matrix     ( system , basis , S_matrix )
 
-CALL Invertion_Matrix   ( S_matrix , S_inv )
+    CALL Huckel             ( basis , S_matrix , h0 )
 
-deallocate (S_matrix)
+    CALL Invertion_Matrix   ( S_matrix )
+
+    deallocate (S_matrix)
+
+    ! for a rigid structure once is enough ...
+    If( file_type == 'structure' ) necessary = .false.
+
+end If
+
 
 If( Coulomb_ ) then
 
@@ -156,34 +172,16 @@ end If
 ALLOCATE( h(N,N), source = D_zero )
 
 if( Coulomb_ ) then
-
     h = h0
-    do j = 1 , N
-        do i = 1 , j-1
-     
-            h(j,i) = h0(i,j)
-
-        end do
-    end do  
     forall( j=1:N ) h(j,j) = h(j,j) + V_coul_El(j)
-
 else
-
     h = h0
-    do j = 1 , N
-        do i = 1 , j-1
-     
-            h(j,i) = h0(i,j)
-
-        end do
-    end do  
-
 end if
 
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime(N,N) )
 
-H_prime = matmul( S_inv , h )
+CALL symm( S_inv , h , H_prime )
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
 CALL Propagation( system , basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t , it )
@@ -195,35 +193,18 @@ h(:,:)       = D_zero
 H_prime(:,:) = D_zero
 
 if( Coulomb_ ) then
-
     h = h0
-    do j = 1 , N
-        do i = 1 , j-1
-     
-            h(j,i) = h0(i,j)
-
-        end do
-    end do  
     forall( j=1:N ) h(j,j) = h(j,j) + V_coul_Hl(j)
-
 else
-
     h = h0
-    do j = 1 , N
-        do i = 1 , j-1
-     
-            h(j,i) = h0(i,j)
-
-        end do
-    end do  
-
 end if
 
-deallocate( h0 )
 If( Coulomb_ ) deallocate( V_coul_El , V_coul_Hl )
 
-H_prime = matmul( S_inv , h )
-deallocate(h,S_inv)
+CALL symm( S_inv , h , H_prime )
+
+deallocate(h)
+If( file_type == 'trajectory' ) deallocate( h0 , S_inv )
 
 ! proceed evolution of HOLE wapacket with best tau ...
 CALL Propagation( system , basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t , it )
@@ -240,6 +221,8 @@ DUAL_ket = Psi_t_bra
 
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+
+CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
 deallocate( H_prime , DUAL_bra , DUAL_ket )
@@ -431,12 +414,11 @@ end subroutine Convergence
 !
 !
 !
-!=================================================
-subroutine Invertion_Matrix( matrix , matrix_inv )
-!=================================================
+!=====================================
+ subroutine Invertion_Matrix( matrix )
+!=====================================
 implicit none
 real*8                  , intent(in)  :: matrix(:,:)
-real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
 
 ! local variables...
 real*8  , allocatable   :: work(:)
@@ -447,9 +429,11 @@ integer                 :: i , j , info , sparse , N
 N = size( matrix(:,1) )
 
 ! compute inverse of S_matrix...
-allocate( ipiv       ( N     ) )
-allocate( work       ( N     ) )
-allocate( matrix_inv ( N , N ) )
+allocate( ipiv  ( N     ) )
+allocate( work  ( N     ) )
+allocate( S_inv ( N , N ) )
+
+associate( matrix_inv => S_inv )
 
 matrix_inv = matrix
 
@@ -472,6 +456,8 @@ do i = 2 , N
         matrix_inv(i,j) = matrix_inv(j,i)
     end do
 end do
+
+end associate
 
 end subroutine Invertion_Matrix
 !
@@ -532,6 +518,8 @@ do j = 1 , size(basis)
 
         h0(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
 
+        h0(j,i) = h0(i,j)
+
     end do
 
     h0(j,j) = basis(j)%IP
@@ -539,6 +527,41 @@ do j = 1 , size(basis)
 end do
 
 end subroutine Huckel
+!
+!
+!
+!
+!
+!=================================
+ subroutine dump_Qdyn( Qdyn , it )
+!=================================
+implicit none
+type(g_time)    , intent(in) :: QDyn
+integer         , intent(in) :: it 
+
+! local variables ...
+integer :: nf , n
+
+do n = 1 , n_part
+
+    If( it == 1 ) then
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,12) "#" , QDyn%fragments , "total"
+    else
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+    end If
+
+    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
+
+    close(52)
+
+end do
+
+12 FORMAT(10A10)
+13 FORMAT(10F10.5)
+
+end subroutine dump_Qdyn
+!
 !
 !
 !

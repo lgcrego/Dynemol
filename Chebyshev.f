@@ -2,13 +2,15 @@ module Chebyshev_m
 
     use type_m              , g_time => f_time  
     use constants_m
-    use parameters_m        , only : t_i , t_f , n_t , frame_step , DP_Field_                     
     use mkl95_blas
     use mkl95_lapack
     use ifport
+    use parameters_m        , only : t_i , t_f , n_t ,              &
+                                     frame_step , DP_Field_ ,       &
+                                     file_type , n_part                   
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis                   
+    use FMO_m               , only : FMO_analysis , eh_tag                  
     use QCmodel_Huckel      , only : Huckel ,                       &
                                      Huckel_with_FIELDS
     use Data_Output         , only : Populations
@@ -24,6 +26,8 @@ module Chebyshev_m
 
 ! module variables ...
     real*8  , save :: save_tau 
+    logical , save :: necessary = .true.
+    real*8  , allocatable , save :: H_prime(:,:)
 
 contains
 !
@@ -74,6 +78,8 @@ Psi_ket = Psi
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
+CALL dump_Qdyn( Qdyn , it )
+
 ! clean and exit ...
 deallocate( DUAL_ket , S_matrix , DUAL_bra )
 
@@ -96,13 +102,20 @@ integer          , intent(in)    :: it
 ! local variables...
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
-real*8      , allocatable   :: H_prime(:,:)
 real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
 integer                     :: j , k_ref , N
 logical                     :: OK
 
-! building  S_matrix  and  H'= S_inv * H ...
-CALL Build_Hprime( system , basis , H_prime )
+
+If ( necessary ) then
+    
+    ! building  S_matrix  and  H'= S_inv * H ...
+    CALL Build_Hprime( system , basis )
+
+    ! for a rigid structure once is enough ...
+    If( file_type == 'structure' ) necessary = .false.
+
+end If
 
 N = size(basis)
 
@@ -190,8 +203,11 @@ DUAL_ket = Psi_t_bra
 ! save populations(time) ...
 QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
+CALL dump_Qdyn( Qdyn , it )
+
 ! clean and exit ...
-deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , H_prime , DUAL_bra , DUAL_ket )
+deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , DUAL_bra , DUAL_ket )
+If( file_type == 'trajectory' ) deallocate( H_prime )
 
 Print 186, t
 
@@ -276,13 +292,12 @@ end subroutine Convergence
 !
 !
 !
-!==================================================
-subroutine Build_Hprime( system , basis , H_prime )
-!==================================================
+!=========================================
+ subroutine Build_Hprime( system , basis )
+!=========================================
 implicit none
 type(structure)                 , intent(in)  :: system
 type(STO_basis)                 , intent(in)  :: basis(:)
-real*8          , allocatable   , intent(out) :: H_prime(:,:)
 
 ! local variables...
 real*8  , allocatable   :: Hamiltonian(:,:)
@@ -324,7 +339,7 @@ deallocate( S )
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime ( size(basis) , size(basis) ) )
 
-H_prime = matmul(S_inv,Hamiltonian)
+CALL symm( S_inv , Hamiltonian , H_prime )
 
 deallocate( S_inv , Hamiltonian )
 
@@ -398,6 +413,38 @@ do k = 2 , k_max
 end do
 
 end function coefficient
+!
+!
+!
+!=================================
+ subroutine dump_Qdyn( Qdyn , it )
+!=================================
+implicit none
+type(g_time)    , intent(in) :: QDyn
+integer         , intent(in) :: it 
+
+! local variables ...
+integer :: nf , n
+
+do n = 1 , n_part
+
+    If( it == 1 ) then
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,12) "#" , QDyn%fragments , "total"
+    else
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+    end If
+
+    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
+
+    close(52)
+
+end do
+
+12 FORMAT(10A10)
+13 FORMAT(10F10.5)
+
+end subroutine dump_Qdyn
 !
 !
 !

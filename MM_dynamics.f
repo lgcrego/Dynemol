@@ -9,7 +9,7 @@ module MM_dynamics_m
     use F_intra_m           , only : FORCEINTRA
     use for_force           , only : pot
     use MD_dynamics_m       , only : VV1 , VV2 , SUMMAT , PRESS_Boundary
-    use project             , only : MM_system , MM_molecular , MM_atomic
+    use MM_types            , only : MM_system , MM_molecular , MM_atomic
     use Structure_Builder   , only : Unit_Cell
     use Data_Output         , only : Net_Charge
 

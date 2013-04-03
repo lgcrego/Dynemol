@@ -25,6 +25,7 @@ module type_m
         real*8       , allocatable :: coord(:,:)
         real*8       , allocatable :: k_WH(:)
         real*8       , allocatable :: solvation_hardcore(:)
+        real*8       , allocatable :: hardcore(:)
         real*8       , allocatable :: polar(:)
         real*8                     :: BoxSides(3)
         real*8                     :: Center_of_Mass(3)
@@ -42,6 +43,7 @@ module type_m
         real*8                        :: mass
         real*8                        :: charge
         real*8                        :: solvation_hardcore
+        real*8                        :: hardcore
         real*8                        :: polar
         integer                       :: AtNo
         integer                       :: Nvalen
@@ -127,6 +129,7 @@ module type_m
         real*8           :: y
         real*8           :: z
         real*8           :: solvation_hardcore
+        real*8           :: hardcore
         character(len=2) :: symbol
         character(len=1) :: fragment
         character(len=3) :: EHSymbol
