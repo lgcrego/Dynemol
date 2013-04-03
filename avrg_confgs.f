@@ -5,7 +5,7 @@ module Sampling_m
     use type_m
     use constants_m
     use parameters_m        , only : frame_step , spectrum ,        &
-                                     survival , state_of_matter ,   &
+                                     survival , nuclear_matter ,    &
                                      DP_Moment , DP_Field_ ,        &
                                      file_type , sigma , n_part ,   &
                                      restart
@@ -85,7 +85,7 @@ end if
 
 do frame = frame_init , size(trj) , frame_step
 
-    select case ( state_of_matter )
+    select case ( nuclear_matter )
 
         case( "solvated_sys" )
 
@@ -99,7 +99,7 @@ do frame = frame_init , size(trj) , frame_step
 
         case default
 
-            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
             stop
 
     end select

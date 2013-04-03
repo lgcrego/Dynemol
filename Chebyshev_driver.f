@@ -4,7 +4,7 @@ module Chebyshev_driver_m
 
     use type_m
     use constants_m
-    use parameters_m                , only : t_f , n_t , state_of_matter ,  &
+    use parameters_m                , only : t_f , n_t , nuclear_matter ,   &
                                              frame_step , DP_Field_ ,       &
                                              n_part
     use Babel_m                     , only : Coords_from_Universe ,         &
@@ -70,7 +70,7 @@ CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 it = 1
 
-select case ( state_of_matter )
+select case ( nuclear_matter )
 
     case( "solvated_sys" )
 
@@ -84,7 +84,7 @@ select case ( state_of_matter )
 
     case default
 
-        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+        Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
 
 end select
 
@@ -109,7 +109,7 @@ do frame = 2 , size(trj) , frame_step
     CALL DeAllocate_Structures ( Extended_Cell )
     DeAllocate                 ( ExCell_basis  )
 
-    select case ( state_of_matter )
+    select case ( nuclear_matter )
 
         case( "solvated_sys" )
 
@@ -123,7 +123,7 @@ do frame = 2 , size(trj) , frame_step
 
         case default
 
-            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
 
     end select
 
@@ -170,7 +170,7 @@ CALL DeAllocate_QDyn( QDyn , flag="alloc" )
 
 it = 1
 
-select case ( state_of_matter )
+select case ( nuclear_matter )
 
     case( "solvated_sys" )
 
@@ -184,7 +184,7 @@ select case ( state_of_matter )
 
     case default
 
-        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+        Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
 
 end select
 
@@ -209,7 +209,7 @@ do frame = 2 , size(trj) , frame_step
     CALL DeAllocate_Structures ( Extended_Cell )
     DeAllocate                 ( ExCell_basis  )
 
-    select case ( state_of_matter )
+    select case ( nuclear_matter )
 
         case( "solvated_sys" )
 
@@ -223,7 +223,7 @@ do frame = 2 , size(trj) , frame_step
 
         case default
 
-            Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+            Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
 
     end select
 

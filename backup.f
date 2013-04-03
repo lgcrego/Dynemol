@@ -2,7 +2,7 @@ module Backup_m
 
     use type_m
     use mkl95_blas
-    use parameters_m        , only : state_of_matter            , &
+    use parameters_m        , only : nuclear_matter             , &
                                      DP_field_                  , &
                                      DP_Moment                  , &
                                      Coulomb_                   , &
@@ -45,7 +45,7 @@ type(R_eigen)   , optional      , intent(out)   :: UNI_hl
 ! local variables ...
 type(universe) :: Solvated_System
 
-select case ( state_of_matter )
+select case ( nuclear_matter )
 
     case( "solvated_sys" )
 
@@ -59,7 +59,7 @@ select case ( state_of_matter )
 
     case default
 
-        Print*, " >>> Check your state_of_matter options <<< :" , state_of_matter
+        Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
         stop
 
 end select
