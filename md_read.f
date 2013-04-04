@@ -6,6 +6,7 @@ module MD_read_m
     use for_force           , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines  , only : ad_hoc_MM_tuning
     use MM_types            , only : MM_system , MM_molecular , MM_atomic
+    use gmx2mdflex          , only : itp2mdflex, top2mdflex
     use Structure_Builder   , only : Unit_Cell
 
     type(MM_system)                     :: MM
@@ -26,8 +27,9 @@ subroutine Reading
 implicit none
 
 ! local variables ...
-real*8          :: massa , r0 , k0 , theta0 , ktheta0
+real*8          :: massa , r0 , k0 , theta0 , ktheta0 , compressibility
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid
+logical         :: read_from_gmx
 logical         :: exist
 character(10)   :: string
 
@@ -41,19 +43,22 @@ CALL allocate_MM
     CALL allocate_species( MM % N_of_species )
 
     do i = 1 , MM % N_of_species
+        read (10,*) species(i) % residue                !  Residue of species i
         read (10,*) species(i) % N_of_molecules         !  Number of molecules of species i
         read (10,*) species(i) % N_of_atoms             !  Number of atoms of a molecules of species i
         read (10,*) species(i) % flex                   !  Flexible   (T,F)
     end do
 
-    read (10,*) temper                                  !        Temperature (K)
-    read (10,*) press                                   !               Pressure
-    read (10,*) rcut                                    !      Cutoff radius (A)
-    read (10,*) talt                                    !   Temperature coupling
+    read (10,*) temper                                  !  Temperature (K)
+    read (10,*) press                                   !  Pressure
+    read (10,*) rcut                                    !  Cutoff radius (A)
+    read (10,*) talt                                    !  Temperature coupling
                 talt = talt * 1.0d-12
-    read (10,*) talp                                    !      Pressure coupling 
+    read (10,*) talp                                    !  Pressure coupling 
+    read (10,*) compressibility
                 talp = 107.0d-6 / (talp * 1.0d-12)
     read (10,*) KAPPA
+    read (10,*) read_from_gmx                           ! .T. => reads FF from gmx input files   
 
  close (10)
  atmax = sum( species(:) % N_of_atoms )                 ! 
@@ -125,7 +130,15 @@ CALL Symbol_2_AtNo( atom )
 !=======================  reading  potential.inpt  ============================= 
  CALL allocate_FF( atmax )
 
- open (30, file='potential.inpt', status='old')
+ If( read_from_gmx ) then
+
+    CALL ad_hoc_tuning_MD(instance="SpecialBonds")
+    CALL top2mdflex( MM, atom, FF )
+    CALL itp2mdflex( MM, atom, species , FF)
+
+ else
+
+    open (30, file='potential.inpt', status='old')
 
     read(30,*) forcefield
     read(30,*) MM % CombinationRule
@@ -283,7 +296,11 @@ CALL Symbol_2_AtNo( atom )
         endif
     end do
 
- close (30)
+    close (30)
+
+end If
+
+!=======================  finished  reading  potential.inpt  ============================= 
 
  do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % N_of_atoms = species(i) % N_of_atoms
@@ -318,7 +335,7 @@ CALL Symbol_2_AtNo( atom )
      k = k + molecule(i) % N_of_atoms
  end do
  
- CALL ad_hoc_MM_tuning(atom)
+ CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 end subroutine Reading
 !

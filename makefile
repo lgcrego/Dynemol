@@ -39,6 +39,7 @@ SOURCE2 = constants_m.o  \
 		  util.o  \
 		  EHT_input.o  \
 		  tuning.o \
+		  gmx2mdflex.o \
 		  babel_routines.o  \
 		  babel.o  \
 		  structure.o  \

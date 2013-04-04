@@ -151,18 +151,30 @@ end module tuning_m
 !
 module MM_tuning_routines
 
-use MM_types , only : MM_atomic
+use MM_types , only : MM_atomic, DefineBonds, DefineAngles
+
+private
+
+public :: ad_hoc_MM_tuning , SpecialBonds, SpecialAngs
+
+! module variables ...
+type(DefineBonds) , allocatable :: SpecialBonds(:)
+type(DefineAngles), allocatable :: SpecialAngs(:)
 
 contains
 
-!==================================
-subroutine ad_hoc_MM_tuning(system)
-!==================================
+!================================================
+ subroutine ad_hoc_MM_tuning( system , instance )
+!================================================
 implicit none
-type(MM_atomic)  , intent(inout) :: system(:)
+type(MM_atomic) , optional , intent(inout) :: system(:)
+character(*)               , intent(in)    :: instance
 
-! local variables ...
-integer :: i 
+
+select case ( instance ) 
+
+!=================================================
+    case ("General")
 
 !----------------------------------
 !      define SPECIAL atoms 
@@ -197,6 +209,38 @@ where(system % my_id == 51 ) system % free = .false.
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------
+
+
+!=================================================
+
+    case( 'SpecialBonds' )
+
+!----------------------------------
+!      define SPECIAL bonds
+!----------------------------------
+ allocate(SpecialBonds(2))
+ SpecialBonds(1) % nome      = 'bond_gb16'
+ SpecialBonds(1) % kbond0(1) = 392459.2
+ SpecialBonds(1) % kbond0(2) = 0.14010
+
+ SpecialBonds(2) % nome      = 'bond_gb53'
+ SpecialBonds(2) % kbond0(1) = 392459.2
+ SpecialBonds(2) % kbond0(2) = 0.14580
+!----------------------------------
+!      define SPECIAL angles 
+!----------------------------------
+ allocate(SpecialAngs(2))
+ SpecialAngs(1) % nome     = 'angle_ga07'
+ SpecialAngs(1) % kang0(1) = 527.184
+ SpecialAngs(1) % kang0(2) = 108.000
+
+ SpecialAngs(2) % nome     = 'angle_ga27'
+ SpecialAngs(2) % kang0(1) = 527.184
+ SpecialAngs(2) % kang0(2) = 120.000
+
+!=================================================
+
+end select
 
 end subroutine ad_hoc_MM_tuning
 
