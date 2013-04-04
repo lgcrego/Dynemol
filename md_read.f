@@ -132,7 +132,7 @@ CALL Symbol_2_AtNo( atom )
 
  If( read_from_gmx ) then
 
-    CALL ad_hoc_tuning_MD(instance="SpecialBonds")
+    CALL ad_hoc_MM_tuning(instance="SpecialBonds")
     CALL top2mdflex( MM, atom, FF )
     CALL itp2mdflex( MM, atom, species , FF)
 
