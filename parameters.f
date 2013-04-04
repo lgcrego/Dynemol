@@ -28,14 +28,14 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   nuclear_matter = "MDynamics"                ! <== solvated_sys , extended_sys or MDynamics
 !			
   Survival        = T_                       
   SPECTRUM        = F_                          
   DP_Moment       = F_                       
-  OPT_parms       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = T_                        ! <== ad hoc tuning of parameters
 
 !--------------------------------------------------------------------
@@ -49,7 +49,7 @@ logical :: dynamic
   GaussianCube      = F_                       
   GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = T_                      ! <== pdb format charge Occupancy ONLY
+  NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
   CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
   CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
 !--------------------------------------------------------------------
@@ -76,13 +76,13 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  2                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  0                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  2                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state =  147                        ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
@@ -136,6 +136,8 @@ static = .not. dynamic
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
+
+If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 If ( NetCharge .AND. Ch_and_DP ) stop ">>> NetCharge and Ch_and_DP should not be set simultaneously <<< "
 
