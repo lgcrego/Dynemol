@@ -10,6 +10,7 @@ module MM_dynamics_m
     use for_force           , only : pot
     use MD_dynamics_m       , only : VV1 , VV2 , SUMMAT , PRESS_Boundary
     use MM_types            , only : MM_system , MM_molecular , MM_atomic
+    use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
     use Data_Output         , only : Net_Charge
 
@@ -37,9 +38,7 @@ integer :: i
 
 if( .NOT. done ) CALL preprocess_DM
 
-do i = 1 , size(atom)
-    atom(i) % charge = atom(i) % MM_charge + Net_Charge(i)
-end do
+atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
 
 ! Molecuar dynamic ...
 CALL VV1( dt )
@@ -57,7 +56,7 @@ if (mod(frame,1) == 0) write (*,'(I7,4F15.5)') frame, Ttrans, pot*mol*1.d-6 / df
 CALL output( Ttrans , dt )
 
 ! pass nuclear configuration to QM ...
-forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom(i) % xyz(:)
+forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
 end subroutine MolecularDynamics
 !
@@ -72,9 +71,7 @@ integer :: i
 
 CALL Reading
 
-do i = 1 , size(atom)
-    atom(i) % charge = atom(i) % MM_charge + Net_Charge(i)
-end do
+atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
 
 CALL Setup
 CALL cmzero

@@ -45,6 +45,7 @@ module type_m
         real*8                        :: solvation_hardcore
         real*8                        :: hardcore
         real*8                        :: polar
+        integer                       :: my_id
         integer                       :: AtNo
         integer                       :: Nvalen
         integer                       :: nr

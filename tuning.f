@@ -55,13 +55,13 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "BE2" ) univ % atom % El = .true.
+ where( univ % atom % residue == "PPH" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 
- where( univ % atom % residue == "BE1" ) univ % atom % Hl = .true.
+ where( univ % atom % residue == "PPH" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...

@@ -19,6 +19,7 @@
                                          Initialize_System
     use Semi_Empirical_Parms    , only : atom                                         
 
+!    private
 
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_XYZ
@@ -26,6 +27,7 @@
 
     type(universe)      , allocatable   , public  :: trj(:)
     real*8                              , public  :: MD_dt
+    integer             , allocatable   , public  :: QMMM_key(:)
     character(len=72)                   , public  :: System_Characteristics
 
 contains
@@ -201,6 +203,7 @@ do
     read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
     if( keyword == "CRYST1" ) then
         do i = 1 , system%N_of_atoms
+                         system%atom(i)%my_id = i
             read(3 , 115 , iostat=io_err , err=12)             &
                          MMSymbol_char                      ,  &    ! <== atom type
                          system%atom(i)%residue             ,  &    ! <== residue name
@@ -232,6 +235,9 @@ CALL Identify_Residues  ( system      )
 CALL Setting_Fragments  ( system      )
 CALL Identify_Fragments ( system      )
 CALL Pack_Residues      ( system%atom , system%list_of_residues )
+
+! vector QMMM_key is the key to exchange QM and MM atomic properties ...
+allocate( QMMM_key(system%N_of_atoms) , source=system%atom%my_id)
 
 If( verify(driver,'slice') == 6 ) then
 

@@ -28,7 +28,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   nuclear_matter = "MDynamics"                ! <== solvated_sys , extended_sys or MDynamics
 !			
@@ -64,7 +64,7 @@ logical :: dynamic
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
-  Induced_     =  F_                          ! <== use induced dipole potential 
+  Induced_     =  T_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -76,9 +76,9 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
-  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  0                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  146                        ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 

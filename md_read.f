@@ -7,6 +7,7 @@ module MD_read_m
     use MM_tuning_routines  , only : ad_hoc_MM_tuning
     use MM_types            , only : MM_system , MM_molecular , MM_atomic
     use gmx2mdflex          , only : itp2mdflex, top2mdflex
+    use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
 
     type(MM_system)                     :: MM
@@ -547,19 +548,22 @@ subroutine pass_structure_to_MD
 implicit none
 
 ! local variables ...
-integer :: i
+integer :: i , j
 
 MM % box  = Unit_Cell % T_xyz
 MM % ibox =  D_one / MM % box
 
-do i = 1 , MM % N_of_atoms
-    atom(i) % AtNo       = Unit_Cell % AtNo(i)
+do j = 1 , MM % N_of_atoms
+
+    i = QMMM_key(j)
+
+    atom(i) % AtNo       = Unit_Cell % AtNo(j)
     atom(i) % my_id      = i
-    atom(i) % nr         = Unit_Cell % nr(i)
-    atom(i) % residue    = Unit_Cell % residue(i)
-    atom(i) % Symbol     = Unit_Cell % Symbol(i)
-    atom(i) % MMSymbol   = Unit_Cell % MMSymbol(i)
-    atom(i) % xyz(:)     = Unit_Cell % coord(i,:)
+    atom(i) % nr         = Unit_Cell % nr(j)
+    atom(i) % residue    = Unit_Cell % residue(j)
+    atom(i) % Symbol     = Unit_Cell % Symbol(j)
+    atom(i) % MMSymbol   = Unit_Cell % MMSymbol(j)
+    atom(i) % xyz(:)     = Unit_Cell % coord(j,:)
     atom(i) % vel(:)     = 0.d0
     atom(i) % fbond(:)   = 0.d0
     atom(i) % fang(:)    = 0.d0
@@ -575,6 +579,7 @@ do i = 1 , MM % N_of_atoms
     atom(i) % eps        = 0.d0
     atom(i) % sig        = 0.d0
     atom(i) % free       = .true.
+
 end do
 
 atom(:) % MMSymbol = adjustr( atom(:) % MMSymbol )
