@@ -43,12 +43,11 @@ ENDMDL
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-AtNo - XYZ
+xyz.dat
 
 N_of_ATOMS
 System Characteristics                                                fmt(a72)
 T_x  	T_y  	T_z 
-
 SYMBOL  x   y   z
 SYMBOL  .   .   .
 SYMBOL  .   .   .
@@ -57,11 +56,14 @@ SYMBOL  .   .   .
 
 OR
 
+N_of_ATOMS
+System Characteristics                                                fmt(a72)
+T_x  	T_y  	T_z 
 Atomic Number 	x   y   z
 Atomic Number 	.   .   .
 Atomic Number 	.   .   .
-  .      .		.   .   .
-  .      .		.   .   .
+  .      .      .   .   .
+  .      .      .   .   .
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
