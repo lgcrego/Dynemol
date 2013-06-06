@@ -25,14 +25,15 @@ integer :: i , ioerr
 
 ! edit structure  ...
 
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!
+!      univ % atom(:) % etc
+!
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 !-----------------------------------
 !      define %atom
 !-----------------------------------
-
- where( univ % atom % AtNo == 1 ) univ % atom % hardcore = 2.04d0
- where( univ % atom % AtNo == 6 ) univ % atom % hardcore = 2.45d0
- where( univ % atom % AtNo == 7 ) univ % atom % hardcore = 2.04d0
- where( univ % atom % AtNo == 8 ) univ % atom % hardcore = 1.75d0
 
 !-----------------------------------
 !      define %residue
@@ -55,20 +56,16 @@ integer :: i , ioerr
 !      define %El   : mandatory !!
 !-----------------------------------
 
- where( univ % atom % residue == "PPH" ) univ % atom % El = .true.
-
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
- where( univ % atom % residue == "PPH" ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
 !------------------------------------------------
 
 !default: %El => DONOR
- where( univ % atom % El ) univ % atom % fragment = "D"
+! where( univ % atom % El ) univ % atom % fragment = "D"
 
 !......................................................................
 
@@ -112,12 +109,6 @@ integer  :: i
  DO i = 1 , size(a%atom)
  
     select case(a%atom(i)%residue)
-
-        case( 'BE1') 
-            a%atom(i)%fragment = '1' 
-
-        case( 'ETH') 
-            a%atom(i)%fragment = 'B' 
 
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 

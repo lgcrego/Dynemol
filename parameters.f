@@ -28,15 +28,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
-  nuclear_matter = "MDynamics"                ! <== solvated_sys , extended_sys or MDynamics
+  nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys or MDynamics
 !			
-  Survival        = T_                       
+  Survival        = F_                       
   SPECTRUM        = F_                          
-  DP_Moment       = F_                       
-  OPT_parms       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc          = T_                        ! <== ad hoc tuning of parameters
+  DP_Moment       = T_                       
+  OPT_parms       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  ad_hoc          = F_                        ! <== ad hoc tuning of parameters
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
@@ -64,7 +64,7 @@ logical :: dynamic
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
-  Induced_     =  T_                          ! <== use induced dipole potential 
+  Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
@@ -76,9 +76,9 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 0                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  146                        ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  000                        ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 

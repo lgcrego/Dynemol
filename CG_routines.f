@@ -11,7 +11,6 @@ module CG_driver_m
     private 
 
     ! module variables ...
-    integer      :: Top_Selection = 15
     type(CG_OPT) :: CG
 
 contains
@@ -29,11 +28,12 @@ type(STO_basis) , allocatable   , intent(out)   :: CG_basis(:)
 
 ! local variables ...
 integer                 :: i , GlobalMinimum
+integer                 :: Top_Selection 
 real*8  , allocatable   :: local_minimum(:) , InitialCost(:)
 
 If( profiling ) OPEN( unit=32 , file='CG-log.dat' , status='unknown' )
 
-Top_Selection = min( Top_Selection , size(GA_Selection(1,:)) )
+Top_Selection = size(GA_Selection(1,:)) 
 
 allocate( local_minimum(Top_Selection) , source = real_large)
 allocate( InitialCost(0:Top_Selection) )

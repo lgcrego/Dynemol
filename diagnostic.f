@@ -39,15 +39,12 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues
  character(3)                   :: residue
- logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 
  
 ! preprocessing stuff ...................................
-
-DIPOLE_ = ( DP_Moment )
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
 
@@ -75,9 +72,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
+ If( DP_Moment .OR. Spectrum ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
- If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
+ If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
  If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(87,:) , UNI%R(:,87) , 87 , 0.d0 )
 
