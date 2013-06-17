@@ -2,11 +2,14 @@ module GA_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : DP_Moment , F_ , T_ , CG_
+    use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
+                                         Pop_size , N_generations ,     &
+                                         Top_Selection , Pop_range ,    &
+                                         Mutation_rate , Mutate_Cross
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
-    use GA_QCModel_m            , only : GA_eigen ,         &
-                                         GA_DP_Analysis ,   &
+    use GA_QCModel_m            , only : GA_eigen ,                     &
+                                         GA_DP_Analysis ,               &
                                          Mulliken
     use cost_tuning_m           , only : evaluate_cost                                         
     use CG_driver_m             , only : CG_driver
@@ -15,13 +18,6 @@ module GA_m
     public :: Genetic_Algorithm , Mulliken
 
     private 
-
-    integer , parameter :: Pop_Size       =   10         
-    integer , parameter :: N_generations  =   20
-    integer , parameter :: Top_Selection  =   5            ! <== top selection < Pop_Size
-    real*8  , parameter :: Pop_range      =   0.3d0        ! <== range of variation of parameters
-    real*8  , parameter :: Mutation_rate  =   0.3           
-    logical , parameter :: Mutate_Cross   =   T_           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
     type(OPT) :: GA
 
@@ -301,11 +297,10 @@ real*8  , intent(inout) :: Pop(:,:)
 real*8  , allocatable   :: mat2(:,:) , ma(:) , za(:) , sem(:) , po(:)
 real*8                  :: rn , rp
 integer , allocatable   :: p(:) , n(:)
-integer                 :: i , j , pt , pm
+integer                 :: i , j , pt , pm , N_crossings , Ponto_cruzamento
 
-! local parameters ...
-integer , parameter     :: N_crossings      = Pop_Size - Top_Selection 
-integer , parameter     :: Ponto_cruzamento = N_crossings / 2 
+N_crossings      = Pop_Size - Top_Selection 
+Ponto_cruzamento = N_crossings / 2 
 
 ! Random number for crossing ...
 allocate( n(N_crossings) )

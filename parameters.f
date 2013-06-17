@@ -4,12 +4,15 @@ use type_m
 
 integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
+integer                 :: Pop_Size , N_generations , Top_Selection 
 real*8                  :: t_i , t_f , sigma
+real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
+logical                 :: Mutate_Cross   
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -28,9 +31,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
-  nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys or MDynamics
+  nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival        = F_                       
   SPECTRUM        = F_                          
@@ -108,10 +111,17 @@ logical :: dynamic
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
-!           OPTIMIZATION parameters
+!           Genetic_Alg and CG OPTIMIZATION parameters
 !
-  CG_ = T_                                  ! <== use conjugate gradient method after genetic algorithm
 
+  Pop_Size       =   50         
+  N_generations  =   10
+  Top_Selection  =   2                      ! <== top selection < Pop_Size
+  Pop_range      =   0.2d0                  ! <== range of variation of parameters
+  Mutation_rate  =   0.3           
+  Mutate_Cross   =   T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+
+  CG_ = F_                                  ! <== use conjugate gradient method after genetic algorithm
   profiling = T_                            ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
