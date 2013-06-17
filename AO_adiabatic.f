@@ -116,7 +116,7 @@ do frame = frame_init , frame_final , frame_step
     CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
     ! save populations(t + t_rate) ...
-    QDyn%dyn(it,:,nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,nn) , DUAL_ket(:,nn) , t )
+    QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t )
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -296,7 +296,7 @@ CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zer
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
 ! save populations ...
-QDyn%dyn(it,:,nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,nn) , DUAL_ket(:,nn) , t_i )
+QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t_i )
 
 CALL dump_Qdyn( Qdyn , it )
 
