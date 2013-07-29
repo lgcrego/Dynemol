@@ -140,7 +140,7 @@ forall( i=1:n_of_DOS_states ) list_of_DOS_states(i) = i1 + (i-1)
 allocate( atom(system%atoms) , source=I_zero ) 
 j=1
 do i = 1 , system%atoms
-    if( (system%residue(i) == PDOS(nr)%residue) ) then
+    if( system%residue(i) == PDOS(nr)%residue ) then
         atom(j) = i
         j = j + 1
     end if
@@ -256,12 +256,14 @@ n_of_atoms = size(atom)
 do j = 1 , top-1
 
     do l = 1 , n_of_atoms
+        if( atom(l) /= 0 ) then
 
-        i1 = system%BasisPointer(atom(l)) + 1
-        i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
+            i1 = system%BasisPointer(atom(l)) + 1
+            i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
 
-        state_projection(j) = state_projection(j) + sum( QM%L(j,i1:i2)*QM%R(i1:i2,j) )
+            state_projection(j) = state_projection(j) + sum( QM%L(j,i1:i2)*QM%R(i1:i2,j) )
         
+        end if
     end do
 
 end do
