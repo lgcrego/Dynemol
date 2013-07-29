@@ -128,7 +128,6 @@ integer :: copy , nr_sum , ix , iy , k , n
         END FORALL
 
         k      =  k      + unit_cell%atoms
-        nr_sum =  nr_sum + maxval( unit_cell%nr )
 
      END IF
 
@@ -416,6 +415,12 @@ type(structure) system
 ! local parameter: offset for ASCII numerical characters ...
 integer :: ASC_offset_1 = 48      
 integer :: ASC_offset_2 = 96      
+
+! if there are TOO MANY copies, then all neighborhood shall be acceptor ...
+if( maxval(system%copy_No) > 2 ) then
+    where( (system%El) .AND. (system%copy_No /= 0) ) system%fragment = 'A'
+    where( (system%Hl) .AND. (system%copy_No /= 0) ) system%fragment = 'A'
+end if
 
 ! separate central structure from replicas ...
 where( (system%El) .AND. (system%copy_No /= 0) ) system%El = .false.
