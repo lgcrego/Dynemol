@@ -216,7 +216,7 @@ integer , parameter :: mxn = 15 , mxl = 5
 ! na, la, expa, xa, ya, za:  N, L, EXPONENT and cartesian coordinates of function on A
 ! nb, lb, expb, xb, yb, zb:  N', L', EXPONENT' and cartesian coordinates of function on B
 !
-! coordinates must be in a.u. 
+! coordinates must be in a.u. to be consistent with zetas ... 
 
 AtNo_a = a_system%AtNo (ia)
 AtNo_b = b_system%AtNo (ib)

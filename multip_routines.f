@@ -375,7 +375,7 @@ end subroutine multipoles1c
 !
 !     Coded by Rafael Lopez (rafael.lopez@uam.es)  October 6th 2008.
 !
-subroutine multipoles2c(na, la, exa, nb, lb, exb, xab, yab, zab, Rab, lmult, rl, rl2, qlm)
+subroutine multipoles2c(na, la, exa, nb, lb, exb, Rab, lmult, rl, rl2, qlm)
 
 implicit real*8 (a-h,o-z)
 

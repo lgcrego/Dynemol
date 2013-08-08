@@ -45,8 +45,6 @@
  character(len=5)         :: string 
  character(len=22)        :: f_name
 
- real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
-
  allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i5.5)') it
@@ -77,7 +75,7 @@
 !  translation to the center of mass
  forall(i=1:extended_cell%atoms,j=1:3) xyz(i,j) = extended_cell%coord(i,j) - extended_cell%Center_of_Mass(j)
 
-! initial corner of the volume Box 
+!  initial corner of the volume Box 
  a = minval(xyz(:,1)) - fringe / two
  b = minval(xyz(:,2)) - fringe / two
  c = minval(xyz(:,3)) - fringe / two
@@ -86,14 +84,16 @@
  write(4,*) System_Characteristics
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
- write(4,111) extended_cell%atoms , a/aB , b/aB , c/aB
- write(4,111) n_xyz_steps(1) + 1 , dx/aB   , 0.d0 , 0.d0 
- write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/aB   , 0.d0
- write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/aB
+ write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
+ write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr   , 0.d0 , 0.d0 
+ write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/a_Bohr   , 0.d0
+ write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/a_Bohr
 
+!  coordinates in a.u., because zeta is in units of [a_0^{-1}] ...
+ xyz = xyz / a_Bohr
  DO i = 1 , extended_cell%atoms
  
-    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
+    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1) , xyz(i,2) , xyz(i,3)
 
  END DO
 
@@ -118,14 +118,14 @@
 !$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,TotalPsiKet)
 !$OMP single
  DO ix = 0 , n_xyz_steps(1)
-    x = a + ix * dx
+    x = (a + ix * dx) / a_Bohr
     
     !$OMP task untied
     DO iy = 0 , n_xyz_steps(2)
-        y = b + iy * dy
+        y = (b + iy * dy) / a_Bohr
  
     DO iz = 0 , n_xyz_steps(3) 
-        z = c + iz * dz
+        z = (c + iz * dz) / a_Bohr
 
         i = 0 
         TotalPsiKet = C_zero 
@@ -133,11 +133,11 @@
 
             AtNo = extended_cell%AtNo(k)
 
-            ! distance from the center of the nuclei
+            ! distance from the center of the nuclei, in a.u.
 
             r = dsqrt((x-xyz(k,1))*(x-xyz(k,1)) + (y-xyz(k,2))*(y-xyz(k,2)) + (z-xyz(k,3))*(z-xyz(k,3))) 
 
-            ! coordinates centered on the nuclei   
+            ! coordinates centered on the nuclei, in a.u.   
 
             x0 = x - xyz(k,1) 
             y0 = y - xyz(k,2) 
@@ -181,13 +181,10 @@
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
  DO ix = 0 , n_xyz_steps(1)
- x = a + ix * dx
  
     DO iy = 0 , n_xyz_steps(2)
-    y = b + iy * dy
  
         DO iz = 0 , n_xyz_steps(3) 
-        z = c + iz * dz
 
             write(4,112,advance='no') Psi( ix+1 , iy+1 , iz+1 ) 
 
@@ -232,8 +229,6 @@
  character(len=5)         :: string 
  character(len=22)        :: f_name
 
- real*8 , parameter :: aB = 0.529d0   ! <== Bohr radius
-
  allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i5.5)') it
@@ -273,14 +268,16 @@
  write(4,*) System_Characteristics
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
- write(4,111) extended_cell%atoms , a/aB , b/aB , c/aB
- write(4,111) n_xyz_steps(1) + 1 , dx/aB   , 0.d0 , 0.d0 
- write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/aB   , 0.d0
- write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/aB
+ write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
+ write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr   , 0.d0 , 0.d0 
+ write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/a_Bohr   , 0.d0
+ write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/a_Bohr
 
+!  coordinates in a.u., because zeta is in units of [a_0^{-1}] ...
+ xyz = xyz / a_Bohr
  DO i = 1 , extended_cell%atoms
  
-    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1)/aB , xyz(i,2)/aB , xyz(i,3)/aB
+    write(4,113) extended_cell%AtNo(i), 0.0 , xyz(i,1) , xyz(i,2) , xyz(i,3)
 
  END DO
 
@@ -305,14 +302,14 @@
 !$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,TotalPsiBra,TotalPsiKet)
 !$OMP single
  DO ix = 0 , n_xyz_steps(1)
-    x = a + ix * dx
+    x = (a + ix * dx) / a_Bohr
     
     !$OMP task untied
     DO iy = 0 , n_xyz_steps(2)
-        y = b + iy * dy
+        y = (b + iy * dy) / a_Bohr
  
     DO iz = 0 , n_xyz_steps(3) 
-        z = c + iz * dz
+        z = (c + iz * dz) / a_Bohr
 
         i = 0 
         TotalPsiBra = C_zero 
@@ -370,13 +367,10 @@
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
  DO ix = 0 , n_xyz_steps(1)
- x = a + ix * dx
  
     DO iy = 0 , n_xyz_steps(2)
-    y = b + iy * dy
  
         DO iz = 0 , n_xyz_steps(3) 
-        z = c + iz * dz
 
             write(4,112,advance='no') Psi_2( ix+1 , iy+1 , iz+1 ) 
 
