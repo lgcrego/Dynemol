@@ -342,7 +342,7 @@ type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
-real*8  :: expa, expb, xab , yab , zab , Rab 
+real*8  :: expa, expb, Rab 
 integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb , i , j
 integer :: na , la , ma 
@@ -365,9 +365,9 @@ do ia = 1 , system%atoms
 
 ! calculate rotation matrix for the highest l
 
-    call RotationMultipoles(system,ia,ib,xab,yab,zab,Rab,lmult,rl,rl2)
+    call RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
 
-    If(Rab*a_Bohr > cutoff_Angs) goto 10
+    If(Rab > cutoff_Angs) goto 10
 
     do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
     do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja

@@ -16,18 +16,19 @@ contains
 !
 !
 !
-!=======================================================================
-subroutine RotationMultipoles(system,ia,ib,xab,yab,zab,Rab,lmult,rl,rl2)
-!=======================================================================
+!==========================================================================
+ subroutine RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
+!==========================================================================
 implicit none
 type(structure)            , intent(in)  :: system
 integer                    , intent(in)  :: ia , ib
-real*8                     , intent(out) :: xab, yab, zab, Rab
+real*8                     , intent(out) :: Rab
 integer                    , intent(in)  :: lmult
 real*8  , dimension(:,:,:) , intent(out) :: rl , rl2
 
 ! local variables ...
-real*8  :: xa, ya, za, xb, yb, zb , xy , sinal , cosal , sinbet , cosbet , singa , cosga
+real*8  :: xa, ya, za, xb, yb, zb , xy , xab , yab , zab
+real*8  :: sinal , cosal , sinbet , cosbet , singa , cosga
 integer :: AtNo_a , AtNo_b
 integer :: la_max , lb_max , lmax
 
@@ -37,18 +38,16 @@ integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
 ! INPUT DATA
 ! na, la, expa, xa, ya, za:  N, L, EXPONENT and cartesian coordinates of function on A
 ! nb, lb, expb, xb, yb, zb:  N', L', EXPONENT' and cartesian coordinates of function on B
-!
-! coordinates must be in a.u. 
 
 AtNo_a = system%AtNo(ia)
 AtNo_b = system%AtNo(ib)
 
-xa = system%coord(ia,1) / a_Bohr
-ya = system%coord(ia,2) / a_Bohr
-za = system%coord(ia,3) / a_Bohr
-xb = system%coord(ib,1) / a_Bohr
-yb = system%coord(ib,2) / a_Bohr
-zb = system%coord(ib,3) / a_Bohr
+xa = system%coord(ia,1) 
+ya = system%coord(ia,2) 
+za = system%coord(ia,3) 
+xb = system%coord(ib,1) 
+yb = system%coord(ib,2) 
+zb = system%coord(ib,3) 
 
 ! Loads the matrices for the rotation of (normalized) spherical harmonics
 ! from the lined-up system to the molecular frame
