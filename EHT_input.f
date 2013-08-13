@@ -41,16 +41,16 @@ module Semi_Empirical_Parms
     atom(AtNo)%symbol      , &
     atom(AtNo)%AtNo        , &
     atom(AtNo)%Nvalen      , &
-    atom(AtNo)%Nzeta(Ang)  , &
+    atom(AtNo)%Nzeta(Ang)  , & 
     atom(AtNo)%Nquant(Ang) , &
     spdf                   , &
     atom(AtNo)%IP(Ang)     , &
-    atom(AtNo)%zeta(Ang,1) , &
-    atom(AtNo)%zeta(Ang,2) , &
+    atom(AtNo)%zeta(Ang,1) , &      ! <== zetas of my_eht_parameters.dat are given in units of a0^{-1} ...
+    atom(AtNo)%zeta(Ang,2) , &      ! <== zetas of my_eht_parameters.dat are given in units of a0^{-1} ...
     atom(AtNo)%coef(Ang,1) , &
     atom(AtNo)%coef(Ang,2) , &
     atom(AtNo)%DOS         , &
-    atom(AtNo)%polar       ! <== 10^{-24}*cm^3  
+    atom(AtNo)%polar                ! <== 10^{-24}*cm^3  
 
     if(ioerr < 0) EXIT
 
@@ -77,6 +77,9 @@ module Semi_Empirical_Parms
  end do    
 
  close(3)
+
+ ! transform zetas to units of Angs^{-1} ...
+ forall( Ang=0:3 , i=1:2 ) atom(:)%zeta(Ang,i) =  atom(:)%zeta(Ang,i) / a_Bohr 
 
  If( OPT_parms ) CALL read_OPT_parameters
 
@@ -155,8 +158,8 @@ do i = 1 , size(EH_atom)
                 EH_atom(i)%n            ,   &
                 spdf                    ,   &
                 EH_atom(i)%IP(0)        ,   &
-                EH_atom(i)%zeta(0,1)    ,   &
-                EH_atom(i)%zeta(0,2)    ,   &
+                EH_atom(i)%zeta(0,1)    ,   &      ! <== zetas of OPT_eht_parameters.input.dat are given in units of a0^{-1} ...
+                EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of OPT_eht_parameters.input.dat are given in units of a0^{-1} ...
                 EH_atom(i)%coef(0,1)    ,   &
                 EH_atom(i)%coef(0,2)    ,   &
                 EH_atom(i)%k_WH(0)
@@ -183,6 +186,9 @@ close(3)
 
 Print 44
 Print 45 , EH_atom%EHSymbol
+
+ ! transform zetas to units of Angs^{-1} ...
+ forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
 
 include 'formats.h'
 

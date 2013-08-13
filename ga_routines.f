@@ -448,8 +448,8 @@ do n_EHS = 1 , N_of_EHSymbol
                         OPT_basis(j)%n               ,   &
                  Lquant(OPT_basis(j)%l)              ,   &
                         OPT_basis(j)%IP              ,   &
-                        OPT_basis(j)%zeta(1)         ,   &
-                        OPT_basis(j)%zeta(2)         ,   &
+                        OPT_basis(j)%zeta(1)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
                         OPT_basis(j)%coef(1)         ,   &
                         OPT_basis(j)%coef(2)         ,   &
                         OPT_basis(j)%k_WH

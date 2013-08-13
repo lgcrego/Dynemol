@@ -40,7 +40,7 @@
  complex*16               :: TotalPsiKet
  real*8     , allocatable :: xyz(:,:) , Psi(:,:,:)
  real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
- integer                  :: AtNo , i , j , ix , iy , iz , k 
+ integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
  character(len=22)        :: f_name
@@ -85,8 +85,8 @@
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
  write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
- write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr   , 0.d0 , 0.d0 
- write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/a_Bohr   , 0.d0
+ write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr , 0.d0 , 0.d0 
+ write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/a_Bohr , 0.d0
  write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/a_Bohr
 
 !  coordinates in a.u., because zeta is in units of [a_0^{-1}] ...
@@ -115,7 +115,7 @@
 
  allocate( Psi(n_xyz_steps(1)+1,n_xyz_steps(2)+1,n_xyz_steps(3)+1) , source = D_zero ) 
 
-!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,TotalPsiKet)
+!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,l,TotalPsiKet)
 !$OMP single
  DO ix = 0 , n_xyz_steps(1)
     x = (a + ix * dx) / a_Bohr
@@ -144,28 +144,33 @@
             z0 = z - xyz(k,3) 
 
             do j = 1 , atom(AtNo)%DOS
+
                 i = i + 1
+                l = extended_cell%BasisPointer(k) + j
+
                 select case (j)
                     case( 1 ) 
-                        SlaterOrbital = s_orb(r,AtNo)  
+                        SlaterOrbital = s_orb(r,AtNo,l)  
                     case( 2 ) 
-                        SlaterOrbital = p_orb(r,y0,AtNo)
+                        SlaterOrbital = p_orb(r,y0,AtNo,l)
                     case( 3 ) 
-                        SlaterOrbital = p_orb(r,z0,AtNo)
+                        SlaterOrbital = p_orb(r,z0,AtNo,l)
                     case( 4 ) 
-                        SlaterOrbital = p_orb(r,x0,AtNo)
+                        SlaterOrbital = p_orb(r,x0,AtNo,l)
                     case( 5 ) 
-                        SlaterOrbital = d_xyz(r,x0,y0,AtNo)
+                        SlaterOrbital = d_xyz(r,x0,y0,AtNo,l)
                     case( 6 ) 
-                        SlaterOrbital = d_xyz(r,y0,z0,AtNo)
+                        SlaterOrbital = d_xyz(r,y0,z0,AtNo,l)
                     case( 7 ) 
-                        SlaterOrbital = d_z2(r,x0,y0,z0,AtNo)
+                        SlaterOrbital = d_z2(r,x0,y0,z0,AtNo,l)
                     case( 8 ) 
-                        SlaterOrbital = d_xyz(r,x0,z0,AtNo)
+                        SlaterOrbital = d_xyz(r,x0,z0,AtNo,l)
                     case( 9 ) 
-                        SlaterOrbital = d_x2y2(r,x0,y0,AtNo)
+                        SlaterOrbital = d_x2y2(r,x0,y0,AtNo,l)
                 end select
+
                 TotalPsiKet = TotalPsiKet + ket(i) * SlaterOrbital
+
             end do  ! <== DOS
         end do  ! <== atoms
 
@@ -224,7 +229,7 @@
  complex*16               :: TotalPsiBra , TotalPsiKet
  real*8     , allocatable :: xyz(:,:) , Psi_2(:,:,:)
  real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
- integer                  :: AtNo , i , j , ix , iy , iz , k 
+ integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
  character(len=22)        :: f_name
@@ -269,9 +274,9 @@
  write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
 
  write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
- write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr   , 0.d0 , 0.d0 
- write(4,111) n_xyz_steps(2) + 1 , 0.d0 , dy/a_Bohr   , 0.d0
- write(4,111) n_xyz_steps(3) + 1 , 0.d0 , 0.d0 , dz/a_Bohr
+ write(4,111) n_xyz_steps(1) + 1  , dx/a_Bohr , 0.d0 , 0.d0 
+ write(4,111) n_xyz_steps(2) + 1  , 0.d0 , dy/a_Bohr , 0.d0
+ write(4,111) n_xyz_steps(3) + 1  , 0.d0 , 0.d0 , dz/a_Bohr
 
 !  coordinates in a.u., because zeta is in units of [a_0^{-1}] ...
  xyz = xyz / a_Bohr
@@ -329,29 +334,34 @@
             z0 = z - xyz(k,3) 
 
             do j = 1 , atom(AtNo)%DOS
+
                 i = i + 1
+                l = extended_cell%BasisPointer(k) + j
+
                 select case (j)
                     case( 1 ) 
-                        SlaterOrbital = s_orb(r,AtNo)  
+                        SlaterOrbital = s_orb(r,AtNo,l)  
                     case( 2 ) 
-                        SlaterOrbital = p_orb(r,y0,AtNo)
+                        SlaterOrbital = p_orb(r,y0,AtNo,l)
                     case( 3 ) 
-                        SlaterOrbital = p_orb(r,z0,AtNo)
+                        SlaterOrbital = p_orb(r,z0,AtNo,l)
                     case( 4 ) 
-                        SlaterOrbital = p_orb(r,x0,AtNo)
+                        SlaterOrbital = p_orb(r,x0,AtNo,l)
                     case( 5 ) 
-                        SlaterOrbital = d_xyz(r,x0,y0,AtNo)
+                        SlaterOrbital = d_xyz(r,x0,y0,AtNo,l)
                     case( 6 ) 
-                        SlaterOrbital = d_xyz(r,y0,z0,AtNo)
+                        SlaterOrbital = d_xyz(r,y0,z0,AtNo,l)
                     case( 7 ) 
-                        SlaterOrbital = d_z2(r,x0,y0,z0,AtNo)
+                        SlaterOrbital = d_z2(r,x0,y0,z0,AtNo,l)
                     case( 8 ) 
-                        SlaterOrbital = d_xyz(r,x0,z0,AtNo)
+                        SlaterOrbital = d_xyz(r,x0,z0,AtNo,l)
                     case( 9 ) 
-                        SlaterOrbital = d_x2y2(r,x0,y0,AtNo)
+                        SlaterOrbital = d_x2y2(r,x0,y0,AtNo,l)
                 end select
+
                 TotalPsiBra = TotalPsiBra + bra(i) * SlaterOrbital
                 TotalPsiKet = TotalPsiKet + ket(i) * SlaterOrbital
+
             end do  ! <== DOS
         end do  ! <== atoms
 

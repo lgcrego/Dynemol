@@ -130,7 +130,7 @@ do ia = ib+1 , a_system% atoms
 
     call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
 
-    If(Rab*a_Bohr > cutoff_Angs) goto 10
+    If(Rab > cutoff_Angs) goto 10
 
     do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
     do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
@@ -216,17 +216,16 @@ integer , parameter :: mxn = 15 , mxl = 5
 ! na, la, expa, xa, ya, za:  N, L, EXPONENT and cartesian coordinates of function on A
 ! nb, lb, expb, xb, yb, zb:  N', L', EXPONENT' and cartesian coordinates of function on B
 !
-! coordinates must be in a.u. to be consistent with zetas ... 
 
 AtNo_a = a_system%AtNo (ia)
 AtNo_b = b_system%AtNo (ib)
 
-xa = a_system%coord (ia,1) / a_Bohr
-ya = a_system%coord (ia,2) / a_Bohr
-za = a_system%coord (ia,3) / a_Bohr
-xb = b_system%coord (ib,1) / a_Bohr
-yb = b_system%coord (ib,2) / a_Bohr
-zb = b_system%coord (ib,3) / a_Bohr
+xa = a_system%coord (ia,1) 
+ya = a_system%coord (ia,2)
+za = a_system%coord (ia,3) 
+xb = b_system%coord (ib,1) 
+yb = b_system%coord (ib,2) 
+zb = b_system%coord (ib,3) 
 
 ! Loads the matrices for the rotation of (normalized) spherical harmonics
 ! from the lined-up system to the molecular frame

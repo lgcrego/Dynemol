@@ -6,7 +6,8 @@
                                              file_format ,              &
                                              nnx , nny ,                &
                                              hole_state ,               &
-                                             OPT_parms
+                                             OPT_parms ,                &
+                                             GaussianCube
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
                                              Read_from_PDB ,            &
@@ -21,10 +22,15 @@
 
     type(structure)                 , public  :: Unit_Cell , Extended_Cell 
     type(STO_basis) , allocatable   , public  :: ExCell_basis(:)
+    real*8          , allocatable   , public  :: Cube_Coef(:,:) , Cube_Zeta(:,:)
+
 
     public :: Read_Structure , Generate_Structure , Basis_Builder 
 
     private
+
+    !  module variables ...
+    logical :: done = .false.
 
  contains
 !
@@ -127,7 +133,7 @@ integer :: copy , nr_sum , ix , iy , k , n
         
         END FORALL
 
-        k      =  k      + unit_cell%atoms
+        k = k + unit_cell%atoms
 
      END IF
 
@@ -262,6 +268,21 @@ integer :: copy , nr_sum , ix , iy , k , n
 
 ! during GACG cannot use OPT_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
+
+! STO paramaters for generating Gaussian Cube Files (must be in a.u.) ... 
+If( GaussianCube .AND. (.NOT. done) ) then
+
+    allocate( Cube_Coef(N_of_orbitals,2) , source = D_zero )
+    allocate( Cube_Zeta(N_of_orbitals,2) , source = D_zero )
+
+    do k = 1 , N_of_orbitals  
+        Cube_Coef(k,:) = basis(k) % coef(:)
+        Cube_Zeta(k,:) = basis(k) % zeta(:) * a_Bohr
+    end do
+
+    done = .true. 
+
+ end If
 
  end subroutine Basis_Builder
 !
