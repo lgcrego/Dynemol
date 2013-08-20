@@ -51,7 +51,8 @@ real*8  , dimension (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl)   :: v
 real*8  , dimension (-mxl:mxl)                              :: vaux
 
 ! local parameters ...
-integer :: spdf_indx(0:3) = [1,2,5,10]
+integer , parameter  :: spdf_indx(0:3) = [1,2,5,10]
+real*8  , parameter  :: conversion = 14.39965173d0      ! <== e^2/Angs = 14.399 eV 
 
 ! local variables ...
 complex*16           :: coeff_El , coeff_Hl , coeff_El_deg , coeff_Hl_deg
@@ -130,10 +131,10 @@ do ib = ia + 1  , system % atoms
             do k = 1 , basis(b1)% Nzeta
             do l = 1 , basis(b2)% Nzeta
 
-                x1 = basis(a1)%  zeta(i)    ;   rn1 = sqrt( (x1+x1)**(na_1+na_1+1)/fact(na_1+na_1) )
-                x2 = basis(a2)%  zeta(j)    ;   rn2 = sqrt( (x2+x2)**(na_2+na_2+1)/fact(na_2+na_2) )
-                x3 = basis(b1)%  zeta(k)    ;   rn3 = sqrt( (x3+x3)**(nb_1+nb_1+1)/fact(nb_1+nb_1) )
-                x4 = basis(b2)%  zeta(l)    ;   rn4 = sqrt( (x4+x4)**(nb_2+nb_2+1)/fact(nb_2+nb_2) )
+                x1 = basis(a1)% zeta(i)    ;   rn1 = sqrt( (x1+x1)**(na_1+na_1+1)/fact(na_1+na_1) )
+                x2 = basis(a2)% zeta(j)    ;   rn2 = sqrt( (x2+x2)**(na_2+na_2+1)/fact(na_2+na_2) )
+                x3 = basis(b1)% zeta(k)    ;   rn3 = sqrt( (x3+x3)**(nb_1+nb_1+1)/fact(nb_1+nb_1) )
+                x4 = basis(b2)% zeta(l)    ;   rn4 = sqrt( (x4+x4)**(nb_2+nb_2+1)/fact(nb_2+nb_2) )
 
                 Coul_tmp = D_zero
 
@@ -248,10 +249,10 @@ do ib = ia + 1  , system % atoms
 end do  !ib  
 end do  !ia
 
-! Hartree atomic units => eV
-V_coul_El (:)   = V_coul_El (:)  * Hartree_2_eV 
-V_coul_Hl (:)   = V_coul_Hl (:)  * Hartree_2_eV 
-V_coul    (:,:) = V_coul    (:,:)* Hartree_2_eV 
+! units => eV
+V_coul_El (:)   = V_coul_El (:)   * conversion
+V_coul_Hl (:)   = V_coul_Hl (:)   * conversion
+V_coul    (:,:) = V_coul    (:,:) * conversion
 
 deallocate( Coul , Coul_tmp )
 
@@ -423,12 +424,12 @@ AtNo_a = system%AtNo (ia)
 AtNo_b = system%AtNo (ib)
 
 ! coordinates must be in a.u. 
-xa  = system%coord (ia,1) / a_Bohr
-ya  = system%coord (ia,2) / a_Bohr
-za  = system%coord (ia,3) / a_Bohr
-xb  = system%coord (ib,1) / a_Bohr
-yb  = system%coord (ib,2) / a_Bohr
-zb  = system%coord (ib,3) / a_Bohr
+xa  = system%coord (ia,1) 
+ya  = system%coord (ia,2) 
+za  = system%coord (ia,3) 
+xb  = system%coord (ib,1) 
+yb  = system%coord (ib,2) 
+zb  = system%coord (ib,3) 
 xab = xb - xa
 yab = yb - ya
 zab = zb - za
