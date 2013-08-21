@@ -13,7 +13,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 logical                 :: Mutate_Cross   
-logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , OPT_parms , ad_hoc , restart
+logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
@@ -31,14 +31,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
 !			
   nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival        = F_                       
-  SPECTRUM        = F_                          
+  SPECTRUM        = T_                          
   DP_Moment       = T_                       
-  OPT_parms       = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  Alpha_Tensor    = T_                        ! <== Embeded Finite Field Polarizability 
+  OPT_parms       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc          = F_                        ! <== ad hoc tuning of parameters
 
 !--------------------------------------------------------------------

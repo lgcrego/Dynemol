@@ -5,6 +5,7 @@ module diagnostic_m
  use constants_m
  use parameters_m               , only : spectrum , DP_Moment , &
                                          survival , DP_Field_ , &
+                                         Alpha_Tensor ,         &
                                          GaussianCube
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
@@ -23,6 +24,8 @@ module diagnostic_m
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff
 
+ use Embedded_FF_Alpha          , only : AlphaPolar
+
  public :: diagnostic
 
  private
@@ -39,6 +42,7 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues
  character(3)                   :: residue
+ real*8                         :: DP(3)
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
@@ -72,7 +76,9 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
- If( DP_Moment .OR. Spectrum ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
+ If( DP_Moment .OR. Spectrum ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )  
+
+ If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis , DP ) 
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 

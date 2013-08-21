@@ -113,3 +113,7 @@
 186   FORMAT(1x,'time = ',F9.5,' fs')
 
 187   FORMAT(1x,'Sparsity of H_prime Mtrx = ',F10.5)
+
+188   FORMAT(1x,'Polarizability Tensor diagonal elements = (',3F10.3,') Angs^3    ==>  Average = ',F10.3,' Angs^3')
+
+189   FORMAT(1x,'Polarizability Tensor diagonal elements = (',3F10.3,') a_Bohr^3  ==>  Average = ',F10.3,' a_Bohr^3')

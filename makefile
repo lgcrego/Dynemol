@@ -62,6 +62,7 @@ SOURCE2 = constants_m.o  \
 		  polarizability.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
+		  AlphaPolar.o  \
 		  data_output.o \
 		  md_dynamics.o \
 		  MM_dynamics.o \

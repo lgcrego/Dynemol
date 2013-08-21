@@ -9,16 +9,18 @@ MODULE constants_m
 	real*8     , parameter :: SQRT2=1.41421356237309504880168872420969807856967d0 
     real*8     , parameter :: SQRT2PI=2.50662827463100050242d0
 	real*8     , parameter :: EULER=0.5772156649015328606065120900824024310422d0 
-    real*8     , parameter :: HALF  = 5.d-1
-    real*8     , parameter :: TWO   = 2.d0
-    real*8     , parameter :: THREE = 3.d0
-    real*8     , parameter :: FOUR  = 4.d0
-    real*8     , parameter :: FIVE  = 5.d0
-    real*8     , parameter :: SIX   = 6.d0
-	real*8     , parameter :: a_Bohr=0.52917720859d0
+    real*8     , parameter :: HALF   = 5.d-1
+    real*8     , parameter :: TWO    = 2.d0
+    real*8     , parameter :: THREE  = 3.d0
+    real*8     , parameter :: FOUR   = 4.d0
+    real*8     , parameter :: FIVE   = 5.d0
+    real*8     , parameter :: SIX    = 6.d0
+    real*8     , parameter :: TWELVE = 12.d0
+	real*8     , parameter :: a_Bohr = 0.52917720859d0
 	real*8     , parameter :: Hartree_2_eV=27.21138386d0        
     real*8     , parameter :: h_bar=6.58264d-4                      ! <== Planck's  constant  (eV * ps)
     real*8     , parameter :: debye_inv  = 2.0819436d-1             ! <== e[C]*d[Angs] = p[Debye] * 0.20819436
+    real*8     , parameter :: debye_2_au = 0.393430294d0            ! <== converts Debye units to atomic units (a.u.)
     real*8     , parameter :: low_prec   = 1.1d-7
     real*8     , parameter :: mid_prec   = 1.d-10
     real*8     , parameter :: high_prec  = 1.d-14

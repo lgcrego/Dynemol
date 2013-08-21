@@ -152,7 +152,7 @@ Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
 !--------------------------------------------------------------------------------------
 
-Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
+If( verbose ) Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
 
 If( present(DP_total) ) DP_total = Total_DP
 
