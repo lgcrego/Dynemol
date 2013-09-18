@@ -23,17 +23,17 @@
 
 
  contains
-!=====================================================================
- subroutine AlphaPolar( system , basis , DP ) 
-!=====================================================================
+
+!=======================================
+ subroutine AlphaPolar( system , basis ) 
+!=======================================
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-real*8                      , intent(inout) :: DP(3)
 
 ! local variables ...
 integer                         :: mm , i , j , xyz
-real*8                          :: alpha_ii(3) , Ri(3)
+real*8                          :: alpha_ii(3) 
 real*8          , ALLOCATABLE   :: H(:,:) , DP_AO(:,:) 
 type(R_eigen)                   :: UNI
 type(R3_vector)                 :: Induced(-2:2)
@@ -95,8 +95,7 @@ end do
 Print 188 , Alpha_ii , sum( Alpha_ii ) / three
 Print 189 , Alpha_ii / (a_Bohr*a_Bohr*a_Bohr) , sum( Alpha_ii ) / (three*a_Bohr*a_Bohr*a_Bohr)
 
-DEALLOCATE( H , H0 , S )
-stop
+DEALLOCATE( H , H0 , S , DP_AO )
 
 include 'formats.h'
 
@@ -113,7 +112,7 @@ type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 
 ! local variables ...
-integer               :: i , j 
+integer :: i , j 
 
 verbose = .NOT. verbose
 
@@ -196,41 +195,6 @@ real*8  , ALLOCATABLE :: dumb_s(:,:)
 !----------------------------------------------------------
 
 end subroutine Eigenstates
-!
-!
-!
-!===========================================
- subroutine Center_of_Charge( a , R_vector )
-!===========================================
-implicit none
-type(structure)                 , intent(inout) :: a
-real*8          , allocatable   , intent(out)   :: R_vector(:,:)
-
-! local variables ...
-integer               :: i , j
-real*8                :: total_valence
-real*8  , allocatable :: Qi_Ri(:,:) 
-
-! define system for DP_Moment calculation ...
-
-! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
-
-allocate( Qi_Ri(a%atoms,3) , source = D_zero )
-
-forall( j=1:3 , i=1:a%atoms ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
-
-total_valence = sum( a%Nvalen )
-
-forall(j=1:3) a%Center_of_Charge(j) = sum( Qi_Ri(:,j) ) / total_valence
-
-! atomic positions measured from the Center of Charge
-allocate( R_vector(a%atoms,3) , source = D_zero )
-forall( j=1:3 , i=1:a%atoms ) R_vector(i,j) = a%coord(i,j) - a%Center_of_Charge(j)
-
-deallocate( Qi_Ri )
-
-end subroutine Center_of_Charge
-!
 !
 !
 !
