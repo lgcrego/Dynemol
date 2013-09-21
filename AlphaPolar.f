@@ -141,8 +141,6 @@ else
 
 end if
 
-!verbose = .NOT. verbose
-
 end subroutine Build_H0_and_S
 !
 !
