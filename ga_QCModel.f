@@ -5,6 +5,7 @@ module GA_QCModel_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
+    use parameters_m            , only : Alpha_Tensor
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
@@ -13,7 +14,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public ::  GA_eigen , GA_DP_Analysis , Mulliken
+    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar
 
     private 
 
@@ -22,7 +23,9 @@ module GA_QCModel_m
         module procedure C_Mulliken
     end interface
 
+    ! module variables ...
     Real*8 , allocatable :: DP_matrix_AO(:,:,:)
+    Real*8 , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
 
 contains
 !
@@ -250,6 +253,156 @@ end subroutine GA_DP_Analysis
 !
 !
 !
+!==================================================
+ subroutine AlphaPolar( system , basis , Alpha_ii ) 
+!==================================================
+implicit none
+type(structure)  , intent(inout) :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+real*8           , intent(out)   :: Alpha_ii(3) 
+
+! local variables ...
+integer                         :: mm , i , j , xyz
+real*8          , ALLOCATABLE   :: H(:,:) , DP_AO(:,:) 
+type(R_eigen)                   :: UNI
+type(R3_vector)                 :: Induced(-2:2)
+
+! local parameters ...
+real*8 , parameter :: conversion_factor = 20.23100999d0  ! <== see AlphaTensor.f
+real*8 , parameter :: base_Field        = 5.0d-4
+
+mm = size(basis)
+
+! build the field independent H and S matrices ...
+CALL Build_H0_and_S( system , basis )
+
+ALLOCATE( H(mm,mm) , source=D_zero )
+
+! field dependent hamiltonian and Induced DP moments (DP is calculated in Debyes) ...
+
+ALLOCATE( DP_AO(mm,mm) , source=D_zero )
+
+! for each molecular axis F_xyz ...
+do xyz = 1 , 3 
+
+    select case ( xyz )
+
+        case (1)
+        forall( i=1:mm , j=1:mm ) DP_AO(i,j) = DP_matrix_AO(i,j,xyz) + basis(i)%x*S(i,j)
+
+        case (2)
+        forall( i=1:mm , j=1:mm ) DP_AO(i,j) = DP_matrix_AO(i,j,xyz) + basis(i)%y*S(i,j)
+
+        case (3)
+        forall( i=1:mm , j=1:mm ) DP_AO(i,j) = DP_matrix_AO(i,j,xyz) + basis(i)%z*S(i,j)
+
+    end select
+
+    do i = -2 , 2
+
+        If( i /= 0 ) then
+
+            H(:,:) = H0(:,:) +  DP_AO(:,:)*base_Field*float(i)  
+            CALL Alpha_eigen( H , UNI )
+
+            ! Dipole moment in Debye ...
+            CALL Dipole_Moment( system , basis , UNI%L , UNI%R , Total_DP=Induced(i)%DP )
+
+        end if
+
+    end do
+
+    ! diagonal elements of the Alpha tensor , JCP 109, 7756 (1998) ...
+    Alpha_ii(xyz) = two/three * (Induced(1)%DP(xyz) - Induced(-1)%DP(xyz)) - D_one/twelve * (Induced(2)%DP(xyz) - Induced(-2)%DP(xyz))
+
+    ! diagonal elements of the polarizability tensor in a_B^{3} ...
+    Alpha_ii(xyz) = ( Alpha_ii(xyz)/base_Field ) * conversion_factor    
+
+end do
+
+DEALLOCATE( H , H0 , S , DP_AO , DP_matrix_AO )
+
+end subroutine AlphaPolar
+!
+!
+!
+!
+!===========================================
+ subroutine Build_H0_and_S( system , basis )
+!===========================================
+implicit none
+type(structure)  , intent(in)    :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+
+! local variables ...
+integer :: i , j 
+
+CALL Overlap_Matrix( system , basis , S , "GA-CG" )
+
+ALLOCATE( H0(size(basis),size(basis)) , source=D_zero)
+
+do j = 1 , size(basis)
+    do i = 1 , j
+     
+        H0(i,j) = Huckel_bare( i , j , S(i,j) , basis )
+
+    end do
+end do  
+
+end subroutine Build_H0_and_S
+!
+!
+!
+!================================
+ subroutine Alpha_eigen( H , QM )
+!================================
+implicit none
+real*8          , allocatable   , intent(inout) :: H(:,:) 
+type(R_eigen)                   , intent(inout) :: QM
+
+! local variables ...
+integer               :: mm , info
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8  , ALLOCATABLE :: dumb_s(:,:) 
+
+ mm = size( H(:,1) )
+
+ ALLOCATE( dumb_S(mm,mm) , source=S )
+
+ If( .NOT. allocated(QM%erg) ) ALLOCATE( QM%erg(mm) )
+
+ CALL SYGVD( H , dumb_S , QM%erg , 1 , 'V' , 'U' , info )
+
+ DEALLOCATE(dumb_S)
+
+ ALLOCATE( Lv(mm,mm) )
+
+ Lv = H
+
+ ALLOCATE( Rv(mm,mm) )
+
+ CALL gemm( S , Lv , Rv , 'N' , 'N' , D_one , D_zero )
+
+!----------------------------------------------------------
+!  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+
+ If( .NOT. allocated(QM%L) ) ALLOCATE( QM%L(mm,mm) ) 
+! eigenvectors in the rows of QM%L
+ QM%L = transpose(Lv) 
+ DEALLOCATE( Lv )
+
+ If( .NOT. ALLOCATED(QM%R) ) ALLOCATE( QM%R(mm,mm) )
+! eigenvectors in the columns of QM%R
+ QM%R = Rv
+ DEALLOCATE( Rv )
+
+!  the order of storage is the ascending order of eigenvalues
+!----------------------------------------------------------
+
+end subroutine Alpha_eigen
+!
+!
+!
 !================================================
  subroutine Build_DIPOLE_Matrix( system , basis )
 !================================================
@@ -405,7 +558,9 @@ Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 deallocate( R_vector , a , b   )
 deallocate( origin_Dependent   )
 deallocate( origin_Independent )
-deallocate( DP_matrix_AO       )
+
+! AlphaPolar will deallocate it ...
+If( .not. Alpha_Tensor ) deallocate( DP_matrix_AO )
 
 end subroutine Dipole_Moment
 !
@@ -430,11 +585,11 @@ end subroutine Dipole_Moment
 
  c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- Huckel_bare = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+ Huckel_bare = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
 
  IF(i == j) Huckel_bare = basis(i)%IP
 

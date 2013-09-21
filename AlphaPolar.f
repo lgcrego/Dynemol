@@ -1,14 +1,11 @@
  module Embedded_FF_Alpha
 
     use type_m
-    use omp_lib
-    use constants_m
-    use parameters_m                , only : DP_Field_,       &
-                                             Induced_ ,       &
-                                             verbose
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
+    use constants_m
+    use parameters_m                , only : DP_Field_, Induced_ , verbose
     use Overlap_Builder             , only : Overlap_Matrix
     use QCModel_Huckel              , only : Huckel , Huckel_with_Fields
     use DP_main_m                   , only : DP_matrix_AO , Dipole_Moment
@@ -143,6 +140,8 @@ else
     end do  
 
 end if
+
+!verbose = .NOT. verbose
 
 end subroutine Build_H0_and_S
 !

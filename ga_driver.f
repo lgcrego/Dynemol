@@ -2,14 +2,13 @@ module GA_driver_m
 
  use type_m
  use constants_m
- use parameters_m               , only : spectrum , DP_Moment , GaussianCube
+ use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
- use GA_QCModel_m               , only : GA_eigen , Mulliken
+ use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
  use DOS_m 
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
- use DP_main_m                  , only : Dipole_Matrix
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -29,7 +28,7 @@ implicit none
 
 ! local variables ...
  integer                        :: i , nr , N_of_residues
- real*8                         :: DP(3)
+ real*8                         :: DP(3) , Alpha_ii(3)
  character(3)                   :: residue
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
@@ -73,40 +72,46 @@ do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
 end do
 
-If( DIPOLE_ ) CALL Dipole_Matrix( Extended_Cell, OPT_basis, UNI%L, UNI%R, DP )  
+If( DIPOLE_ ) CALL GA_DP_Analysis( Extended_Cell, OPT_basis, UNI%L, UNI%R, DP )  
+
+If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, OPT_basis , Alpha_ii )
 
 If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 !----------------------------------------------
 ! print zone ...
 
-Print 154, DP, sqrt( dot_product(DP,DP) )
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(88) - UNI%erg(87)
-Print*, "dE2 = ",UNI%erg(89) - UNI%erg(87)
-Print*, "dE3 = ",UNI%erg(89) - UNI%erg(88)
-Print*, "dE4 = ",UNI%erg(87) - UNI%erg(86)
-Print*, "dE5 = ",UNI%erg(88) - UNI%erg(86)
+Print 154, DP, sqrt( dot_product(DP,DP) )
+Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
+
+Print*, " " 
+Print*, "dE1 = ",UNI%erg(5) - UNI%erg(4)
+!Print*, "dE2 = ",UNI%erg(89) - UNI%erg(87)
+!Print*, "dE3 = ",UNI%erg(89) - UNI%erg(88)
+!Print*, "dE4 = ",UNI%erg(87) - UNI%erg(86)
+!Print*, "dE5 = ",UNI%erg(88) - UNI%erg(86)
 Print*, " "
 
 ! Population analysis ...
-print*, "H"
- print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 
- print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TPH") 
- print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="CBX") 
-print*, "L"
- print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TRI") 
- print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TPH") 
- print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="CBX") 
-print*, "L+1"
- print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TRI") 
- print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TPH") 
- print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="CBX") 
+!print*, "H"
+! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TPH") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="CBX") 
+!print*, "L"
+! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TRI") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TPH") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="CBX") 
+!print*, "L+1"
+! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TRI") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TPH") 
+! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="CBX") 
 
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(86,:) , UNI%R(:,86) , 86 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(87,:) , UNI%R(:,87) , 87 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(88,:) , UNI%R(:,88) , 88 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(89,:) , UNI%R(:,89) , 89 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(2,:) , UNI%R(:,2) , 2 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(3,:) , UNI%R(:,3) , 3 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4,:) , UNI%R(:,4) , 4 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(5,:) , UNI%R(:,5) , 5 , 0.d0 )
+If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(6,:) , UNI%R(:,6) , 6 , 0.d0 )
 
 !----------------------------------------------
 

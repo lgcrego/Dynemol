@@ -5,11 +5,13 @@ module GA_m
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
-                                         Mutation_rate , Mutate_Cross
+                                         Mutation_rate , Mutate_Cross , &
+                                         Alpha_Tensor
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
+                                         AlphaPolar ,                   &
                                          Mulliken
     use cost_tuning_m           , only : evaluate_cost                                         
     use CG_driver_m             , only : CG_driver
@@ -120,7 +122,7 @@ type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 
 ! local variables ...
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,:) , pot(:,:) , Custo(:) 
-real*8                          :: GA_DP(3)
+real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , j , l , generation , info , Pop_start
 type(R_eigen)                   :: GA_UNI
@@ -168,10 +170,12 @@ do generation = 1 , N_generations
             continue
         end if
 
-        If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
+        If( DP_Moment )    CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
+
+        If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
 !       gather data and evaluate population cost ...
-        custo(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP )
+        custo(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 

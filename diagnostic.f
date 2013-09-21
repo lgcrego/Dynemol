@@ -23,7 +23,6 @@ module diagnostic_m
  use Oscillator_m               , only : Optical_Transitions
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff
-
  use Embedded_FF_Alpha          , only : AlphaPolar
 
  public :: diagnostic
@@ -82,7 +81,11 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(87,:) , UNI%R(:,87) , 87 , 0.d0 )
+Print*, " " 
+Print*, "dE1 = ",UNI%erg(5) - UNI%erg(4)
+
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4,:) , UNI%R(:,4) , 4 , 0.d0 )
+ If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(5,:) , UNI%R(:,5) , 5 , 0.d0 )
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

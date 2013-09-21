@@ -13,31 +13,28 @@ contains
 !
 !
 !
-!==============================================
- function evaluate_cost( OPT_UNI , basis , DP )
-!==============================================
+!=========================================================
+ function evaluate_cost( OPT_UNI , basis , DP , Alpha_ii )
+!=========================================================
 implicit none
-type(R_eigen)   , intent(in)  :: OPT_UNI
-type(STO_basis) , intent(in)  :: basis(:)
-real*8          , intent(in)  :: DP(3)
-real*8                        :: evaluate_cost
+type(R_eigen)               , intent(in)  :: OPT_UNI
+type(STO_basis)             , intent(in)  :: basis(:)
+real*8          , optional  , intent(in)  :: DP(3)
+real*8          , optional  , intent(in)  :: Alpha_ii(3)
+real*8                                    :: evaluate_cost
 
 ! local variables ...
 real*8   :: chi(20) , weight(20)
-real*8   :: REF_DP(3)
+real*8   :: REF_DP(3) , REF_Alpha(3)
 
 ! general definitions ...
 chi(:) = 0.d0   ;   weight(:) = 0.d0
 
-!-----------------------------------
+!--------------------
 ! HOMO-LUMO gaps ...     
-!-----------------------------------
+!--------------------
 
-chi(1) = ( OPT_UNI%erg(16) - OPT_UNI%erg(15) ) - 8.8425d0                             ; weight(1) = 1.0d0
-chi(2) = ( OPT_UNI%erg(17) - OPT_UNI%erg(15) ) - 9.5315d0                             ; weight(2) = 1.0d0
-chi(3) = ( OPT_UNI%erg(17) - OPT_UNI%erg(16) ) - 0.6890d0                             ; weight(3) = 1.0d0
-chi(4) = ( OPT_UNI%erg(15) - OPT_UNI%erg(14) ) - 1.8800d0                             ; weight(4) = 1.0d0
-chi(5) = ( OPT_UNI%erg(16) - OPT_UNI%erg(14) ) - 10.7300d0                             ; weight(5) = 1.0d0
+chi(1) = ( OPT_UNI%erg(5) - OPT_UNI%erg(4) ) - 7.6d0                             ; weight(1) = 1.0d0
 
 !--------------------------------------------------------------------
 ! Population analysis ...
@@ -56,17 +53,27 @@ chi(5) = ( OPT_UNI%erg(16) - OPT_UNI%erg(14) ) - 10.7300d0                      
 !chi(13)=  Mulliken(OPT_UNI,basis,MO=77,residue="TPH") - 0.30d0               ; weight(13)=  12.0d0
 !chi(14)=  Mulliken(OPT_UNI,basis,MO=77,residue="CBX") - 0.35d0               ; weight(14)=  12.0d0
 
-!-----------------------------------
+!-------------------------
 ! Total DIPOLE moment ...
-!-----------------------------------
+!-------------------------
 
-REF_DP = [ 3.d-4 , 1.63d0 , 0.0015d0 ]
+REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ]
 
-chi(6)  = DP(1) - REF_DP(1)     ; weight(6) = 2.d0
+chi(6)  = DP(1) - REF_DP(1)     ; weight(6) = 1.d0
 chi(7)  = DP(2) - REF_DP(2)     ; weight(7) = 2.d0
-chi(8)  = DP(3) - REF_DP(3)     ; weight(8) = 2.d0
+chi(8)  = DP(3) - REF_DP(3)     ; weight(8) = 1.d0
 
 !chi(15)  = dot_product( DP , DP ) - dot_product( REF_DP , REF_DP )     ; weight(15) = 2.d0
+
+!-----------------------------------------------------
+! Polarizability: Alpha tensor diagonal elements  ...
+!-----------------------------------------------------
+
+REF_Alpha = [ 9.2d0 , 8.5d0 , 7.8d0 ]
+
+chi(9)  = Alpha_ii(1) - REF_Alpha(1)     ; weight(9)  = 1.4d0
+chi(10) = Alpha_ii(2) - REF_Alpha(2)     ; weight(10) = 1.d0
+chi(11) = Alpha_ii(3) - REF_Alpha(3)     ; weight(11) = 1.4d0
 
 !......................................................................
 ! apply weight on chi and evaluate cost ...

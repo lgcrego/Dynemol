@@ -2,10 +2,12 @@ module CG_class_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : DP_Moment 
+    use parameters_m            , only : DP_Moment ,        &
+                                         Alpha_Tensor
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,         &
-                                         GA_DP_Analysis 
+                                         GA_DP_Analysis ,   &
+                                         AlphaPolar 
     use cost_tuning_m           , only : evaluate_cost                              
 
     private
@@ -67,7 +69,7 @@ real*8                         :: cost
 
 !local variables ...
 integer     :: info
-real*8      :: CG_DP(3)
+real*8      :: CG_DP(3) , CG_Alpha_ii(3)
 
 If( .NOT. allocated(CG_basis) ) allocate( CG_basis(size(me%basis)) , source = me%basis)
 
@@ -78,7 +80,9 @@ CALL GA_eigen( Extended_Cell , me%basis , CG_UNI , info )
 
 If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , me%basis , CG_UNI%L ,CG_UNI%R , CG_DP )
 
-cost = evaluate_cost( CG_UNI , me%basis , CG_DP )
+If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , me%basis , CG_Alpha_ii )
+
+cost = evaluate_cost( CG_UNI , me%basis , CG_DP , CG_Alpha_ii )
 
 end function cost
 !
