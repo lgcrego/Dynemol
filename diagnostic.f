@@ -39,8 +39,10 @@ subroutine diagnostic
 implicit none 
 
 ! local variables ...
- integer                        :: i , nr , N_of_residues
+ integer                        :: i , nr , N_of_residues, MO_total
+ integer         , allocatable  :: MOnum(:)
  character(3)                   :: residue
+ character(6)                   :: MOstr
  real*8                         :: DP(3)
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
@@ -56,6 +58,14 @@ CALL DeAllocate_PDOS( PDOS , flag="alloc" )
 CALL DeAllocate_SPEC( SPEC , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
+
+! reading command line arguments for plotting MO cube files ...
+MO_total  = COMMAND_ARGUMENT_COUNT()
+allocate( MOnum(MO_total) )
+do i = 1 , MO_total
+    CALL GET_COMMAND_ARGUMENT(i, MOstr)
+    read( MOstr,*) MOnum(i)
+end do
 
 !.........................................................
 
@@ -81,8 +91,11 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4,:) , UNI%R(:,4) , 4 , 0.d0 )
- If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(5,:) , UNI%R(:,5) , 5 , 0.d0 )
+ If( GaussianCube ) then
+     do i = 1 , MO_total
+         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
+     end do
+ end if
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 
