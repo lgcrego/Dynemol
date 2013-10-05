@@ -27,6 +27,7 @@
     Complex*16 , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra 
     Complex*16 , ALLOCATABLE , dimension(:)     :: bra , ket
     Real*8     , ALLOCATABLE , dimension(:,:,:) :: Pops(:,:,:)
+    logical    :: static_hole = .false.
 
  contains
 !
@@ -48,6 +49,7 @@ integer                             :: it , i , n , it_init
 real*8                              :: t , t_rate 
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:,:)
+character(11)                       :: argument
 type(R_eigen)                       :: UNI_el , UNI_hl
 
 real*8 :: E_el , E_hl
@@ -98,7 +100,7 @@ else
         
             case( "hl" )
 
-                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+!                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
                 MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
                 MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -129,6 +131,22 @@ else
 
 end if
 
+! get command line argument to turn off hole dynamics ...
+CALL GET_COMMAND_ARGUMENT( 1 , argument ) 
+
+if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
+    select case ( argument )
+
+        case( "static_hole" ) 
+        static_hole = .true.
+
+        case default 
+        write(*,'(a11)', advance="no") argument
+        stop " >>> wrong input argument in ElHl_dynamics <<< "
+
+    end select
+end if
+
 !-------------------------------------------------------------
 !                       Q-DYNAMICS  
 
@@ -139,7 +157,9 @@ DO it = it_init , n_t
     t = t + t_rate
 
     phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
-    phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
+    phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar) 
+
+    if( static_hole ) phase(:,2) = (1.d0,0.d0)
 
     forall( n=1:n_part)   
         MO_bra(:,n) = conjg(phase(:,n)) * MO_bra(:,n) 
