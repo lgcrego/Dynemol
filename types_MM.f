@@ -44,8 +44,11 @@ module MM_types
         real*8              , allocatable   :: kang0(:,:)
         integer                             :: Ndiheds
         integer             , allocatable   :: diheds(:,:)
+        integer             , allocatable   :: funct_dihed(:)
         real*8              , allocatable   :: kdihed0(:,:)
+        character(4)        , allocatable   :: dihedral_type(:)
         integer                             :: Nharm
+        integer             , allocatable   :: harm(:)
         integer                             :: Nbonds14
         integer             , allocatable   :: bonds14(:,:)
         real*8              , allocatable   :: fact14(:)

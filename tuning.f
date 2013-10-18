@@ -55,6 +55,7 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
+where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
@@ -110,6 +111,18 @@ integer  :: i
  
     select case(a%atom(i)%residue)
 
+        case( 'BP1' ) 
+            a%atom(i)%fragment = '1' 
+
+        case( 'BP2' ) 
+            a%atom(i)%fragment = '2' 
+
+        case( 'BP3' ) 
+            a%atom(i)%fragment = '3' 
+
+        case( 'ION' ) 
+            a%atom(i)%fragment = 'I' 
+
         case( 'H2O' , 'SOL' ) 
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 2.0d0
@@ -136,7 +149,6 @@ integer  :: i
 end subroutine Setting_Fragments
 
 end module tuning_m 
-!
 !
 !
 !
@@ -209,25 +221,25 @@ where(system % my_id == 51 ) system % free = .false.
 !----------------------------------
 !      define SPECIAL bonds
 !----------------------------------
- allocate(SpecialBonds(2))
- SpecialBonds(1) % nome      = 'bond_gb16'
- SpecialBonds(1) % kbond0(1) = 392459.2
- SpecialBonds(1) % kbond0(2) = 0.14010
+! allocate(SpecialBonds(2))
+! SpecialBonds(1) % nome      = 'bond_gb16'
+! SpecialBonds(1) % kbond0(1) = 392459.2
+! SpecialBonds(1) % kbond0(2) = 0.14010
 
- SpecialBonds(2) % nome      = 'bond_gb53'
- SpecialBonds(2) % kbond0(1) = 392459.2
- SpecialBonds(2) % kbond0(2) = 0.14580
+! SpecialBonds(2) % nome      = 'bond_gb53'
+! SpecialBonds(2) % kbond0(1) = 392459.2
+! SpecialBonds(2) % kbond0(2) = 0.14580
 !----------------------------------
 !      define SPECIAL angles 
 !----------------------------------
- allocate(SpecialAngs(2))
- SpecialAngs(1) % nome     = 'angle_ga07'
- SpecialAngs(1) % kang0(1) = 527.184
- SpecialAngs(1) % kang0(2) = 108.000
+! allocate(SpecialAngs(2))
+! SpecialAngs(1) % nome     = 'angle_ga07'
+! SpecialAngs(1) % kang0(1) = 527.184
+! SpecialAngs(1) % kang0(2) = 108.000
 
- SpecialAngs(2) % nome     = 'angle_ga27'
- SpecialAngs(2) % kang0(1) = 527.184
- SpecialAngs(2) % kang0(2) = 120.000
+! SpecialAngs(2) % nome     = 'angle_ga27'
+! SpecialAngs(2) % kang0(1) = 527.184
+! SpecialAngs(2) % kang0(2) = 120.000
 
 !=================================================
 

@@ -1,8 +1,8 @@
 module MD_dump_m
 
     use constants_m
-    use parameters_m    , only : n_t
-    use syst
+    use parameters_m    , only: n_t
+    use syst            , only: temper, Initial_density, Ekin, DensTot, TempTot, PressTot
     use MD_read_m       , only: MM , atom , molecule , species
 
     public :: output , cleanup , saving
@@ -22,7 +22,7 @@ implicit none
 real*8  , intent(in)    :: Ttrans
 real*8  , intent(in)    :: dt
  
-! local variables ...
+! local variables ... 
  integer :: i, j
 
  open (10, file='resumo.out', status='unknown')

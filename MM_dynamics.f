@@ -38,7 +38,7 @@ integer :: i
 
 if( .NOT. done ) CALL preprocess_DM
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
+atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge !+ Net_Charge(:)
 
 ! Molecuar dynamic ...
 CALL VV1( dt )
@@ -51,7 +51,7 @@ CALL Summat( density )
 !CALL Press_Boundary( pressure , dt )
 
 if (mod(frame,1) == 0) CALL Saving( frame , dt )
-if (mod(frame,1) == 0) write (*,'(I7,4F15.5)') frame, Ttrans, pot*mol*1.d-6 / dfloat(MM % N_of_molecules), pressure, density
+!if (mod(frame,1) == 0) write (*,'(I7,4F15.5)') frame, Ttrans, pot*mol*1.d-6 / dfloat(MM % N_of_molecules), pressure, density
 
 CALL output( Ttrans , dt )
 

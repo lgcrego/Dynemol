@@ -1,180 +1,356 @@
-!======================================================================
 ! Convert gmx data to mdflex program :: verify gmx format in IO FORMATS 
-!======================================================================
 module gmx2mdflex
 
- use constants_m
- use for_force
- use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles
- use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
+use constants_m
+use for_force
+use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles
+use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 
- private
+private
  
- public :: top2mdflex, itp2mdflex
+public :: top2mdflex, itp2mdflex
 
-   ! module variables ...
-   integer                       :: Nbonds, Nangs, Ndiheds
-   real*8                        :: fact14
-   real*8         , allocatable  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
-   character(3)   , allocatable  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
-   character(15)  , allocatable  :: special_bonds(:), special_angles(:)
+    ! module variables ...
+    real*8                           , save  :: fact14
+    character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
+    real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
+    character(15)    , allocatable   , save  :: special_bonds(:), special_angles(:)
 
 contains
 !
 !
-!=======================================
- subroutine top2mdflex( MM , atom , FF )
-!=======================================
- implicit none 
- type(MM_system), intent(inout) :: MM
- type(MM_atomic), intent(inout) :: atom(:)
- type(MM_atomic), allocatable, intent(inout) :: FF(:)
+!
+!=================================================
+ subroutine top2mdflex( MM , atom , species , FF )
+!=================================================
+implicit none 
+type(MM_molecular)                  , intent(inout) :: species(:)
+type(MM_system)                     , intent(inout) :: MM
+type(MM_atomic)                     , intent(inout) :: atom(:)
+type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
  
- ! local variables ...
- integer      :: i, j, ioerr, dummy_int, ilines, dihed_type, k
- real*8       :: dummy_real, r0, k0, theta0, ktheta0
- character(3) :: dummy_char, string, bondatm1, bondatm2, angatm1, angatm2, angatm3
- character(3) :: dihedatm1, dihedatm2, dihedatm3, dihedatm4
+! local variables ...
+type(MM_atomic) , allocatable   :: FF_tmp(:)
+character(3)    , allocatable   :: InputChars(:,:)
+real*8          , allocatable   :: InputReals(:,:)
+integer         , allocatable   :: InputIntegers(:,:)
+integer         , allocatable   :: Dihed_Type(:)
+real*8                          :: factQQ , dummy_real , theta0 , ktheta0
+integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes , NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types
 
- forcefield = 2
+character(1)                    :: keyword_1
+character(3)                    :: dummy_char
+character(9)                    :: keyword_9
+character(18)                   :: keyword
+logical                         :: flag1 , flag2 , flag3 , flag4
+
+allocate( InputChars    ( 10000 , 10 )                   )
+allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
+allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
+
+forcefield = 2
   
- open (8, file='topol.top', status='old', iostat=ioerr, err=10)
-    ! msg file error ...
-    10 if( ioerr > 0 ) then
-       stop ' "topol.top" file not found; terminating execution'
-    end if
-             
-    ! finding the number of atomtypes ...
-    do 50 ilines = 1, 2
-         read(8,*)
-    50 continue
-  
-    read(8,*) dummy_int, MM % CombinationRule, dummy_char, fact14, fact14
+open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     
-    do 51 ilines = 1, 4
-         read(8,*)
-    51 continue
+!   file error msg ...
+    10 if( ioerr > 0 ) stop '"topol.top" file not found; terminating execution'
 
-    i = 1
-    do  
-       read(8,*,iostat=ioerr) dummy_char, dummy_real, dummy_real, dummy_char, dummy_real, dummy_real
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
+!   reading defaults ...
+    CALL skip_lines(33,2)
+    read(33,*) dummy_int, MM % CombinationRule, dummy_char, fact14, factQQ
 
-    ! AtomTypes stuffs :: reading ...
-    MM % N_of_AtomTypes = i-1
-    rewind(8)
-
-    do 60 ilines = 1, 7
-       read(8,*)
-    60  continue
-  
- !   allocate( FF(MM % N_of_AtomTypes) )
-    do i = 1 , MM % N_of_AtomTypes
-       read(8,*,iostat=ioerr) FF(i) % MMSymbol, FF(i) % mass, FF(i) % MM_charge, dummy_char, FF(i) % sig, FF(i) % eps
-       FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
-       FF(i) % eps   = FF(i) % eps * 1.d26 * imol
-       FF(i) % eps   = SQRT( FF(i) % eps )
-       FF(i) % sig   = FF(i) % sig * 1.d1
-       select case ( MM % CombinationRule )
-            case (2) 
-            FF(i) % sig = FF(i) % sig / TWO
-            case (3)
-            FF(i) % sig = sqrt( FF(i) % sig )
-       end select
-       FF(i) % my_id = i
-
-       where( atom % MMSymbol == FF(i) % MMSymbol ) atom % eps    = FF(i) % eps
-       where( atom % MMSymbol == FF(i) % MMSymbol ) atom % sig    = FF(i) % sig
-    end do
-
-    ! Bonding parameters :: reading ...
-    do 70 ilines = 1, 5
-       read(8,*)
-    70 continue
-
-    i = 1
+!=====================================================================================
+!   reading he number of [ atomtypes ] ...
     do
-       read(8,*,iostat=ioerr) dummy_char, dummy_char, dummy_int, dummy_real, dummy_real
-       if ( ioerr /= 0 ) exit
-       i = i + 1
+        read(33,100) keyword
+        if( trim(keyword) == "[ atomtypes ]" ) exit
     end do
-    Nbonds = i-1
+    CALL skip_lines(33,2)
 
-    do j = 1, Nbonds+3
-       backspace(8)
-    end do
-
-    allocate( BondPairsSymbols    (Nbonds,2) )
-    allocate( BondPairsParameters (Nbonds,2) )
-    do i = 1 , Nbonds
-       read(8,*,iostat=ioerr) BondPairsSymbols(i,1:2), dummy_int, r0, k0
-       BondPairsParameters(i,1) = k0
-       BondPairsParameters(i,2) = r0
-    end do
-    BondPairsParameters(:,2) = BondPairsParameters(:,2) * 1.d1
-    BondPairsParameters(:,1) = BondPairsParameters(:,1) * 1.d24 * imol
-
-    ! Angle parameters :: reading ...
-    do 80 ilines = 1, 5
-       read(8,*)
-    80 continue
-
-    i = 1
+    i=1
     do
-       read(8,*,iostat=ioerr) dummy_char, dummy_char, dummy_char, dummy_int, dummy_real, dummy_real
-       if ( ioerr /= 0 ) exit
-       i = i + 1
+        read(33,*,iostat=ioerr) InputChars(i,1) , (InputReals(i,j) , j=1,2) , InputChars(i,2) , (InputReals(i,j) , j=3,4)
+        if( ioerr /= 0 ) exit
+        i = i + 1
     end do
-    Nangs = i-1
-
-    do j = 1, Nangs+4
-       backspace(8)
-    end do
-
-    allocate( AngleSymbols    (Nangs,3) )
-    allocate( AngleParameters (Nangs,2) )
-    do i = 1 , Nangs
-       read(8,*,iostat=ioerr) AngleSymbols(i,1:3), dummy_int, theta0, ktheta0
-       AngleParameters(i,1) = ktheta0
-       AngleParameters(i,2) = theta0
-    end do
-    AngleParameters(:,2) = AngleParameters(:,2) * pi / 180.d0
-    AngleParameters(:,1) = AngleParameters(:,1) * 1.d26 * imol
+        backspace(33)
  
-   ! Dihedral parameters :: reading ...
-    do 90 ilines = 1, 5
-       read(8,*)
-    90 continue
+    N_of_AtomTypes = i - 1
+
+    do i = 1 , N_of_AtomTypes
+        where( FF % MMSymbol == InputChars(i,1) )
+            FF % sig = InputReals(i,3)
+            FF % eps = InputReals(i,4)
+        end where   
+    end do
+
+    FF % eps = sqrt( FF % eps * 1.d26 * imol )
+
+    FF % sig = FF % sig * 1.d1
+    select case ( MM % CombinationRule )
+
+        case (2) 
+            FF % sig = FF % sig / TWO
+
+        case (3)
+            FF % sig = sqrt( FF % sig )
+            
+    end select
+
+    do i = 1 , size(FF)
+        where( atom % MMSymbol == FF(i) % MMSymbol ) 
+            atom % eps = FF(i) % eps
+            atom % sig = FF(i) % sig
+        end where
+    end do
+
+!=====================================================================================
+!  NonBonding parameters :: reading ...
+
+!  if there are [ nonbonding parameters ] read here...
+
+!=====================================================================================
+!  reads [ bondtypes ] ...
+    do
+        read(33,100) keyword
+        if( trim(keyword) == "[ bondtypes ]" ) exit
+    end do
+    CALL skip_lines(33,2)
+        
+    i = 1
+    do
+        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
+        if( ioerr /= 0 ) exit
+        i = i + 1
+    end do
+    backspace(33)
+
+    NbondsTypes = i - 1
+
+    allocate( BondPairsSymbols    ( NbondsTypes , 2 ) )
+    allocate( BondPairsParameters ( NbondsTypes , 2 ) )
+    forall(i=1:2) BondPairsSymbols(:NbondsTypes,i) = InputChars(:NbondsTypes,i)
+    BondPairsParameters(:NbondsTypes,1) = InputReals(:NbondsTypes,2) * 1.d24 * imol
+    BondPairsParameters(:NbondsTypes,2) = InputReals(:NbondsTypes,1) * 1.d1
+
+!=====================================================================================
+!  reads [ angletypes ] ...
+    do
+        read(33,100) keyword
+        if( trim(keyword) == "[ angletypes ]" ) exit
+    end do
+    CALL skip_lines(33,1)
 
     i = 1
     do
-       read(8,*,iostat=ioerr) dummy_char, dummy_char, dummy_char, dummy_char, dummy_int, dummy_real, dummy_real, &
-                            & dummy_real, dummy_real, dummy_real, dummy_real
-       if ( ioerr /= 0 ) exit
-       i = i + 1
+        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,3) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
+        if( ioerr /= 0 ) exit
+        i = i + 1
     end do
-    Ndiheds = i-1
+    backspace(33)
+    backspace(33)
 
-    do j = 1, Ndiheds + 5
-       backspace(8)
+    NangsTypes = i - 1
+
+    allocate( AngleSymbols    ( NangsTypes , 3 ) )
+    allocate( AngleParameters ( NangsTypes , 2 ) )
+    forall(i=1:3) AngleSymbols(:NangsTypes,i)  = InputChars(:NangsTypes,i)
+    AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * 1.d26 * imol
+    AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * pi / 180.d0
+
+!=====================================================================================
+!  reads [ dihedraltypes ] ...
+    InputReals    = D_zero
+    InputIntegers = I_zero
+    do
+        read(33,100) keyword
+        if( trim(keyword) == "[ dihedraltypes ]" ) exit
     end do
 
-    allocate( DihedSymbols    (Ndiheds,4) )
-    allocate( DihedParameters (Ndiheds,6) )
-    do i = 1 , Ndiheds
-       read(8,*,iostat=ioerr) DihedSymbols(i,1:4), dihed_type, DihedParameters(i,1:6) 
+    i = 1
+    do
+        read( 33 , * , iostat=ioerr ) (InputChars(i,k) , k=1,4) , InputIntegers(i,1) 
+        if( ioerr /= 0 ) exit
+
+        backspace(33)
+
+        select case ( InputIntegers(i,1) )
+
+            case( 1 )
+
+                read( 33 , * ) (dummy_char, k=1,4) , dummy_int , (InputReals(i,k) , k=1,3)
+
+                ! conversion 
+                InputReals(i,2) = InputReals(i,2) * 1.d26 * imol
+            
+
+            case( 3 )
+
+                read( 33 , * ) (dummy_char, k=1,4) , dummy_int , (InputReals(i,k) , k=1,6)
+
+                InputReals(i,1:6) = InputReals(i,1:6) * 1.d26 * imol
+
+        end select            
+
+        i = i + 1
+
     end do
-    DihedParameters(:,1:6) = DihedParameters(:,1:6) * 1.d26 * imol
-    if ( Ndiheds == 0 ) then 
-    Dihedral_Potential_Type = 'none'
-    else
-    Dihedral_Potential_Type = 'ryck'
-    end if    
 
- close(8)
+    NdihedTypes = i - 1
 
+    allocate( Dihed_Type         ( NdihedTypes     )                   )
+    allocate( DihedSymbols       ( NdihedTypes , 4 )                   )
+    allocate( DihedParameters    ( NdihedTypes , 6 ) , source = D_zero )
+
+    forall(k=1:4) DihedSymbols(:NdihedTypes,k)    = InputChars(:NdihedTypes,k)
+    forall(k=1:6) DihedParameters(:NdihedTypes,k) = InputReals(:NdihedTypes,k)
+
+    Dihed_Type(:NdihedTypes) = InputIntegers(:NdihedTypes,1)
+
+close(33)
+
+deallocate( InputChars , InputReals , InputIntegers )
+!=====================================================================================
+
+do a = 1, MM % N_of_species
+
+!   Assigning to each specie the corresponding parameter ...
+!   Bond parameters ...
+    allocate( species(a) % kbond0( species(a) % Nbonds , 2 ) )
+
+    do k = 1 , NbondsTypes
+        do n = 1 , species(a) % Nbonds
+       
+            flag1 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) .AND. &
+                    ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) ) 
+            flag2 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) ) .AND. & 
+                    ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) 
+
+            if ( flag1 .OR. flag2 ) then 
+                species(a) % kbond0(n,1) = BondPairsParameters(k,1)
+                species(a) % kbond0(n,2) = BondPairsParameters(k,2)
+            end if
+        end do
+    end do
+
+    if( allocated(SpecialBonds) ) then
+        do k = 1, size(SpecialBonds)
+            where( special_bonds == SpecialBonds(k) % nome ) species(a) % kbond0(:,1) = SpecialBonds(k) % kbond0(1) * 1.d24 * imol
+            where( special_bonds == SpecialBonds(k) % nome ) species(a) % kbond0(:,2) = SpecialBonds(k) % kbond0(2) * 1.d1
+        end do
+    end if
+
+    if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
+    if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )
+    if( allocated(special_bonds)       ) deallocate( special_bonds       )
+    if( allocated(SpecialBonds)        ) deallocate( SpecialBonds        )
+
+!   Angle parameters ...
+    allocate( species(a) % kang0(species(a) % Nangs , 2 ) )
+
+    do k = 1 , NangsTypes
+        do n = 1 , species(a) % Nangs
+
+            flag1 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,1)) ) .AND. &
+                    ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) .AND. &
+                    ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,3)) )
+
+            flag2 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,3)) ) .AND. &
+                    ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) .AND. &
+                    ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,1)) )
+
+            if( flag1 .OR. flag2 ) then
+                species(a) % kang0(n,1) = AngleParameters(k,1)
+                species(a) % kang0(n,2) = AngleParameters(k,2)
+            end if
+
+        end do
+    end do
+
+    if( allocated(SpecialAngs) ) then
+        do k = 1 , size(SpecialAngs)
+            where( special_angles == SpecialAngs(k) % nome ) species(a) % kang0(:,1) = SpecialAngs(k) % kang0(1) * 1.d26 * imol
+            where( special_angles == SpecialAngs(k) % nome ) species(a) % kang0(:,2) = SpecialAngs(k) % kang0(2) * pi / 180.d0
+        end do
+    end if
+
+    if( allocated(AngleParameters) ) deallocate( AngleParameters )
+    if( allocated(AngleSymbols)    ) deallocate( AngleSymbols    )
+    if( allocated(special_angles)  ) deallocate( special_angles  )
+    if( allocated(SpecialAngs)     ) deallocate( SpecialAngs     )
+
+    ! Dihedral parameters ...
+    allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 6 ) , source = D_zero )
+    allocate( species(a) % harm    ( species(a) % Ndiheds     ) , source = I_zero )
+
+    do n = 1 , species(a) % Ndiheds
+        do k = 1 , NdihedTypes
+
+            ! if funct = 1 (cos)
+            ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61 (GMX manual 4.0)
+            if( species(a) % funct_dihed(n) == 1 ) then
+
+                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                if( flag1 .OR. flag2 ) then
+                    ! kdihed0(:,1) = phi_s (deg)
+                    ! kdihed0(:,2) = k_phi (kJ/mol)
+                    ! harm(:)      = n
+                    species(a) % kdihed0(n,1:2) = DihedParameters(k,1:2)
+                    species(a) % harm(n)        = int(DihedParameters(k,3))
+                end if
+
+            end if
+
+            ! if funct = 3 (cos3)
+            ! V = C0 + C1 * cos( phi + 180 ) + C2 * cos^2( phi + 180 ) + C3 * cos^3( phi + 180 ) + C4 * cos^4( phi + 180 )      
+            ! Eq. 4.62 (GMX manual 4.0)
+            if( species(a) % funct_dihed(n) == 3 ) then
+
+                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
+                        ( Dihed_Type(k) == 3 )
+
+                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
+                        ( Dihed_Type(k) == 3 )
+   
+                if( flag1 .OR. flag2 ) then
+                    ! kdihed0(:,1) = C0 (kJ/mol) * 1.0d26 * imol
+                    ! kdihed0(:,2) = C1 (kJ/mol) * 1.0d26 * imol
+                    ! kdihed0(:,3) = C2 (kJ/mol) * 1.0d26 * imol
+                    ! kdihed0(:,4) = C3 (kJ/mol) * 1.0d26 * imol
+                    ! kdihed0(:,5) = C4 (kJ/mol) * 1.0d26 * imol
+                    ! kdihed0(:,6) = C5 (kJ/mol) * 1.0d26 * imol
+                    species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6)
+                end if
+
+            end if
+        end do
+    end do
+
+end do
+
+if( allocated(DihedParameters) ) deallocate( DihedParameters )
+if( allocated(Dihed_Type)      ) deallocate( Dihed_Type      )
+if( allocated(DihedSymbols)    ) deallocate( DihedSymbols    )
+
+100 format(a18)
+120  format(4a5,t22,I2,t26,6f14.4)
 
 end subroutine top2mdflex
 !
@@ -183,273 +359,243 @@ end subroutine top2mdflex
 !================================================
  subroutine itp2mdflex( MM , atom , species , FF)
 !================================================
- implicit none
- type(MM_system)   , intent(in)    :: MM
- type(MM_atomic)   , intent(inout) :: atom(:)
- type(MM_atomic)   , intent(inout) :: FF(:)
- type(MM_molecular), intent(inout) :: species(:)
+implicit none
+type(MM_system)     , intent(in)    :: MM
+type(MM_atomic)     , intent(inout) :: atom(:)
+type(MM_atomic)     , intent(inout) :: FF(:)
+type(MM_molecular)  , intent(inout) :: species(:)
 
- ! local variables ...
- integer          :: i, j, k, n, a, ioerr, ilines, dummy_int
- real*8           :: dummy_real, factor
- character(3)     :: dummy_char, angatm1, angatm2, angatm3, bondatm1, bondatm2
- character(3)     :: dihedatm1, dihedatm2, dihedatm3, dihedatm4
- character(10)    :: string
- logical          :: flag1, flag2
+! local variables ...
+character(15)   , allocatable   :: InputChars(:,:)
+integer         , allocatable   :: InputIntegers(:,:)
+character(18)                   :: keyword , keyword_tmp
+character(10)                   :: string
+character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
+real*8                          :: dummy_real , factor
+integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14
 
+allocate( InputIntegers ( 10000 , 10 ) , source=0 )
+allocate( InputChars    ( 10000 , 10 )            )
+
+! Reading different '.itp' species files ...
+counter = 0
 do a = 1, MM % N_of_species
- ! Reading different '.itp' species files ...
- string = species(a) % residue // '.itp'
  
- open (9, file=string, status='old',iostat=ioerr,err=101)
- 
- 101 if( ioerr > 0 )then
-     print*, string,' file not found; terminating execution'; stop
-     end if
+    string = species(a) % residue // '.itp'
 
-    ! finding the number of atoms in the molecule ...
-    do 50 ilines = 1, 6
-       read(9,*)
-    50 continue
+    open(33, file=string, status='old',iostat=ioerr,err=101)
 
-    i = 1
-    do
-       read(9,*,iostat=ioerr) dummy_int, dummy_char, dummy_int, dummy_char, dummy_char, dummy_int, dummy_real, dummy_real
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
+        101 if( ioerr > 0 ) then
+            print*, string,' file not found; terminating execution' ; stop
+        end if
 
-    ! Atom & AtomTypes stuffs :: reading ...
-    species(a) % N_of_atoms = i - 1 
-    rewind(9)
-
-    do 60 ilines = 1, 6
-       read(9,*)
-    60  continue
+        ! start reading the molecular structure of species(a) ...
+        do
+            read(33,100) keyword
+            if( trim(keyword) == "[ atoms ]" ) exit
+        end do
+        CALL skip_lines( 33 , 1 )
     
-    allocate( species(a) % atom(species(a) % N_of_atoms) )
+        allocate( species(a) % atom ( species(a) % N_of_atoms ) )
 
-    do i = 1 , species(a) % N_of_atoms
-       read(9,*,iostat=ioerr) species(a) % atom(i) % my_id,         &
-                              species(a) % atom(i) % MMSymbol,      &
-                              dummy_int,                            &
-                              species(a) % atom(i) % residue,       &
-                              species(a) % atom(i) % Symbol,        &
-                              dummy_int,                            &
-                              species(a) % atom(i) % MM_charge,     &
-                              species(a) % atom(i) % mass
+        do i = 1 , species(a) % N_of_atoms
 
-       species(a) % atom(i) % MMSymbol = adjustr(species(a) % atom(i) % MMSymbol)
-    end do
- 
-    do i = 1 , species(a) % N_of_atoms
-       where( atom % MMSymbol == species(a) % atom(i) % MMSymbol ) atom % MM_charge = species(a) % atom(i) % MM_charge
-       FF(i) % eps = atom(i) % eps
-       FF(i) % sig = atom(i) % sig
-       FF(i) % MM_charge = atom(i) % MM_charge
-       FF(i) % MMSymbol = atom(i) % MMSymbol
-    end do
+            read(33,*) species(a) % atom(i) % my_id ,      &
+                       species(a) % atom(i) % MMSymbol ,   &
+                       dummy_int ,                         &
+                       species(a) % atom(i) % residue ,    &
+                       species(a) % atom(i) % Symbol ,     &
+                       dummy_int ,                         &
+                       species(a) % atom(i) % MM_charge ,  &
+                       species(a) % atom(i) % mass
 
-    ! Bonding parameters :: reading ...
-    do 70 ilines = 1, 5
-       read(9,*)
-    70 continue
+            species(a) % atom(i) % MMSymbol = adjustr(species(a) % atom(i) % MMSymbol)
 
-    i = 1
-    do
-       read(9,*,iostat=ioerr) dummy_int, dummy_int
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
-    species(a) % Nbonds = i
+            counter = counter + 1
+            FF(counter) % my_id     = species(a) % atom(i) % my_id
+            FF(counter) % residue   = species(a) % atom(i) % residue
+            FF(counter) % Symbol    = species(a) % atom(i) % Symbol
+            FF(counter) % MMSymbol  = species(a) % atom(i) % MMSymbol
+            FF(counter) % MM_charge = species(a) % atom(i) % MM_charge
 
-    do j = 1, species(a) % Nbonds+3
-       backspace(9)
-    end do
+            where( atom % MMSymbol == species(a) % atom(i) % MMSymbol .AND. atom % my_id == species(a) % atom(i) % my_id )
+                atom % MM_charge = species(a) % atom(i) % MM_charge
+            end where
 
-    allocate( species(a) % bonds(species(a)%Nbonds,2) )
-    allocate( special_bonds(species(a)%Nbonds)        )
-    do i = 1 , species(a) % Nbonds
-       read(9,*,iostat=ioerr) species(a) % bonds(i,1:2), special_bonds(i)
-    end do
-    
-   ! Pairs interactions :: reading ...
-    do 71 ilines = 1, 4
-       read(9,*)
-    71 continue
+        end do
 
-    i = 1
-    do
-       read(9,*,iostat=ioerr) dummy_int, dummy_int, dummy_int
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
-    species(a) % Nbonds14 = i-1
+!==============================================================================================
+        ! Bonding parameters :: reading ...
+        do
+            read(33,100) keyword
+            if( trim(keyword) == "[ bonds ]" ) exit
+        end do
+        CALL skip_lines(33,1)
 
-    do j = 1, species(a) % Nbonds14+3
-       backspace(9)
-    end do
-    
-    allocate( species(a) % bonds14 (species(a)%Nbonds14,2) )
-    allocate( species(a) % fact14  (species(a)%Nbonds14)   )
-    do i = 1 , species(a) % Nbonds14
-       read(9,*,iostat=ioerr) species(a) % bonds14(i,1:2), dummy_int
-       species(a) % fact14(i) = fact14
-    end do
+        i = 1
+        do
+            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputChars(i,1)
+            if( ioerr /= 0 ) exit
+            i = i + 1
+        end do
+        backspace(33)
 
-    ! Angle parameters :: reading ...
-    do 72 ilines = 1, 4
-       read(9,*)
-    72 continue
+        Nbonds = i - 1
+        species(a) % Nbonds = Nbonds
 
-    i = 1
-    do
-       read(9,*,iostat=ioerr) dummy_int, dummy_int, dummy_int
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
-    species(a) % Nangs = i-1
+        allocate( species(a) % bonds ( Nbonds , 2 ) )
+        allocate( special_bonds      ( Nbonds     ) )
+        forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
+        special_bonds(:Nbonds) = InputChars(:Nbonds,1)
 
-    do j = 1, species(a) % Nangs+3
-       backspace(9)
-    end do
+!==============================================================================================
+        ! expecting for special-pairs OR angles ...
+        do
+            read(33,100) keyword
+            if ( trim(keyword) == "[ pairs ]" .OR. trim(keyword) == "[ angles ]" ) exit
+        end do
+        CALL skip_lines(33,1)
 
-    allocate( species(a) % angs(species(a)%Nangs,3) )
-    allocate( special_angles(species(a)%Nangs)      )
-    do i = 1 , species(a) % Nangs
-       read(9,*,iostat=ioerr) species(a) % angs(i,1:3), special_angles(i)
-    end do
+        if( trim(keyword) == "[ pairs ]" ) then
 
-    ! Dihedrals parameters :: reading ...
-    do 73 ilines = 1, 4
-       read(9,*)
-    73 continue
+            ! Pairs interactions :: reading ...
+            InputIntegers = I_zero
+            i = 1
+            do
+                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 )
+                if( ioerr /= 0 ) exit
+                i = i + 1
+            end do
+            backspace(33)
 
-    i = 1
-    do
-       read(9,*,iostat=ioerr) dummy_int, dummy_int, dummy_int, dummy_int, dummy_int
-       if ( ioerr /= 0 ) exit
-       i = i + 1
-    end do
-    species(a) % Ndiheds = i-1
-    
-    do j = 1, species(a) % Ndiheds+1
-       backspace(9)
-    end do
+            Nbonds14 = i - 1
+            species(a) % Nbonds14 = Nbonds14
 
-    allocate( species(a) % diheds(species(a)%Ndiheds,4) )
-    do i = 1 , species(a) % Ndiheds
-       read(9,*,iostat=ioerr) species(a) % diheds(i,1:4), dummy_int
-    end do
+            allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
+            allocate( species(a) % fact14  ( Nbonds14     ) )
 
-!====================================================================
-! Assigning to each specie the corresponding parameter ...
- ! Bond parameters ...
- allocate( species(a) % kbond0(species(a) % Nbonds,2) )
- do k = 1 , Nbonds
-    do n = 1 , species(a) % Nbonds
-       
-       flag1 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) &
-            .AND.                                                                                                   &
-               ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) ) 
+            do i = 1 , species(a) % Nbonds14
+                read(33,*) species(a) % bonds14(i,1:2)
+                species(a) % fact14(i) = fact14
+            end do
 
-       flag2 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) ) &
-            .AND.                                                                                                   & 
-               ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) 
+            do
+                read(33,100) keyword
+                if ( trim(keyword) == "[ angles ]" ) exit
+            end do
+            CALL skip_lines(33,1)
 
-       if ( flag1 .OR. flag2 ) then 
-          species(a) % kbond0(n,1) = BondPairsParameters(k,1)
-          species(a) % kbond0(n,2) = BondPairsParameters(k,2)
-       end if
-     end do
- end do     
+        end if
 
- if ( allocated(SpecialBonds) ) then
-    do k = 1, size(SpecialBonds)
-       where( special_bonds == SpecialBonds(k) % nome ) species(a) % kbond0(:,1) = SpecialBonds(k) % kbond0(1) * 1.d24 * imol
-       where( special_bonds == SpecialBonds(k) % nome ) species(a) % kbond0(:,2) = SpecialBonds(k) % kbond0(2) * 1.d1
-    end do
- end if
+!==============================================================================================
+        ! Angle parameters :: reading ...
+        InputIntegers = I_zero
+        i = 1
+        do
+            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,3 ) , InputChars(i,1)
+            if( ioerr /= 0 ) exit
+            i = i + 1
+        end do
+        backspace(33)
+           
+        Nangs = i - 1
+        species(a) % Nangs = Nangs
 
- deallocate( BondPairsParameters, BondPairsSymbols, special_bonds, SpecialBonds ) 
- ! Angle parameters ...
- allocate( species(a) % kang0(species(a) % Nangs,2) )
- do k = 1 , Nangs
-    do n = 1 , species(a) % Nangs
+        allocate( species(a) % angs ( Nangs , 3 ) )
+        allocate( special_angles    ( Nangs     ) )
+        forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
+        special_angles(:Nangs) = InputChars(:Nangs,1)
 
-       flag1 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,1)) ) &
-            .AND.                                                                                              &
-               ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) &
-            .AND.                                                                                              &
-               ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,3)) )
+!==============================================================================================
+        ! Dihedrals parameters :: reading ...
+        do
+            read(33,100) keyword
+            if( keyword == "[ dihedrals ]" ) exit
+        end do
+        CALL skip_lines(33,1)
 
+        InputIntegers = I_zero
+        i = 1
+        do
+            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,5 )
+            if( ioerr /= 0 ) exit
+            i = i + 1
+        end do
 
-       flag2 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,3)) ) &
-            .AND.                                                                                              &
-               ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) &
-            .AND.                                                                                              &
-               ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,1)) )
+        Ndiheds = i - 1
+        species(a) % Ndiheds = Ndiheds
 
-       if ( flag1 .OR. flag2 ) then
-          species(a) % kang0(n,1) = AngleParameters(k,1)
-          species(a) % kang0(n,2) = AngleParameters(k,2)
-       end if
+        allocate( species(a) % diheds  ( Ndiheds , 4 ) )
+        allocate( species(a) % funct_dihed ( Ndiheds     ) )
+        forall(i=1:4) species(a) % diheds(:Ndiheds,i) = InputIntegers(:Ndiheds,i)
+        species(a) % funct_dihed(:Ndiheds) = InputIntegers(:Ndiheds,5)
 
-     end do
- end do
+        ! define species(a) % dihedral_type ...
+        CALL define_DihedralType( species(a) , Ndiheds )
 
- if ( allocated(SpecialAngs) ) then
-    do k = 1, size(SpecialAngs)
-       where( special_angles == SpecialAngs(k) % nome ) species(a) % kang0(:,1) = SpecialAngs(k) % kang0(1) * 1.d26 * imol
-       where( special_angles == SpecialAngs(k) % nome ) species(a) % kang0(:,2) = SpecialAngs(k) % kang0(2) * pi / 180.d0
-    end do
- end if
+!==============================================================================================
+    close(33)
 
- deallocate( AngleParameters, AngleSymbols, special_angles, SpecialAngs )
-
- ! Dihedral parameters ...
- allocate( species(a) % kdihed0(species(a) % Ndiheds,6) )
- do k = 1 , Ndiheds
-    do n = 1 , species(a) % Ndiheds
-
-       flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) )
-
-
-       flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) &
-            .AND.                                                                                                &
-               ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) )
-
-       if ( flag1 .OR. flag2 ) then
-          species(a) % kdihed0(n,1) = DihedParameters(k,1)
-          species(a) % kdihed0(n,2) = DihedParameters(k,2)
-          species(a) % kdihed0(n,3) = DihedParameters(k,3)
-          species(a) % kdihed0(n,4) = DihedParameters(k,4)
-          species(a) % kdihed0(n,5) = DihedParameters(k,5)
-          species(a) % kdihed0(n,6) = DihedParameters(k,6)
-       end if
-
-     end do
- end do
-
- deallocate( DihedParameters, DihedSymbols )
-
-!
 end do
 
-close(9)
+deallocate( InputChars , InputIntegers )
 
+100 format(a18)
 
 end subroutine itp2mdflex
+!
+!
+!
+!=======================================
+ subroutine define_DihedralType( a , N )
+!=======================================
+implicit none
+type(MM_molecular)  , intent(inout) :: a
+integer             , intent(in)    :: N
+
+! local variables ...
+integer :: i
+
+allocate( a % Dihedral_Type ( N ) )
+
+do i = 1 , N
+
+    select case( a % funct_dihed(i) )
+
+        case( 1 )
+
+            a % dihedral_type(i) = "cos"
+
+        case( 3 )
+            
+            a % dihedral_type(i) = "cos3"
+
+    end select
+
+    a % dihedral_type(i) = adjustl( a % dihedral_type(i) )
+
+end do
+
+end subroutine define_DihedralType
+!
+!
+!
+!=========================================
+subroutine skip_lines( file_unit , lines )
+!=========================================
+implicit none
+integer , intent(in) :: file_unit
+integer , intent(in) :: lines
+
+!local variables ...
+integer :: i , ioerr
+
+do i = 1 , lines
+    read(file_unit,*,iostat=ioerr) 
+    if(ioerr < 0) exit
+end do
+
+end subroutine skip_lines
 !
 !
 !

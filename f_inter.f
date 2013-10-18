@@ -2,7 +2,8 @@ module F_inter_m
 
     use constants_m
     use omp_lib
-    use for_force 
+    use for_force   , only: forcefield, rcut, vrecut, frecut, rcutsq, pot, ecoul, eintra, evdw, & 
+                            vscut, fscut, tmp_fsr, tmp_fch, erfkr, KAPPA, vself
     use MD_read_m   , only : atom , MM , molecule
     use MM_types    , only : MM_system , MM_molecular , MM_atomic
 

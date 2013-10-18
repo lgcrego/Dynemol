@@ -145,7 +145,7 @@ do frame = frame_init , frame_final , frame_step
             CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
 
         case( "MDynamics" )
-            
+
             CALL MolecularDynamics( t_rate_MM , frame )
 
         case default
@@ -260,7 +260,7 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           AO_bra   , AO_ket   ,       &
                           DUAL_bra , DUAL_ket ,       &
                           bra      , ket      , phase )
-
+                          
 mm = size(ExCell_basis)                          
 nn = n_part
 

@@ -1,10 +1,10 @@
 module MD_dynamics_m
 
     use constants_m
-    use syst
+    use syst        ! using all syst
     use MD_read_m   , only: MM , atom , molecule, species
     use for_force   , only: forcefield
-    use f_inter_m
+    use f_inter_m   , only: stressr , stresre
 
     public :: VV1 , VV2 , SUMMAT , PRESS_BOUNDARY
 

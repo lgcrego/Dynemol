@@ -2,19 +2,23 @@ module MD_read_m
  
     use constants_m
     use atomicmass 
-    use syst 
-    use for_force           , only : KAPPA, Dihedral_potential_type, forcefield, rcut
-    use MM_tuning_routines  , only : ad_hoc_MM_tuning
-    use MM_types            , only : MM_system , MM_molecular , MM_atomic
-    use gmx2mdflex          , only : itp2mdflex, top2mdflex
-    use Babel_m             , only : QMMM_key
-    use Structure_Builder   , only : Unit_Cell
+    use syst                    , only : temper, press, talt, talp, initial_density 
+    use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
+    use MM_tuning_routines      , only : ad_hoc_MM_tuning
+    use MM_types                , only : MM_system , MM_molecular , MM_atomic
+    use gmx2mdflex              , only : itp2mdflex, top2mdflex
+    use Babel_m                 , only : QMMM_key
+    use Structure_Builder       , only : Unit_Cell
+    use Semi_Empirical_Parms    , only : Read_Atomic_Mass , Atomic_Mass
 
     type(MM_system)                     :: MM
     type(MM_molecular) , allocatable    :: species(:) , molecule(:)
     type(MM_atomic)    , allocatable    :: atom(:) , FF(:)
 
-    public :: Reading , RESTRT , MM , atom , molecule , species , FF
+    ! module variables ...
+    logical :: read_from_gmx
+
+    public :: Reading , RESTRT , MM , atom , molecule , species , FF , read_from_gmx
 
     private
 
@@ -28,16 +32,16 @@ subroutine Reading
 implicit none
 
 ! local variables ...
-real*8          :: massa , r0 , k0 , theta0 , ktheta0 , compressibility
+real*8          :: massa , compressibility
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid
-logical         :: read_from_gmx
 logical         :: exist
 character(10)   :: string
 
 !=======================  reading  system.inpt  ============================= 
 CALL allocate_MM
 
- open (10, file='system.inpt', status='old')
+open (10, file='system.inpt', status='old')
+
     read (10,*) MM % N_of_molecules                     !       total number of molecules
     read (10,*) MM % N_of_species                       !       total number of species
    
@@ -46,7 +50,7 @@ CALL allocate_MM
     do i = 1 , MM % N_of_species
         read (10,*) species(i) % residue                !  Residue of species i
         read (10,*) species(i) % N_of_molecules         !  Number of molecules of species i
-        read (10,*) species(i) % N_of_atoms             !  Number of atoms of a molecules of species i
+        read (10,*) species(i) % N_of_atoms             !  Number of atoms of a molecule of species i
         read (10,*) species(i) % flex                   !  Flexible   (T,F)
     end do
 
@@ -61,10 +65,10 @@ CALL allocate_MM
     read (10,*) KAPPA
     read (10,*) read_from_gmx                           ! .T. => reads FF from gmx input files   
 
- close (10)
- atmax = sum( species(:) % N_of_atoms )                 ! 
+close (10)
+atmax = sum( species(:) % N_of_atoms )
 
-!============================================================================ 
+! =====================================================================================
 ! types of molecules ...
 CALL allocate_molecule( MM % N_of_molecules )
 
@@ -102,22 +106,22 @@ end do
 !----------------------
 ! finished reading ...
 !----------------------
-
 ! get Atomic Number (AtNo) ...
 CALL Symbol_2_AtNo( atom )
 
 ! Define atomic mass ...
- atom % mass = atmas( atom % AtNo )
- do i = 1 , MM % N_of_species
-        species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
-        where( molecule % my_species == i ) molecule % mass = species(i) % mass
- end do
- ! mass of molec spi in Kg ...
- species % mass = species % mass * imol
- molecule % mass = molecule % mass * imol
+atom % mass = atmas( atom % AtNo )
+do i = 1 , MM % N_of_species
+    species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
+    where( molecule % my_species == i ) molecule % mass = species(i) % mass
+end do
+
+! mass of molecule species in Kg ...
+species % mass = species % mass * imol
+molecule % mass = molecule % mass * imol
 
 ! initial density of the box ... 
- initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ibox(3) * 1.d27
+initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ibox(3) * 1.d27
 
 10 if( ioerr > 0 ) stop "file_name file not found; terminating execution"
 11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
@@ -129,15 +133,33 @@ CALL Symbol_2_AtNo( atom )
 115 FORMAT(t8,i4,t14,a3,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 
 !=======================  reading  potential.inpt  ============================= 
- CALL allocate_FF( atmax )
+CALL allocate_FF( atmax )
 
- If( read_from_gmx ) then
+If( read_from_gmx ) then
 
     CALL ad_hoc_MM_tuning(instance="SpecialBonds")
-    CALL top2mdflex( MM, atom, FF )
-    CALL itp2mdflex( MM, atom, species , FF)
 
- else
+    FF % AtNo = atom % AtNo
+
+    CALL itp2mdflex( MM , atom , species , FF)
+
+    CALL top2mdflex( MM , atom , species , FF )
+
+    do i = 1 , size(species)
+        CALL MMSymbol_2_Symbol( species(i) % atom )
+    end do
+
+    CALL Read_Atomic_Mass
+
+    do i = 1 , size( Atomic_Mass )
+        where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
+        where( FF % AtNo == i ) FF % mass = Atomic_Mass(i)
+    end do
+
+    FF % nr   = atom % nr
+    FF % free = atom % free
+
+else
 
     open (30, file='potential.inpt', status='old')
 
@@ -184,15 +206,15 @@ CALL Symbol_2_AtNo( atom )
                string = species(a) % residue // '.inpt14'
                open (70, file=string, status='old',iostat=ioerr,err=101)
                read (70,*) species(a) % Nbonds14 
-               allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 )   )
-               allocate( species(a) % fact14  ( species(a) % Nbonds14 )    )
+               allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 ) )
+               allocate( species(a) % fact14  ( species(a) % Nbonds14   ) )
                do b = 1 , species(a) % Nbonds14
                    read(70,*) species(a) % bonds14(b,1:2) , species(a) % fact14(b)
                end do
                close (70)
             else
-               allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 )   )
-               allocate( species(a) % fact14  ( species(a) % Nbonds14 )    )
+               allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 ) )
+               allocate( species(a) % fact14  ( species(a) % Nbonds14   ) )
                do b = 1 , species(a) % Nbonds14
                    read(30,*) species(a) % bonds14(b,1:2) , species(a) % fact14(b)
                end do        
@@ -204,24 +226,20 @@ CALL Symbol_2_AtNo( atom )
 
             ! bond stretching pairs for species(a) ...
             read(30,*) species(a) % Nbonds
-            allocate( species(a) % bonds ( species(a) % Nbonds,2 )   )
+            allocate( species(a) % bonds  ( species(a) % Nbonds,2 ) )
             allocate( species(a) % kbond0 ( species(a) % Nbonds,2 ) )
             do b = 1 , species(a) % Nbonds
-                read(30,*) species(a) % bonds(b,1:2) , r0, k0 
-                species(a) % kbond0(b,1) = k0
-                species(a) % kbond0(b,2) = r0
+                read(30,*) species(a) % bonds(b,1:2) , (species(a) % kbond0(b,k) ,k=2,1,-1)
             end do        
             species(a) % kbond0(:,1) = species(a) % kbond0(:,1) * 1.d24 * imol
             species(a) % kbond0(:,2) = species(a) % kbond0(:,2) * 1.d1
 
             ! bond angle pairs for species(a) ...
             read(30,*) species(a) % Nangs
-            allocate( species(a) % angs ( species(a) % Nangs,3 )   )
-            allocate( species(a) % kang0 ( species(a) % Nangs,2)   )
+            allocate( species(a) % angs  ( species(a) % Nangs,3 ) )
+            allocate( species(a) % kang0 ( species(a) % Nangs,2 ) )
             do b = 1 , species(a) % Nangs
-                read(30,*) species(a) % angs(b,1:3), theta0, ktheta0
-                species(a) % kang0(b,1) = ktheta0
-                species(a) % kang0(b,2) = theta0
+                read(30,*) species(a) % angs(b,1:3), (species(a) % kang0(b,k) ,k=2,1,-1)
             end do
             species(a) % kang0(:,2) = species(a) % kang0(:,2) * pi / 180.d0
             species(a) % kang0(:,1) = species(a) % kang0(:,1) * 1.d26 * imol
@@ -232,7 +250,7 @@ CALL Symbol_2_AtNo( atom )
            
                case ('cos') 
                     read(30,*) species(a) % Ndiheds
-                    allocate( species(a) % diheds( species(a) % Ndiheds,4 ) )
+                    allocate( species(a) % diheds ( species(a) % Ndiheds,4 ) )
                     allocate( species(a) % kdihed0( species(a) % Ndiheds,2 ) )                  
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:2), species(a) % Nharm
@@ -288,6 +306,8 @@ CALL Symbol_2_AtNo( atom )
                     species(a) % kdihed0(:,1:4) = species(a) % kdihed0(:,1:4) * 1.d26 * imol
             end select 
 
+            allocate( species(a) % Dihedral_Type(species(a)%Ndiheds) , source = Dihedral_Potential_Type )
+
         else
             ! species(a) is NOT flexible ...    
             species(a) % Nbonds14  =  0
@@ -303,40 +323,48 @@ end If
 
 !=======================  finished  reading  potential.inpt  ============================= 
 
- do i = 1 , MM % N_of_species
+do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % N_of_atoms = species(i) % N_of_atoms
     where( molecule % my_species == i ) molecule % Nbonds     = species(i) % Nbonds
     where( molecule % my_species == i ) molecule % Nangs      = species(i) % Nangs
     where( molecule % my_species == i ) molecule % Ndiheds    = species(i) % Ndiheds
     where( molecule % my_species == i ) molecule % Nharm      = species(i) % Nharm
     where( molecule % my_species == i ) molecule % Nbonds14   = species(i) % Nbonds14
- end do
+end do
 
- do i = 1 , MM % N_of_molecules
-     allocate( molecule(i) % bonds14 ( molecule(i) % Nbonds14,2 ) )
-     allocate( molecule(i) % fact14  ( molecule(i) % Nbonds14   ) )
-     allocate( molecule(i) % bonds   ( molecule(i) % Nbonds,2   ) )
-     allocate( molecule(i) % kbond0  ( molecule(i) % Nbonds,2   ) )
-     allocate( molecule(i) % angs    ( molecule(i) % Nangs,3    ) )
-     allocate( molecule(i) % kang0   ( molecule(i) % Nangs,2    ) )
-     allocate( molecule(i) % diheds  ( molecule(i) % Ndiheds,4  ) )
-     allocate( molecule(i) % kdihed0 ( molecule(i) % Ndiheds,7  ) )
- end do
+do i = 1 , MM % N_of_molecules
 
- k = 0
- do i = 1 , MM % N_of_molecules
-     molecule(i) % kbond0  = species(molecule(i)% my_species) % kbond0
-     molecule(i) % bonds   = species(molecule(i)% my_species) % bonds + k 
-     molecule(i) % kang0   = species(molecule(i)% my_species) % kang0
-     molecule(i) % angs    = species(molecule(i)% my_species) % angs + k
-     molecule(i) % kdihed0 = species(molecule(i)% my_species) % kdihed0
-     molecule(i) % diheds  = species(molecule(i)% my_species) % diheds + k
-     molecule(i) % fact14  = species(molecule(i)% my_species) % fact14
-     molecule(i) % bonds14 = species(molecule(i)% my_species) % bonds14 + k
-     k = k + molecule(i) % N_of_atoms
- end do
- 
- CALL ad_hoc_MM_tuning( atom , instance = "General" )
+    allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
+    allocate( molecule(i) % fact14        ( molecule(i) % Nbonds14     ) )
+    allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
+    allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 2 ) )
+    allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
+    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 2 ) )
+    allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
+    allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , 7 ) )
+    allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
+    allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
+
+end do
+
+k = 0
+do i = 1 , MM % N_of_molecules
+
+    molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
+    molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
+    molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
+    molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
+    molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
+    molecule(i) % harm          = species(molecule(i) % my_species) % harm
+    molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
+    molecule(i) % fact14        = species(molecule(i) % my_species) % fact14
+    molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
+    molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
+
+    k = k + molecule(i) % N_of_atoms
+end do
+
+CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 end subroutine Reading
 !
@@ -602,7 +630,7 @@ type(MM_atomic) , intent(inout) :: a(:)
 integer             :: i
 character(len=1)    :: element
 
- DO i = 1 , size(a)
+DO i = 1 , size(a)
 
     write( element,'(A1)' ) adjustl( a(i)%MMSymbol )
 
@@ -624,7 +652,7 @@ character(len=1)    :: element
     select case( adjustl( a(i)%MMSymbol) )
         case( 'Ox' , 'OxH' , 'OS' )
             a(i)%Symbol = 'O'
-        case( 'YN' , 'NTr' , 'Nx' )
+        case( 'YN' , 'NTr' , 'Nx' , 'N2' , 'N32' , 'N42' , 'N52' )
             a(i)%Symbol = 'N'
         case( 'Al' )
             a(i)%Symbol = 'Al'
@@ -634,18 +662,18 @@ character(len=1)    :: element
             a(i)%Symbol = 'Li'
         case( 'Ru' )
             a(i)%Symbol = 'Ru'
-        case( 'HC' )
+        case( 'HC' , 'HA' )
             a(i)%Symbol = 'H'
-        case( 'C=' , 'CTr' , 'CS' , 'CC' , 'CM' , 'YC' , 'CT' )
+        case( 'C=' , 'CTr' , 'CS' , 'CC' , 'CM' , 'YC' , 'CT' , 'CA' , 'CB' )
             a(i)%Symbol = 'C'
         case( 'SS' )
             a(i)%Symbol = 'S'
     end select
 
- END DO
+END DO
 
- end subroutine MMSymbol_2_Symbol
-
-
+end subroutine MMSymbol_2_Symbol
+!
+!
 !
 end  module MD_read_m
