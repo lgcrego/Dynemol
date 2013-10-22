@@ -65,9 +65,6 @@ where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
 !      define %fragments   : Donor fragment ...
 !------------------------------------------------
 
-!default: %El => DONOR
-! where( univ % atom % El ) univ % atom % fragment = "D"
-
 !......................................................................
 
 If( ad_hoc_verbose_ ) then
@@ -106,6 +103,13 @@ integer  :: i
 !
 ! some typical cases are used below ...
 !--------------------------------------------------------
+
+!default: %El => DONOR
+If( any(a%atom%El) ) then
+    where( a % atom % El ) a % atom % fragment = "D"
+else
+    stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning <<"
+end If
 
  DO i = 1 , size(a%atom)
  
