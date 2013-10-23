@@ -48,7 +48,7 @@ MODULE constants_m
     real*8  , parameter :: coulomb     = 230.7113d0                 ! ee^2/(4.pi.boltz) x1E-30 N.m^2
     real*8  , parameter :: pico_2_segs = 1.0d-12                    ! converts picosecond units to second units
     real*8  , parameter :: nano_2_angs = 1.0d1                      ! converts nanometer units to angstron units
-    real*8  , parameter :: mets_2_nano = 1.0d9                      ! converts meter units to nanometer units
+    real*8  , parameter :: mts_2_nano  = 1.0d9                      ! converts meter units to nanometer units
     real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors
