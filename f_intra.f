@@ -236,7 +236,9 @@ do i = 1 , MM % N_of_molecules
             fs    = (fs / rklq) * molecule(i) % fact14(j)
             atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
-            sterm  = 4.d0 * eps * 1.d-20 * ( sr12 - sr6 ) 
+            ! factor used to compensate the factor1 and factor2 factors ...
+            ! factor3 = 1.0d-20
+            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 ) 
 !           alternative cutoff formula ...
 !           sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
             sterm  = sterm * molecule(i) % fact14(j)
@@ -249,17 +251,21 @@ do i = 1 , MM % N_of_molecules
             freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * molecule(i) % fact14(j)
             atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
             atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
-            tterm = coulomb*1.d-20 * chrgi * chrgj * ERFC(KRIJ)/rklsq * molecule(i) % fact14(j)
+            ! factor used to compensate the factor1 and factor2 factors ...
+            ! factor3 = 1.0d-20
+            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * molecule(i) % fact14(j)
 !           alternative cutoff formula ...
-!           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * 1.d-20
+!           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
             lj14pot   = lj14pot + sterm
             coul14pot = coul14pot + tterm
 
         end if
     end do
 end do
- 
-pot2 = pot + ( bdpot + angpot + dihpot) * 1.d-20 + lj14pot + coul14pot
+
+! factor used to compensate the factor1 and factor2 factors ...
+! factor3 = 1.0d-20
+pot2 = pot + ( bdpot + angpot + dihpot) * factor3 + lj14pot + coul14pot
 
 ! New Get total force ...
 
@@ -271,9 +277,7 @@ do i = 1 , MM % N_of_atoms
                                                   atom(i) % fnonch(:)    &
                                                   ) * 1.d-10
 end do
-!
-!
-!
+
 end subroutine FORCEINTRA
 !
 !
@@ -289,24 +293,11 @@ real*8  :: psi
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61
 
-        ! kdihed0(:,1) = phi_s (rad)
-        ! kdihed0(:,2) = k_phi (kJ/mol) * (1.0d26 * imol)
-        ! harm(:)      = n
-        ! phi (rad)
-
         term  =   molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
         pterm =   molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
         gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
 
-    case('cos3')    ! V = C0 + C1*cos(phi + 180) + C2*cos^2(phi + 180) + C3*cos^3(phi + 180) + C4*cos^4(phi + 180) + C5*cos(phi + 180)      <== Eq. 4.62
-
-        ! kdihed0(:,1) = C0 (kJ/mol) * (1.0d26 * imol)
-        ! kdihed0(:,2) = C1 (kJ/mol) * (1.0d26 * imol)
-        ! kdihed0(:,3) = C2 (kJ/mol) * (1.0d26 * imol)
-        ! kdihed0(:,4) = C3 (kJ/mol) * (1.0d26 * imol)
-        ! kdihed0(:,5) = C4 (kJ/mol) * (1.0d26 * imol)
-        ! kdihed0(:,6) = C5 (kJ/mol) * (1.0d26 * imol)
-        ! phi (rad)
+    case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)      <== Eq. 4.62
 
         psi = phi - PI
 

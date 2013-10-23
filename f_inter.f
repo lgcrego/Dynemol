@@ -16,46 +16,47 @@ contains
 !
 !
 !
-!====================
-subroutine FORCEINTER
-!====================
+!=====================
+ subroutine FORCEINTER
+!=====================
 implicit none
 
 ! local variables ...
- integer :: i, j, k, l, atk, atl, j1, j2
- integer :: OMP_get_thread_num, ithr, numthr, nresid, nresidl, nresidk
- real*8  :: rjkq, rklq, rjksq, rklsq, tmp, pikap, erfkrq, chrgk, chrgl, vsr, vreal, freal, sr2, sr6, sr12, fs, KRIJ, expar     
- real*8  :: stressr11, stressr22, stressr33, stressr12, stressr13, stressr23
- real*8  :: stresre11, stresre22, stresre33, stresre12, stresre13, stresre23 
- real*8, dimension (3) :: rij, rjk, rkl
+integer :: i, j, k, l, atk, atl, j1, j2
+integer :: OMP_get_thread_num, ithr, numthr, nresid, nresidl, nresidk
+real*8  :: rjkq, rklq, rjksq, rklsq, tmp, pikap, erfkrq, chrgk, chrgl, vsr, vreal, freal, sr2, sr6, sr12, fs, KRIJ, expar     
+real*8  :: stressr11, stressr22, stressr33, stressr12, stressr13, stressr23
+real*8  :: stresre11, stresre22, stresre33, stresre12, stresre13, stresre23 
+real*8, dimension (3) :: rij, rjk, rkl
 
- stressr(:,:) = 0.d0; stresre(:,:) = 0.d0
- stressr11 = 0.d0; stressr22 = 0.d0; stressr33 = 0.d0
- stressr12 = 0.d0; stressr13 = 0.d0; stressr23 = 0.d0
- stresre11 = 0.d0; stresre22 = 0.d0; stresre33 = 0.d0
- stresre12 = 0.d0; stresre13 = 0.d0; stresre23 = 0.d0
+stressr(:,:) = 0.d0; stresre(:,:) = 0.d0
+stressr11 = 0.d0; stressr22 = 0.d0; stressr33 = 0.d0
+stressr12 = 0.d0; stressr13 = 0.d0; stressr23 = 0.d0
+stresre11 = 0.d0; stresre22 = 0.d0; stresre33 = 0.d0
+stresre12 = 0.d0; stresre13 = 0.d0; stresre23 = 0.d0
 
- numthr = OMP_get_max_threads()
+numthr = OMP_get_max_threads()
 
- allocate ( tmp_fsr(MM % N_of_atoms,3,numthr)      , source=0.d0 )
- allocate ( tmp_fch(MM % N_of_atoms,3,numthr)      , source=0.d0 )
- allocate ( erfkr(MM % N_of_atoms,MM % N_of_atoms) , source=0.d0 )
 
- do i = 1, MM % N_of_atoms 
+allocate ( tmp_fsr(MM % N_of_atoms,3,numthr)      , source=0.d0 )
+allocate ( tmp_fch(MM % N_of_atoms,3,numthr)      , source=0.d0 )
+allocate ( erfkr(MM % N_of_atoms,MM % N_of_atoms) , source=0.d0 )
+
+do i = 1, MM % N_of_atoms 
     atom(i) % fsr(:)    = 0.0d0
     atom(i) % fch(:)    = 0.0d0
- end do
+end do
 
- pot    = 0.d0
- vself  = 0.d0 
- ecoul  = 0.d0
- evdw   = 0.d0
- eintra = 0.d0
+pot    = 0.d0
+vself  = 0.d0 
+ecoul  = 0.d0
+evdw   = 0.d0
+eintra = 0.d0
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
 
- do i = 1, MM % N_of_atoms 
+do i = 1, MM % N_of_atoms 
     nresid = atom(i) % nr
     if ( molecule(nresid) % N_of_atoms > 1 ) then
        j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1 
@@ -72,11 +73,11 @@ implicit none
           end if
        end do
     end if
- end do
+end do
 
- pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * 1.d-20
+pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * 1.d-20
 
- do i = 1, MM % N_of_atoms
+do i = 1, MM % N_of_atoms
     vself = vself + pikap * atom(i) % charge * atom(i) % charge
     nresid = atom(i) % nr
     if ( molecule(nresid) % N_of_atoms > 1 ) then
@@ -89,8 +90,8 @@ implicit none
           endif
        end do
     endif
- end do
- eintra = eintra + vself
+end do
+eintra = eintra + vself
 
 !##############################################################################
 !$OMP parallel DO schedule(GUIDED,200)                                                                                              &
@@ -100,7 +101,7 @@ implicit none
 
 ! LJ and Coulomb calculation
 
- do k = 1 , MM % N_of_atoms - 1
+do k = 1 , MM % N_of_atoms - 1
     do l = k , MM % N_of_atoms
        if ( atom(k) % nr /= atom(l) % nr ) then
 
@@ -184,32 +185,32 @@ implicit none
           endif
        end if
     end do
- end do
+end do
 
 !$OMP end parallel do
 ! ################################################################################3
 
- pot = pot - vself
+pot = pot - vself
 
- stressr(1,1) = stressr11; stressr(2,2) = stressr22
- stressr(3,3) = stressr33; stressr(1,2) = stressr12
- stressr(1,3) = stressr13; stressr(2,3) = stressr23
- stresre(1,1) = stresre11; stresre(2,2) = stresre22
- stresre(3,3) = stresre33; stresre(1,2) = stresre12
- stresre(1,3) = stresre13; stresre(2,3) = stresre23
- stressr(2,1) = stressr(1,2); stressr(3,1) = stressr(1,3)
- stressr(3,2) = stressr(2,3); stresre(2,1) = stresre(1,2)
- stresre(3,1) = stresre(1,3); stresre(3,2) = stresre(2,3)
+stressr(1,1) = stressr11; stressr(2,2) = stressr22
+stressr(3,3) = stressr33; stressr(1,2) = stressr12
+stressr(1,3) = stressr13; stressr(2,3) = stressr23
+stresre(1,1) = stresre11; stresre(2,2) = stresre22
+stresre(3,3) = stresre33; stresre(1,2) = stresre12
+stresre(1,3) = stresre13; stresre(2,3) = stresre23
+stressr(2,1) = stressr(1,2); stressr(3,1) = stressr(1,3)
+stressr(3,2) = stressr(2,3); stresre(2,1) = stresre(1,2)
+stresre(3,1) = stresre(1,3); stresre(3,2) = stresre(2,3)
 
- do i = 1, MM % N_of_atoms
+do i = 1, MM % N_of_atoms
     do k = 1 , numthr
         atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
         atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
     atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * 1.d-10
- end do
+end do
 
- deallocate ( tmp_fsr , tmp_fch , erfkr )
+deallocate ( tmp_fsr , tmp_fch , erfkr )
 
 end subroutine FORCEINTER
 !

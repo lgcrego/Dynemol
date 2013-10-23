@@ -193,11 +193,11 @@ do
     N_of_atoms = N_of_atoms + 1
 end do
 system%N_of_atoms = N_of_atoms
-       
+
 allocate( system%atom(system%N_of_atoms) )
 CALL Initialize_System( system )
 
-!read data ...    
+!read data ...
 rewind 3
 do
     read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword

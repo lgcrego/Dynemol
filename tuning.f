@@ -208,11 +208,6 @@ select case ( instance )
 !     Selective_Dynamics
 !----------------------------------
 
-where(system % my_id == 50 ) system % free = .false.
-where(system % my_id == 52 ) system % free = .false.
-where(system % my_id ==  2 ) system % free = .false.
-where(system % my_id == 51 ) system % free = .false.
-
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------

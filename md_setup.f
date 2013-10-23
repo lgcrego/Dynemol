@@ -102,19 +102,20 @@ end subroutine CMASS
 !=================
  subroutine CMZERO
 !=================
- implicit none
+implicit none
 
 ! local varibales ...
- integer :: i, j, l
- real*8  :: massa, masstot
- real*8, dimension(3) :: t, p, rcm, vcm
+integer :: i, j, l
+real*8  :: massa, masstot
+real*8, dimension(3) :: t, p, rcm, vcm
 
 ! Box CM ...
- p(:)  = 0.d0
- t(:)  = 0.d0
- masstot = 0.d0
- l = 1
- do i = 1 , MM % N_of_molecules 
+p(:)  = 0.d0
+t(:)  = 0.d0
+masstot = 0.d0
+
+l = 1
+do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = atmas ( atom(j) % AtNo )
        atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * ANINT( atom(j) % xyz(:) * MM % ibox(:) )
@@ -123,19 +124,19 @@ end subroutine CMASS
        masstot = masstot + massa
     end do
     l = l + molecule(i) % N_of_atoms
- end do
- rcm(:) = p(:) / masstot
- vcm(:) = t(:) / masstot
+end do
+rcm(:) = p(:) / masstot
+vcm(:) = t(:) / masstot
 
 ! New box ...
- l = 1
- do i = 1 , MM % N_of_molecules
+l = 1
+do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms -1
        atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)
        atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)
     end do
     l = l + molecule(i) % N_of_atoms
- end do
+end do
 
 
 end subroutine CMZERO

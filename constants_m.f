@@ -25,8 +25,8 @@ MODULE constants_m
     real*8     , parameter :: mid_prec   = 1.d-10
     real*8     , parameter :: high_prec  = 1.d-14
     real*8     , parameter :: real_large = 1.d+10
-    real*8     , parameter :: deg_2_rad  = PI / 180d0
-    real*8     , parameter :: rad_2_deg  = 180d0 / PI
+    real*8     , parameter :: deg_2_rad  = PI / 180.0d0
+    real*8     , parameter :: rad_2_deg  = 180.0d0 / PI
 
     complex*16 , parameter :: zi = (0.d0,1.d0)
 
@@ -39,12 +39,18 @@ MODULE constants_m
     integer    , parameter :: I_one =  1
 
 !   Molecular dynamics constants ...
-    real*8  , parameter :: ee      = 1.60219d-19                    ! in Coulomb
-    real*8  , parameter :: rsqpi   = 0.56418958354d0                ! sqrt(pi)
-    real*8  , parameter :: mol     = 6.02214129d26                  ! mol X 1000
-    real*8  , parameter :: imol    = 0.166057788d-26                ! 1/(mol x 1000)
-    real*8  , parameter :: boltz   = 1.3806488d-23                  ! kB in J/K
-    real*8  , parameter :: iboltz  = 2.41432176d22                  ! 1/(3kB) in K/J
-    real*8  , parameter :: coulomb = 230.7113d0                     ! ee^2/(4.pi.boltz) x1E-30 N.m^2
+    real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
+    real*8  , parameter :: rsqpi       = 0.56418958354d0            ! sqrt(pi)
+    real*8  , parameter :: mol         = 6.02214129d26              ! mol X 1000
+    real*8  , parameter :: imol        = 0.166057788d-26            ! 1/(mol x 1000)
+    real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
+    real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
+    real*8  , parameter :: coulomb     = 230.7113d0                 ! ee^2/(4.pi.boltz) x1E-30 N.m^2
+    real*8  , parameter :: pico_2_segs = 1.0d-12                    ! converts picosecond units to second units
+    real*8  , parameter :: nano_2_angs = 1.0d1                      ! converts nanometer units to angstron units
+    real*8  , parameter :: mets_2_nano = 1.0d9                      ! converts meter units to nanometer units
+    real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
+    real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
+    real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors
 
 END MODULE constants_m

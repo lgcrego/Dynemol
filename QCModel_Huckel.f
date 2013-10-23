@@ -31,31 +31,31 @@
 !=============================================================
  subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
 !=============================================================
- implicit none
- type(structure)                             , intent(in)    :: system
- type(STO_basis)                             , intent(in)    :: basis(:)
- type(R_eigen)                               , intent(inout) :: QM
- integer          , optional                 , intent(inout) :: flag1
- integer          , optional                 , intent(in)    :: flag2
+implicit none
+type(structure)                             , intent(in)    :: system
+type(STO_basis)                             , intent(in)    :: basis(:)
+type(R_eigen)                               , intent(inout) :: QM
+integer          , optional                 , intent(inout) :: flag1
+integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
- real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
- real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
- integer               :: i , j , info
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
+integer               :: i , j , info
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
- CALL Overlap_Matrix(system,basis,S_matrix)
+CALL Overlap_Matrix(system,basis,S_matrix)
 
- If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
+If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
 
- ALLOCATE( h     (size(basis),size(basis)) , source=D_zero)
- ALLOCATE( dumb_s(size(basis),size(basis)) , source=D_zero)
+ALLOCATE( h     (size(basis),size(basis)) , source=D_zero)
+ALLOCATE( dumb_s(size(basis),size(basis)) , source=D_zero)
 
 ! clone S_matrix because SYGVD will destroy it ... 
- dumb_s = S_matrix
+dumb_s = S_matrix
 
- If( DP_field_ .OR. Induced_ ) then
+If( DP_field_ .OR. Induced_ ) then
 
 !$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
@@ -67,7 +67,7 @@
     end do  
 !$OMP END PARALLEL DO
 
- else
+else
  
     do j = 1 , size(basis)
         do i = 1 , j
@@ -77,14 +77,14 @@
         end do
     end do  
 
- end If
+end If
 
- CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'U' , info )
+CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'U' , info )
 
- If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
- If ( present(flag1) ) flag1 = info
+If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+If ( present(flag1) ) flag1 = info
 
- DEALLOCATE(dumb_s)
+DEALLOCATE(dumb_s)
 
 !     ---------------------------------------------------
 !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
@@ -94,48 +94,48 @@
 !   Rv = <AO|MO> coefficients
 !     ---------------------------------------------------
 
- ALLOCATE(Lv(size(basis),size(basis)))
+ALLOCATE(Lv(size(basis),size(basis)))
 
- Lv = h
+Lv = h
 
- DEALLOCATE(h)
+DEALLOCATE(h)
 
- ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
- If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
+If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
- ALLOCATE(Rv(size(basis),size(basis)))
+ALLOCATE(Rv(size(basis),size(basis)))
 
- CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
 
- DEALLOCATE( S_matrix )
+DEALLOCATE( S_matrix )
 
 !----------------------------------------------------------
 !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 
- If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
+If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
 ! eigenvectors in the rows of QM%L
- QM%L = transpose(Lv) 
- DEALLOCATE( Lv )
+QM%L = transpose(Lv) 
+DEALLOCATE( Lv )
 
- If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
+If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
 ! eigenvectors in the columns of QM%R
- QM%R = Rv
- DEALLOCATE( Rv )
+QM%R = Rv
+DEALLOCATE( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
 !----------------------------------------------------------
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ! save energies of the TOTAL system 
- OPEN(unit=9,file='system-ergs.dat',status='unknown')
+OPEN(unit=9,file='system-ergs.dat',status='unknown')
     do i = 1 , size(basis)
         write(9,*) i , QM%erg(i)
     end do
- CLOSE(9)  
+CLOSE(9)  
 
- If( verbose ) Print*, '>> EigenSystem done <<'
+If( verbose ) Print*, '>> EigenSystem done <<'
 
- end subroutine EigenSystem
+end subroutine EigenSystem
 !
 !
 !
