@@ -121,7 +121,7 @@ species % mass = species % mass * imol
 molecule % mass = molecule % mass * imol
 
 ! initial density of the box ... 
-initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ibox(3) * 1.d27
+initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ibox(3) * (mts_2_nano**3)
 
 10 if( ioerr > 0 ) stop "file_name file not found; terminating execution"
 11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
@@ -176,9 +176,10 @@ else
             do i = 1, atmax
                 read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
                 FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
-                FF(i) % eps = FF(i) % eps * 1.d26 * imol
+                ! factor1 = factor1      <== factor used to not work with small numbers
+                FF(i) % eps = FF(i) % eps * factor1 * imol
                 FF(i) % eps = SQRT( FF(i) % eps )
-                FF(i) % sig = ( FF(i) % sig * 1.d1 )
+                FF(i) % sig = ( FF(i) % sig * nano_2_angs )
                 select case ( MM % CombinationRule )
                      case (2) 
                      FF(i) % sig = FF(i) % sig / TWO
@@ -230,9 +231,11 @@ else
             allocate( species(a) % kbond0 ( species(a) % Nbonds,2 ) )
             do b = 1 , species(a) % Nbonds
                 read(30,*) species(a) % bonds(b,1:2) , (species(a) % kbond0(b,k) ,k=2,1,-1)
-            end do        
-            species(a) % kbond0(:,1) = species(a) % kbond0(:,1) * 1.d24 * imol
-            species(a) % kbond0(:,2) = species(a) % kbond0(:,2) * 1.d1
+            end do
+            ! factor used to not work with small numbers ...
+            ! factor2 = 1.0d24
+            species(a) % kbond0(:,1) = species(a) % kbond0(:,1) * factor2 * imol
+            species(a) % kbond0(:,2) = species(a) % kbond0(:,2) * nano_2_angs
 
             ! bond angle pairs for species(a) ...
             read(30,*) species(a) % Nangs
@@ -241,13 +244,17 @@ else
             do b = 1 , species(a) % Nangs
                 read(30,*) species(a) % angs(b,1:3), (species(a) % kang0(b,k) ,k=2,1,-1)
             end do
-            species(a) % kang0(:,2) = species(a) % kang0(:,2) * pi / 180.d0
-            species(a) % kang0(:,1) = species(a) % kang0(:,1) * 1.d26 * imol
+            species(a) % kang0(:,2) = species(a) % kang0(:,2) * deg_2_rad
+            ! factor used to not work with small numbers ...
+            ! factor1 = factor1
+            species(a) % kang0(:,1) = species(a) % kang0(:,1) * factor1 * imol
 
             ! Dihedral Angle Potential for species(a) : general form ...
             read(30,*) Dihedral_Potential_Type
             select case( adjustl(Dihedral_Potential_Type) ) 
-           
+          
+               ! factor1 = factor1      <== factor used to not work with small numbers
+
                case ('cos') 
                     read(30,*) species(a) % Ndiheds
                     allocate( species(a) % diheds ( species(a) % Ndiheds,4 ) )
@@ -255,8 +262,8 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:2), species(a) % Nharm
                     end do
-                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * pi / 180.d0
-                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * 1.d26 * imol
+                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * deg_2_rad
+                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * factor1 * imol
 
                case ('harm')
                     read(30,*) species(a) % Ndiheds
@@ -265,8 +272,8 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:2)
                     end do
-                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * pi / 180.d0
-                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * 1.d26 * imol
+                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * deg_2_rad
+                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * factor1 * imol
            
                case ('hcos')
                     read(30,*) species(a) % Ndiheds
@@ -275,8 +282,8 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:2)
                     end do
-                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * pi / 180.d0
-                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * 1.d26 * imol
+                    species(a) % kdihed0(:,2) = species(a) % kdihed0(:,2) * deg_2_rad
+                    species(a) % kdihed0(:,1) = species(a) % kdihed0(:,1) * factor1 * imol
            
                case ('cos3')
                     read(30,*) species(a) % Ndiheds
@@ -285,7 +292,7 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:3)
                     end do
-                    species(a) % kdihed0(:,1:3) = species(a) % kdihed0(:,1:3) * 1.d26 * imol
+                    species(a) % kdihed0(:,1:3) = species(a) % kdihed0(:,1:3) * factor1 * imol
            
                case ('ryck')
                     read(30,*) species(a) % Ndiheds
@@ -294,7 +301,7 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:6)
                     end do
-                    species(a) % kdihed0(:,1:6) = species(a) % kdihed0(:,1:6) * 1.d26 * imol
+                    species(a) % kdihed0(:,1:6) = species(a) % kdihed0(:,1:6) * factor1 * imol
            
                case ('opls')
                     read(30,*) species(a) % Ndiheds
@@ -303,7 +310,7 @@ else
                     do b = 1 , species(a) % Ndiheds
                        read(30,*) species(a) % diheds(b,1:4), species(a) % kdihed0(b,1:4)
                     end do
-                    species(a) % kdihed0(:,1:4) = species(a) % kdihed0(:,1:4) * 1.d26 * imol
+                    species(a) % kdihed0(:,1:4) = species(a) % kdihed0(:,1:4) * factor1 * imol
             end select 
 
             allocate( species(a) % Dihedral_Type(species(a)%Ndiheds) , source = Dihedral_Potential_Type )
@@ -322,7 +329,6 @@ else
 end If
 
 !=======================  finished  reading  potential.inpt  ============================= 
-
 do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % N_of_atoms = species(i) % N_of_atoms
     where( molecule % my_species == i ) molecule % Nbonds     = species(i) % Nbonds
@@ -333,7 +339,6 @@ do i = 1 , MM % N_of_species
 end do
 
 do i = 1 , MM % N_of_molecules
-
     allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
     allocate( molecule(i) % fact14        ( molecule(i) % Nbonds14     ) )
     allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
@@ -344,7 +349,6 @@ do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , 7 ) )
     allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
-
 end do
 
 k = 0
