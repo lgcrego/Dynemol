@@ -176,7 +176,7 @@ else
             do i = 1, atmax
                 read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
                 FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
-                ! factor1 = factor1      <== factor used to not work with small numbers
+                ! factor1 = 1.0d26       <== factor used to not work with small numbers
                 FF(i) % eps = FF(i) % eps * factor1 * imol
                 FF(i) % eps = SQRT( FF(i) % eps )
                 FF(i) % sig = ( FF(i) % sig * nano_2_angs )
@@ -246,14 +246,14 @@ else
             end do
             species(a) % kang0(:,2) = species(a) % kang0(:,2) * deg_2_rad
             ! factor used to not work with small numbers ...
-            ! factor1 = factor1
+            ! factor1 = 1.0d26
             species(a) % kang0(:,1) = species(a) % kang0(:,1) * factor1 * imol
 
             ! Dihedral Angle Potential for species(a) : general form ...
             read(30,*) Dihedral_Potential_Type
             select case( adjustl(Dihedral_Potential_Type) ) 
           
-               ! factor1 = factor1      <== factor used to not work with small numbers
+               ! factor1 = 1.0d26       <== factor used to not work with small numbers
 
                case ('cos') 
                     read(30,*) species(a) % Ndiheds
