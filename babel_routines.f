@@ -79,6 +79,8 @@ integer :: i
             a(i)%AtNo = 22 
         case( 'MN','Mn' ) 
             a(i)%AtNo = 25 
+        case( 'CU','Cu' ) 
+            a(i)%AtNo = 29 
         case( 'ZN','Zn' ) 
             a(i)%AtNo = 30 
         case( 'Ru' ) 
@@ -131,6 +133,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 22 
         case( 'MN','Mn' ) 
             a%AtNo(i) = 25 
+        case( 'CU','Cu' ) 
+            a%AtNo(i) = 29 
         case( 'ZN','Zn' ) 
             a%AtNo(i) = 30 
         case( 'Ru' ) 
@@ -186,6 +190,8 @@ integer :: i
             a(i)%Symbol = 'Ti '
         case( 25 ) 
             a(i)%Symbol = 'Mn'
+        case( 29 ) 
+            a(i)%Symbol = 'Cu'
         case( 30 ) 
             a(i)%Symbol = 'Zn'
         case( 44 ) 
@@ -241,6 +247,8 @@ integer :: i
             a%Symbol(i) = 'Ti '
         case( 25 ) 
             a%Symbol(i) = 'Mn'
+        case( 29 ) 
+            a%Symbol(i) = 'Cu'
         case( 30 ) 
             a%Symbol(i) = 'Zn'
         case( 44 ) 
