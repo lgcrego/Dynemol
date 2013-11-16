@@ -4,7 +4,7 @@ module setup_m
     use atomicmass      , only : atmas
     use MD_read_m       , only : MM , atom , molecule , species , FF
 
-    public :: setup , cmass , cmzero
+    public :: setup , cmass , cmzero , offset
 
 contains
 !
@@ -45,8 +45,8 @@ contains
        end select
        sr6 = sr2 * sr2 * sr2
        sr12 = sr6 * sr6
-       vscut(i,j) = 4.d0 * ( FF(i) % eps * FF(j) % eps * 1.d-20 ) * (sr12 - sr6)
-       fscut(i,j) = 24.d0 * ( FF(i) % eps * FF(j) % eps * 1.d-20 ) * (2.d0 * sr12 - sr6)
+       vscut(i,j) = 4.d0 * ( FF(i) % eps * FF(j) % eps * factor3 ) * (sr12 - sr6)
+       fscut(i,j) = 24.d0 * ( FF(i) % eps * FF(j) % eps * factor3 ) * (2.d0 * sr12 - sr6)
        fscut(i,j) = fscut(i,j) / rcut       
      end do
    end do 
@@ -55,11 +55,28 @@ contains
 !###########################################################
  sr2 = 1.0/rcutsq
  KRIJ  = KAPPA * rcut
- vrecut = coulomb * 1.d-20 * ERFC(KRIJ) / rcut
+ vrecut = coulomb * factor3 * ERFC(KRIJ) / rcut
  expar = exp( - (KRIJ * KRIJ) )
  frecut = coulomb * sr2 * ( ERFC(KRIJ) + 2. * rsqpi * KAPPA * rcut * expar )
 
 end subroutine SETUP
+!
+!
+!
+!======================
+ subroutine offset( a )
+!======================
+implicit none
+integer , allocatable , intent(out) :: a(:)
+
+! local variables ...
+integer :: i
+
+allocate( a(size(species)) )
+
+a = [ (sum( species(1:i-1)%N_of_atoms ) , i=1,size(species)) ]
+
+end subroutine offset
 !
 !
 !

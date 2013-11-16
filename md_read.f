@@ -2,9 +2,10 @@ module MD_read_m
  
     use constants_m
     use atomicmass 
+    use diagnostic_types_m      , only : diagnostic_types
     use syst                    , only : temper, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
-    use MM_tuning_routines      , only : ad_hoc_MM_tuning
+    use MM_tuning_routines      , only : ad_hoc_MM_tuning , define_nr
     use MM_types                , only : MM_system , MM_molecular , MM_atomic
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
     use Babel_m                 , only : QMMM_key
@@ -32,7 +33,7 @@ subroutine Reading
 implicit none
 
 ! local variables ...
-real*8          :: massa , compressibility
+real*8          :: massa 
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid
 logical         :: exist
 character(10)   :: string
@@ -60,7 +61,6 @@ open (10, file='system.inpt', status='old')
     read (10,*) talt                                    !  Temperature coupling
                 talt = talt * 1.0d-12
     read (10,*) talp                                    !  Pressure coupling 
-    read (10,*) compressibility
                 talp = 107.0d-6 / (talp * 1.0d-12)
     read (10,*) KAPPA
     read (10,*) read_from_gmx                           ! .T. => reads FF from gmx input files   
@@ -106,6 +106,7 @@ end do
 !----------------------
 ! finished reading ...
 !----------------------
+
 ! get Atomic Number (AtNo) ...
 CALL Symbol_2_AtNo( atom )
 
@@ -139,15 +140,15 @@ If( read_from_gmx ) then
 
     CALL ad_hoc_MM_tuning(instance="SpecialBonds")
 
-    FF % AtNo = atom % AtNo
-
     CALL itp2mdflex( MM , atom , species , FF)
-
+    
     CALL top2mdflex( MM , atom , species , FF )
-
+    
     do i = 1 , size(species)
         CALL MMSymbol_2_Symbol( species(i) % atom )
     end do
+    
+    CALL Symbol_2_AtNo( FF )
 
     CALL Read_Atomic_Mass
 
@@ -156,8 +157,15 @@ If( read_from_gmx ) then
         where( FF % AtNo == i ) FF % mass = Atomic_Mass(i)
     end do
 
-    FF % nr   = atom % nr
-    FF % free = atom % free
+    do i = 1 , MM % N_of_species
+        do j = 1 , species(i) % N_of_atoms
+            where( FF % residue == species(i) % atom(j) % residue )
+                FF % nr         = species(i) % atom(j) % nr
+                FF % free       = species(i) % atom(j) % free
+                FF % my_species = species(i) % my_species
+            end where
+        end do
+    end do
 
 else
 
@@ -175,7 +183,7 @@ else
         ! L-J potential ...   
             do i = 1, atmax
                 read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
-                FF(i) % MMSymbol = adjustr( FF(i) % MMSymbol )
+                FF(i) % MMSymbol = adjustl( FF(i) % MMSymbol )
                 ! factor1 = 1.0d26       <== factor used to not work with small numbers
                 FF(i) % eps = FF(i) % eps * factor1 * imol
                 FF(i) % eps = SQRT( FF(i) % eps )
@@ -193,6 +201,66 @@ else
                  
             end do
     end select
+
+    CALL MMSymbol_2_Symbol( FF )
+
+    CALL Symbol_2_AtNo( FF )
+
+    CALL Read_Atomic_Mass
+
+    do i = 1 , size( Atomic_Mass )
+        where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
+        where( FF % AtNo == i ) FF % mass = Atomic_Mass(i)
+    end do
+
+    do i = 1 , MM % N_of_species
+
+        allocate( species(i) % atom( species(i) % N_of_atoms ) )
+
+        do j = 1 , size(atom)
+
+            if( species(i) % residue == atom(j) % residue ) then
+                species(i) % atom(1:species(i) % N_of_atoms) % residue    = species(i) % residue
+                species(i) % atom(1:species(i) % N_of_atoms) % my_species = species(i) % my_species
+                species(i) % atom(1:species(i) % N_of_atoms) % my_id      = atom(j:j + species(i) % N_of_atoms) % my_id
+                species(i) % atom(1:species(i) % N_of_atoms) % nr         = atom(j:j + species(i) % N_of_atoms) % nr
+                species(i) % atom(1:species(i) % N_of_atoms) % free       = atom(j:j + species(i) % N_of_atoms) % free
+                exit
+            end if
+            
+        end do
+
+    end do
+
+    do k = 1 , MM % N_of_species
+        do i = 1 , size(FF) - species(k) % N_of_atoms + 1
+            do j = 1 , size(atom) - species(k) % N_of_atoms + 1
+
+                l = 0
+                do
+                    if( i + l > size(FF) .OR. j + l > size(atom) ) exit
+                    if( FF(i+l) % Symbol == atom(j+l) % Symbol ) then
+                        l = l + 1
+                    else
+                        exit
+                    end if
+                end do
+
+                if( l == species(k) % N_of_atoms ) then
+                    FF(i:i+l-1) % my_species = atom(j:j+l-1) % my_species
+                    FF(i:i+l-1) % residue    = atom(j:j+l-1) % residue
+                    FF(i:i+l-1) % my_id      = atom(j:j+l-1) % my_id
+                    FF(i:i+l-1) % nr         = atom(j:j+l-1) % nr
+                    FF(i:i+l-1) % free       = atom(j:j+l-1) % free
+                    exit
+                end if
+
+            end do
+
+            if( l == species(k) % N_of_atoms ) exit
+
+        end do
+    end do
 
     ! Internal bondig parameters ...
     do a = 1 , MM % N_of_species
@@ -366,6 +434,10 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
 
     k = k + molecule(i) % N_of_atoms
+end do
+
+do i = 1 , size(atom)
+    atom(i) % my_local_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
 
 CALL ad_hoc_MM_tuning( atom , instance = "General" )
@@ -592,9 +664,9 @@ do j = 1 , MM % N_of_atoms
     atom(i) % AtNo       = Unit_Cell % AtNo(j)
     atom(i) % my_id      = i
     atom(i) % nr         = Unit_Cell % nr(j)
-    atom(i) % residue    = Unit_Cell % residue(j)
-    atom(i) % Symbol     = Unit_Cell % Symbol(j)
-    atom(i) % MMSymbol   = Unit_Cell % MMSymbol(j)
+    atom(i) % residue    = adjustl(Unit_Cell % residue(j))
+    atom(i) % Symbol     = adjustl(Unit_Cell % Symbol(j))
+    atom(i) % MMSymbol   = adjustl(Unit_Cell % MMSymbol(j))
     atom(i) % xyz(:)     = Unit_Cell % coord(j,:)
     atom(i) % vel(:)     = 0.d0
     atom(i) % fbond(:)   = 0.d0
@@ -614,7 +686,6 @@ do j = 1 , MM % N_of_atoms
 
 end do
 
-atom(:) % MMSymbol = adjustr( atom(:) % MMSymbol )
 CALL MMSymbol_2_Symbol( atom )
 
 do i = 1 , MM % N_of_atoms
@@ -675,6 +746,8 @@ DO i = 1 , size(a)
     end select
 
 END DO
+
+a % Symbol = adjustl(a % Symbol)
 
 end subroutine MMSymbol_2_Symbol
 !

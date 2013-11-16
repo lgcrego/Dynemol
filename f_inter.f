@@ -7,6 +7,8 @@ module F_inter_m
     use MD_read_m   , only : atom , MM , molecule
     use MM_types    , only : MM_system , MM_molecular , MM_atomic
 
+    use setup_m     , only : offset
+ 
     public :: FORCEINTER
     
     ! module variables ...
@@ -29,68 +31,86 @@ real*8  :: stressr11, stressr22, stressr33, stressr12, stressr13, stressr23
 real*8  :: stresre11, stresre22, stresre33, stresre12, stresre13, stresre23 
 real*8, dimension (3) :: rij, rjk, rkl
 
-stressr(:,:) = 0.d0; stresre(:,:) = 0.d0
-stressr11 = 0.d0; stressr22 = 0.d0; stressr33 = 0.d0
-stressr12 = 0.d0; stressr13 = 0.d0; stressr23 = 0.d0
-stresre11 = 0.d0; stresre22 = 0.d0; stresre33 = 0.d0
-stresre12 = 0.d0; stresre13 = 0.d0; stresre23 = 0.d0
+integer , allocatable :: species_offset(:)
+
+CALL offset( species_offset )
+
+stressr(:,:) = D_zero
+stresre(:,:) = D_zero
+
+stressr11 = D_zero; stressr22 = D_zero; stressr33 = D_zero
+stressr12 = D_zero; stressr13 = D_zero; stressr23 = D_zero
+stresre11 = D_zero; stresre22 = D_zero; stresre33 = D_zero
+stresre12 = D_zero; stresre13 = D_zero; stresre23 = D_zero
 
 numthr = OMP_get_max_threads()
 
+allocate( tmp_fsr ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
+allocate( tmp_fch ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
 
-allocate ( tmp_fsr(MM % N_of_atoms,3,numthr)      , source=0.d0 )
-allocate ( tmp_fch(MM % N_of_atoms,3,numthr)      , source=0.d0 )
-allocate ( erfkr(MM % N_of_atoms,MM % N_of_atoms) , source=0.d0 )
+allocate( erfkr ( MM % N_of_atoms , MM % N_of_atoms ) , source = D_zero )
 
 do i = 1, MM % N_of_atoms 
-    atom(i) % fsr(:)    = 0.0d0
-    atom(i) % fch(:)    = 0.0d0
+    atom(i) % fsr(:) = D_zero
+    atom(i) % fch(:) = D_zero
 end do
 
-pot    = 0.d0
-vself  = 0.d0 
-ecoul  = 0.d0
-evdw   = 0.d0
-eintra = 0.d0
+pot    = D_zero
+vself  = D_zero 
+ecoul  = D_zero
+evdw   = D_zero
+eintra = D_zero
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
+do i = 1 , MM % N_of_atoms 
 
-do i = 1, MM % N_of_atoms 
     nresid = atom(i) % nr
+
     if ( molecule(nresid) % N_of_atoms > 1 ) then
-       j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1 
-       j2 = nresid * molecule(nresid) % N_of_atoms
-       do j =  j1 , j2  
-          if ( i /= j ) then
-             rjk(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
-             rjk(:) = rjk(:) - MM % box(:) * ANINT( rjk(:) * MM % ibox(:) )
-             rjkq   = sum( rjk(:) * rjk(:) )
-             rjksq  = SQRT(rjkq)
-             tmp = KAPPA * rjksq
-             erfkr(i,j) = ( 1.d0 - ERFC(tmp) ) / rjksq
-             erfkr(i,j) = erfkr(i,j) * coulomb * 1.d-20
-          end if
-       end do
+
+        j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+        j2 = sum(molecule(1:nresid) % N_of_atoms)
+
+        do j =  j1 , j2
+            if ( i /= j ) then
+
+                rjk(:)     = atom(i) % xyz(:) - atom(j) % xyz(:)
+                rjk(:)     = rjk(:) - MM % box(:) * ANINT( rjk(:) * MM % ibox(:) )
+                rjkq       = sum( rjk(:) * rjk(:) )
+                rjksq      = sqrt(rjkq)
+                tmp        = KAPPA * rjksq
+                erfkr(i,j) = ( 1.d0 - ERFC(tmp) ) / rjksq
+                erfkr(i,j) = erfkr(i,j) * coulomb * factor3
+
+            end if
+        end do
     end if
 end do
 
-pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * 1.d-20
+pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * factor3
 
-do i = 1, MM % N_of_atoms
-    vself = vself + pikap * atom(i) % charge * atom(i) % charge
+do i = 1 , MM % N_of_atoms
+
+    vself  = vself + pikap * atom(i) % charge * atom(i) % charge
     nresid = atom(i) % nr
+
     if ( molecule(nresid) % N_of_atoms > 1 ) then
-       j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
-       j2 = nresid * molecule(nresid) % N_of_atoms
+
+        j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+        j2 = sum(molecule(1:nresid) % N_of_atoms)       
+
        do j =  j1 , j2
           if ( i /= j ) then
+
              erfkrq = 0.5d0 * ( erfkr(i,j) + vrecut )
              vself  = vself + atom(i) % charge * atom(j) % charge * erfkrq
+
           endif
        end do
     endif
 end do
+
 eintra = eintra + vself
 
 !##############################################################################
@@ -103,90 +123,99 @@ eintra = eintra + vself
 
 do k = 1 , MM % N_of_atoms - 1
     do l = k , MM % N_of_atoms
-       if ( atom(k) % nr /= atom(l) % nr ) then
 
-          ithr    = OMP_get_thread_num() + 1
+       ! do it for different molecules ...
+        if ( atom(k) % nr /= atom(l) % nr ) then
+        
+            ithr    = OMP_get_thread_num() + 1
+            nresidk = atom(k) % nr
+            nresidl = atom(l) % nr
+            rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+            rij(:)  = rij(:) - MM % box * ANINT( rij(:) * MM % ibox(:) )
+            chrgk   = atom(k) % charge
+            chrgl   = atom(l) % charge
+            rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
+            rkl(:)  = rkl(:) - MM % box(:) * ANINT( rkl(:) * MM % ibox(:) )
+            rklq    = sum( rkl(:) * rkl(:) )
 
-          nresidk = atom(k) % nr
-          nresidl = atom(l) % nr
-          rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-          rij(:)  = rij(:) - MM % box * ANINT( rij(:) * MM % ibox(:) )
-          chrgk   = atom(k) % charge
-          chrgl   = atom(l) % charge
-          rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
-          rkl(:)  = rkl(:) - MM % box(:) * ANINT( rkl(:) * MM % ibox(:) )
-          rklq    = sum( rkl(:) * rkl(:) )
+            if( rklq < rcutsq ) then
 
-          if ( rklq < rcutsq ) then
+                select case(forcefield)
 
-             select case(forcefield)
+                    case( 1 )
+                    ! Born-Mayer ; short range ...
 
-                case( 1 )
-                ! Born-Mayer ; short range ...
+                    case( 2 )
+                        ! Lennard Jones ; short range ...
 
-                case( 2 )
-                ! Lennard Jones ; short range ...
-                atk   = (k + molecule(nresidk) % N_of_atoms) - nresidk * molecule(nresidk) % N_of_atoms
-                atl   = (l + molecule(nresidl) % N_of_atoms) - nresidl * molecule(nresidl) % N_of_atoms
+                        atk = atom(k) % my_local_id + species_offset(atom(k) % my_species)
+                        atl = atom(l) % my_local_id + species_offset(atom(l) % my_species)
 
-                rklsq = SQRT(rklq)
-                select case ( MM % CombinationRule )
-                     case (2) 
-                     ! AMBER FF :: GMX COMB-RULE 2
-                     sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
-                     case (3)
-                     ! OPLS  FF :: GMX COMB-RULE 3
-                     sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
-                end select
-                sr6   = sr2 * sr2 * sr2
-                sr12  = sr6 * sr6
-                fs    = 24.d0 * ( atom(k) % eps * atom(l) % eps * 1.d-20 ) * ( 2.d0 * sr12 - sr6 )
-                fs    = fs / rklq - fscut(atk,atl) / rklsq
-                vsr   = 4.d0 * ( atom(k) % eps * atom(l) % eps * 1.d-20 ) * ( sr12 - sr6 )
-                vsr   = vsr - vscut(atk,atl) + fscut(atk,atl) * ( rklsq - rcut )
-                pot   = pot + vsr
-                evdw  = evdw + vsr
+                        rklsq = SQRT(rklq)
 
-                stressr11 = stressr11 + rij(1) * fs * rkl(1)
-                stressr22 = stressr22 + rij(2) * fs * rkl(2)
-                stressr33 = stressr33 + rij(3) * fs * rkl(3)
-                stressr12 = stressr12 + rij(1) * fs * rkl(2)
-                stressr13 = stressr13 + rij(1) * fs * rkl(3)
-                stressr23 = stressr23 + rij(2) * fs * rkl(3)
+                    select case ( MM % CombinationRule )
 
-                fs = fs * 1.0d20
-                tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
-                tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
+                        case (2) 
+                            ! AMBER FF :: GMX COMB-RULE 2
 
-                ! Coulomb Part
-                sr2   = 1.d0 / rklq
-                KRIJ  = KAPPA * rklsq
-                expar = EXP( -(KRIJ*KRIJ) )
-                freal = coulomb * chrgk * chrgl * (sr2 / rklsq)
-                freal = freal * ( ERFC(KRIJ) + 2.d0 * rsqpi * KAPPA * rklsq * expar )
-                freal = freal - frecut / rklsq * chrgk * chrgl
-                vreal = coulomb*1.d-20 * chrgk * chrgl * ERFC(KRIJ)/rklsq
-                vreal = vreal - vrecut * chrgk * chrgl + frecut * chrgk * chrgl * ( rklsq-rcut ) * 1.d-20
+                            sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
 
-                pot   = pot + vreal
-                ecoul = ecoul + vreal
+                        case (3)
+                            ! OPLS  FF :: GMX COMB-RULE 3
+
+                            sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
+
+                    end select
+
+                    sr6  = sr2 * sr2 * sr2
+                    sr12 = sr6 * sr6
+                    fs   = 24.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
+                    fs   = fs / rklq - fscut(atk,atl) / rklsq
+                    vsr  = 4.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( sr12 - sr6 )
+                    vsr  = vsr - vscut(atk,atl) + fscut(atk,atl) * ( rklsq - rcut )
+                    pot  = pot + vsr
+                    evdw = evdw + vsr
+
+                    stressr11 = stressr11 + rij(1) * fs * rkl(1)
+                    stressr22 = stressr22 + rij(2) * fs * rkl(2)
+                    stressr33 = stressr33 + rij(3) * fs * rkl(3)
+                    stressr12 = stressr12 + rij(1) * fs * rkl(2)
+                    stressr13 = stressr13 + rij(1) * fs * rkl(3)
+                    stressr23 = stressr23 + rij(2) * fs * rkl(3)
+
+                    fs = fs * 1.0d20
+
+                    tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
+                    tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
+
+                    ! Coulomb Part
+                    sr2   = 1.d0 / rklq
+                    KRIJ  = KAPPA * rklsq
+                    expar = EXP( -(KRIJ*KRIJ) )
+                    freal = coulomb * chrgk * chrgl * (sr2 / rklsq)
+                    freal = freal * ( ERFC(KRIJ) + 2.d0 * rsqpi * KAPPA * rklsq * expar )
+                    freal = freal - frecut / rklsq * chrgk * chrgl
+                    vreal = coulomb*factor3 * chrgk * chrgl * ERFC(KRIJ)/rklsq
+                    vreal = vreal - vrecut * chrgk * chrgl + frecut * chrgk * chrgl * ( rklsq-rcut ) * factor3
+
+                    pot   = pot + vreal
+                    ecoul = ecoul + vreal
          
-                stresre11 = stresre11 + rij(1) * freal * rkl(1) * 1.d-20
-                stresre22 = stresre22 + rij(2) * freal * rkl(2) * 1.d-20
-                stresre33 = stresre33 + rij(3) * freal * rkl(3) * 1.d-20
-                stresre12 = stresre12 + rij(1) * freal * rkl(2) * 1.d-20
-                stresre13 = stresre13 + rij(1) * freal * rkl(3) * 1.d-20
-                stresre23 = stresre23 + rij(2) * freal * rkl(3) * 1.d-20
+                    stresre11 = stresre11 + rij(1) * freal * rkl(1) * factor3
+                    stresre22 = stresre22 + rij(2) * freal * rkl(2) * factor3
+                    stresre33 = stresre33 + rij(3) * freal * rkl(3) * factor3
+                    stresre12 = stresre12 + rij(1) * freal * rkl(2) * factor3
+                    stresre13 = stresre13 + rij(1) * freal * rkl(3) * factor3
+                    stresre23 = stresre23 + rij(2) * freal * rkl(3) * factor3
 
-                tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + freal * rkl(1:3)
-                tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - freal * rkl(1:3)
+                    tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + freal * rkl(1:3)
+                    tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - freal * rkl(1:3)
 
-             end select
-          endif
-       end if
+                end select
+            end if
+        end if
     end do
 end do
-
 !$OMP end parallel do
 ! ################################################################################3
 

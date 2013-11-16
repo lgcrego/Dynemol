@@ -25,10 +25,10 @@ real*8  , dimension (3):: ai, newpos, oldpos, distance
 real*8                  :: massa , dt_half
 integer                 :: i
 
- dt_half = dt / two
+dt_half = dt / two
 
 ! VV1 ... 
- do i = 1 , MM % N_of_atoms
+do i = 1 , MM % N_of_atoms
     if ( atom(i) % free ) then
         oldpos(1:3) = atom(i) % xyz(1:3)
         massa = mol / atom(i) % mass 
@@ -38,7 +38,7 @@ integer                 :: i
         newpos(1:3) = atom(i) % xyz(1:3)
         distance(1:3) = newpos(1:3) - oldpos(1:3)
     end if
- end do
+end do
 
 end subroutine VV1
 !
@@ -59,19 +59,19 @@ real*8  :: massa, sumtemp, temp, lambda, dt_half
 real*8, dimension(3) :: vi
 
 sumtemp = D_zero
-stresvv(1:3,1:3) = 0.0d0
+stresvv = D_zero
 
 ! VV2 and thermostat ...
 do i = 1 , MM % N_of_molecules
-    vi(1:3) = 0.0d0
+    vi = D_zero
     nresid = molecule(i) % nr
-    j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
-    j2 = nresid * molecule(i) % N_of_atoms
+    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+    j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
-       if ( atom(j) % free ) then
-       massa = atmas( atom(j) % AtNo )
-       vi(1:3) = vi(1:3) + massa * atom(j) % vel(1:3)
-       end if
+        if( atom(j) % free ) then
+            massa = atmas( atom(j) % AtNo )
+            vi(1:3) = vi(1:3) + massa * atom(j) % vel(1:3)
+        end if
     end do   
     massa = molecule(i) % mass
     vi(1:3) = vi(1:3) * imol / massa
@@ -84,6 +84,7 @@ do i = 1 , MM % N_of_molecules
     ! 2*kinetic energy of the system ...
     sumtemp = sumtemp + massa * ( vi(1) * vi(1) + vi(2) * vi(2) + vi(3) * vi(3) )
 end do
+
 stresvv(2,1) = stresvv(1,2)
 stresvv(3,1) = stresvv(1,3)
 stresvv(3,2) = stresvv(2,3)
@@ -101,17 +102,18 @@ lambda = SQRT(1.0d0 + lambda)
 
 dt_half = dt / two
 
+
 sumtemp = 0.d0
 do i = 1 , MM % N_of_molecules
     vi(1:3) = 0.0d0
     nresid = molecule(i) % nr
-    j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
-    j2 = nresid * molecule(i) % N_of_atoms
+    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+    j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if ( atom(j) % free ) then
             massa = mol / atmas( atom(j) % AtNo )
-!            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
-            atom(j) % vel(1:3) = atom(j) % vel(1:3)  + ( dt_half * atom(j) % ftotal(1:3) ) * massa
+            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
+!            atom(j) % vel(1:3) = atom(j) % vel(1:3)  + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
         end if
     end do
@@ -187,8 +189,8 @@ real*8  , intent(in)    :: dt
  
  do i = 1 , MM % N_of_molecules
     nresid = molecule(i) % nr
-    j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
-    j2 = nresid * molecule(i) % N_of_atoms
+    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+    j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if ( atom(j) % free ) then
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) * mip

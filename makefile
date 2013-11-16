@@ -34,6 +34,7 @@ SOURCE2 = constants_m.o  \
 		  exec_time.o  \
 		  types_EHT.o  \
 		  types_MM.o \
+		  diagnosis.o \
 		  parameters.o  \
 		  allocation_m.o  \
 		  util.o  \
@@ -44,9 +45,9 @@ SOURCE2 = constants_m.o  \
 		  babel.o  \
 		  structure.o  \
 		  md_read.o	\
+		  md_setup.o \
 		  f_intra.o \
 		  f_inter.o \
-		  md_setup.o \
 		  md_output.o \
 		  pbc.o  \
 		  overlap_D.o  \

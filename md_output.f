@@ -184,8 +184,8 @@ real*8  :: CartesianDistance
 
  do i = 1 , MM % N_of_molecules
     nresid = molecule(i) % nr
-    j1 = ( nresid - 1 ) * molecule(nresid) % N_of_atoms + 1
-    j2 = nresid * molecule(i) % N_of_atoms
+    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+    j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
        do xyz = 1 , 3
           CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)

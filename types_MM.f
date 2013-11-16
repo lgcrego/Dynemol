@@ -3,6 +3,7 @@ module MM_types
     type MM_atomic
         integer                             :: AtNo
         integer                             :: my_id
+        integer                             :: my_local_id
         integer                             :: my_species
         integer                             :: nr
         character(3)                        :: residue
@@ -44,6 +45,8 @@ module MM_types
         real*8              , allocatable   :: kang0(:,:)
         integer                             :: Ndiheds
         integer             , allocatable   :: diheds(:,:)
+        character(3)        , allocatable   :: funct_bond(:)
+        character(3)        , allocatable   :: funct_angle(:)
         integer             , allocatable   :: funct_dihed(:)
         real*8              , allocatable   :: kdihed0(:,:)
         character(4)        , allocatable   :: dihedral_type(:)
