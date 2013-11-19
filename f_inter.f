@@ -60,8 +60,6 @@ ecoul  = D_zero
 evdw   = D_zero
 eintra = D_zero
 
-CALL debug_MM(mm)
-stop
 ! ##################################################################
 ! vself part of the Coulomb calculation
 do i = 1 , MM % N_of_atoms 
