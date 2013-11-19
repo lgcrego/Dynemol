@@ -2,11 +2,10 @@ module MD_read_m
  
     use constants_m
     use atomicmass 
-    use diagnostic_types_m      , only : diagnostic_types
     use syst                    , only : temper, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
-    use MM_types                , only : MM_system , MM_molecular , MM_atomic
+    use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
@@ -437,7 +436,7 @@ do i = 1 , MM % N_of_molecules
 end do
 
 do i = 1 , size(atom)
-    atom(i) % my_local_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
+    atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
 
 CALL ad_hoc_MM_tuning( atom , instance = "General" )

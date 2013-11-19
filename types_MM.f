@@ -1,9 +1,11 @@
 module MM_types
 
+    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , debug_MM
+
     type MM_atomic
         integer                             :: AtNo
         integer                             :: my_id
-        integer                             :: my_local_id
+        integer                             :: my_intra_id
         integer                             :: my_species
         integer                             :: nr
         character(3)                        :: residue
@@ -79,5 +81,240 @@ module MM_types
         real*8                              :: kang0(2)
     end type DefineAngles
 
-end module MM_types
+    interface debug_MM
+        module procedure debug_MM_atomic 
+        module procedure debug_MM_molecular
+        module procedure debug_MM_system
+    end interface debug_MM
+ 
+    private
+
+contains
 !
+!
+!
+!===============================
+ subroutine debug_MM_atomic( a )
+!===============================
+implicit none
+type(MM_atomic) , intent(in) :: a(:)
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT        '
+    print'("")'      
+    write(*,*) ' (1) Symbol      '
+    write(*,*) ' (2) MMSymbol    '
+    write(*,*) ' (3) AtNo        '
+    write(*,*) ' (4) my_id       '
+    write(*,*) ' (5) my_intra_id '
+    write(*,*) ' (6) my_species  '
+    write(*,*) ' (7) nr          '
+    write(*,*) ' (8) residue     '
+    write(*,*) ' (9) charge      '
+    write(*,*) ' (10) MM_charge  '
+    write(*,*) ' (11) eps        '
+    write(*,*) ' (12) sig        '
+    write(*,*) ' (13) free       '
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,10) a(:) % Symbol
+
+        case(2)
+            write(*,20) a(:) % MMSymbol
+
+        case(3)
+            write(*,30) a(:) % AtNo
+
+        case(4)
+            write(*,40) a(:) % my_id
+
+        case(5)
+            write(*,50) a(:) % my_intra_id
+
+        case(6)
+            write(*,30) a(:) % my_species
+
+        case(7)
+            write(*,50) a(:) % nr
+
+        case(8)
+            write(*,20) a(:) % residue
+
+        case(9)
+            write(*,60) a(:) % charge
+
+        case(10)
+            write(*,60) a(:) % MM_charge
+
+        case(11)
+            write(*,60) a(:) % eps
+
+        case(12)
+            write(*,60) a(:) % sig
+            
+        case(13)
+            write(*,70) a(:) % free
+
+        case default
+            exit
+
+    end select
+
+end do
+
+10 Format(50a3)
+20 Format(37a4)
+30 Format(50i3)
+40 Format(30i5)
+50 Format(37i4)
+60 Format(18F8.4)
+70 Format(50L3)
+
+end subroutine debug_MM_atomic
+!
+!
+!
+!====================================
+ subroutine debug_MM_molecular( mol )
+!====================================
+implicit none
+type(MM_molecular) , intent(in) :: mol(:)
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT            '
+    print'("")'      
+    write(*,*) ' (1)  my_species     '
+    write(*,*) ' (2)  N_of_atoms     '
+    write(*,*) ' (3)  N_of_molecules '
+    write(*,*) ' (4)  nr             '
+    write(*,*) ' (5)  residue        '
+    write(*,*) ' (6)  flex           '
+    write(*,*) ' (7)  Nbonds         '
+    write(*,*) ' (8)  Nangs          '
+    write(*,*) ' (9)  Ndiheds        '
+    write(*,*) ' (10) Nharm          '
+    write(*,*) ' (11) Nbonds14       '
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,10) mol(:) % my_species
+
+        case(2)
+            write(*,20) mol(:) % N_of_atoms
+
+        case(3)
+            write(*,20) mol(:) % N_of_molecules
+
+        case(4)
+            write(*,20) mol(:) % nr
+
+        case(5)
+            write(*,30) mol(:) % residue
+
+        case(6)
+            write(*,40) mol(:) % flex
+
+        case(7)
+            write(*,20) mol(:) % Nbonds
+
+        case(8)
+            write(*,20) mol(:) % Nangs
+
+        case(9)
+            write(*,20) mol(:) % Ndiheds
+
+        case(10)
+            write(*,20) mol(:) % Nharm
+
+        case(11)
+            write(*,20) mol(:) % Nbonds14
+
+        case default
+            exit
+
+    end select
+
+end do
+
+10 Format(50i3)
+20 Format(37i4)
+30 Format(37a4)
+40 Format(50L3)
+
+end subroutine debug_MM_molecular
+!
+!
+!
+!==================================
+ subroutine debug_MM_system ( sys )
+!==================================
+implicit none
+type(MM_system) , intent(in) :: sys
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT            '
+    print'("")'      
+    write(*,*) ' (1) N_of_atoms      '
+    write(*,*) ' (2) N_of_species    '
+    write(*,*) ' (3) N_of_molecules  '
+    write(*,*) ' (4) N_of_AtomTypes  '
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,'(a13,i5)') "N_of_atoms = ", sys % N_of_atoms 
+
+        case(2)
+            write(*,'(a15,i3)') "N_of_species = ", sys % N_of_species   
+
+        case(3)
+            write(*,'(a17,i4)') "N_of_molecules = ", sys  % N_of_molecules 
+
+        case(4)
+            write(*,'(a17,i3)') "N_of_AtomTypes = ", sys  % N_of_AtomTypes 
+
+        case default
+            exit
+
+    end select
+
+end do
+
+end  subroutine debug_MM_system 
+!
+!
+!
+end module MM_types

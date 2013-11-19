@@ -34,7 +34,6 @@ SOURCE2 = constants_m.o  \
 		  exec_time.o  \
 		  types_EHT.o  \
 		  types_MM.o \
-		  diagnosis.o \
 		  parameters.o  \
 		  allocation_m.o  \
 		  util.o  \

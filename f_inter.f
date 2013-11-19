@@ -5,8 +5,7 @@ module F_inter_m
     use for_force   , only: forcefield, rcut, vrecut, frecut, rcutsq, pot, ecoul, eintra, evdw, & 
                             vscut, fscut, tmp_fsr, tmp_fch, erfkr, KAPPA, vself
     use MD_read_m   , only : atom , MM , molecule
-    use MM_types    , only : MM_system , MM_molecular , MM_atomic
-
+    use MM_types    , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m     , only : offset
  
     public :: FORCEINTER
@@ -61,6 +60,8 @@ ecoul  = D_zero
 evdw   = D_zero
 eintra = D_zero
 
+CALL debug_MM(mm)
+stop
 ! ##################################################################
 ! vself part of the Coulomb calculation
 do i = 1 , MM % N_of_atoms 
@@ -148,8 +149,8 @@ do k = 1 , MM % N_of_atoms - 1
                     case( 2 )
                         ! Lennard Jones ; short range ...
 
-                        atk = atom(k) % my_local_id + species_offset(atom(k) % my_species)
-                        atl = atom(l) % my_local_id + species_offset(atom(l) % my_species)
+                        atk = atom(k) % my_intra_id + species_offset(atom(k) % my_species)
+                        atl = atom(l) % my_intra_id + species_offset(atom(l) % my_species)
 
                         rklsq = SQRT(rklq)
 

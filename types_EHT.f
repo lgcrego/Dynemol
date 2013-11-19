@@ -3,9 +3,6 @@ module type_m
     use constants_m 
     use execution_time_m
 
-    implicit real*8      (a-h,o-y)
-    implicit complex*16  (z)
-
     type structure
         integer                    :: atoms 
         integer                    :: N_of_electrons
