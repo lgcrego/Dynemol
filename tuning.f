@@ -2,7 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m    , only  : T_ , F_
+    use parameters_m    , only  : T_ , F_ , static
 
     public :: Setting_Fragments , ad_hoc_tuning
 
@@ -39,9 +39,11 @@ integer :: i , ioerr
 !      define %residue
 !-----------------------------------
 
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
+
  
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
@@ -55,11 +57,14 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where( univ % atom % residue == "BP1" ) univ % atom % El = .true.
+
+where(univ % atom % residue == "UNK") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
+
+where(univ % atom % El ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
@@ -108,7 +113,7 @@ integer  :: i
 If( any(a%atom%El) ) then
     where( a % atom % El ) a % atom % fragment = "D"
 else
-    stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning <<"
+    if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning <<"
 end If
 
  DO i = 1 , size(a%atom)
