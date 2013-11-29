@@ -226,22 +226,22 @@ select case ( instance )
 !      define SPECIAL bonds
 !----------------------------------
 ! allocate(SpecialBonds(2))
-! SpecialBonds(1) % nome      = 'bond_gb16'
+! SpecialBonds(1) % label     = 'bond_gb16'
 ! SpecialBonds(1) % kbond0(1) = 392459.2
 ! SpecialBonds(1) % kbond0(2) = 0.14010
 
-! SpecialBonds(2) % nome      = 'bond_gb53'
+! SpecialBonds(2) % label     = 'bond_gb53'
 ! SpecialBonds(2) % kbond0(1) = 392459.2
 ! SpecialBonds(2) % kbond0(2) = 0.14580
 !----------------------------------
 !      define SPECIAL angles 
 !----------------------------------
 ! allocate(SpecialAngs(2))
-! SpecialAngs(1) % nome     = 'angle_ga07'
+! SpecialAngs(1) % label    = 'angle_ga07'
 ! SpecialAngs(1) % kang0(1) = 527.184
 ! SpecialAngs(1) % kang0(2) = 108.000
 
-! SpecialAngs(2) % nome     = 'angle_ga27'
+! SpecialAngs(2) % label    = 'angle_ga27'
 ! SpecialAngs(2) % kang0(1) = 527.184
 ! SpecialAngs(2) % kang0(2) = 120.000
 

@@ -257,8 +257,8 @@ do a = 1 , MM % N_of_species
 
     if( allocated(SpecialBonds) ) then
         do k = 1, size(SpecialBonds)
-            where( species(a) % funct_bond == SpecialBonds(k) % nome ) species(a) % kbond0(:,1) = SpecialBonds(k) % kbond0(1) * factor2 * imol
-            where( species(a) % funct_bond == SpecialBonds(k) % nome ) species(a) % kbond0(:,2) = SpecialBonds(k) % kbond0(2) * nano_2_angs
+            where( species(a) % funct_bond == SpecialBonds(k) % label ) species(a) % kbond0(:,1) = SpecialBonds(k) % kbond0(1) * factor2 * imol
+            where( species(a) % funct_bond == SpecialBonds(k) % label ) species(a) % kbond0(:,2) = SpecialBonds(k) % kbond0(2) * nano_2_angs
         end do
     end if
 
@@ -290,8 +290,8 @@ do a = 1 , MM % N_of_species
         do k = 1 , size(SpecialAngs)
             ! conversion 
             ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
-            where( species(a) % funct_angle == SpecialAngs(k) % nome ) species(a) % kang0(:,1) = SpecialAngs(k) % kang0(1) * factor1 * imol
-            where( species(a) % funct_angle == SpecialAngs(k) % nome ) species(a) % kang0(:,2) = SpecialAngs(k) % kang0(2) * deg_2_rad
+            where( species(a) % funct_angle == SpecialAngs(k) % label ) species(a) % kang0(:,1) = SpecialAngs(k) % kang0(1) * factor1 * imol
+            where( species(a) % funct_angle == SpecialAngs(k) % label ) species(a) % kang0(:,2) = SpecialAngs(k) % kang0(2) * deg_2_rad
         end do
     end if
 

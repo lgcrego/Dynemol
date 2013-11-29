@@ -72,12 +72,12 @@ module MM_types
     end type MM_system
 
     type DefineBonds
-        character(15)                       :: nome
+        character(15)                       :: label
         real*8                              :: kbond0(2)
     end type DefineBonds
 
     type DefineAngles
-        character(15)                       :: nome
+        character(15)                       :: label
         real*8                              :: kang0(2)
     end type DefineAngles
 
