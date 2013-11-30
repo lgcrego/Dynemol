@@ -111,15 +111,15 @@ real*8  , intent(in)    :: dt
 ! local variables ...
 integer :: i , j , l , step
 
-! config_xyz.out ... 
+! restart_MM_xyz.out ... 
 open (10, file='restart_MM_xyz.out', status='unknown')
     write (10,*) MM % box(1), MM % box(2), MM % box(3)
     do i = 1 , MM % N_of_atoms 
-        write(10,*) atom(i) % my_id, atom(i) % xyz(1:3), atom(i) % charge
+        write(10,999) atom(i) % my_id, atom(i) % xyz(1:3), atom(i) % charge
     end do
 close (10)
 
-! config_vel.out ... 
+! restart_MM_vel.out ... 
 open(11, file='restart_MM_vel.out', status='unknown')
     do i = 1 , MM % N_of_atoms
         write(11,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
