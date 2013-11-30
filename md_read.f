@@ -1,7 +1,7 @@
 module MD_read_m
  
     use constants_m
-    use atomicmass 
+    use atomicmass
     use syst                    , only : temper, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
@@ -34,7 +34,7 @@ implicit none
 ! local variables ...
 real*8          :: massa 
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid
-logical         :: exist
+logical         :: exist , read_vel
 character(10)   :: string
 
 !=======================  reading  system.inpt  ============================= 
@@ -62,6 +62,7 @@ open (10, file='system.inpt', status='old')
     read (10,*) talp                                    !  Pressure coupling 
                 talp = 107.0d-6 / (talp * 1.0d-12)
     read (10,*) KAPPA
+    read (10,*) read_vel                                ! .T. => reads the velocities
     read (10,*) read_from_gmx                           ! .T. => reads FF from gmx input files   
 
 close (10)
@@ -93,7 +94,7 @@ do i = 1 , MM % N_of_species
 end do
 
 ! ==============  pass information from structure to molecular dynamics  ==============
-CALL pass_structure_to_MD
+CALL Structure_2_MD( read_vel )
 
 KAPPA = KAPPA / MM % box(3)
 
@@ -645,10 +646,11 @@ integer :: i
 !
 !
 !
-!==============================
-subroutine pass_structure_to_MD
-!==============================
+!====================================
+subroutine Structure_2_MD( read_vel )
+!====================================
 implicit none
+logical , intent(in) :: read_vel
 
 ! local variables ...
 integer :: i , j
@@ -685,13 +687,25 @@ do j = 1 , MM % N_of_atoms
 
 end do
 
-CALL MMSymbol_2_Symbol( atom )
-
 do i = 1 , MM % N_of_atoms
     atom(i) % vel(1:3) = 0.d0
 end do
 
-end subroutine pass_structure_to_MD
+if( read_vel ) then
+
+    open(unit=33 , file='restart_MM_vel.in' , status='old' , action='read')
+
+        do i = 1 , size(atom)
+            read(33,*) atom(i) % vel(1) , atom(i) % vel(2) , atom(i) % vel(3)
+        end do
+
+    close(33)
+
+end if
+
+CALL MMSymbol_2_Symbol( atom )
+
+end subroutine Structure_2_MD
 !
 !
 !

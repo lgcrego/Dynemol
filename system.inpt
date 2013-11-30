@@ -1,0 +1,14 @@
+1		 	Moléculas
+1			Espécies
+Ru2			Resíduo
+1			Moléculas
+61			Átomos
+.True.		Fexível
+300.00d0	Temperatura
+1.0d0		Pressão
+16.0d0		Raio de corte
+9999999999999.1d0		Talt
+9999999999999.2d0		Talp
+6.0d0		Kappa
+.true.		read_vel
+.true.		read_from_gmx

@@ -111,19 +111,22 @@ real*8  , intent(in)    :: dt
 ! local variables ...
 integer :: i , j , l , step
 
-! config.out ... ######################
- open (10, file='config.out', status='unknown')
- write (10,*) MM % box(1), MM % box(2), MM % box(3)
- do i = 1 , MM % N_of_atoms 
-    write(10,999) atom(i) % my_id, atom(i) % xyz(1:3), atom(i) % charge
- end do
+! config_xyz.out ... 
+open (10, file='restart_MM_xyz.out', status='unknown')
+    write (10,*) MM % box(1), MM % box(2), MM % box(3)
+    do i = 1 , MM % N_of_atoms 
+        write(10,*) atom(i) % my_id, atom(i) % xyz(1:3), atom(i) % charge
+    end do
+close (10)
 
- do i = 1 , MM % N_of_atoms
-    write(10,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
- end do
- close (10)
+! config_vel.out ... 
+open(11, file='restart_MM_vel.out', status='unknown')
+    do i = 1 , MM % N_of_atoms
+        write(11,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
+    end do
+close(11)
  
-! config.pdb ... ######################
+! config.pdb ... 
 
  CALL ReGroupMolecule
 
@@ -134,33 +137,32 @@ integer :: i , j , l , step
         write(14,993) 'MODEL'  , step
 
         do i = 1 , MM % N_of_atoms
-             write(14,992)  atom(i) % my_id          , &     ! <== global number
-                            atom(i) % MMSymbol       , &     ! <== atom type  
-                            ' '                      , &     ! <== alternate location indicator
-                            atom(i) % residue        , &     ! <== residue name
-                            ' '                      , &     ! <== chain identifier
-                            atom(i) % nr             , &     ! <== residue sequence number
-                            ' '                      , &     ! <== code for insertion of residues
-                            ( atom(i) % xyz(l) , l=1,3 )   , &     ! <== xyz coordinates
-                            1.00                     , &     ! <== occupancy
-                            0.00                     , &     ! <== temperature factor
-                            ' '                      , &     ! <== segment identifier
-                            ' '                      , &     ! <== here only for tabulation purposes
-                            atom(i) % Symbol         , &     ! <== chemical element symbol
-                            atom(i) % charge                 ! <== charge on the atom
+             write(14,992)  atom(i) % my_id          ,          &     ! <== global number
+                            atom(i) % MMSymbol       ,          &     ! <== atom type  
+                            ' '                      ,          &     ! <== alternate location indicator
+                            atom(i) % residue        ,          &     ! <== residue name
+                            ' '                      ,          &     ! <== chain identifier
+                            atom(i) % nr             ,          &     ! <== residue sequence number
+                            ' '                      ,          &     ! <== code for insertion of residues
+                            ( atom(i) % xyz(l) , l=1,3 )   ,    &     ! <== xyz coordinates
+                            1.00                     ,          &     ! <== occupancy
+                            0.00                     ,          &     ! <== temperature factor
+                            ' '                      ,          &     ! <== segment identifier
+                            ' '                      ,          &     ! <== here only for tabulation purposes
+                            atom(i) % Symbol         ,          &     ! <== chemical element symbol
+                            atom(i) % charge                          ! <== charge on the atom
         end do
         write(14,'(''MASTER'')')
         write(14,'(''END'')')
  close(14) 
  first = .false.
  
-! restart.inpt ... ######################
+! restart.inpt ...
  open (97, file='restart.inpt', status='unknown', form='unformatted')
  do i = 1 , 3
     write (97) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
  end do
  close(97)
-
  
 991 FORMAT(a6,3F9.3,3F7.2,a11,a4)
 992 FORMAT('ATOM  ',i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
