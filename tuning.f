@@ -34,6 +34,7 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %atom
 !-----------------------------------
+ 
 
 !-----------------------------------
 !      define %residue
@@ -49,22 +50,16 @@ integer :: i , ioerr
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
 
-!default: %DPF = F_
-
-!use default: %DPF = %solute  
-! where( univ % atom % DPF ) univ % atom % solute = .true.
 
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
 
-where(univ % atom % residue == "UNK") univ % atom % El = .true.
+where(univ % atom % residue == "BP1") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
-where(univ % atom % El ) univ % atom % Hl = .true.
 
 !------------------------------------------------
 !      define %fragments   : Donor fragment ...
@@ -116,7 +111,9 @@ else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning <<"
 end If
 
- DO i = 1 , size(a%atom)
+DO i = 1 , size(a%atom)
+
+ if( a%atom(i)%fragment /= "D" ) then
  
     select case(a%atom(i)%residue)
 
@@ -153,7 +150,9 @@ end If
 
     end select
 
- END DO
+ end if
+
+END DO
 
 end subroutine Setting_Fragments
 
