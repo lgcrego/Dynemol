@@ -503,10 +503,9 @@ do j = 1 , model
 
         CALL MMSymbol_2_Symbol  ( trj(j)%atom )
         CALL Symbol_2_AtNo      ( trj(j)%atom )
-        CALL Setting_Fragments  ( trj(j)      )
-
         ! use ad hoc tuning of parameters ...
         If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
+        CALL Setting_Fragments  ( trj(j)      )
 
         trj(j)%atom % Nvalen    =  atom(trj(j)%atom%AtNo) % Nvalen
         trj(j)%atom % polar     =  atom(trj(j)%atom%AtNo) % polar 
