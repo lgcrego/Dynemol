@@ -87,6 +87,9 @@ if( restart .AND. Coulomb_ ) then
 
 else
 
+    t  = t_i
+    it = 1
+
 !   building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
     do n = 1 , n_part                         
         select case( eh_tag(n) )
@@ -125,9 +128,22 @@ else
 
     CALL dump_QDyn( QDyn , 1 )
 
-    t = t_i
+!   save the initial GaussianCube file ...
+    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
-    it_init = 2
+        ! LOCAL representation for film STO production ...
+        AO_bra = DUAL_bra
+
+        CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm , C_zero , AO_ket(:,1) , mm )
+        CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
+
+        do n = 1 , n_part
+            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+        end do
+
+    end If
+
+    it_init = it + 1
 
 end if
 
