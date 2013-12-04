@@ -65,7 +65,7 @@ integer         , intent(out)   :: it
 
 ! local variables ...
 type(universe)          :: Solvated_System
-real*8                  :: t , t_rate , t_rate_MM
+real*8                  :: t , t_rate 
 integer                 :: j , frame , frame_init , frame_final , frame_restart
 
 it = 1
@@ -84,11 +84,9 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
-! time is PICOseconds in EHT & seconds in MM ... 
 If( nuclear_matter == "MDynamics" ) then
     t_rate      = t_f / float(n_t)
     frame_final = n_t
-    t_rate_MM   = 1.0d-12 * t_rate
 else
     t_rate      = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
     frame_final = size(trj)
@@ -146,7 +144,7 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
-            CALL MolecularDynamics( t_rate_MM , frame )
+            CALL MolecularDynamics( t_rate , frame )
 
         case default
 

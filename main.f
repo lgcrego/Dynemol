@@ -47,7 +47,7 @@ select case ( driver )
     case ( "diagnostic" )
         CALL diagnostic
 
-    case ( "Coulomb" )
+    case ( "MM_Dynamics" )
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver

@@ -12,7 +12,7 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
-logical                 :: Mutate_Cross   
+logical                 :: Mutate_Cross , QMMM
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -31,9 +31,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "slice_AO"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] 
+  DRIVER          = "q_dynamics"            ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"              ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"           ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival        = T_                       
   SPECTRUM        = F_                          
@@ -50,8 +50,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
 !
-  GaussianCube      = F_                       
-  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
+  GaussianCube      = T_                       
+  GaussianCube_step = 1                       ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
   CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
@@ -80,9 +80,9 @@ logical :: dynamic
   t_f  =  1.0d1                               ! <== final time in PICOseconds
   n_t  =  20000                               ! <== number of time steps
 
-  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  000                        ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    =  1                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
@@ -144,6 +144,8 @@ select case( DRIVER )
 end select
 
 static = .not. dynamic
+
+QMMM = dynamic .AND. (nuclear_matter == "MMDynamics")
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 

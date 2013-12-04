@@ -1,7 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
-    use parameters_m        , only : restart
+    use parameters_m        , only : restart , QMMM
     use MD_read_m           , only : atom , Reading , restrt , MM , species , molecule , FF
     use setup_m             , only : setup, cmzero, cmass
     use MD_dump_m           , only : output , cleanup , saving
@@ -25,20 +25,24 @@ contains
 !
 !
 !
-!=========================================
-subroutine MolecularDynamics( dt , frame )
-!=========================================
+!=============================================
+subroutine MolecularDynamics( t_rate , frame )
+!=============================================
 implicit none
-real*8  , intent(in)    :: dt
+real*8  , intent(in)    :: t_rate
 integer , intent(in)    :: frame
 
 ! local variables ...
-real*8  :: Ttrans , pressure , density
+real*8  :: Ttrans , pressure , density , dt
 integer :: i
+
+
+! time is PICOseconds in EHT & seconds in MM ; converts picosecond units to second units ... 
+dt = t_rate * pico_2_segs 
 
 if( .NOT. done ) CALL preprocess_DM
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge !+ Net_Charge(:)
+If( QMMM ) atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
 
 ! Molecuar dynamic ...
 CALL VV1( dt )
@@ -71,7 +75,7 @@ integer :: i
 
 CALL Reading
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
+If( QMMM ) atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge + Net_Charge(:)
 
 CALL Setup
 CALL cmzero
