@@ -37,8 +37,8 @@ real*8  :: Ttrans , pressure , density , dt
 integer :: i
 
 
-! time is PICOseconds in EHT & seconds in MM ; converts picosecond units to second units ... 
-dt = t_rate * pico_2_segs 
+! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ... 
+dt = t_rate * pico_2_sec 
 
 if( .NOT. done ) CALL preprocess_DM
 

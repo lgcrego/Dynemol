@@ -145,7 +145,7 @@ end select
 
 static = .not. dynamic
 
-QMMM = dynamic .AND. (nuclear_matter == "MMDynamics")
+QMMM = dynamic .AND. (nuclear_matter == "MDynamics")
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
