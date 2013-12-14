@@ -31,16 +31,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "MM_Dynamics"           ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"           ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
-  Survival        = T_                       
-  SPECTRUM        = F_                          
-  DP_Moment       = F_                       
-  Alpha_Tensor    = F_                        ! <== Embeded Finite Field Polarizability 
-  OPT_parms       = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc          = T_                        ! <== ad hoc tuning of parameters
+  Survival       = T_                       
+  SPECTRUM       = F_                          
+  DP_Moment      = F_                       
+  QMMM           = F_
+  Alpha_Tensor   = F_                        ! <== Embeded Finite Field Polarizability 
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
@@ -50,8 +51,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
 !
-  GaussianCube      = T_                       
-  GaussianCube_step = 1                       ! <== time step for saving Gaussian Cube files
+  GaussianCube      = F_                       
+  GaussianCube_step = 100                     ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
   CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
@@ -77,16 +78,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  1.0d1                               ! <== final time in PICOseconds
-  n_t  =  20000                               ! <== number of time steps
+  t_f  =  1.0d0                               ! <== final time in PICOseconds
+  n_t  =  2000                                ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    =  1                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 7                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state =  47                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 47                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
@@ -129,7 +130,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "MM_Dynamics" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "Coulomb" , "coupling_QMMM" )
         
         dynamic = T_ .OR. Survival 
 
@@ -137,6 +138,10 @@ select case( DRIVER )
 
         dynamic = F_ .OR. Survival
 
+    case( "MM_Dynamics" )
+
+        QMMM = F_
+        
     case default
         Print*, " >>> Check your driver options <<< :" , driver
         stop
@@ -144,8 +149,6 @@ select case( DRIVER )
 end select
 
 static = .not. dynamic
-
-QMMM = dynamic .AND. (nuclear_matter == "MDynamics")
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 

@@ -47,6 +47,7 @@ SOURCE2 = constants_m.o  \
 		  md_setup.o \
 		  f_intra.o \
 		  f_inter.o \
+		  CoulInt_QMMM.o \
 		  md_output.o \
 		  pbc.o  \
 		  overlap_D.o  \
