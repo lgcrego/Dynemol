@@ -31,7 +31,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER          = "q_dynamics"            ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER          = "MM_Dynamics"           ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"           ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -129,7 +129,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "Coulomb" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "MM_Dynamics" )
         
         dynamic = T_ .OR. Survival 
 

@@ -66,6 +66,7 @@ SOURCE2 = constants_m.o  \
 		  data_output.o \
 		  md_dynamics.o \
 		  MM_dynamics.o \
+		  MM_driver.o \
 		  film_STO.o \
 		  DOS_m.o \
 		  oscillator.o \

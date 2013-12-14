@@ -11,6 +11,7 @@ use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
+use MMechanics_m            , only : MMechanics
 
 ! local variables ...
  
@@ -48,6 +49,7 @@ select case ( driver )
         CALL diagnostic
 
     case ( "MM_Dynamics" )
+        CALL MMechanics
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver
