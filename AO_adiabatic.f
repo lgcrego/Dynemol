@@ -71,14 +71,6 @@ integer                 :: j , frame , frame_init , frame_final , frame_restart
 it = 1
 t  = t_i
 
-If( restart ) then
-    CALL Restart_stuff( QDyn , t , it , frame_restart )
-    mm = size(ExCell_basis)
-    nn = n_part
-else
-    CALL Preprocess( QDyn , it )
-end If
-
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
@@ -90,6 +82,14 @@ If( nuclear_matter == "MDynamics" ) then
 else
     t_rate      = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
     frame_final = size(trj)
+end If
+
+If( restart ) then
+    CALL Restart_stuff( QDyn , t , it , frame_restart )
+    mm = size(ExCell_basis)
+    nn = n_part
+else
+    CALL Preprocess( QDyn , t_rate , it )
 end If
 
 do frame = frame_init , frame_final , frame_step
@@ -186,12 +186,13 @@ end subroutine AO_adiabatic
 !
 !
 !
-!==================================
- subroutine Preprocess( QDyn , it )
-!==================================
+!=======================================
+ subroutine Preprocess( QDyn , dt , it )
+!=======================================
 implicit none
-type(f_time)    , intent(out)    :: QDyn
-integer         , intent(in)     :: it
+type(f_time)    , intent(out)   :: QDyn
+real*8          , intent(in)    :: dt
+integer         , intent(in)    :: it
 
 ! local variables
 integer         :: hole_save , n
@@ -216,6 +217,8 @@ select case ( nuclear_matter )
 
     case( "MDynamics" )
 
+        CALL MolecularDynamics( dt , 1 )
+        
     case default
 
         Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter

@@ -22,10 +22,10 @@ implicit none
 real*8  :: t , t_rate 
 integer :: it , frame , frame_init , frame_final
 
-it = 1
+it = 0
 t  = t_i
 
-frame_init =  frame_step + 1
+frame_init = 1
 
 !-------------------------------------------------------
 
@@ -37,7 +37,7 @@ do frame = frame_init , frame_final , frame_step
 
     t = t + t_rate 
 
-    If( it >= n_t .OR. t >= t_f ) exit    
+    If( it >= n_t .OR. t >= t_f + t_rate ) exit
 
     it = it + 1
 
