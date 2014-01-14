@@ -59,7 +59,8 @@ where(univ % atom % residue == "BP1") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "ION") univ % atom % Hl = .true.
+!where(univ % atom % residue == "ION") univ % atom % Hl = .true.
+where(univ % atom % residue == "BP1") univ % atom % Hl = .true.
 
 !......................................................................
 

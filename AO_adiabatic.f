@@ -47,10 +47,11 @@ module AO_adiabatic_m
     private
 
     ! module variables ...
-    Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket , phase
-    type(R_eigen)                             :: UNI , el_FMO , hl_FMO
-    integer                                   :: mm , nn
+    Complex*16      , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16      , allocatable , dimension(:)    :: bra , ket , phase
+    real*8          , allocatable , dimension(:,:)  :: Net_Charge_old(:,:)
+    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
+    integer                                         :: mm , nn
 
 contains
 !
@@ -64,9 +65,9 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-type(universe)          :: Solvated_System
-real*8                  :: t , t_rate 
-integer                 :: j , frame , frame_init , frame_final , frame_restart
+type(universe)  :: Solvated_System
+real*8          :: t , t_rate 
+integer         :: j , frame , frame_init , frame_final , frame_restart
 
 it = 1
 t  = t_i
@@ -116,6 +117,11 @@ do frame = frame_init , frame_final , frame_step
     ! save populations(t + t_rate) ...
     QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t )
 
+    if( NetCharge ) then
+        Net_Charge_old(:,2) = Net_Charge_old(:,1)
+        Net_Charge_old(:,1) = Net_Charge
+    end if
+
     CALL dump_Qdyn( Qdyn , it )
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
@@ -144,7 +150,11 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
+            if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,2)
+        
             CALL MolecularDynamics( t_rate , frame )
+
+            if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,1)
 
         case default
 
@@ -217,7 +227,6 @@ select case ( nuclear_matter )
 
     case( "MDynamics" )
 
-        CALL MolecularDynamics( dt , 1 )
         
     case default
 
@@ -230,7 +239,10 @@ el_hl_ = any( Unit_Cell%Hl )
  
 CALL Generate_Structure ( 1 )
 
-If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
+If( NetCharge ) then
+    allocate( Net_Charge     ( Extended_Cell%atoms     ) , source = D_zero )
+    allocate( Net_Charge_old ( Extended_Cell%atoms , 2 ) , source = D_zero )
+end if
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
@@ -282,7 +294,7 @@ do n = 1 , n_part
        
         case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+!            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -298,6 +310,8 @@ CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zer
 
 ! save populations ...
 QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t_i )
+
+if( NetCharge ) Net_Charge_old(:,1) = Net_Charge
 
 CALL dump_Qdyn( Qdyn , it )
 

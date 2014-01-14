@@ -10,5 +10,5 @@ Ru2			Resíduo
 9999999999999.1d0		Talt
 9999999999999.2d0		Talp
 6.0d0		Kappa
-.true.		read_vel
+.true.   	read_vel
 .true.		read_from_gmx

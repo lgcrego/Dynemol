@@ -50,13 +50,13 @@ CALL ForceInter
 CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-CALL VV2 ( Ttrans , frame , dt )
+CALL VV2 ( Ttrans , frame - 1 , dt )
 
 CALL Summat( density ) 
 CALL Press_Boundary( pressure , dt )
 
-if (mod(frame,1) == 0) CALL Saving( frame , dt )
-if (mod(frame,1) == 0) write (*,'(I7,4F15.5)') frame , Ttrans , pot*mol*1.d-6 / dfloat(MM % N_of_molecules) , pressure , density
+if (mod(frame-1,1) == 0) CALL Saving( frame - 1 , dt )
+if (mod(frame-1,1) == 0) write (*,'(I7,4F15.5)') frame - 1 , Ttrans , pot*mol*1.d-6 / dfloat(MM % N_of_molecules) , pressure , density
 
 CALL output( Ttrans , dt )
 
@@ -90,10 +90,7 @@ if( restart ) then
 else
 
     CALL Cleanup
-
-    ! saving the first frame ==> frame 1 = input ...
-    CALL Saving( 1 , D_zero )
-
+    
     CALL ForceInter
     CALL ForceIntra
 
@@ -101,6 +98,9 @@ else
     if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 
 endif
+
+! saving the first frame ==> frame 1 = input ...
+CALL Saving( 0 , D_zero )
 
 done = .true.
 
