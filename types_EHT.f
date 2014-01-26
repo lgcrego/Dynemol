@@ -234,4 +234,336 @@ module type_m
         real*8  ,  allocatable  :: hl_DP(:,:)
     end type dipoles
 
+
+    interface debug_EH
+        module procedure debug_EH_structure
+        module procedure debug_EH_atomic 
+        module procedure debug_EH_STO_basis
+    end interface debug_EH
+ 
+contains
+!
+!
+!
+!==================================
+ subroutine debug_EH_structure( a )
+!==================================
+implicit none
+type(structure) , intent(in) :: a
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT                       '
+    print'("")'      
+    write(*,*) ' (1)  Symbol                    '
+    write(*,*) ' (2)  MMSymbol                  '
+    write(*,*) ' (3)  AtNo                      '
+    write(*,*) ' (4)  fragment                  '
+    write(*,*) ' (5)  nr                        '
+    write(*,*) ' (6)  residue                   '
+    write(*,*) ' (7)  copy_No                   '
+    write(*,*) ' (8)  BasisPointer              '
+    write(*,*) ' (9)  list_of_fragments         '
+    write(*,*) ' (10) list_of_residues          ' 
+    write(*,*) ' (11) polar                     '
+    write(*,*) ' (12) k_WH                      '
+    write(*,*) ' (13) DPF                       '
+    write(*,*) ' (14) El                        '
+    write(*,*) ' (15) Hl                        '
+    write(*,*) ' (16) solute                    '
+    write(*,*) ' (17) atoms                     '
+    write(*,*) ' (18) N_of_electrons            '
+    write(*,*) ' (19) N_of_solvent_Molecules    '
+    write(*,*) ' (20) N_of_solute_Molecules     '
+
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,10) a % Symbol(:)
+
+        case(2)
+            write(*,20) a % MMSymbol(:)
+
+        case(3)
+            write(*,30) a % AtNo(:)
+
+        case(4)
+            write(*,10) a % fragment(:)
+
+        case(5)
+            write(*,50) a % nr(:)
+
+        case(6)
+            write(*,20) a % residue(:)
+
+        case(7)
+            write(*,30) a % copy_No(:)
+
+        case(8)
+            write(*,80) a % BasisPointer(:)
+
+        case(9)
+            write(*,10) a % list_of_fragments(:)
+
+        case(10)
+            write(*,40) a % list_of_residues(:)
+
+        case(11)
+            write(*,60) a % polar(:)
+
+        case(12)
+            write(*,60) a % k_WH(:)
+
+        case(13)
+            write(*,70) a % DPF(:)
+
+        case(14)
+            write(*,70) a % El(:)
+
+        case(15)
+            write(*,70) a % Hl(:)
+
+        case(16)
+            write(*,70) a % solute(:)
+
+        case(17)
+            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
+
+        case(18)
+            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
+
+        case(19)
+            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+
+        case(20)
+            write(*,'(a25,i5)') "N. of Solute Molecules = ", a % N_of_solute_Molecules
+
+        case default
+            exit
+
+    end select
+
+end do
+
+10 Format(50a3)
+20 Format(37a4)
+30 Format(50i3)
+40 Format(30i5)
+50 Format(37i4)
+60 Format(18F8.4)
+70 Format(50L3)
+80 Format(25i6)
+
+end subroutine debug_EH_structure
+!
+!
+!
+!===============================
+ subroutine debug_EH_atomic( a )
+!===============================
+implicit none
+type(atomic) , intent(in) :: a(:)
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT        '
+    print'("")'      
+    write(*,*) ' (1) Symbol      '
+    write(*,*) ' (2) MMSymbol    '
+    write(*,*) ' (3) AtNo        '
+    write(*,*) ' (4) my_id       '
+    write(*,*) ' (5) copy_No     '
+    write(*,*) ' (6) fragment    '
+    write(*,*) ' (7) nr          '
+    write(*,*) ' (8) residue     '
+    write(*,*) ' (9) charge      '
+    write(*,*) ' (10) DPF        '
+    write(*,*) ' (11) El         '
+    write(*,*) ' (12) Hl         '
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,10) a(:) % Symbol
+
+        case(2)
+            write(*,20) a(:) % MMSymbol
+
+        case(3)
+            write(*,30) a(:) % AtNo
+
+        case(4)
+            write(*,80) a(:) % my_id
+
+        case(5)
+            write(*,30) a(:) % copy_No
+
+        case(6)
+            write(*,10) a(:) % fragment
+
+        case(7)
+            write(*,50) a(:) % nr
+
+        case(8)
+            write(*,20) a(:) % residue
+
+        case(9)
+            write(*,90) a(:) % charge
+
+        case(10)
+            write(*,70) a(:) % DPF
+
+        case(11)
+            write(*,70) a(:) % El
+
+        case(12)
+            write(*,70) a(:) % Hl
+            
+        case default
+            exit
+
+    end select
+
+end do
+
+10 Format(50a3)
+20 Format(37a4)
+30 Format(50i3)
+40 Format(30i5)
+50 Format(37i4)
+60 Format(18F8.4)
+70 Format(50L3)
+80 Format(25i6)
+90 Format(15F10.3)
+
+end subroutine debug_EH_atomic
+!
+!
+!
+!==================================
+ subroutine debug_EH_STO_basis( a )
+!==================================
+implicit none
+type(STO_basis) , intent(in) :: a(:)
+
+! local variables ...
+integer :: option
+
+do
+
+    print'("")'      
+    write(*,*) ' (0) QUIT            '
+    print'("")'      
+    write(*,*) ' (1)  Symbol         '
+    write(*,*) ' (2)  EHSymbol       '
+    write(*,*) ' (3)  AtNo           '
+    write(*,*) ' (4)  fragment       '
+    write(*,*) ' (5)  nr             '
+    write(*,*) ' (6)  residue        '
+    write(*,*) ' (7)  copy_No        '
+    write(*,*) ' (8)  indx           '
+    write(*,*) ' (9)  atom           '
+    write(*,*) ' (10) Nzeta          '
+    write(*,*) ' (11) IP             '
+    write(*,*) ' (12) k_WH           '
+    write(*,*) ' (13) solute         '
+    write(*,*) ' (14) DPF            '
+    write(*,*) ' (15) El             '
+    write(*,*) ' (16) Hl             '
+
+
+    read (*,*) option
+
+    select case( option )
+
+        case(0)
+            stop
+
+        case(1)
+            write(*,10) a(:) % Symbol
+
+        case(2)
+            write(*,20) a(:) % EHSymbol
+
+        case(3)
+            write(*,30) a(:) % AtNo
+
+        case(4)
+            write(*,10) a(:) % fragment
+
+        case(5)
+            write(*,50) a(:) % nr
+
+        case(6)
+            write(*,20) a(:) % residue
+
+        case(7)
+            write(*,30) a(:) % Copy_No
+
+        case(8)
+            write(*,80) a(:) % indx
+
+        case(9)
+            write(*,80) a(:) % atom
+
+        case(10)
+            write(*,30) a(:) % Nzeta
+
+        case(11)
+            write(*,90) a(:) % IP
+
+        case(12)
+            write(*,60) a(:) % k_WH
+
+        case(13)
+            write(*,70) a(:) % solute
+
+        case(14)
+            write(*,70) a(:) % DPF
+
+        case(15)
+            write(*,70) a(:) % El
+
+        case(16)
+            write(*,70) a(:) % Hl
+
+
+        case default
+            exit
+
+    end select
+
+end do
+
+10 Format(50a3)
+20 Format(37a4)
+30 Format(50i3)
+40 Format(30i5)
+50 Format(37i4)
+60 Format(18F8.3)
+70 Format(50L3)
+80 Format(25i6)
+90 Format(15F10.3)
+
+end subroutine debug_EH_STO_basis
+
 end module type_m
