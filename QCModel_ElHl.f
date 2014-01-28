@@ -23,7 +23,7 @@
 
     ! module variables ...
     complex*16  , allocatable   :: V_coul(:,:)
-    real*8      , allocatable   :: h0(:,:) , H_DP(:,:)
+    real*8      , allocatable   :: H_DP(:,:)
     logical                     :: PTheory
 
 contains
@@ -65,16 +65,14 @@ end If
 
 !-----------------------------------------------------------------------
 !           Electron Hamiltonian : upper triangle of V_coul ...
-  
-CALL Huckel( basis , S_matrix )
 
-ALLOCATE( h (size(basis),size(basis)) , source = D_zero )
+ALLOCATE( h (size(basis),size(basis)) , source = Huckel( basis , S_matrix ) )
 
 if( DP_field_ .OR. Induced_ ) then
 
     CALL H_DP_Builder( basis , S_matrix )
 
-    h = h0 + H_DP
+    h = h + H_DP
     if( PTheory ) then
         forall( j=1:size(basis) ) h(j,j) = h(j,j) + ( AO_bra(j,1)*AO_ket(j,1) * H_DP(j,j) ) + V_coul_El(j)
     else
@@ -83,12 +81,9 @@ if( DP_field_ .OR. Induced_ ) then
 
 else
 
-    h = h0
     forall( j=1:size(basis) ) h(j,j) = h(j,j) + V_coul_El(j)
 
 end if
-
-deallocate( h0 )
 
 ! eigensystem for ELECTRON wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , instance="el" )
@@ -96,15 +91,13 @@ CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , in
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
 
-h(:,:) = D_zero
-
-CALL Huckel( basis , S_matrix )
+h = Huckel( basis , S_matrix )
 
 if( DP_field_ .OR. Induced_ ) then
 
     CALL H_DP_Builder( basis , S_matrix )
 
-    h = transpose(h0) + transpose(H_DP)
+    h = transpose(h) + transpose(H_DP)
     if( PTheory ) then
         forall( j=1:size(basis) ) h(j,j) = h(j,j) - ( AO_bra(j,2)*AO_ket(j,2) * H_DP(j,j) )  + V_coul_Hl(j)
     else
@@ -113,12 +106,12 @@ if( DP_field_ .OR. Induced_ ) then
 
 else
 
-    h = transpose(h0)
+    h = transpose(h)
     forall( j=1:size(basis) ) h(j,j) = h(j,j) + V_coul_Hl(j)
 
 end if
 
-deallocate( h0 , V_coul_El , V_coul_Hl )
+deallocate( V_coul_El , V_coul_Hl )
 
 ! eigensystem for HOLE wavepacket ...
 CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , flag2 , instance="hl" )
@@ -232,12 +225,14 @@ end subroutine Build_MO_basis
 !
 !
 !
-!====================================
-subroutine Huckel( basis , S_matrix )
-!====================================
+!========================================
+ pure function Huckel( basis , S_matrix )
+!========================================
 implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
+
+real*8  , allocatable   :: Huckel(:,:)
 
 ! local variables ... 
 real*8  :: k_eff , k_WH , c1 , c2 , c3
@@ -246,7 +241,7 @@ integer :: i , j
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
 
-ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
+ALLOCATE( Huckel(size(basis),size(basis)) , source = D_zero )
 
 do j = 1 , size(basis)
 
@@ -261,15 +256,15 @@ do j = 1 , size(basis)
 
         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-        h0(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
+        Huckel(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
 
     end do
 
-    h0(j,j) = basis(j)%IP
+    Huckel(j,j) = basis(j)%IP
 
 end do
 
-end subroutine Huckel
+end function Huckel
 !
 !
 !

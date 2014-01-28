@@ -279,6 +279,7 @@ do
     write(*,*) ' (18) N_of_electrons            '
     write(*,*) ' (19) N_of_solvent_Molecules    '
     write(*,*) ' (20) N_of_solute_Molecules     '
+    write(*,*) ' any other number cotinues      '
 
 
     read (*,*) option
@@ -394,6 +395,7 @@ do
     write(*,*) ' (10) DPF        '
     write(*,*) ' (11) El         '
     write(*,*) ' (12) Hl         '
+    write(*,*) ' any other number continues     '
 
     read (*,*) option
 
@@ -489,6 +491,7 @@ do
     write(*,*) ' (14) DPF            '
     write(*,*) ' (15) El             '
     write(*,*) ' (16) Hl             '
+    write(*,*) ' any other number continues     '
 
 
     read (*,*) option
