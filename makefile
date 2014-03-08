@@ -65,7 +65,7 @@ SOURCE2 = constants_m.o  \
 		  QCModel_ElHl.o \
 		  AlphaPolar.o  \
 		  data_output.o \
-		  md_dynamics.o \
+		  verlet.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \

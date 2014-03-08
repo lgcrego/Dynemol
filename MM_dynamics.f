@@ -9,7 +9,7 @@ module MM_dynamics_m
     use f_intra_m           , only : FORCEINTRA
     use QMMM_m              , only : QMMM_FORCE
     use for_force           , only : pot
-    use MD_dynamics_m       , only : VV1 , VV2 , Summat , PRESS_Boundary
+    use verlet_m            , only : VV1 , VV2 , Summat , PRESS_Boundary
     use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
     use Data_Output         , only : Net_Charge

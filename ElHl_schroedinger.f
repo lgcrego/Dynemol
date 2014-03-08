@@ -103,7 +103,7 @@ else
         
             case( "hl" )
 
-                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> quit: hole state above the Fermi level <<<'
+                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> warning: hole state above the Fermi level <<<'
 
                 MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
                 MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
