@@ -2,6 +2,7 @@ module MM_dynamics_m
 
     use constants_m
     use parameters_m        , only : restart , QMMM
+    use MM_input            , only : MM_log_step , MM_frame_step
     use MD_read_m           , only : atom , Reading , restrt , MM
     use setup_m             , only : setup, cmzero, cmass
     use MD_dump_m           , only : output , cleanup , saving
@@ -14,20 +15,17 @@ module MM_dynamics_m
     use Structure_Builder   , only : Unit_Cell
     use Data_Output         , only : Net_Charge
 
-    public :: MolecularDynamics
+    public :: MolecularMechanics , preprocess_MM
 
     private
-
-    ! module variables ...
-    logical , save  :: done = .false.
 
 contains
 !
 !
 !
-!=============================================
-subroutine MolecularDynamics( t_rate , frame )
-!=============================================
+!==============================================
+subroutine MolecularMechanics( t_rate , frame )
+!==============================================
 implicit none
 real*8  , intent(in)    :: t_rate
 integer , intent(in)    :: frame
@@ -39,8 +37,6 @@ integer :: i
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosencond to second ...
 dt = t_rate * pico_2_sec
 
-if( .NOT. done ) CALL preprocess_DM
-
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 ! Molecuar dynamic ...
@@ -50,25 +46,26 @@ CALL ForceInter
 CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-CALL VV2 ( Ttrans , frame - 1 , dt )
+CALL VV2 ( Ttrans , frame , dt )
 
 CALL Summat( density ) 
 CALL Press_Boundary( pressure , dt )
 
-if (mod(frame-1,1) == 0) CALL Saving( frame - 1 , dt )
-if (mod(frame-1,1) == 0) write (*,'(I7,4F15.5)') frame - 1 , Ttrans , pot*mol*1.d-6 / dfloat(MM % N_of_molecules) , pressure , density
+if ( mod(frame,MM_frame_step) == 0 ) CALL Saving( frame , dt )
 
-CALL output( Ttrans , dt )
+if ( mod(frame,MM_log_step) == 0 ) write (*,'(I7,4F15.5)') frame , Ttrans , pot*mol*1.d-6 / dfloat(MM % N_of_molecules) , pressure , density
+
+if ( mod(frame,MM_log_step) == 0 ) CALL output( Ttrans , frame , dt )
 
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
-end subroutine MolecularDynamics
+end subroutine MolecularMechanics
 !
 !
 !
 !=======================
-subroutine preprocess_DM
+subroutine preprocess_MM
 !=======================
 implicit none
 
@@ -99,12 +96,10 @@ else
 
 endif
 
-! saving the first frame ==> frame 1 = input ...
+! saving the first frame ==> frame 0 = input ...
 CALL Saving( 0 , D_zero )
 
-done = .true.
-
-end subroutine preprocess_DM
+end subroutine preprocess_MM
 !
 !
 !

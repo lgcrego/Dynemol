@@ -40,7 +40,7 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use MM_dynamics_m               , only : MolecularDynamics
+    use MM_dynamics_m               , only : MolecularMechanics
 
     public :: ElHl_adiabatic
 
@@ -148,7 +148,7 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
-            CALL MolecularDynamics( t_rate_MM , frame )
+            CALL MolecularMechanics( t_rate_MM , frame )
             
         case default
 

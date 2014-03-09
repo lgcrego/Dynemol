@@ -1,6 +1,7 @@
 module MD_dump_m
 
     use constants_m
+    use MM_input        , only: MM_frame_step
     use parameters_m    , only: n_t
     use syst            , only: temper, Initial_density, Ekin, DensTot, TempTot, PressTot
     use MD_read_m       , only: MM , atom , molecule , species
@@ -8,92 +9,101 @@ module MD_dump_m
     public :: output , cleanup , saving
 
 !   module variables ...
-    logical , save :: first = .true. 
+    logical , save :: first = .true. , done = .false.
 
 contains    
 !
 !
 !
 !========================================
- subroutine OUTPUT( Ttrans , dt ) 
+ subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
 use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot , dihpot, lj14pot, coul14pot, pot2, forcefield
 implicit none
 real*8  , intent(in)    :: Ttrans
+integer , intent(in)    :: frame 
 real*8  , intent(in)    :: dt
  
 ! local variables ... 
  integer :: i, j
 
- open (10, file='resumo.out', status='unknown')
-  write(10,*)
-  write(10,'(''********************************************'')')
-  write(10,'(''*                                          *'')')
-  write(10,'(''*               MMDynamics                 *'')')
-  write(10,'(''*                                          *'')')
-  write(10,'(''********************************************'')')
-  write(10,*)
-  write(10,*)            
-  write(10,*)'Resumo da simulacao'
-  write(10,*)
-  write(10,*)
-  write(10,'(''Num de molec   :'',I10)') MM % N_of_molecules
-  write(10,'(''Temper inicial :'',F10.2,'' Kelvin'')') temper
-  write(10,'(''Lados da caixa :'',3F10.2,'' Angstroms'')') MM % box(1:3)
-  write(10,'(''Raio de corte  :'',F10.2,'' Angstroms'')') rcut
-  write(10,'(''Densidade      :'',F10.4,'' g/cm3'')') Initial_density
-  write(10,*)
-  write(10,'(''Temper inicial :'',F10.2,'' Kelvin'')') temper
-  write(10,'(''Temper Final   :'',F10.2,'' Kelvin'')') Ttrans
-  write(10,*)
-  write(10,'(''Numero de passos realizados    :'',i10)') n_t
-  write(10,'(''Intervalo entre cada passo     :'',E10.2,'' seg'')') dt
-  write(10,'(''Salvamos configs e g(r) a cada :'',i10,'' passos'')') 1
-  write(10,*)
-
-  select case( forcefield )
-
-    case( 1 )
-    write(10,'(''Potencial intermolecular Born Meyer'')')
-
-    case( 2) 
-    write(10,'(''Potencial intermolecular Lennard Jones'')')
-
-  end select
-
-  write(10,*)
-  write(10,'(''Caixa contem'',i3,'' especies'')') MM % N_of_species
-  write(10,*)
-  do i = 1, MM % N_of_species
-    if (species(i) % N_of_atoms > 1) then
-      write(10,'(''Especie'',i2,'' tem '',i2,'' sitios'')') i, species(i) % N_of_atoms
-    endif
+IF( .NOT. done ) then 
+    open (10, file='MM_log.out', status='unknown')
     write(10,*)
-  end do 
+    write(10,'(''********************************************'')')
+    write(10,'(''*                                          *'')')
+    write(10,'(''*               MM_Dynamics                *'')')
+    write(10,'(''*                                          *'')')
+    write(10,'(''********************************************'')')
+    write(10,*)
+    write(10,*)            
+    write(10,*)'Initial Paramenters'
+    write(10,*)
+    write(10,*)
+    write(10,'(''Number of Molecules      :'',I10)') MM % N_of_molecules
+    write(10,'(''Initial Bath Temperature :'',F10.2,'' Kelvin'')') temper
+    write(10,'(''Box dimensions           :'',3F10.2,'' Angstroms'')') MM % box(1:3)
+    write(10,'(''Cut off radius           :'',F10.2,'' Angstroms'')') rcut
+    write(10,'(''Density                  :'',F10.4,'' g/cm3'')') Initial_density
+    write(10,*)
+    write(10,'(''System Temperature       :'',F10.2,'' Kelvin'')') Ttrans
+    write(10,*)
+    write(10,'(''Total Simulation Steps   :'',i10)') n_t
+    write(10,'(''Integration time step    :'',F10.3,'' femtosec'')') dt*1.d15
+    write(10,'(''frame-output step        :'',i10,'' steps'')') MM_frame_step
+    write(10,*)
 
-  write(10,'(''<======  ###############  ==>'')')
-  write(10,'(''<====  A V E R A G E S  ====>'')')
-  write(10,'(''<==  ###############  ======>'')')
-  write(10,*)
-  write(10,*)'Energies (kJ/mol)'
-  write(10,'(''Bond Potential             :'',F12.4)') bdpot*mol*1.d-26    / n_t
-  write(10,'(''Angle Potential            :'',F12.4)') angpot*mol*1.d-26   / n_t
-  write(10,'(''Dihedral Potential         :'',F12.4)') dihpot*mol*1.d-26   / n_t
-  write(10,'(''Lennard-Jones 1-4          :'',F12.4)') lj14pot*mol*1.d-6   / n_t
-  write(10,'(''Coulomb 1-4                :'',F12.4)') coul14pot*mol*1.d-6 / n_t
-  write(10,'(''Lennard-Jones              :'',F12.4)') evdw*mol*1.d-6 
-  write(10,'(''Coulomb self-interaction   :'',F12.4)') eintra *mol*1.d-6
-  write(10,'(''Coulomb short-range        :'',F12.4)') ecoul*mol*1.d-6 
-  write(10,'(''Total Coulomb              :'',F12.4)') (ecoul - eintra)*mol*1.d-6 
-  write(10,'(''Potential Energy           :'',F12.4)') pot*mol*1.d-6 / MM % N_of_molecules
-  write(10,'(''Potential Energy(gmx-like) :'',F12.4)') ( pot2*mol*1.d-6 / MM % N_of_molecules ) / n_t
-  write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
-  write(10,*)
-  write(10,'(''Density     :'',F10.4,'' g/cm³'')') DensTot / n_t
-  write(10,'(''Temperature :'',F10.2,'' Kelvin'')') TempTot / n_t
-  write(10,'(''Pressure    :'',F10.2,'' atm'')') PressTot / n_t
+    select case( forcefield )
 
- close (10)
+        case( 1 )
+        write(10,'(''Born Meyer Potential'')')
+
+        case( 2) 
+        write(10,'(''Lennard-Jones Potential'')')
+
+    end select
+
+    write(10,*)
+    write(10,'(''Box contains'',i3,'' different species'')') MM % N_of_species
+    write(10,*)
+    do i = 1, MM % N_of_species
+        if (species(i) % N_of_atoms > 1) then
+            write(10,'(''Species'',i2,'' comprised of '',i2,'' atoms'')') i, species(i) % N_of_atoms
+        endif
+        write(10,*)
+    end do 
+    close (10)
+
+    done = .true.
+
+end IF
+
+open (10, file='MM_log.out', status='unknown', access='append')
+
+    write(10,'(''<======  ###############  ==>'')')
+    write(10,'(''<====  A V E R A G E S  ====>'')')
+    write(10,'(''<==  ###############  ======>'')')
+    write(10,*)
+    write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
+    write(10,*)'Energies (kJ/mol)'
+    write(10,'(''Bond Potential             :'',F12.4)') bdpot*mol*1.d-26    / n_t
+    write(10,'(''Angle Potential            :'',F12.4)') angpot*mol*1.d-26   / n_t
+    write(10,'(''Dihedral Potential         :'',F12.4)') dihpot*mol*1.d-26   / n_t
+    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') lj14pot*mol*1.d-6   / n_t
+    write(10,'(''Coulomb 1-4                :'',F12.4)') coul14pot*mol*1.d-6 / n_t
+    write(10,'(''Lennard-Jones              :'',F12.4)') evdw*mol*1.d-6 
+    write(10,'(''Coulomb self-interaction   :'',F12.4)') eintra *mol*1.d-6
+    write(10,'(''Coulomb short-range        :'',F12.4)') ecoul*mol*1.d-6 
+    write(10,'(''Total Coulomb              :'',F12.4)') (ecoul - eintra)*mol*1.d-6 
+    write(10,'(''Potential Energy           :'',F12.4)') pot*mol*1.d-6 / MM % N_of_molecules
+    write(10,'(''Potential Energy(gmx-like) :'',F12.4)') ( pot2*mol*1.d-6 / MM % N_of_molecules ) / n_t
+    write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
+    write(10,*)
+    write(10,'(''Density     :'',F10.4,'' g/cm³'')') DensTot / n_t
+    write(10,'(''Temperature :'',F10.2,'' Kelvin'')') TempTot / n_t
+    write(10,'(''Pressure    :'',F10.2,'' atm'')') PressTot / n_t
+
+close (10)
 
 10 format(A2,3F10.4,2X,F10.4)
 

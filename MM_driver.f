@@ -3,7 +3,7 @@ module MMechanics_m
     use type_m
     use constants_m
     use parameters_m            , only : t_i , n_t , t_f , frame_step
-    use MM_dynamics_m           , only : MolecularDynamics
+    use MM_dynamics_m           , only : MolecularMechanics , preprocess_MM
 
     public :: MMechanics
 
@@ -25,7 +25,9 @@ integer :: it , frame , frame_init , frame_final
 it = 0
 t  = t_i
 
-frame_init = 2
+CALL preprocess_MM
+
+frame_init = 1
 
 !-------------------------------------------------------
 
@@ -41,7 +43,7 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    CALL MolecularDynamics( t_rate , frame )
+    CALL MolecularMechanics( t_rate , frame )
 
 end do
 
