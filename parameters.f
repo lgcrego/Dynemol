@@ -31,7 +31,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -43,11 +43,15 @@ logical :: dynamic
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
+!----------------------------------------------------------------------------------------
+!           MOLECULAR MECHANICS parameters are defined separately @ MM_parameters.f 
+!----------------------------------------------------------------------------------------
+
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <= structure or trajectory
-  file_format  =  "pdb"                       ! <= xyz , pdb or vasp
+  file_type    =  "structure"                 ! <== structure or trajectory
+  file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
 !
@@ -60,8 +64,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
-  restart       = F_                          ! TRUE for restarting dynamics
-  step_security = 100                         ! not yet implemented
+  restart       = F_                          ! <== TRUE for restarting dynamics
+  step_security = 100                         ! <== not yet implemented
 !--------------------------------------------------------------------
 !           POTENTIALS
 !

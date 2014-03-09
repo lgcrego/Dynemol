@@ -1,5 +1,7 @@
 module MM_types
 
+use constants_m
+
     public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , debug_MM
 
     type MM_atomic

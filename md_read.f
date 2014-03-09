@@ -2,18 +2,18 @@ module MD_read_m
  
     use constants_m
     use atomicmass
+    use MM_input
+    use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use syst                    , only : temper, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
-    use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
     use Semi_Empirical_Parms    , only : Read_Atomic_Mass , Atomic_Mass
 
-    type(MM_system)                     :: MM
-    type(MM_molecular) , allocatable    :: species(:) , molecule(:)
-    type(MM_atomic)    , allocatable    :: atom(:) , FF(:)
+    type(MM_molecular) , allocatable   :: molecule(:)
+    type(MM_atomic)    , allocatable   :: atom(:) , FF(:)
 
     ! module variables ...
     logical :: read_from_gmx
@@ -37,35 +37,21 @@ integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i
 logical         :: exist , read_vel
 character(10)   :: string
 
-!=======================  reading  system.inpt  ============================= 
-CALL allocate_MM
+!=======================  setting up system  ============================= 
 
-open (10, file='system.inpt', status='old')
+CALL Molecular_Mechanics_input_parameters
 
-    read (10,*) MM % N_of_molecules                     !       total number of molecules
-    read (10,*) MM % N_of_species                       !       total number of species
-   
-    CALL allocate_species( MM % N_of_species )
+temper        = temperature                     !  Temperature (K)
+press         = pressure                        !  Pressure
+rcut          = cutoff_radius                   !  Cutoff radius (A)
+talt          = temperature_coupling            !  Temperature coupling
+talt          = talt * 1.0d-12
+talp          = pressure_coupling               !  Pressure coupling 
+talp          = 107.0d-6 / (talp * 1.0d-12)
+KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+read_vel      = read_velocities                 ! .T. , .F.
+read_from_gmx = gmx_input_format                ! .T. , .F.
 
-    do i = 1 , MM % N_of_species
-        read (10,*) species(i) % residue                !  Residue of species i
-        read (10,*) species(i) % N_of_molecules         !  Number of molecules of species i
-        read (10,*) species(i) % N_of_atoms             !  Number of atoms of a molecule of species i
-        read (10,*) species(i) % flex                   !  Flexible   (T,F)
-    end do
-
-    read (10,*) temper                                  !  Temperature (K)
-    read (10,*) press                                   !  Pressure
-    read (10,*) rcut                                    !  Cutoff radius (A)
-    read (10,*) talt                                    !  Temperature coupling
-                talt = talt * 1.0d-12
-    read (10,*) talp                                    !  Pressure coupling 
-                talp = 107.0d-6 / (talp * 1.0d-12)
-    read (10,*) KAPPA
-    read (10,*) read_vel                                ! .T. => reads the velocities
-    read (10,*) read_from_gmx                           ! .T. => reads FF from gmx input files   
-
-close (10)
 atmax = sum( species(:) % N_of_atoms )
 
 ! =====================================================================================
@@ -147,7 +133,7 @@ If( read_from_gmx ) then
     do i = 1 , size(species)
         CALL MMSymbol_2_Symbol( species(i) % atom )
     end do
-    
+
     CALL Symbol_2_AtNo( FF )
 
     CALL Read_Atomic_Mass
@@ -443,54 +429,6 @@ end do
 CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 end subroutine Reading
-!
-!
-!
-!=====================
-subroutine allocate_MM
-!=====================
-implicit none
-
-MM % box            = 0.0d0
-MM % ibox           = 0.0d0
-MM % N_of_atoms     = 0
-MM % N_of_species   = 0
-MM % N_of_molecules = 0
-
-end subroutine allocate_MM
-!
-!
-!
-!===============================
-subroutine allocate_species( N )
-!===============================
-implicit none
-integer , intent(in)    :: N
-
-! local variables ...
-integer :: i
-
-allocate( species ( N ) )
-
-do i = 1 , N
-    species(i) % my_species     = 0
-    species(i) % N_of_atoms     = 0
-    species(i) % N_of_molecules = "XXX"
-    species(i) % cm(:)          = 0.0d0
-    species(i) % mass           = 0.0d0
-    species(i) % flex           = .false.
-    species(i) % residue        = "XXX"
-    species(i) % nr             = 0
-    species(i) % Nbonds         = 0
-    species(i) % bonds          = 0.0d0
-    species(i) % Nangs          = 0
-    species(i) % Ndiheds        = 0
-    species(i) % Nharm          = 0
-    species(i) % Nbonds14       = 0
-    species(i) % fact14         = 0.0d0
-end do
-
-end subroutine allocate_species
 !
 !
 !
