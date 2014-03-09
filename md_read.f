@@ -2,7 +2,7 @@ module MD_read_m
  
     use constants_m
     use atomicmass
-    use MM_input
+    use MM_input                
     use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use syst                    , only : temper, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
@@ -39,7 +39,7 @@ character(10)   :: string
 
 !=======================  setting up system  ============================= 
 
-CALL Molecular_Mechanics_input_parameters
+CALL Define_MM_Environment
 
 temper        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure

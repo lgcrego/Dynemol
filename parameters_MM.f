@@ -8,13 +8,14 @@ type(MM_molecular) , allocatable :: species(:)
 real*8  :: temperature, pressure, cutoff_radius, temperature_coupling, pressure_coupling, damping_Wolf
 integer :: read_velocities, gmx_input_format    
 
+logical , parameter :: T_ = .true. , F_ = .false. 
+
 contains
 
-!================================================ 
- subroutine Molecular_Mechanics_input_parameters
-!================================================ 
+!================================
+ subroutine Define_MM_Environment
+!================================
 implicit none
-logical , parameter :: T_ = .true. , F_ = .false. 
 
 !------------------------------------------------------------------------------
 ! GENERAL INFO
@@ -46,7 +47,7 @@ logical , parameter :: T_ = .true. , F_ = .false.
 
 ! =====================================================================================
 
-end subroutine Molecular_Mechanics_input_parameters
+end subroutine Define_MM_Environment
 !
 !
 !
