@@ -387,9 +387,9 @@ Print 40
 Print 41
 do j = 1 , N_of_EHSymbol
 
-    read(3,42)  GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+    read(3,42)   GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
-    write(*,42) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+    write(*,421) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
 end do
 

@@ -35,6 +35,7 @@ SOURCE2 = constants_m.o  \
 		  types_EHT.o  \
 		  types_MM.o \
 		  parameters.o  \
+		  parameters_MM.o \
 		  allocation_m.o  \
 		  util.o  \
 		  EHT_input.o  \
