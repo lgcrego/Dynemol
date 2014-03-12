@@ -71,6 +71,8 @@ integer :: i
             a(i)%AtNo = 13 
         case( 'SI','Si' ) 
             a(i)%AtNo = 14 
+        case( 'P','p' ) 
+            a(i)%AtNo = 15 
         case( 'S','s' ) 
             a(i)%AtNo = 16 
         case( 'CL','Cl' ) 
@@ -125,6 +127,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 13 
         case( 'SI','Si' ) 
             a%AtNo(i) = 14 
+        case( 'P','p' ) 
+            a%AtNo(i) = 15 
         case( 'S','s' ) 
             a%AtNo(i) = 16 
         case( 'CL','Cl' ) 
@@ -182,6 +186,8 @@ integer :: i
             a(i)%Symbol = 'Al'
         case( 14 ) 
             a(i)%Symbol = 'Si'
+        case( 15 ) 
+            a(i)%Symbol = 'P '
         case( 16 ) 
             a(i)%Symbol = 'S '
         case( 17 ) 
@@ -239,6 +245,8 @@ integer :: i
             a%Symbol(i) = 'Al'
         case( 14 ) 
             a%Symbol(i) = 'Si'
+        case( 15 ) 
+            a%Symbol(i) = 'P '
         case( 16 ) 
             a%Symbol(i) = 'S '
         case( 17 ) 
@@ -292,6 +300,8 @@ character(len=2)    :: element2
             a(i)%Symbol = 'H' 
         case( 'I' ) 
             a(i)%Symbol = 'I' 
+        case( 'P' ) 
+            a(i)%Symbol = 'P' 
     end select
 
     write( element2,'(A2)' ) adjustl( a(i)%MMSymbol )
