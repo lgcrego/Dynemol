@@ -156,7 +156,7 @@ do frame = frame_init , frame_final , frame_step
             ! MM preprocess ...
             if( frame == frame_init ) CALL preprocess_MM
 
-            CALL MolecularMechanics( t_rate , frame )
+            CALL MolecularMechanics( t_rate , frame - 1 )   ! <== MM precedes QM ...
 
             if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,1)
 

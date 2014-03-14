@@ -44,13 +44,12 @@ end subroutine VV1
 !
 !
 !
-!====================================
- subroutine VV2( Ttrans , step , dt )
-!====================================
+!=============================
+ subroutine VV2( Ttrans , dt )
+!=============================
 use atomicmass
 implicit none
 real*8     , intent(inout) :: Ttrans
-integer    , intent(in)    :: step
 real*8     , intent(in)    :: dt
 
 ! local variables ...

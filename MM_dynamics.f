@@ -46,16 +46,16 @@ CALL ForceInter
 CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-CALL VV2 ( Ttrans , frame - 1 , dt )
+CALL VV2 ( Ttrans , dt )
 
 CALL Summat( density ) 
 CALL Press_Boundary( pressure , dt )
 
 if ( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-if ( mod(frame-1,MM_log_step) == 0 ) write (*,'(I7,4F15.5)') frame - 1 , Ttrans , pressure , density
+if ( mod(frame,MM_log_step) == 0 ) write (*,'(I7,4F15.5)') frame , Ttrans , pressure , density
 
-if ( mod(frame-1,MM_log_step) == 0 ) CALL output( Ttrans , frame - 1 , dt )
+if ( mod(frame,MM_log_step) == 0 ) CALL output( Ttrans , frame , dt )
 
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)

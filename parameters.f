@@ -82,7 +82,7 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                               
-  t_f  =  2.5d-1                              ! <== final time in PICOseconds
+  t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 

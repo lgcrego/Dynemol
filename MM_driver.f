@@ -20,14 +20,12 @@ implicit none
 
 ! local variables ...
 real*8  :: t , t_rate 
-integer :: it , frame , frame_init , frame_final
+integer :: it , frame , frame_final
 
 it = 0
 t  = t_i
 
 CALL preprocess_MM
-
-frame_init = 2
 
 !-------------------------------------------------------
 
@@ -35,7 +33,7 @@ frame_init = 2
 t_rate      = t_f / float(n_t)
 frame_final = n_t
 
-do frame = frame_init , frame_final , frame_step
+do frame = 1 , frame_final , frame_step
 
     t = t + t_rate 
 

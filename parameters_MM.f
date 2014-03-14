@@ -47,7 +47,7 @@ implicit none
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-  read_velocities        = T_               ! <== reads the initial velocities : T_ , F_
+  read_velocities        = F_               ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_               ! <== reads FF parameters from gmx input files : T_ , F_  
 
   MM_log_step            = 50               ! <== step for saving MM results & parameters

@@ -148,7 +148,7 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
-            CALL MolecularMechanics( t_rate_MM , frame )
+            CALL MolecularMechanics( t_rate_MM , frame - 1 )    ! <== MM precedes QM ...
             
         case default
 
