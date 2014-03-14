@@ -27,7 +27,7 @@ t  = t_i
 
 CALL preprocess_MM
 
-frame_init = 1
+frame_init = 2
 
 !-------------------------------------------------------
 

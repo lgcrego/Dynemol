@@ -115,11 +115,11 @@ end subroutine OUTPUT
 subroutine SAVING( step , dt )
 !=============================
 implicit none
-
+integer , intent(in)    :: step
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-integer :: i , j , l , step
+integer :: i , j , l
 
 ! restart_MM_xyz.out ... 
 open (10, file='restart_MM_xyz.out', status='unknown')

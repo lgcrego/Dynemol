@@ -38,8 +38,8 @@ implicit none
 !
   temperature            = 300.d0           ! <== Bath Temperature (K)
   pressure               = 1.d0             ! <== Pressure
-  temperature_coupling   = 1.d14            ! <== Temperature coupling term with the bath
-  pressure_coupling      = 1.d14            ! <== Pressure coupling term 
+  temperature_coupling   = 1.d-1            ! <== Temperature coupling term with the bath
+  pressure_coupling      = 2.d-1            ! <== Pressure coupling term 
 
   cutoff_radius          = 16.d0            ! <== Cut off radius (Angs) for electrostatic interactions
   damping_Wolf           = 6.d0             ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
@@ -47,11 +47,11 @@ implicit none
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-  read_velocities        = F_               ! <== reads the initial velocities : T_ , F_
+  read_velocities        = T_               ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_               ! <== reads FF parameters from gmx input files : T_ , F_  
 
   MM_log_step            = 50               ! <== step for saving MM results & parameters
-  MM_frame_step          = 20               ! <== step for saving MM results & parameters
+  MM_frame_step          = 01               ! <== step for saving MM results & parameters
 
 ! =====================================================================================
 

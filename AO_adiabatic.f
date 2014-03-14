@@ -40,7 +40,8 @@ module AO_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use MM_dynamics_m               , only : MolecularMechanics
+    use MM_dynamics_m               , only : MolecularMechanics ,           &
+                                             preprocess_MM
 
     public :: AO_adiabatic
 
@@ -151,7 +152,10 @@ do frame = frame_init , frame_final , frame_step
         case( "MDynamics" )
 
             if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,2)
-        
+
+            ! MM preprocess ...
+            if( frame == frame_init ) CALL preprocess_MM
+
             CALL MolecularMechanics( t_rate , frame )
 
             if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,1)

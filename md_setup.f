@@ -149,12 +149,11 @@ vcm(:) = t(:) / masstot
 l = 1
 do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms -1
-       atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)
-       atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)
+        atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)
+        atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)
     end do
     l = l + molecule(i) % N_of_atoms
 end do
-
 
 end subroutine CMZERO
 !
