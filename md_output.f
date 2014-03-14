@@ -6,7 +6,7 @@ module MD_dump_m
     use syst            , only: temper, Initial_density, Ekin, DensTot, TempTot, PressTot
     use MD_read_m       , only: MM , atom , molecule , species
 
-    public :: output , cleanup , saving
+    public :: output , cleanup , saving_MM_frame 
 
 !   module variables ...
     logical , save :: first = .true. , done = .false.
@@ -111,15 +111,15 @@ end subroutine OUTPUT
 !
 !
 !
-!=============================
-subroutine SAVING( step , dt )
-!=============================
+!=======================================
+subroutine SAVING_MM_frame( frame , dt )
+!=======================================
 implicit none
-integer , intent(in)    :: step
+integer , intent(in)    :: frame
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-integer :: i , j , l
+integer :: i , j , l 
 
 ! restart_MM_xyz.out ... 
 open (10, file='restart_MM_xyz.out', status='unknown')
@@ -142,9 +142,9 @@ close(11)
 
  open (14, file='frames-MM.pdb', status='unknown', access='append')
         if( first ) write(14,*)  "MDFlex , no title"
-        write(14,995) 'TITLE'  , 'manipulated by MDFlex     t= ', step*dt*1.d12
+        write(14,995) 'TITLE'  , 'manipulated by MDFlex     t= ', frame*dt*1.d12
         write(14,991) 'CRYST1' , MM % box(1) , MM % box(2) , MM % box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-        write(14,993) 'MODEL'  , step
+        write(14,993) 'MODEL'  , frame
 
         do i = 1 , MM % N_of_atoms
              write(14,992)  atom(i) % my_id          ,          &     ! <== global number
@@ -181,7 +181,7 @@ close(11)
 995 FORMAT(a5,t15,a29,F12.6)
 999 format(' ',1X,I7,2X,4F11.5)
        
-end subroutine SAVING
+end subroutine SAVING_MM_frame
 !
 !
 !
@@ -201,7 +201,7 @@ real*8  :: CartesianDistance
     do j = j1 , j2
        do xyz = 1 , 3
           CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)
-          If( abs(CartesianDistance) > MM % box(xyz)/TWO ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+          If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
        end do
     end do
  end do

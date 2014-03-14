@@ -75,7 +75,7 @@ do i = 1 , MM % N_of_atoms
             if ( i /= j ) then
 
                 rjk(:)     = atom(i) % xyz(:) - atom(j) % xyz(:)
-                rjk(:)     = rjk(:) - MM % box(:) * ANINT( rjk(:) * MM % ibox(:) )
+                rjk(:)     = rjk(:) - MM % box(:) * DINT( rjk(:) * MM % ibox(:) )
                 rjkq       = sum( rjk(:) * rjk(:) )
                 rjksq      = sqrt(rjkq)
                 tmp        = KAPPA * rjksq
@@ -130,11 +130,11 @@ do k = 1 , MM % N_of_atoms - 1
             nresidk = atom(k) % nr
             nresidl = atom(l) % nr
             rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-            rij(:)  = rij(:) - MM % box * ANINT( rij(:) * MM % ibox(:) )
+            rij(:)  = rij(:) - MM % box * DINT( rij(:) * MM % ibox(:) )
             chrgk   = atom(k) % charge
             chrgl   = atom(l) % charge
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
-            rkl(:)  = rkl(:) - MM % box(:) * ANINT( rkl(:) * MM % ibox(:) )
+            rkl(:)  = rkl(:) - MM % box(:) * DINT( rkl(:) * MM % ibox(:) )
             rklq    = sum( rkl(:) * rkl(:) )
 
             if( rklq < rcutsq ) then

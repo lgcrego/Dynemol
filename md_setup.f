@@ -4,7 +4,7 @@ module setup_m
     use atomicmass      , only : atmas
     use MD_read_m       , only : MM , atom , molecule , species , FF
 
-    public :: setup , cmass , cmzero , offset
+    public :: setup , Molecular_Cmass , move_to_box_CM , offset
 
 contains
 !
@@ -43,9 +43,9 @@ contains
             ! OPLS  FF :: GMX COMB-RULE 3  
             sr2 = ( (FF(i) % sig * FF(j) % sig ) * (FF(j) % sig * FF(i) % sig ) ) / rcutsq  
        end select
-       sr6 = sr2 * sr2 * sr2
+       sr6  = sr2 * sr2 * sr2
        sr12 = sr6 * sr6
-       vscut(i,j) = 4.d0 * ( FF(i) % eps * FF(j) % eps * factor3 ) * (sr12 - sr6)
+       vscut(i,j) = 4.d0  * ( FF(i) % eps * FF(j) % eps * factor3 ) * (sr12 - sr6)
        fscut(i,j) = 24.d0 * ( FF(i) % eps * FF(j) % eps * factor3 ) * (2.d0 * sr12 - sr6)
        fscut(i,j) = fscut(i,j) / rcut       
      end do
@@ -53,10 +53,10 @@ contains
  endif
 
 !###########################################################
- sr2 = 1.0/rcutsq
- KRIJ  = KAPPA * rcut
+ sr2    = 1.d0/rcutsq
+ KRIJ   = KAPPA * rcut
  vrecut = coulomb * factor3 * ERFC(KRIJ) / rcut
- expar = exp( - (KRIJ * KRIJ) )
+ expar  = exp( - (KRIJ * KRIJ) )
  frecut = coulomb * sr2 * ( ERFC(KRIJ) + 2. * rsqpi * KAPPA * rcut * expar )
 
 end subroutine SETUP
@@ -80,9 +80,9 @@ end subroutine offset
 !
 !
 !
-!================
- subroutine CMASS
-!================
+!==========================
+ subroutine Molecular_Cmass
+!==========================
  implicit none
 
 ! local variables ...
@@ -90,35 +90,39 @@ end subroutine offset
  real*8  :: massa 
  real*8, dimension(3) :: t0, t, t1, dr
 
-!###########################################
-! New molecule < box/2 ...
+! center of mass of molecule i ...
+
  l = 1
  do i = 1 , MM % N_of_molecules
+
       t0(1:3) = atom(l) % xyz(1:3) 
-      t(1:3)  = atom(l) % xyz(1:3) * atmas( atom(l) % AtNo ) ! massa do átomo 1 da molécula i
+      t(1:3)  = atom(l) % xyz(1:3) * atmas( atom(l) % AtNo ) ! massa do primeiro átomo da molécula i
+
       do k = 1 , molecule(i) % N_of_atoms - 1
            t1(1:3) = atom(l+k) % xyz(1:3)
            dr(1:3) = t1(1:3) - t0(1:3)
            do xyz = 1 , 3
-                  if ( abs( dr(xyz) ) > MM % box(xyz) * 0.5 ) then
-                     t1(xyz) = t1(xyz) - sign( 1.d0, t1(xyz) ) * MM % box(xyz)
+                  if ( abs( dr(xyz) ) > MM % box(xyz) * HALF ) then
+                     ! fix devided molecule i ...
+                     t1(xyz) = t1(xyz) - sign( MM % box(xyz) , dr(xyz) ) 
                   endif
            end do
            massa = atmas ( atom(l+k) % AtNo ) ! massa do átomo k da molécula i
            t(1:3) = t(1:3) + massa * t1(1:3)
       end do  
+
       molecule(i) % cm(1:3) = imol * t(1:3) / molecule(i) % mass
       l = l + molecule(i) % N_of_atoms
+
  end do
 
-
-end subroutine CMASS
+end subroutine Molecular_Cmass
 !
 !
 !
-!=================
- subroutine CMZERO
-!=================
+!==========================
+ subroutine move_to_box_CM
+!==========================
 implicit none
 
 ! local varibales ...
@@ -126,36 +130,37 @@ integer :: i, j, l
 real*8  :: massa, masstot
 real*8, dimension(3) :: t, p, rcm, vcm
 
-! Box CM ...
-p(:)  = 0.d0
-t(:)  = 0.d0
+! determines atomic Center of Mass and its velocity for the box of atoms ... 
+p(:) = 0.d0
+t(:) = 0.d0
 masstot = 0.d0
 
 l = 1
 do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = atmas ( atom(j) % AtNo )
-       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * ANINT( atom(j) % xyz(:) * MM % ibox(:) )
+       ! put atom inside the box ...
+       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:)*DINT( atom(j) % xyz(:) * MM % ibox(:) )
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa
     end do
     l = l + molecule(i) % N_of_atoms
 end do
-rcm(:) = p(:) / masstot
-vcm(:) = t(:) / masstot
+rcm(:) = p(:) / masstot  ! <== center of mass of the box of atoms
+vcm(:) = t(:) / masstot  ! <== velocity of the center of mass
 
-! New box ...
+! transform atomic coordinates and velocities to CM frame ...
 l = 1
 do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms -1
-        atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)
-        atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)
+       atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)  ! <== atomic coordinates with the origin at CM
+       atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)  ! <== atomic velocities measured with respect with vcm
     end do
     l = l + molecule(i) % N_of_atoms
 end do
 
-end subroutine CMZERO
+end subroutine move_to_box_CM
 !
 !
 !

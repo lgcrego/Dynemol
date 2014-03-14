@@ -194,7 +194,7 @@ real*8  , intent(in)    :: dt
     do j = j1 , j2
         if ( atom(j) % free ) then
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) * mip
-            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * ANINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
+            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
         end if
     end do
  end do

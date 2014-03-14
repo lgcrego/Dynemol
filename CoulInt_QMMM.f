@@ -31,7 +31,7 @@ do i = 1 , size(atom)
     do j = i + 1 , size(atom)
     
         rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
-        rij(:) = rij(:) - MM % box(:) * ANINT( rij(:) * MM % ibox(:) )
+        rij(:) = rij(:) - MM % box(:) * DINT( rij(:) * MM % ibox(:) )
 
         rklq = rij(1) * rij(1) + rij(2) * rij(2) + rij(3) * rij(3)
         rklsq = sqrt( rklq )
