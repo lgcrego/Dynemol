@@ -4,7 +4,7 @@ module MM_dynamics_m
     use parameters_m        , only : restart , QMMM
     use MM_input            , only : MM_log_step , MM_frame_step
     use MD_read_m           , only : atom , Reading , restrt , MM
-    use setup_m             , only : setup, move_to_box_CM, Molecular_Cmass
+    use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
     use f_inter_m           , only : FORCEINTER
     use f_intra_m           , only : FORCEINTRA
@@ -41,7 +41,7 @@ atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 ! Molecuar dynamic ...
 CALL VV1( dt )
-CALL Molecular_Cmass
+CALL Molecular_CM
 CALL ForceInter
 CALL ForceIntra
 ! QMMM coupling ...
@@ -77,7 +77,7 @@ atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 CALL Setup
 CALL move_to_box_CM
-CALL Molecular_Cmass
+CALL Molecular_CM
 
 if( restart ) then
 

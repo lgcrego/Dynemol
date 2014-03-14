@@ -4,7 +4,7 @@ module setup_m
     use atomicmass      , only : atmas
     use MD_read_m       , only : MM , atom , molecule , species , FF
 
-    public :: setup , Molecular_Cmass , move_to_box_CM , offset
+    public :: setup , Molecular_CM , move_to_box_CM , offset
 
 contains
 !
@@ -80,9 +80,9 @@ end subroutine offset
 !
 !
 !
-!==========================
- subroutine Molecular_Cmass
-!==========================
+!========================
+ subroutine Molecular_CM
+!========================
  implicit none
 
 ! local variables ...
@@ -116,7 +116,7 @@ end subroutine offset
 
  end do
 
-end subroutine Molecular_Cmass
+end subroutine Molecular_CM
 !
 !
 !
