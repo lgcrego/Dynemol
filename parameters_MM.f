@@ -1,11 +1,12 @@
 module MM_input
 
-use MM_types , only : MM_molecular , MM_system
+use constants_m
+use MM_types , only : MM_molecular , MM_system 
 
 type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
-real*8  :: temperature, pressure, cutoff_radius, temperature_coupling, pressure_coupling, damping_Wolf
+real*8  :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
 integer :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step
 
 logical , parameter :: T_ = .true. , F_ = .false. 
@@ -32,17 +33,21 @@ implicit none
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
   species(1) % N_of_atoms      = 61         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
-
+  
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
 !
-  temperature            = 300.d0           ! <== Bath Temperature (K)
-  pressure               = 1.d0             ! <== Pressure
-  temperature_coupling   = 1.d-1            ! <== Temperature coupling term with the bath
-  pressure_coupling      = 2.d-1            ! <== Pressure coupling term 
+  temperature               = 300.d0            ! <== Bath Temperature (K)
+  pressure                  = 1.d0              ! <== Pressure
 
-  cutoff_radius          = 16.d0            ! <== Cut off radius (Angs) for electrostatic interactions
-  damping_Wolf           = 6.d0             ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+  thermal_relaxation_time   = infty             ! <== Temperature coupling term with the bath
+                                                ! <== SMALL = STRONG ; use "= infty" to decouple
+
+  pressure_relaxation_time  = infty             ! <== Pressure coupling term 
+                                                ! <== SMALL = STRONG ; use "= infty" to decouple
+
+  cutoff_radius             = 16.d0             ! <== Cut off radius (Angs) for electrostatic interactions
+  damping_Wolf              = 6.d0              ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...

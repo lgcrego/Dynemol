@@ -3,7 +3,7 @@ module MD_dump_m
     use constants_m
     use MM_input        , only: MM_frame_step
     use parameters_m    , only: n_t
-    use syst            , only: temper, Initial_density, Ekin, DensTot, TempTot, PressTot
+    use syst            , only: bath_T, Initial_density, Ekin, DensTot, TempTot, PressTot
     use MD_read_m       , only: MM , atom , molecule , species
 
     public :: output , cleanup , saving_MM_frame 
@@ -41,7 +41,7 @@ IF( .NOT. done ) then
     write(10,*)
     write(10,*)
     write(10,'(''Number of Molecules      :'',I10)') MM % N_of_molecules
-    write(10,'(''Initial Bath Temperature :'',F10.2,'' Kelvin'')') temper
+    write(10,'(''Initial Bath Temperature :'',F10.2,'' Kelvin'')') bath_T
     write(10,'(''Box dimensions           :'',3F10.2,'' Angstroms'')') MM % box(1:3)
     write(10,'(''Cut off radius           :'',F10.2,'' Angstroms'')') rcut
     write(10,'(''Density                  :'',F10.4,'' g/cm3'')') Initial_density

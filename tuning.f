@@ -252,7 +252,7 @@ end module MM_tuning_routines
 !
 !
 module syst
- real*8                                 :: temper, press, talt, talp, Initial_density
+ real*8                                 :: bath_T, press, talt, talp, Initial_density
  real*8                                 :: Ekin     = 0.d0
  real*8                                 :: DensTot  = 0.d0
  real*8                                 :: TempTot  = 0.d0

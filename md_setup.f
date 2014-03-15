@@ -90,7 +90,7 @@ end subroutine offset
  real*8  :: massa 
  real*8, dimension(3) :: t0, t, t1, dr
 
-! center of mass of molecule i ...
+! calculates the center of mass of molecule i ...
 
  l = 1
  do i = 1 , MM % N_of_molecules

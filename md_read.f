@@ -4,7 +4,7 @@ module MD_read_m
     use atomicmass
     use MM_input                
     use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use syst                    , only : temper, press, talt, talp, initial_density 
+    use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
@@ -41,13 +41,11 @@ character(10)   :: string
 
 CALL Define_MM_Environment
 
-temper        = temperature                     !  Temperature (K)
+bath_T        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure
 rcut          = cutoff_radius                   !  Cutoff radius (A)
-talt          = temperature_coupling            !  Temperature coupling
-talt          = talt * 1.0d-12
-talp          = pressure_coupling               !  Pressure coupling 
-talp          = 107.0d-6 / (talp * 1.0d-12)
+talt          = thermal_relaxation_time         !  Temperature coupling
+talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 read_vel      = read_velocities                 ! .T. , .F.
 read_from_gmx = gmx_input_format                ! .T. , .F.

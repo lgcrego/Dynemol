@@ -25,6 +25,7 @@ MODULE constants_m
     real*8     , parameter :: mid_prec   = 1.d-10
     real*8     , parameter :: high_prec  = 1.d-14
     real*8     , parameter :: real_large = 1.d+10
+    real*8     , parameter :: infty      = 1.d+30
     real*8     , parameter :: deg_2_rad  = PI / 180.0d0
     real*8     , parameter :: rad_2_deg  = 180.0d0 / PI
 

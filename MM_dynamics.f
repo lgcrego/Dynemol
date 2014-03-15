@@ -44,6 +44,7 @@ CALL VV1( dt )
 CALL Molecular_CM
 CALL ForceInter
 CALL ForceIntra
+
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 CALL VV2 ( Ttrans , dt )

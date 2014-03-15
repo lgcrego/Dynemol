@@ -90,17 +90,22 @@ stresvv(3,2) = stresvv(2,3)
 
 !######################################################
 if (sumtemp == 0.d0) then
-    temp = 1.0d0
+    temp = D_ONE
 else
     ! instantaneous temperature : E_kin/(3/2*NkB) ... 
     temp = sumtemp * iboltz / real( MM % N_of_molecules )
 endif
-! Berendsen Thermostat ;  temper = T_ext ...
-lambda = (dt / talt) * ( temper / temp - 1.0d0 )
-lambda = SQRT(1.0d0 + lambda)
+
+! Berendsen Thermostat ; turned off for talt == infty ...
+If( talt == infty ) then
+    lambda = D_one
+else
+    talt   = talt * pico_2_sec
+    lambda = (dt / talt) * ( bath_T / temp - D_ONE )
+    lambda = SQRT(D_ONE + lambda)
+end If
 
 dt_half = dt / two
-
 
 sumtemp = 0.d0
 do i = 1 , MM % N_of_molecules
@@ -111,8 +116,7 @@ do i = 1 , MM % N_of_molecules
     do j = j1 , j2
         if ( atom(j) % free ) then
             massa = mol / atmas( atom(j) % AtNo )
-!            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
-            atom(j) % vel(1:3) = atom(j) % vel(1:3)  + ( dt_half * atom(j) % ftotal(1:3) ) * massa
+            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
         end if
     end do
@@ -175,18 +179,24 @@ real*8  , intent(in)    :: dt
  real*8  :: mip
 
 ! pressure = instantaneous pressure ;  press = external pressure ... 
- if (forcefield == 1) then
- else
-   pressure = ( Astres(1,1)+Astres(2,2)+Astres(3,3) ) / three
- endif
-
- PressTot = pressure + PressTot
-
- mip = dt * talp * ( pressure - press )
- mip = (D_one + mip)**(D_one/three)
- MM % box(1:3) = MM % box(1:3) * mip
+if (forcefield == 1) then
+else
+    pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) / three
+endif
+PressTot = pressure + PressTot
  
- do i = 1 , MM % N_of_molecules
+! Pressurestat ; turned off for talp == infty ...
+If( talp == infty ) then
+    mip = D_one
+else
+    talp = 107.0d-6 / (talp * pico_2_sec)
+    mip  = dt * talp * ( pressure - press )
+    mip  = (D_one + mip)**(D_one/three)
+end If
+
+MM % box(1:3) = MM % box(1:3) * mip
+ 
+do i = 1 , MM % N_of_molecules
     nresid = molecule(i) % nr
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
@@ -196,7 +206,7 @@ real*8  , intent(in)    :: dt
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
         end if
     end do
- end do
+end do
 !
 ! 
 end subroutine PRESS_BOUNDARY
