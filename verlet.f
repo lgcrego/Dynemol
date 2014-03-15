@@ -100,8 +100,7 @@ endif
 If( talt == infty ) then
     lambda = D_one
 else
-    talt   = talt * pico_2_sec
-    lambda = (dt / talt) * ( bath_T / temp - D_ONE )
+    lambda = ( dt / (talt*pico_2_sec) ) * ( bath_T / temp - D_ONE )
     lambda = SQRT(D_ONE + lambda)
 end If
 
@@ -189,8 +188,7 @@ PressTot = pressure + PressTot
 If( talp == infty ) then
     mip = D_one
 else
-    talp = 107.0d-6 / (talp * pico_2_sec)
-    mip  = dt * talp * ( pressure - press )
+    mip  = dt * ( 107.0d-6 / (talp * pico_2_sec) ) * ( pressure - press )
     mip  = (D_one + mip)**(D_one/three)
 end If
 
