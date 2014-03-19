@@ -2,7 +2,7 @@
 IO INPUT FORMAT FILE 
 
 ================================================================================
-config.pdb
+input.pdb
 ================================================================================
 
 System Characteristics                                                fmt(a72)
@@ -14,31 +14,6 @@ WORD      .     .         .       .      .    .    .    .
 WORD      .     .         .       .      .    .    .    .
 MASTER
 END
-
-================================================================================
-system.inpt
-================================================================================
-
-Number of molecules 
-Number of species 
-Number of molecules of species i 
-number of atoms of species i 
-Flexible                 (.T. of .F.)
-Temperature              (K)
-Pressure                 (atm)
-Cut-off radius           (Angs) 
-Temperature scale factor (s⁻¹)
-Pressure scale factor    (s⁻¹)
-Kappa (electrostatic dumping factor)
-
-================================================================================
-control.inpt
-================================================================================
-
-Restart                                    (.T. or .F.)
-Number of steps
-dt 				           (s) 
-Number of steps for configuration output    
 
 ================================================================================
 potential.inpt

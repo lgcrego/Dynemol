@@ -218,27 +218,12 @@ end subroutine ReGroupMolecule
  logical :: filefound
  character (len=64) :: cmd, filename
 
- filename = 'config.xyz'
- inquire(file=filename, EXIST=filefound)
- if (filefound) then
-   write (cmd, '("/bin/rm ", A)' ) TRIM (filename)
-   call SYSTEM (cmd)
- endif
-
  filename = 'frames-MM.pdb'
  inquire(file=filename, EXIST=filefound)
  if (filefound) then
    write (cmd, '("/bin/rm ", A)' ) TRIM (filename)
    call SYSTEM (cmd)
  endif
-
- filename = 'crds.out'
- inquire(file=filename, EXIST=filefound)
- if (filefound) then
-   write (cmd, '("/bin/rm ", A)' ) TRIM (filename)
-   call SYSTEM (cmd)
- endif
-
 
 end subroutine CLEANUP
 !
