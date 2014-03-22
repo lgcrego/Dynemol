@@ -43,9 +43,9 @@ logical :: dynamic
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
-!----------------------------------------------------------------------------------------
-!           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
-!----------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------
+!           MOLECULAR MECHANICS specific parameters are defined separately @ parameters_MM.f 
+!--------------------------------------------------------------------------------------------
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
@@ -79,7 +79,7 @@ logical :: dynamic
 !
   frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
-!           QDynamics parameters
+!           QDynamics parameters for either QM , MM and QMMM
 !
   t_i  =  0.d0                               
   t_f  =  1.0d0                               ! <== final time in PICOseconds
@@ -98,7 +98,7 @@ logical :: dynamic
 !
   nnx = 0  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
-!           Periodic Boundary Conditions 
+!           Periodic Boundary Conditions for QM calculations only (MM uses PBC by default)
 
   mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 
