@@ -1,8 +1,9 @@
 module NonlinearCG_m
 
-        use constants_m         , only: real_large , prec => mid_prec 
-        use parameters_m        , only: profiling
-        use CG_class_m          , only: CG_OPT
+        use constants_m             , only: real_large , a_Bohr , prec => mid_prec 
+        use Semi_Empirical_Parms    , only: atom
+        use parameters_m            , only: profiling
+        use CG_class_m              , only: CG_OPT
 
         implicit none
 
@@ -11,7 +12,7 @@ module NonlinearCG_m
         private
 
         ! module parameters ...
-            integer   , parameter :: ITMAX = 250     ! <== 100-300 is a good compromise of accuracy and safety
+            integer   , parameter :: ITMAX = 3!50     ! <== 100-300 is a good compromise of accuracy and safety
 
         ! module types ...
         type f1com
@@ -60,7 +61,7 @@ real*8  :: g(N),h(N),xi(N)
 
            If( profiling ) then
                Print*, its , local_minimum
-               write(32,*) its , local_minimum
+               write(32,*) its , local_minimum 
            end If
 
            if( local_minimum > fp ) then
@@ -122,6 +123,8 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 
  local_minimum = brent(this,ax,xx,bx,xmin)
+
+ If( profiling ) CALL Dump_OPT_parameters( this )
 
  do j=1,n                                               ! Construct the vector results to return.
     xi(j)=xmin*xi(j)
@@ -322,6 +325,71 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
         brent=fx
  
 end function brent
+!
+!
+!
+!===========================================
+ subroutine Dump_OPT_parameters( this )
+!===========================================
+implicit none
+type(CG_OPT) , intent(in) :: this
+
+! local variables ...
+integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable   :: indx_EHS(:)
+
+! local parameters ...
+character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
+integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
+
+N_of_EHSymbol = size( this % EHSymbol )
+
+allocate( indx_EHS(N_of_EHSymbol) )
+
+! locate position of the first appearance of EHS-atoms in OPT_basis
+indx_EHS = [ ( minloc(this % basis % EHSymbol , 1 , this % basis % EHSymbol == this % EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
+
+!==================================================================================
+! creating file CG_OPT_eht_parameters.dat with temporary optimized parameters ...
+!==================================================================================
+
+! print heading ...
+write(42,48)
+
+do n_EHS = 1 , N_of_EHSymbol
+
+    i = indx_EHS(n_EHS)
+
+    AngMax = atom(this % basis(i) % AtNo) % AngMax
+
+    do L = 0 , AngMax
+
+        j = (i-1) + DOS(L)
+    
+        write(42,17)    this % basis(j) % Symbol          ,   &
+                        this % basis(j) % EHSymbol        ,   &
+                        this % basis(j) % AtNo            ,   &
+                   atom(this % basis(j) % AtNo) % Nvalen  ,   &
+                        this % basis(j) % Nzeta           ,   &
+                        this % basis(j) % n               ,   &
+                 Lquant(this % basis(j) % l)              ,   &
+                        this % basis(j) % IP              ,   &
+                        this % basis(j) % zeta(1)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        this % basis(j) % zeta(2)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        this % basis(j) % coef(1)         ,   &
+                        this % basis(j) % coef(2)         ,   &
+                        this % basis(j) % k_WH
+    end do
+
+enddo
+
+rewind(42)
+
+17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
+
+include 'formats.h'
+
+end subroutine Dump_OPT_parameters
 !
 !
 !

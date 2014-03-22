@@ -30,6 +30,8 @@ type(STO_basis) , allocatable   , intent(out)   :: CG_basis(:)
 integer                 :: i , GlobalMinimum
 integer                 :: Top_Selection 
 real*8  , allocatable   :: local_minimum(:) , InitialCost(:)
+character(len=2)        :: string
+character(len=21)       ::f_name
 
 If( profiling ) OPEN( unit=32 , file='CG-log.dat' , status='unknown' )
 
@@ -42,6 +44,12 @@ InitialCost(0) = 0.d0
 
 do i = 1 , Top_Selection
 
+    If( profiling ) then
+        write(string,'(i2.2)') i
+        f_name = 'CG_OPT_parms'//string//'.dat'
+        OPEN( unit = 42 , file=f_name , status='replace' )
+    end If
+
     ! instantiating CG ...
     CG = CG_OPT( GA_Selection(:,i) , GA )
 
@@ -51,6 +59,8 @@ do i = 1 , Top_Selection
 
     ! temporarily stores CG optimized basis here ...
     GA_Selection(:,i) = CG%basis
+
+    If( profiling ) close(42)
 
 end do
 
