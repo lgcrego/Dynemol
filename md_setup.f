@@ -140,7 +140,6 @@ do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = atmas ( atom(j) % AtNo )
        ! put atom inside the box ...
-       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:)*DINT( atom(j) % xyz(:) * MM % ibox(:) )
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa
