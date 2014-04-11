@@ -51,7 +51,7 @@ select case( file_type )
         n_residues = size( System%list_of_residues )
     case( "trajectory" )
         n_residues = size( trj(1)%list_of_residues )
-    end select
+end select
 
 ! allocating Unit_Cell structure ...
 CALL Allocate_UnitCell( Unit_Cell , n_residues )
