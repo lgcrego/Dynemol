@@ -325,6 +325,9 @@ character(len=2)    :: element2
         case( 'Al' ) 
             a(i)%Symbol = 'Al' 
 
+        case( 'Si','SI' ) 
+            a(i)%Symbol = 'Si' 
+
         case( 'Ti','TI' ) 
             a(i)%Symbol = 'Ti' 
 
@@ -337,7 +340,7 @@ character(len=2)    :: element2
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
 
-        case( 'SS' ) 
+        case( 'SS','S' ) 
             a(i)%Symbol = 'S' 
     end select
 
