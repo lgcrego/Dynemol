@@ -21,7 +21,7 @@ implicit none
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-real*8  , dimension (3):: ai, newpos, oldpos, distance
+real*8  , dimension (3) :: ai
 real*8                  :: massa , dt_half
 integer                 :: i
 
@@ -29,14 +29,11 @@ dt_half = dt / two
 
 ! VV1 ... 
 do i = 1 , MM % N_of_atoms
-    if ( atom(i) % free ) then
-        oldpos(1:3) = atom(i) % xyz(1:3)
+    if( atom(i) % free ) then
         massa = mol / atom(i) % mass 
         ai(1:3) = atom(i) % ftotal(1:3) * massa
         atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + atom(i) % vel(1:3) * 1.0d10 * dt + dt * dt * ai(1:3) * 0.5d10
         atom(i) % vel(1:3) = atom(i) % vel(1:3) + dt_half * ai(1:3)
-        newpos(1:3) = atom(i) % xyz(1:3)
-        distance(1:3) = newpos(1:3) - oldpos(1:3)
     end if
 end do
 
@@ -180,16 +177,17 @@ real*8  , intent(in)    :: dt
 ! pressure = instantaneous pressure ;  press = external pressure ... 
 if (forcefield == 1) then
 else
-    pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) / three
+    pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) * third
 endif
-PressTot = pressure + PressTot
  
+PressTot = pressure + PressTot
+
 ! Pressurestat ; turned off for talp == infty ...
 If( talp == infty ) then
     mip = D_one
 else
     mip  = dt * ( 107.0d-6 / (talp * pico_2_sec) ) * ( pressure - press )
-    mip  = (D_one + mip)**(D_one/three)
+    mip  = (D_one + mip)**third
 end If
 
 MM % box(1:3) = MM % box(1:3) * mip
@@ -201,7 +199,7 @@ do i = 1 , MM % N_of_molecules
     do j = j1 , j2
         if ( atom(j) % free ) then
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) * mip
-            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
+            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DNINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
         end if
     end do
 end do

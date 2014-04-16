@@ -43,9 +43,9 @@ logical :: dynamic
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
-!--------------------------------------------------------------------------------------------
-!           MOLECULAR MECHANICS specific parameters are defined separately @ parameters_MM.f 
-!--------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+!           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
+!----------------------------------------------------------------------------------------
 
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
@@ -79,15 +79,15 @@ logical :: dynamic
 !
   frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
-!           QDynamics parameters for either QM , MM and QMMM
+!           QDynamics parameters
 !
-  t_i  =  0.d0                               
-  t_f  =  1.0d0                               ! <== final time in PICOseconds
-  n_t  =  1000                                ! <== number of time steps
+  t_i  =  0.d0                              
+  t_f  =  0.1d0                               ! <== final time in PICOseconds
+  n_t  =  200                                 ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 29                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 01                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
@@ -98,7 +98,7 @@ logical :: dynamic
 !
   nnx = 0  ; nny = 0                          ! <==  (nnx,nny) = (extended) REAL copies on each side
 !
-!           Periodic Boundary Conditions for QM calculations only (MM uses PBC by default)
+!           Periodic Boundary Conditions 
 
   mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
 

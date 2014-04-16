@@ -10,6 +10,7 @@ MODULE constants_m
     real*8     , parameter :: SQRT2PI=2.50662827463100050242d0
 	real*8     , parameter :: EULER=0.5772156649015328606065120900824024310422d0 
     real*8     , parameter :: HALF   = 5.d-1
+    real*8     , parameter :: THIRD  = 1.d0/3.d0
     real*8     , parameter :: TWO    = 2.d0
     real*8     , parameter :: THREE  = 3.d0
     real*8     , parameter :: FOUR   = 4.d0

@@ -127,14 +127,15 @@ do k = 1 , MM % N_of_atoms - 1
         if ( atom(k) % nr /= atom(l) % nr ) then
         
             ithr    = OMP_get_thread_num() + 1
+
             nresidk = atom(k) % nr
             nresidl = atom(l) % nr
             rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-            rij(:)  = rij(:) - MM % box * DINT( rij(:) * MM % ibox(:) )
+            rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) )
             chrgk   = atom(k) % charge
             chrgl   = atom(l) % charge
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
-            rkl(:)  = rkl(:) - MM % box(:) * DINT( rkl(:) * MM % ibox(:) )
+            rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) )
             rklq    = sum( rkl(:) * rkl(:) )
 
             if( rklq < rcutsq ) then
@@ -181,9 +182,8 @@ do k = 1 , MM % N_of_atoms - 1
                     stressr12 = stressr12 + rij(1) * fs * rkl(2)
                     stressr13 = stressr13 + rij(1) * fs * rkl(3)
                     stressr23 = stressr23 + rij(2) * fs * rkl(3)
-
+                    
                     fs = fs * 1.0d20
-
                     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
                     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
 
@@ -200,12 +200,12 @@ do k = 1 , MM % N_of_atoms - 1
                     pot   = pot + vreal
                     ecoul = ecoul + vreal
          
-                    stresre11 = stresre11 + rij(1) * freal * rkl(1) * factor3
-                    stresre22 = stresre22 + rij(2) * freal * rkl(2) * factor3
-                    stresre33 = stresre33 + rij(3) * freal * rkl(3) * factor3
-                    stresre12 = stresre12 + rij(1) * freal * rkl(2) * factor3
-                    stresre13 = stresre13 + rij(1) * freal * rkl(3) * factor3
-                    stresre23 = stresre23 + rij(2) * freal * rkl(3) * factor3
+                    stresre11 = stresre11 + rij(1) * freal * rkl(1)
+                    stresre22 = stresre22 + rij(2) * freal * rkl(2)
+                    stresre33 = stresre33 + rij(3) * freal * rkl(3)
+                    stresre12 = stresre12 + rij(1) * freal * rkl(2)
+                    stresre13 = stresre13 + rij(1) * freal * rkl(3)
+                    stresre23 = stresre23 + rij(2) * freal * rkl(3)
 
                     tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + freal * rkl(1:3)
                     tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - freal * rkl(1:3)
@@ -219,6 +219,13 @@ end do
 ! ################################################################################3
 
 pot = pot - vself
+
+stresre11 = stresre11 * factor3
+stresre22 = stresre22 * factor3
+stresre33 = stresre33 * factor3
+stresre12 = stresre12 * factor3
+stresre13 = stresre13 * factor3
+stresre23 = stresre23 * factor3
 
 stressr(1,1) = stressr11; stressr(2,2) = stressr22
 stressr(3,3) = stressr33; stressr(1,2) = stressr12

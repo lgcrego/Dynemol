@@ -140,6 +140,7 @@ do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = atmas ( atom(j) % AtNo )
        ! put atom inside the box ...
+       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * DNINT( atom(j) % xyz(:) * MM % ibox(:) )
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa
@@ -154,7 +155,7 @@ l = 1
 do i = 1 , MM % N_of_molecules
     do j = l , l + molecule(i) % N_of_atoms -1
        atom(j) % xyz(:) = atom(j) % xyz(:) - rcm(:)  ! <== atomic coordinates with the origin at CM
-       atom(j)% vel(:)  = atom(j) % vel(:) - vcm(:)  ! <== atomic velocities measured with respect with vcm
+       atom(j) % vel(:) = atom(j) % vel(:) - vcm(:)  ! <== atomic velocities measured with respect with vcm
     end do
     l = l + molecule(i) % N_of_atoms
 end do

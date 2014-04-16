@@ -120,6 +120,8 @@ initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ib
 !=======================  reading  potential.inpt  ============================= 
 CALL allocate_FF( atmax )
 
+atom % MMSymbol = adjustl(atom % MMSymbol)
+
 If( read_from_gmx ) then
 
     CALL ad_hoc_MM_tuning(instance="SpecialBonds")

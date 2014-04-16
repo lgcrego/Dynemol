@@ -21,19 +21,23 @@ implicit none
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
-  MM % N_of_molecules = 1                   ! <== total number of molecules
-  MM % N_of_species   = 1                   ! <== total number of species
+  MM % N_of_molecules = 470                 ! <== total number of molecules
+  MM % N_of_species   = 2                   ! <== total number of species
 
   CALL allocate_species( MM % N_of_species )
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-
   species(1) % residue         = "Ru2"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
   species(1) % N_of_atoms      = 61         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
+  species(2) % residue         = "ACN"      ! <== Residue label for species i ; character(len3)
+  species(2) % N_of_molecules  = 469        ! <== Number of molecules of species i
+  species(2) % N_of_atoms      = 6          ! <== Number of atoms comprosing a single molecule of species i
+  species(2) % flex            = T_         ! <== Flexible : T_ , F_
+
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
 !
@@ -53,10 +57,10 @@ implicit none
 ! GENERAL INFO ...
 !
   read_velocities        = F_               ! <== reads the initial velocities : T_ , F_
-  gmx_input_format       = T_               ! <== reads FF parameters from gmx input files : T_ , F_  
+  gmx_input_format       = T_              ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  MM_log_step            = 50               ! <== step for saving MM results & parameters
-  MM_frame_step          = 01               ! <== step for saving MM results & parameters
+  MM_log_step            =  1               ! <== step for saving MM results & parameters
+  MM_frame_step          =  1               ! <== step for saving MM results & parameters
 
 ! =====================================================================================
 
