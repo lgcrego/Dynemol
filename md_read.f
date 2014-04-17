@@ -10,7 +10,6 @@ module MD_read_m
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
-    use Semi_Empirical_Parms    , only : Read_Atomic_Mass , Atomic_Mass
 
     type(MM_molecular) , allocatable   :: molecule(:)
     type(MM_atomic)    , allocatable   :: atom(:) , FF(:)
@@ -95,7 +94,7 @@ end do
 CALL Symbol_2_AtNo( atom )
 
 ! Define atomic mass ...
-atom % mass = atmas( atom % AtNo )
+atom % mass = Atomic_mass( atom % AtNo )
 do i = 1 , MM % N_of_species
     species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
     where( molecule % my_species == i ) molecule % mass = species(i) % mass
@@ -135,8 +134,6 @@ If( read_from_gmx ) then
     end do
 
     CALL Symbol_2_AtNo( FF )
-
-    CALL Read_Atomic_Mass
 
     do i = 1 , size( Atomic_Mass )
         where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
@@ -191,8 +188,6 @@ else
     CALL MMSymbol_2_Symbol( FF )
 
     CALL Symbol_2_AtNo( FF )
-
-    CALL Read_Atomic_Mass
 
     do i = 1 , size( Atomic_Mass )
         where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)

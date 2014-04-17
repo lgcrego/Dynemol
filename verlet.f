@@ -1,6 +1,7 @@
 module verlet_m
 
     use constants_m
+    use atomicmass
     use syst        ! using all syst
     use MD_read_m   , only: MM , atom , molecule, species
     use for_force   , only: forcefield
@@ -44,7 +45,6 @@ end subroutine VV1
 !=============================
  subroutine VV2( Ttrans , dt )
 !=============================
-use atomicmass
 implicit none
 real*8     , intent(inout) :: Ttrans
 real*8     , intent(in)    :: dt
@@ -65,7 +65,7 @@ do i = 1 , MM % N_of_molecules
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if( atom(j) % free ) then
-            massa = atmas( atom(j) % AtNo )
+            massa = Atomic_mass( atom(j) % AtNo )
             vi(1:3) = vi(1:3) + massa * atom(j) % vel(1:3)
         end if
     end do   
@@ -111,7 +111,7 @@ do i = 1 , MM % N_of_molecules
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if ( atom(j) % free ) then
-            massa = mol / atmas( atom(j) % AtNo )
+            massa = mol / Atomic_mass( atom(j) % AtNo )
             atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
         end if

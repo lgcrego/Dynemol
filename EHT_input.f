@@ -4,9 +4,8 @@ module Semi_Empirical_Parms
     use parameters_m    , only  : OPT_parms
 
     type(EHT)                   , public    , protected :: atom(300) 
-    real*8      , allocatable   , public    , protected :: Atomic_Mass(:)
 
-    public :: read_EHT_parameters , Include_OPT_parameters , Read_Atomic_Mass
+    public :: read_EHT_parameters , Include_OPT_parameters
 
 
     private
@@ -88,37 +87,6 @@ module Semi_Empirical_Parms
 ! 
 !
 ! 
-!
-!==========================
-subroutine Read_Atomic_Mass
-!==========================
-implicit none
-
-! local variables ...
-real*8  , allocatable   :: temp(:)
-integer                 :: ioerr , i , size_of_array
-
-allocate( temp(300) )
-
-OPEN(unit=3,file='atomic_mass.dat',status='old')
-do 
-    read(3,*,IOSTAT=ioerr) i , temp(i)  
-    if(ioerr < 0) EXIT
-end do    
-CLOSE(3)
-
-size_of_array = i
-
-allocate( Atomic_Mass(size_of_array) )
-
-Atomic_Mass = temp(1:size_of_array)
-
-deallocate( temp )
-
-end subroutine Read_Atomic_Mass
-!    
-!
-!
 !==============================
  subroutine read_OPT_parameters
 !==============================

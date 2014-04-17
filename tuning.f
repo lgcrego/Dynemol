@@ -274,7 +274,7 @@ end module for_force
 !
 !
 module atomicmass
-    real*8, dimension(1:107) :: atmas = (/                                                      &
+    real*8 , parameter  , dimension(1:107)  :: Atomic_mass = (/                                 &
     1.00795d0,   4.00260d0,   6.94122d0,   9.01218d0,  10.81172d0,  12.01078d0,  14.00672d0,    &
    15.99943d0,  18.99840d0,  20.17976d0,  22.98970d0,  24.30506d0,  26.98153d0,  28.08553d0,    &
    30.97376d0,  32.06552d0,  35.45322d0,  39.94812d0,  39.09830d0,  40.07842d0,  44.95591d0,    &
@@ -292,7 +292,7 @@ module atomicmass
   252.00000d0, 257.00000d0, 256.00000d0, 254.00000d0, 257.00000d0,  13.01900d0,  14.02700d0,    &
    15.03500d0,  15.03500d0  /)
 
-    character*2, dimension(1:107) :: aicon = (/                          &
+    character*2 , dimension(1:107)  :: aicon = (/                     &
      ' H',    'HE',    'LI',    'BE',    ' B',    ' C',    ' N',      &
      ' O',    ' F',    'NE',    'NA',    'MG',    'AL',    'SI',      &
      ' P',    ' S',    'CL',    'AR',    ' K',    'CA',    'SC',      &

@@ -1,7 +1,7 @@
 module setup_m
 
     use constants_m
-    use atomicmass      , only : atmas
+    use atomicmass
     use MD_read_m       , only : MM , atom , molecule , species , FF
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
@@ -96,7 +96,7 @@ end subroutine offset
  do i = 1 , MM % N_of_molecules
 
       t0(1:3) = atom(l) % xyz(1:3) 
-      t(1:3)  = atom(l) % xyz(1:3) * atmas( atom(l) % AtNo ) ! massa do primeiro átomo da molécula i
+      t(1:3)  = atom(l) % xyz(1:3) * Atomic_mass( atom(l) % AtNo ) ! massa do primeiro átomo da molécula i
 
       do k = 1 , molecule(i) % N_of_atoms - 1
            t1(1:3) = atom(l+k) % xyz(1:3)
@@ -107,7 +107,7 @@ end subroutine offset
                      t1(xyz) = t1(xyz) - sign( MM % box(xyz) , dr(xyz) ) 
                   endif
            end do
-           massa = atmas ( atom(l+k) % AtNo ) ! massa do átomo k da molécula i
+           massa = Atomic_mass( atom(l+k) % AtNo ) ! massa do átomo k da molécula i
            t(1:3) = t(1:3) + massa * t1(1:3)
       end do  
 
@@ -138,7 +138,7 @@ masstot = 0.d0
 l = 1
 do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
-       massa = atmas ( atom(j) % AtNo )
+       massa = Atomic_mass( atom(j) % AtNo )
        ! put atom inside the box ...
        atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * DNINT( atom(j) % xyz(:) * MM % ibox(:) )
        p(:) = p(:) + massa * atom(j) % xyz(:)
