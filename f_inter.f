@@ -113,11 +113,12 @@ end do
 eintra = eintra + vself
 
 !##############################################################################
-!$OMP parallel DO schedule(GUIDED,200)                                                                                              &
-!$OMP private (k, l, rklq, rklsq, chrgk, chrgl, sr2, sr6, sr12, KRIJ, rij, rkl, fs, vsr, vreal, expar, freal, nresidk, nresidl)     &
-!$OMP reduction (+ : pot, ecoul, stressr11, stressr22, stressr33, stressr12, stressr13, stressr23,                                  &
-!$OMP                            stresre11, stresre22, stresre33, stresre12, stresre13, stresre23)
-
+!$OMP parallel DO &
+!$OMP private (k, l, atk, atl, rklq, rklsq, chrgk, chrgl, sr2, sr6, sr12, KRIJ, rij, rkl, fs, vsr, vreal, &
+!$OMP          expar, freal, nresidk, nresidl , ithr)                                                     &
+!$OMP reduction (+ : pot, ecoul, evdw, stressr11, stressr22, stressr33, stressr12, stressr13, stressr23,  &
+!$OMP                                  stresre11, stresre22, stresre33, stresre12, stresre13, stresre23)
+                   
 ! LJ and Coulomb calculation
 
 do k = 1 , MM % N_of_atoms - 1
@@ -130,12 +131,16 @@ do k = 1 , MM % N_of_atoms - 1
 
             nresidk = atom(k) % nr
             nresidl = atom(l) % nr
+
             rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
             rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) )
+
             chrgk   = atom(k) % charge
             chrgl   = atom(l) % charge
+
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
             rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) )
+
             rklq    = sum( rkl(:) * rkl(:) )
 
             if( rklq < rcutsq ) then
@@ -169,10 +174,13 @@ do k = 1 , MM % N_of_atoms - 1
 
                     sr6  = sr2 * sr2 * sr2
                     sr12 = sr6 * sr6
+
                     fs   = 24.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
                     fs   = fs / rklq - fscut(atk,atl) / rklsq
+
                     vsr  = 4.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( sr12 - sr6 )
                     vsr  = vsr - vscut(atk,atl) + fscut(atk,atl) * ( rklsq - rcut )
+
                     pot  = pot + vsr
                     evdw = evdw + vsr
 
@@ -191,10 +199,12 @@ do k = 1 , MM % N_of_atoms - 1
                     sr2   = 1.d0 / rklq
                     KRIJ  = KAPPA * rklsq
                     expar = EXP( -(KRIJ*KRIJ) )
+
                     freal = coulomb * chrgk * chrgl * (sr2 / rklsq)
                     freal = freal * ( ERFC(KRIJ) + 2.d0 * rsqpi * KAPPA * rklsq * expar )
                     freal = freal - frecut / rklsq * chrgk * chrgl
-                    vreal = coulomb*factor3 * chrgk * chrgl * ERFC(KRIJ)/rklsq
+
+                    vreal = coulomb * factor3 * chrgk * chrgl * ERFC(KRIJ)/rklsq
                     vreal = vreal - vrecut * chrgk * chrgl + frecut * chrgk * chrgl * ( rklsq-rcut ) * factor3
 
                     pot   = pot + vreal
