@@ -2,8 +2,8 @@ module F_inter_m
 
     use constants_m
     use omp_lib
-    use for_force   , only: forcefield, rcut, vrecut, frecut, rcutsq, pot, ecoul, eintra, evdw, & 
-                            vscut, fscut, tmp_fsr, tmp_fch, erfkr, KAPPA, vself
+    use for_force   , only : forcefield , rcut , vrecut , frecut , rcutsq , pot , ecoul , &
+                             eintra , evdw , vscut , fscut , KAPPA
     use MD_read_m   , only : atom , MM , molecule
     use MM_types    , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m     , only : offset
@@ -21,16 +21,16 @@ contains
  subroutine FORCEINTER
 !=====================
 implicit none
-
-! local variables ...
-integer :: i, j, k, l, atk, atl, j1, j2
-integer :: OMP_get_thread_num, ithr, numthr, nresid, nresidl, nresidk
-real*8  :: rjkq, rklq, rjksq, rklsq, tmp, pikap, erfkrq, chrgk, chrgl, vsr, vreal, freal, sr2, sr6, sr12, fs, KRIJ, expar     
-real*8  :: stressr11, stressr22, stressr33, stressr12, stressr13, stressr23
-real*8  :: stresre11, stresre22, stresre33, stresre12, stresre13, stresre23 
-real*8, dimension (3) :: rij, rjk, rkl
-
-integer , allocatable :: species_offset(:)
+real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
+real*8  , allocatable   :: erfkr(:,:)
+integer , allocatable   :: species_offset(:)
+real*8                  :: rij(3) , rjk(3) , rkl(3)
+real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl
+real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself
+real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
+real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 
+integer                 :: i , j , k , l , atk , atl , j1 , j2
+integer                 :: OMP_get_thread_num , ithr , numthr , nresid , nresidl , nresidk
 
 CALL offset( species_offset )
 

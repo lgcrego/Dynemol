@@ -1,9 +1,9 @@
 module F_intra_m
    
     use constants_m
-    use for_force   , only: rcut, vrecut, frecut, pot, bdpot, angpot, dihpot,       &
-                            vscut, fscut, erfkr, KAPPA, lj14pot, coul14pot, pot2,   &    
-                            Dihedral_Potential_Type                            
+    use for_force   , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot   , &
+                             vscut, fscut, KAPPA, lj14pot, coul14pot, pot2      , &    
+                             Dihedral_Potential_Type                            
     use MD_read_m   , only : atom , molecule , MM , read_from_gmx
     use MM_types    , only : MM_system , MM_molecular , MM_atomic , debug_MM
 
