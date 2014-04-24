@@ -121,16 +121,8 @@ real*8  , intent(in)    :: dt
 ! local variables ...
 integer :: i , j , l 
 
-! restart_MM_xyz.out ... 
-open (10, file='restart_MM_xyz.out', status='unknown')
-    write (10,*) MM % box(1), MM % box(2), MM % box(3)
-    do i = 1 , MM % N_of_atoms 
-        write(10,999) atom(i) % my_id, atom(i) % xyz(1:3), atom(i) % charge
-    end do
-close (10)
-
-! restart_MM_vel.out ... 
-open(11, file='restart_MM_vel.out', status='unknown')
+! saving latest atomic velocities for future use ... 
+open(11, file='velocity_MM.out', status='unknown')
     do i = 1 , MM % N_of_atoms
         write(11,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
     end do
@@ -166,9 +158,9 @@ close(11)
         write(14,'(''END'')')
  close(14) 
  first = .false.
- 
+
 ! restart.inpt ...
- open (97, file='restart.inpt', status='unknown', form='unformatted')
+ open (97, file='restart.inpt', status='replace', form='unformatted')
  do i = 1 , 3
     write (97) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
  end do

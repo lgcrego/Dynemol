@@ -83,7 +83,6 @@ CALL Molecular_CM
 if( restart ) then
 
     CALL Restrt
-    CALL move_to_box_CM
 
 else
 

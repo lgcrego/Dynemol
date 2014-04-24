@@ -3,6 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                
+    use parameters_m            , only : restart
     use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
@@ -512,13 +513,13 @@ end subroutine allocate_FF
 
  inquire(file="restart.inpt", EXIST=exist)
  if (exist) then
-    open (99, file='restart.inpt', status='unknown', form='unformatted')
+    open (99, file='restart.inpt', status='old', form='unformatted')
     do i = 1 , 3
-       write (99) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
+       read (99) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
     end do
     close(99)
  else
-    STOP ' Arquivo restart.inpt inexistente !'
+    STOP ' restart.inpt file not found !'
  endif
 
 end subroutine RESTRT
@@ -586,6 +587,7 @@ implicit none
 logical , intent(in) :: read_vel
 
 ! local variables ...
+logical :: exist
 integer :: i , j
 
 MM % box  = Unit_Cell % T_xyz
@@ -626,13 +628,19 @@ end do
 
 if( read_vel ) then
 
-    open(unit=33 , file='restart_MM_vel.in' , status='old' , action='read')
+    if( restart ) STOP ' Should NOT read velocity_MM.inpt if restart = .true. !'
 
+    inquire(file="velocity_MM.inpt", EXIST=exist)
+    if (exist) then
+
+        open(unit=33 , file='velocity_MM.inpt' , status='old' , action='read')
         do i = 1 , size(atom)
             read(33,*) atom(i) % vel(1) , atom(i) % vel(2) , atom(i) % vel(3)
         end do
-
-    close(33)
+        close(33)
+    else
+        STOP ' velocity_MM.inpt file not found !'
+    endif
 
 end if
 
