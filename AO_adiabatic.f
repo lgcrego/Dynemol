@@ -73,8 +73,6 @@ integer         :: j , frame , frame_init , frame_final , frame_restart
 it = 1
 t  = t_i
 
-frame_init = merge( frame_restart+1 , frame_step+1 , restart )
-
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
@@ -93,6 +91,8 @@ If( restart ) then
 else
     CALL Preprocess( QDyn , t_rate , it )
 end If
+
+frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
 
