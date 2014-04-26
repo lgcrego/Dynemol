@@ -64,8 +64,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
-  restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 100                         ! <== not yet implemented
+  restart       = T_                          ! <== TRUE for restarting dynamics
+  step_security = 1                           ! <== step for saving backup files
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -82,8 +82,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  0.1d0                               ! <== final time in PICOseconds
-  n_t  =  200                                 ! <== number of time steps
+  t_f  =  1.0d0                               ! <== final time in PICOseconds
+  n_t  =  1000                                ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 

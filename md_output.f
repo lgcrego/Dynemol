@@ -2,7 +2,7 @@ module MD_dump_m
 
     use constants_m
     use MM_input        , only: MM_frame_step
-    use parameters_m    , only: n_t
+    use parameters_m    , only: n_t, restart
     use syst            , only: bath_T, Initial_density, Ekin, DensTot, TempTot, PressTot
     use MD_read_m       , only: MM , atom , molecule , species
 
@@ -133,7 +133,7 @@ close(11)
  CALL ReGroupMolecule
 
  open (14, file='frames-MM.pdb', status='unknown', access='append')
-        if( first ) write(14,*)  "MDFlex , no title"
+        if( first .AND. (.NOT. restart) ) write(14,*)  "MDFlex , no title"
         write(14,995) 'TITLE'  , 'manipulated by MDFlex     t= ', frame*dt*1.d12
         write(14,991) 'CRYST1' , MM % box(1) , MM % box(2) , MM % box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
         write(14,993) 'MODEL'  , frame
@@ -159,13 +159,6 @@ close(11)
  close(14) 
  first = .false.
 
-! restart.inpt ...
- open (97, file='restart.inpt', status='replace', form='unformatted')
- do i = 1 , 3
-    write (97) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
- end do
- close(97)
- 
 991 FORMAT(a6,3F9.3,3F7.2,a11,a4)
 992 FORMAT('ATOM  ',i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
 993 FORMAT(a5,i8)

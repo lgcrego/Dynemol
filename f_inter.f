@@ -21,6 +21,8 @@ contains
  subroutine FORCEINTER
 !=====================
 implicit none
+
+!local variables ...
 real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
 real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)

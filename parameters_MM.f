@@ -44,10 +44,10 @@ implicit none
   temperature               = 300.d0            ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
 
-  thermal_relaxation_time   = infty             ! <== Temperature coupling term with the bath
+  thermal_relaxation_time   = 0.1d0             ! <== Temperature coupling term with the bath
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  pressure_relaxation_time  = infty             ! <== Pressure coupling term 
+  pressure_relaxation_time  = 0.2d0             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   cutoff_radius             = 16.d0             ! <== Cut off radius (Angs) for electrostatic interactions
@@ -59,8 +59,8 @@ implicit none
   read_velocities        = F_               ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_              ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  MM_log_step            =  1               ! <== step for saving MM results & parameters
-  MM_frame_step          =  1               ! <== step for saving MM results & parameters
+  MM_log_step            =  1                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  1                 ! <== step for saving MM results & parameters
 
 ! =====================================================================================
 

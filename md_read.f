@@ -18,7 +18,7 @@ module MD_read_m
     ! module variables ...
     logical :: read_from_gmx
 
-    public :: Reading , RESTRT , MM , atom , molecule , species , FF , read_from_gmx
+    public :: Reading , MM , atom , molecule , species , FF , read_from_gmx
 
     private
 
@@ -499,30 +499,6 @@ do i = 1 , N
 end do
 
 end subroutine allocate_FF
-!
-!
-!
-!=================
- subroutine RESTRT
-!=================
- implicit none
-
-! local variables ...
- logical :: exist
- integer :: i
-
- inquire(file="restart.inpt", EXIST=exist)
- if (exist) then
-    open (99, file='restart.inpt', status='old', form='unformatted')
-    do i = 1 , 3
-       read (99) atom % xyz(i), atom % vel(i), atom % ftotal(i), MM % box(i)
-    end do
-    close(99)
- else
-    STOP ' restart.inpt file not found !'
- endif
-
-end subroutine RESTRT
 !
 !
 !
