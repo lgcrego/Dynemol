@@ -4,7 +4,7 @@ module DP_potential_m
     use constants_m
     use mkl95_blas
     use mkl95_precision
-    use parameters_m            , only : mmx , mmy , mmz
+    use parameters_m            , only : PBC
     use Structure_Builder       , only : Extended_Cell
     use Semi_Empirical_Parms    , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
@@ -79,7 +79,7 @@ else
 
 end If
 
-! generate periodic structure of solvent molecules ; if mmx=mmy=mmz=0 ==> DP_mols_pbc = DP_mols ...
+! generate periodic structure of solvent molecules ; if PBCx=PBCy=PBCz=0 ==> DP_mols_pbc = DP_mols ...
 CALL Generate_Periodic_DPs( a ,  DP_mols%CC     , DP_mols%DP     , DP_mols%nr     ,& 
                                  DP_mols_pbc%CC , DP_mols_pbc%DP , DP_mols_pbc%nr )
 
@@ -211,7 +211,7 @@ N_of_DP = size( DP_mols_pbc%DP(:,1) )
 ! choice of solvent droplet .vs. PBC box ...
 !------------------------------------------------------------------------
 
-If( mmx+mmy+mmz == 0) then
+If( sum(PBC) == 0) then
 
     allocate( vector  ( N_of_DP , 3 ) , source = D_zero )
     allocate( DP_Mols ( N_of_DP , 3 ) , source = D_zero )

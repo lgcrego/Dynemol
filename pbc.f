@@ -1,7 +1,7 @@
 module PBC_m
 
     use type_m
-    use parameters_m            , only  : mmx , mmy , mmz
+    use parameters_m            , only  : PBC
     use Babel_m
     use constants_m
     use Allocation_m
@@ -35,7 +35,7 @@ contains
 !----------------------------------------------------------
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions
 
- CALL Allocate_Structures( (2*mmx+1)*(2*mmy+1)*(2*mmz+1)*cell%atoms , pbc_cell )
+ CALL Allocate_Structures( product(2*PBC(:)+1)*cell%atoms , pbc_cell )
 
  pbc_cell % coord              (1:cell%atoms,1:3)  =  cell % coord
  pbc_cell % nr                 (1:cell%atoms)      =  cell % nr 
@@ -62,9 +62,9 @@ contains
  k = cell%atoms
  copy = 0
 
- DO iz = -mmz , mmz
- DO iy = -mmy , mmy
- DO ix = -mmx , mmx
+ DO iz = -PBC(3) , PBC(3)
+ DO iy = -PBC(2) , PBC(2)
+ DO ix = -PBC(1) , PBC(1)
 
     If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
 
@@ -102,7 +102,7 @@ contains
  END DO
  END DO
 
- pbc_cell % atoms = (2*mmx+1)*(2*mmy+1)*(2*mmz+1)*cell%atoms 
+ pbc_cell % atoms = product(2*PBC(:)+1)*cell%atoms 
 
 !------------------------------------------------------------
 
@@ -132,7 +132,7 @@ integer :: ix , iy , iz , i , j , k , n , N_of_DP_MOLs , N_of_pbc_mols
 N_of_DP_MOLs = size( nr_MOL )
 
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions ...
-N_of_pbc_mols = (2*mmx+1)*(2*mmy+1)*(2*mmz+1) * N_of_DP_MOLs
+N_of_pbc_mols = product(2*PBC(:)+1) * N_of_DP_MOLs
 
 allocate( pbc_CC_MOL ( N_of_pbc_mols , 3 ) )
 allocate( pbc_DP_MOL ( N_of_pbc_mols , 3 ) )
@@ -149,9 +149,9 @@ pbc_nr_MOL = nr_Mol
 ! include the replicas        
 k = N_of_DP_MOLs
 
-DO iz = -mmz , mmz
-DO iy = -mmy , mmy
-DO ix = -mmx , mmx
+DO iz = -PBC(3) , PBC(3)
+DO iy = -PBC(2) , PBC(2)
+DO ix = -PBC(1) , PBC(1)
 
     If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
 
@@ -195,7 +195,7 @@ end subroutine Generate_Periodic_DPs
 !----------------------------------------------------------
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions
 
- CALL Allocate_Structures( (2*mmx+1)*(2*mmy+1)*(2*mmz+1)*cell%atoms , pbc_cell )
+ CALL Allocate_Structures( product(2*PBC(:)+1)*cell%atoms , pbc_cell )
 
  pbc_cell % coord              (1:cell%atoms,1:3)  =  cell % coord
  pbc_cell % nr                 (1:cell%atoms)      =  cell % nr 
@@ -222,9 +222,9 @@ end subroutine Generate_Periodic_DPs
  k = cell%atoms
  copy = 0
 
- DO iz = -mmz , mmz
- DO iy = -mmy , mmy
- DO ix = -mmx , mmx
+ DO iz = -PBC(3) , PBC(3)
+ DO iy = -PBC(2) , PBC(2)
+ DO ix = -PBC(1) , PBC(1)
 
     If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
 
@@ -262,7 +262,7 @@ end subroutine Generate_Periodic_DPs
  END DO
  END DO
 
- pbc_cell % atoms = (2*mmx+1)*(2*mmy+1)*(2*mmz+1)*cell%atoms 
+ pbc_cell % atoms = product(2*PBC(:)+1)*cell%atoms 
 
 !------------------------------------------------------------
 

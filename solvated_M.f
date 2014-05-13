@@ -4,7 +4,7 @@ module Solvated_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : nnx , nny , mmx , mmy , mmz , T_ , F_
+    use parameters_m            , only : nnx , nny , PBC , T_ , F_
     use Allocation_m            , only : Allocate_UnitCell
     use Babel_m                 , only : System_Characteristics , trj
     use Structure_Builder       , only : Unit_Cell
@@ -45,7 +45,7 @@ integer , parameter :: PBC_Factor = 27
 ! check-list ...
 if( .not. any(trj(frame)%atom%solute) ) Pause " >>> Solute is not tagged <<< " 
 
-If( nnx+nny+mmx+mmy+mmz /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
+If( nnx+nny+sum(PBC) /= 0 ) Pause " >>> Using Replication in Solvated_M <<< "
 
 ! identify the CG of the solute ...
 forall( i=1:3 ) solute_CG(i) = sum( trj(frame)%atom%xyz(i) , trj(frame)%atom%solute == .true. ) / count(trj(frame)%atom%solute)

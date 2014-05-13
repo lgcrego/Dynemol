@@ -2,7 +2,7 @@ MODULE parameters_m
 
 use type_m
 
-integer                 :: nnx , nny , mmx , mmy , mmz , n_t , step_security
+integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection 
 real*8                  :: t_i , t_f , sigma
@@ -100,7 +100,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  mmx = 0  ; mmy = 0   ; mmz = 0              ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

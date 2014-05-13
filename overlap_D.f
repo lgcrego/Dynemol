@@ -4,7 +4,7 @@ module Overlap_Builder
 
     use type_m
     use constants_m
-    use parameters_m            , only  : verbose , mmx , mmy , mmz
+    use parameters_m            , only  : verbose , PBC
     use PBC_m                   , only  : Generate_Periodic_Structure
     use Semi_Empirical_Parms    , only  : atom
     use Allocation_m            , only  : DeAllocate_Structures    
@@ -59,8 +59,8 @@ contains
         If( verbose ) Print 53
 
         If( verbose ) then
-            If( (2*mmx+1)*(2*mmy+1)*(2*mmz+1) /= 1 ) then
-                Print 51 , mmx , mmy , mmz
+            If( product( 2*PBC(:)+1 ) /= 1 ) then
+                Print 51 , PBC(:) 
             else
                 Print 54
             end If
