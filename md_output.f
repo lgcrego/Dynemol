@@ -178,20 +178,15 @@ subroutine ReGroupMolecule
 implicit none
 
 ! local variables ...
-integer :: i, j, xyz , j1, j2, nresid
+integer :: j, xyz 
 real*8  :: CartesianDistance
 
 If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom )
 
- do i = 1 , MM % N_of_molecules
-    nresid = molecule(i) % nr
-    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-    j2 = sum(molecule(1:nresid) % N_of_atoms)
-    do j = j1 , j2
-       do xyz = 1 , 3
-          CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
-          If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
-       end do
+ do j = 1 , MM % N_of_atoms
+    do xyz = 1 , 3
+       CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
+       If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
     end do
  end do
 

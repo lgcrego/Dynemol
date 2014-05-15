@@ -1,7 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
-    use parameters_m        , only : restart , step_security , QMMM
+    use parameters_m        , only : restart , step_security , QMMM 
     use MM_input            , only : MM_log_step , MM_frame_step
     use MD_read_m           , only : atom , Reading , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
