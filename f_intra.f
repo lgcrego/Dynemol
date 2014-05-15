@@ -1,11 +1,12 @@
 module F_intra_m
    
     use constants_m
-    use for_force   , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot   , &
-                             vscut, fscut, KAPPA, lj14pot, coul14pot, pot2      , &    
+    use parameters_m , only : PBC
+    use for_force    , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot   , &
+                             vscut, fscut, KAPPA, lj14pot, coul14pot, pot2       , &    
                              Dihedral_Potential_Type                            
-    use MD_read_m   , only : atom , molecule , MM , read_from_gmx
-    use MM_types    , only : MM_system , MM_molecular , MM_atomic , debug_MM
+    use MD_read_m    , only : atom , molecule , MM , read_from_gmx
+    use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
 
     private
 
@@ -46,7 +47,7 @@ do i = 1 , MM % N_of_molecules
         atj = molecule(i) % bonds(j,2)
         if( atom(atj) % free .OR. atom(ati) % free ) then
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
-            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) )
+            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             rijsq  = SQRT(rijq)
             qterm  = 0.5d0 * molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )**2
@@ -66,11 +67,11 @@ do i = 1 , MM % N_of_molecules
         atk = molecule(i) % angs(j,3)
         if( atom(atj) % free .OR. atom(ati) % free .OR. atom(atk) % free ) then
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
-            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) )
+            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             rijsq  = SQRT(rijq)
             rjk(:) = atom(atk) % xyz(:) - atom(ati) % xyz(:)
-            rjk(:) = rjk(:) - MM % box(:)*DNINT( rjk(:) * MM % ibox(:) )
+            rjk(:) = rjk(:) - MM % box(:)*DNINT( rjk(:) * MM % ibox(:) ) * PBC(:)
             rjkq   = rjk(1)*rjk(1) + rjk(2)*rjk(2) + rjk(3)*rjk(3)
             rjksq  = SQRT(rjkq)
 
@@ -117,16 +118,16 @@ do i = 1 , MM % N_of_molecules
         if ( atom(atj) % free .OR. atom(ati) % free .OR. atom(atk) % free .OR. atom(atl) % free ) then
             ! Definition of vector rij = rj - ri
             rij(:)  = atom(ati) % xyz(1:3) - atom(atj) % xyz(1:3)
-            rij(:)  = rij(1:3) - MM % box(1:3) * DNINT( rij(1:3) * MM % ibox(1:3) )
+            rij(:)  = rij(1:3) - MM % box(1:3) * DNINT( rij(1:3) * MM % ibox(1:3) ) * PBC(1:3)
             ! Definition of vector rjk = rj - rk
             rjk(:)  = atom(atj) % xyz(1:3) - atom(atk) % xyz(1:3)
-            rjk(:)  = rjk(1:3) - MM % box(1:3) * DNINT( rjk(1:3) * MM % ibox(1:3) )
+            rjk(:)  = rjk(1:3) - MM % box(1:3) * DNINT( rjk(1:3) * MM % ibox(1:3) ) * PBC(1:3)
             rjkq    = rjk(1)*rjk(1) + rjk(2)*rjk(2) + rjk(3)*rjk(3)
             rjksq   = 1.d0 / SQRT(rjkq)
             rjksq2  = rjksq * rjksq
             ! Definition of vector rkl = rl - rk
             rkl(:)  = atom(atk) % xyz(1:3) - atom(atl) % xyz(1:3)
-            rkl(:)  = rkl(1:3) - MM % box(1:3) * DNINT( rkl(1:3) * MM % ibox(1:3) )
+            rkl(:)  = rkl(1:3) - MM % box(1:3) * DNINT( rkl(1:3) * MM % ibox(1:3) ) * PBC(1:3)
             ! Cross Product M = | rij X rjk | :: First dihedral vector ...
             rijk(1) = rij(2) * rjk(3) - rij(3) * rjk(2)
             rijk(2) = rij(3) * rjk(1) - rij(1) * rjk(3)
@@ -212,7 +213,7 @@ do i = 1 , MM % N_of_molecules
             chrgi  = atom(ati) % charge
             chrgj  = atom(atj) % charge
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
-            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) )
+            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             ! Lennard Jones ...
             select case ( MM % CombinationRule )

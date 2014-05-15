@@ -3,9 +3,10 @@ module verlet_m
     use constants_m
     use atomicmass
     use syst        ! using all syst
-    use MD_read_m   , only: MM , atom , molecule, species
-    use for_force   , only: forcefield
-    use f_inter_m   , only: stressr , stresre
+    use parameters_m , only: PBC
+    use MD_read_m    , only: MM , atom , molecule, species
+    use for_force    , only: forcefield
+    use f_inter_m    , only: stressr , stresre
 
     public :: VV1 , VV2 , SUMMAT , PRESS_BOUNDARY
 
@@ -199,7 +200,7 @@ do i = 1 , MM % N_of_molecules
     do j = j1 , j2
         if ( atom(j) % free ) then
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) * mip
-            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DNINT( atom(j) % xyz(1:3) * MM % ibox(1:3) )
+            atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DNINT( atom(j) % xyz(1:3) * MM % ibox(1:3) ) * PBC(1:3)
         end if
     end do
 end do

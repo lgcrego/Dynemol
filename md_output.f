@@ -1,6 +1,7 @@
 module MD_dump_m
 
     use constants_m
+    use MM_types        , only: MM_atomic
     use MM_input        , only: MM_frame_step
     use parameters_m    , only: n_t, restart
     use syst            , only: bath_T, Initial_density, Ekin, DensTot, TempTot, PressTot
@@ -9,7 +10,8 @@ module MD_dump_m
     public :: output , cleanup , saving_MM_frame 
 
 !   module variables ...
-    logical , save :: first = .true. , done = .false.
+    logical         , save        :: first = .true. , done = .false.  
+    type(MM_atomic) , allocatable :: previous(:)
 
 contains    
 !
@@ -179,18 +181,21 @@ implicit none
 integer :: i, j, xyz , j1, j2, nresid
 real*8  :: CartesianDistance
 
+If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom )
+
  do i = 1 , MM % N_of_molecules
     nresid = molecule(i) % nr
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
        do xyz = 1 , 3
-          CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)
+          CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
           If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
        end do
     end do
  end do
 
+ previous = atom
 
 end subroutine ReGroupMolecule
 !

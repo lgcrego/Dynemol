@@ -2,11 +2,12 @@ module F_inter_m
 
     use constants_m
     use omp_lib
-    use for_force   , only : forcefield , rcut , vrecut , frecut , rcutsq , pot , ecoul , &
+    use parameters_m , only : PBC
+    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot , ecoul , &
                              eintra , evdw , vscut , fscut , KAPPA
-    use MD_read_m   , only : atom , MM , molecule
-    use MM_types    , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use setup_m     , only : offset
+    use MD_read_m    , only : atom , MM , molecule
+    use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
+    use setup_m      , only : offset
  
     public :: FORCEINTER
     
@@ -135,13 +136,13 @@ do k = 1 , MM % N_of_atoms - 1
             nresidl = atom(l) % nr
 
             rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-            rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) )
+            rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
 
             chrgk   = atom(k) % charge
             chrgl   = atom(l) % charge
 
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
-            rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) )
+            rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
 
             rklq    = sum( rkl(:) * rkl(:) )
 

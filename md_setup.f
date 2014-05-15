@@ -2,6 +2,7 @@ module setup_m
 
     use constants_m
     use atomicmass
+    use parameters_m    , only : PBC
     use MD_read_m       , only : MM , atom , molecule , species , FF
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
@@ -86,9 +87,10 @@ end subroutine offset
  implicit none
 
 ! local variables ...
- integer :: i, xyz, k, l
+ integer :: i, xyz, k, l 
  real*8  :: massa 
  real*8, dimension(3) :: t0, t, t1, dr
+ logical :: SmallMolecule
 
 ! calculates the center of mass of molecule i ...
 
@@ -98,11 +100,13 @@ end subroutine offset
       t0(1:3) = atom(l) % xyz(1:3) 
       t(1:3)  = atom(l) % xyz(1:3) * Atomic_mass( atom(l) % AtNo ) ! massa do primeiro átomo da molécula i
 
+      SmallMolecule = NINT(float(molecule(i)%N_of_atoms) / float(MM%N_of_atoms)) == 0
+
       do k = 1 , molecule(i) % N_of_atoms - 1
            t1(1:3) = atom(l+k) % xyz(1:3)
            dr(1:3) = t1(1:3) - t0(1:3)
            do xyz = 1 , 3
-                  if ( abs( dr(xyz) ) > MM % box(xyz) * HALF ) then
+                  if ( abs( dr(xyz) ) > MM % box(xyz) * HALF .AND. SmallMolecule ) then
                      ! fix devided molecule i ...
                      t1(xyz) = t1(xyz) - sign( MM % box(xyz) , dr(xyz) ) 
                   endif
@@ -139,8 +143,8 @@ l = 1
 do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = Atomic_mass( atom(j) % AtNo )
-       ! put atom inside the box ...
-       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * DNINT( atom(j) % xyz(:) * MM % ibox(:) )
+       ! put atom inside the box (note that here we use DINT instead of DNINT because did not change to CM yet) ...
+       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * DINT( atom(j) % xyz(:) * MM % ibox(:) ) * PBC(:)
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa

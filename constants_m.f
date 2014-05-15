@@ -1,14 +1,14 @@
 MODULE constants_m
     integer    , parameter :: ABOVE=+100000000
     integer    , parameter :: BELOW=-100000000
-	real*8     , parameter :: PI=3.141592653589793238462643383279502884197d0 
-	real*8     , parameter :: PIO2=1.57079632679489661923132169163975144209858d0 
-	real*8     , parameter :: TWOPI=6.283185307179586476925286766559005768394d0 
-	real*8     , parameter :: FOURPI=12.56637061435917295385d0
+    real*8     , parameter :: PI=3.141592653589793238462643383279502884197d0 
+    real*8     , parameter :: PIO2=1.57079632679489661923132169163975144209858d0 
+    real*8     , parameter :: TWOPI=6.283185307179586476925286766559005768394d0 
+    real*8     , parameter :: FOURPI=12.56637061435917295385d0
     real*8     , parameter :: PI4 = FOURPI
-	real*8     , parameter :: SQRT2=1.41421356237309504880168872420969807856967d0 
+    real*8     , parameter :: SQRT2=1.41421356237309504880168872420969807856967d0 
     real*8     , parameter :: SQRT2PI=2.50662827463100050242d0
-	real*8     , parameter :: EULER=0.5772156649015328606065120900824024310422d0 
+    real*8     , parameter :: EULER=0.5772156649015328606065120900824024310422d0 
     real*8     , parameter :: HALF   = 5.d-1
     real*8     , parameter :: THIRD  = 1.d0/3.d0
     real*8     , parameter :: TWO    = 2.d0
@@ -17,8 +17,9 @@ MODULE constants_m
     real*8     , parameter :: FIVE   = 5.d0
     real*8     , parameter :: SIX    = 6.d0
     real*8     , parameter :: TWELVE = 12.d0
-	real*8     , parameter :: a_Bohr = 0.52917720859d0
-	real*8     , parameter :: Hartree_2_eV=27.21138386d0        
+    real*8     , parameter :: ThreeQuarters = 3.d0/4.d0
+    real*8     , parameter :: a_Bohr = 0.52917720859d0
+    real*8     , parameter :: Hartree_2_eV=27.21138386d0        
     real*8     , parameter :: h_bar=6.58264d-4                      ! <== Planck's  constant  (eV * ps)
     real*8     , parameter :: debye_inv  = 2.0819436d-1             ! <== e[C]*d[Angs] = p[Debye] * 0.20819436
     real*8     , parameter :: debye_2_au = 0.393430294d0            ! <== converts Debye units to atomic units (a.u.)
