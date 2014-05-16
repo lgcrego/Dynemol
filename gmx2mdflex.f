@@ -434,7 +434,10 @@ do a = 1 , MM % N_of_species
             species(a) % atom(i) % MMSymbol = adjustr(species(a) % atom(i) % MMSymbol)
             species(a) % atom(i) % nr       = a
             species(a) % my_species         = a
-            species(a) % atom(i) % free     = species(a) % flex
+            species(a) % atom(i) % flex     = species(a) % flex
+
+            ! this is the standard; atomic flexibity can also be defined @ ad_hoc_MM_tuning ...    
+            where( atom % my_species == a ) atom % flex = species(a) % flex
 
             counter = counter + 1
             FF(counter) % my_id     = species(a) % atom(i) % my_id

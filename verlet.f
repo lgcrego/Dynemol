@@ -31,7 +31,7 @@ dt_half = dt / two
 
 ! VV1 ... 
 do i = 1 , MM % N_of_atoms
-    if( atom(i) % free ) then
+    if( atom(i) % flex ) then
         massa = mol / atom(i) % mass 
         ai(1:3) = atom(i) % ftotal(1:3) * massa
         atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + atom(i) % vel(1:3) * 1.0d10 * dt + dt * dt * ai(1:3) * 0.5d10
@@ -65,7 +65,7 @@ do i = 1 , MM % N_of_molecules
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
-        if( atom(j) % free ) then
+        if( atom(j) % flex ) then
             massa = Atomic_mass( atom(j) % AtNo )
             vi(1:3) = vi(1:3) + massa * atom(j) % vel(1:3)
         end if
@@ -111,7 +111,7 @@ do i = 1 , MM % N_of_molecules
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
-        if ( atom(j) % free ) then
+        if ( atom(j) % flex ) then
             massa = mol / Atomic_mass( atom(j) % AtNo )
             atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
@@ -198,7 +198,7 @@ do i = 1 , MM % N_of_molecules
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
-        if ( atom(j) % free ) then
+        if ( atom(j) % flex ) then
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) * mip
             atom(j) % xyz(1:3) = atom(j) % xyz(1:3) - MM % box(1:3) * DNINT( atom(j) % xyz(1:3) * MM % ibox(1:3) ) * PBC(1:3)
         end if

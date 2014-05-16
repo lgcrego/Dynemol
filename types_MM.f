@@ -29,7 +29,7 @@ use constants_m
         real*8                              :: MM_charge
         real*8                              :: eps
         real*8                              :: sig
-        logical                             :: free
+        logical                             :: flex
     end type MM_atomic
 
     type MM_molecular
@@ -122,7 +122,7 @@ do
     write(*,*) ' (10) MM_charge  '
     write(*,*) ' (11) eps        '
     write(*,*) ' (12) sig        '
-    write(*,*) ' (13) free       '
+    write(*,*) ' (13) flex       '
 
     read (*,*) option
 
@@ -168,7 +168,7 @@ do
             write(*,60) a(:) % sig
             
         case(13)
-            write(*,70) a(:) % free
+            write(*,70) a(:) % flex
 
         case default
             exit
@@ -263,7 +263,7 @@ do
 end do
 
 10 Format(50i3)
-20 Format(37i4)
+20 Format(33i5)
 30 Format(37a4)
 40 Format(50L3)
 

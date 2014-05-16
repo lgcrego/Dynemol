@@ -145,7 +145,7 @@ If( read_from_gmx ) then
         do j = 1 , species(i) % N_of_atoms
             where( FF % residue == species(i) % atom(j) % residue )
                 FF % nr         = species(i) % atom(j) % nr
-                FF % free       = species(i) % atom(j) % free
+                FF % flex       = species(i) % atom(j) % flex
                 FF % my_species = species(i) % my_species
             end where
         end do
@@ -206,7 +206,7 @@ else
                 species(i) % atom(1:species(i) % N_of_atoms) % my_species = species(i) % my_species
                 species(i) % atom(1:species(i) % N_of_atoms) % my_id      = atom(j:j + species(i) % N_of_atoms) % my_id
                 species(i) % atom(1:species(i) % N_of_atoms) % nr         = atom(j:j + species(i) % N_of_atoms) % nr
-                species(i) % atom(1:species(i) % N_of_atoms) % free       = atom(j:j + species(i) % N_of_atoms) % free
+                species(i) % atom(1:species(i) % N_of_atoms) % flex       = atom(j:j + species(i) % N_of_atoms) % flex
                 exit
             end if
             
@@ -233,7 +233,7 @@ else
                     FF(i:i+l-1) % residue    = atom(j:j+l-1) % residue
                     FF(i:i+l-1) % my_id      = atom(j:j+l-1) % my_id
                     FF(i:i+l-1) % nr         = atom(j:j+l-1) % nr
-                    FF(i:i+l-1) % free       = atom(j:j+l-1) % free
+                    FF(i:i+l-1) % flex       = atom(j:j+l-1) % flex
                     exit
                 end if
 
@@ -495,7 +495,7 @@ do i = 1 , N
     FF(i) % MM_charge  = 0.0d0
     FF(i) % eps        = 0.0d0
     FF(i) % sig        = 0.0d0
-    FF(i) % free       = .false.
+    FF(i) % flex       = .false.
 end do
 
 end subroutine allocate_FF
@@ -594,7 +594,7 @@ do j = 1 , MM % N_of_atoms
     atom(i) % MM_charge  = 0.d0
     atom(i) % eps        = 0.d0
     atom(i) % sig        = 0.d0
-    atom(i) % free       = .true.
+    atom(i) % flex       = .true.
 
 end do
 

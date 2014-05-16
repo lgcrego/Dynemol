@@ -45,7 +45,7 @@ do i = 1 , MM % N_of_molecules
     do j = 1 ,  molecule(i) % Nbonds
         ati = molecule(i) % bonds(j,1)
         atj = molecule(i) % bonds(j,2)
-        if( atom(atj) % free .OR. atom(ati) % free ) then
+        if( atom(atj) % flex .OR. atom(ati) % flex ) then
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
@@ -65,7 +65,7 @@ do i = 1 , MM % N_of_molecules
         atj = molecule(i) % angs(j,1)
         ati = molecule(i) % angs(j,2)
         atk = molecule(i) % angs(j,3)
-        if( atom(atj) % free .OR. atom(ati) % free .OR. atom(atk) % free ) then
+        if( atom(atj) % flex .OR. atom(ati) % flex .OR. atom(atk) % flex ) then
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
@@ -115,7 +115,7 @@ do i = 1 , MM % N_of_molecules
         atj = molecule(i) % diheds(j,2)
         atk = molecule(i) % diheds(j,3)
         atl = molecule(i) % diheds(j,4)
-        if ( atom(atj) % free .OR. atom(ati) % free .OR. atom(atk) % free .OR. atom(atl) % free ) then
+        if ( atom(atj) % flex .OR. atom(ati) % flex .OR. atom(atk) % flex .OR. atom(atl) % flex ) then
             ! Definition of vector rij = rj - ri
             rij(:)  = atom(ati) % xyz(1:3) - atom(atj) % xyz(1:3)
             rij(:)  = rij(1:3) - MM % box(1:3) * DNINT( rij(1:3) * MM % ibox(1:3) ) * PBC(1:3)
@@ -208,7 +208,7 @@ do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % Nbonds14
         ati    = molecule(i) % bonds14(j,1)
         atj    = molecule(i) % bonds14(j,2)
-        if ( atom(atj) % free .OR. atom(ati) % free ) then
+        if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
             chrgi  = atom(ati) % charge
             chrgj  = atom(atj) % charge
