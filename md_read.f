@@ -33,7 +33,7 @@ implicit none
 
 ! local variables ...
 real*8          :: massa 
-integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid
+integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid , nr
 logical         :: exist , read_vel
 character(10)   :: string
 
@@ -127,14 +127,23 @@ If( read_from_gmx ) then
     CALL ad_hoc_MM_tuning(instance="SpecialBonds")
 
     CALL itp2mdflex( MM , atom , species , FF)
-    
+
+    do nr = 1 , atom( MM % N_of_atoms ) % nr
+        do i = 1 , MM % N_of_species
+
+            where( (atom % nr == nr) .AND. (atom % my_species == i) ) atom % MMSymbol = FF % MMSymbol
+
+        end do
+    end do
+
     CALL top2mdflex( MM , atom , species , FF )
     
     do i = 1 , size(species)
         CALL MMSymbol_2_Symbol( species(i) % atom )
     end do
 
-    CALL Symbol_2_AtNo( FF )
+    CALL MMSymbol_2_Symbol ( FF )
+    CALL Symbol_2_AtNo     ( FF )
 
     do i = 1 , size( Atomic_Mass )
         where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
@@ -166,7 +175,7 @@ else
         case( 2 ) 
         ! L-J potential ...   
             do i = 1, atmax
-                read (30,*) FF(i) % MMsymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
+                read (30,*) FF(i) % MMSymbol, FF(i) % MM_charge, FF(i) % sig, FF(i) % eps
                 FF(i) % MMSymbol = adjustl( FF(i) % MMSymbol )
                 ! factor1 = 1.0d26       <== factor used to not work with small numbers
                 FF(i) % eps = FF(i) % eps * factor1 * imol
@@ -480,6 +489,7 @@ do i = 1 , N
     FF(i) % residue    = "XXX"
     FF(i) % Symbol     = "XXX"
     FF(i) % MMSymbol   = "XXX"
+    FF(i) % EHSymbol   = "XXX"
     FF(i) % xyz(:)     = 0.0d0
     FF(i) % vel(:)     = 0.0d0
     FF(i) % fbond(:)   = 0.0d0
@@ -512,7 +522,7 @@ integer :: i
 
  DO i = 1 , size(a)
 
-    select case(adjustl(a(i)%symbol))
+    select case(adjustl(a(i)%Symbol))
         case( 'H')
             a(i)%AtNo = 1
         case( 'LI','Li')
@@ -546,7 +556,7 @@ integer :: i
         case( 'I')
             a(i)%AtNo = 53
         case default
-            print*, ' >> Symbol_2_AtNo ; unknown atom found <<' , '[',a(i)%symbol,']' , i
+            print*, ' >> Symbol_2_AtNo ; unknown atom found <<' , '[',a(i)%Symbol,']' , i
             stop
     end select
 
@@ -564,7 +574,7 @@ logical , intent(in) :: read_vel
 
 ! local variables ...
 logical :: exist
-integer :: i , j
+integer :: i , j , nr , indx
 
 MM % box  = Unit_Cell % T_xyz
 MM % ibox =  D_one / MM % box
@@ -578,7 +588,7 @@ do j = 1 , MM % N_of_atoms
     atom(i) % nr         = Unit_Cell % nr(j)
     atom(i) % residue    = adjustl(Unit_Cell % residue(j))
     atom(i) % Symbol     = adjustl(Unit_Cell % Symbol(j))
-    atom(i) % MMSymbol   = adjustl(Unit_Cell % MMSymbol(j))
+    atom(i) % EHSymbol   = adjustl(Unit_Cell % MMSymbol(j))
     atom(i) % xyz(:)     = Unit_Cell % coord(j,:)
     atom(i) % vel(:)     = 0.d0
     atom(i) % fbond(:)   = 0.d0
@@ -595,9 +605,19 @@ do j = 1 , MM % N_of_atoms
     atom(i) % eps        = 0.d0
     atom(i) % sig        = 0.d0
     atom(i) % flex       = .true.
-
 end do
 
+indx = 1
+do nr = 1 , atom( MM % N_of_atoms ) % nr
+    do i = 1 , count( atom%nr == nr ) 
+        atom(indx) % my_intra_id = i
+        indx = indx + 1
+    end do
+end do
+
+CALL MMSymbol_2_Symbol( atom )
+
+! setting up initial velocities ...
 do i = 1 , MM % N_of_atoms
     atom(i) % vel(1:3) = 0.d0
 end do
@@ -619,8 +639,6 @@ if( read_vel ) then
     endif
 
 end if
-
-CALL MMSymbol_2_Symbol( atom )
 
 end subroutine Structure_2_MD
 !

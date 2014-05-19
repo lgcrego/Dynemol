@@ -13,6 +13,7 @@ use constants_m
         character(3)                        :: residue
         character(2)                        :: Symbol
         character(3)                        :: MMSymbol
+        character(3)                        :: EHSymbol
         real*8                              :: xyz(3)
         real*8                              :: vel(3)
         real*8                              :: fbond(3)
@@ -112,17 +113,18 @@ do
     print'("")'      
     write(*,*) ' (1) Symbol      '
     write(*,*) ' (2) MMSymbol    '
-    write(*,*) ' (3) AtNo        '
-    write(*,*) ' (4) my_id       '
-    write(*,*) ' (5) my_intra_id '
-    write(*,*) ' (6) my_species  '
-    write(*,*) ' (7) nr          '
-    write(*,*) ' (8) residue     '
-    write(*,*) ' (9) charge      '
-    write(*,*) ' (10) MM_charge  '
-    write(*,*) ' (11) eps        '
-    write(*,*) ' (12) sig        '
-    write(*,*) ' (13) flex       '
+    write(*,*) ' (3) EHSymbol    '
+    write(*,*) ' (4) AtNo        '
+    write(*,*) ' (5) my_id       '
+    write(*,*) ' (6) my_intra_id '
+    write(*,*) ' (7) my_species  '
+    write(*,*) ' (8) nr          '
+    write(*,*) ' (9) residue     '
+    write(*,*) ' (10) charge     '
+    write(*,*) ' (11) MM_charge  '
+    write(*,*) ' (12) eps        '
+    write(*,*) ' (13) sig        '
+    write(*,*) ' (14) flex       '
 
     read (*,*) option
 
@@ -138,36 +140,39 @@ do
             write(*,20) a(:) % MMSymbol
 
         case(3)
-            write(*,30) a(:) % AtNo
+            write(*,20) a(:) % EHSymbol
 
         case(4)
-            write(*,40) a(:) % my_id
+            write(*,30) a(:) % AtNo
 
         case(5)
-            write(*,50) a(:) % my_intra_id
+            write(*,40) a(:) % my_id
 
         case(6)
-            write(*,30) a(:) % my_species
+            write(*,40) a(:) % my_intra_id
 
         case(7)
-            write(*,50) a(:) % nr
+            write(*,30) a(:) % my_species
 
         case(8)
-            write(*,20) a(:) % residue
+            write(*,50) a(:) % nr
 
         case(9)
-            write(*,60) a(:) % charge
+            write(*,20) a(:) % residue
 
         case(10)
-            write(*,60) a(:) % MM_charge
+            write(*,60) a(:) % charge
 
         case(11)
-            write(*,60) a(:) % eps
+            write(*,60) a(:) % MM_charge
 
         case(12)
+            write(*,60) a(:) % eps
+
+        case(13)
             write(*,60) a(:) % sig
             
-        case(13)
+        case(14)
             write(*,70) a(:) % flex
 
         case default

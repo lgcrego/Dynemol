@@ -94,7 +94,7 @@ if( restart ) then
 else
 
     CALL Cleanup
-    
+
     CALL ForceInter
     CALL ForceIntra
 

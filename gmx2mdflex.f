@@ -78,6 +78,8 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
  
     N_of_AtomTypes = i - 1
 
+    MM % N_of_AtomTypes = i - 1
+
     do i = 1 , N_of_AtomTypes
         where( FF % MMSymbol == InputChars(i,1) )
             FF % sig = InputReals(i,3)
@@ -321,7 +323,20 @@ do a = 1 , MM % N_of_species
                         ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
                         ( Dihed_Type(k) == 1 )
 
-                if( flag1 .OR. flag2 ) then
+
+                flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                flag4 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. & 
+                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)
                     ! harm(:)      = n
@@ -337,19 +352,31 @@ do a = 1 , MM % N_of_species
             
             if( species(a) % funct_dihed(n) == 3 ) then
 
-                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 3 )
+
+                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 3 )
+
+                flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
                         ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 3 )
 
-                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                flag4 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
                         ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 3 )
    
-                if( flag1 .OR. flag2 ) then
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
                      species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6)
                 end if
 
@@ -426,15 +453,15 @@ do a = 1 , MM % N_of_species
                        species(a) % atom(i) % MMSymbol ,   &
                        dummy_int ,                         &
                        species(a) % atom(i) % residue ,    &
-                       species(a) % atom(i) % Symbol ,     &
+                       species(a) % atom(i) % EHSymbol ,   &
                        dummy_int ,                         &
                        species(a) % atom(i) % MM_charge ,  &
                        species(a) % atom(i) % mass
 
-            species(a) % atom(i) % MMSymbol = adjustr(species(a) % atom(i) % MMSymbol)
-            species(a) % atom(i) % nr       = a
-            species(a) % my_species         = a
-            species(a) % atom(i) % flex     = species(a) % flex
+            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
+            species(a) % atom(i) % my_species = a
+            species(a) % my_species           = a
+            species(a) % atom(i) % flex       = species(a) % flex
 
             ! this is the standard; atomic flexibity can also be defined @ ad_hoc_MM_tuning ...    
             where( atom % my_species == a ) atom % flex = species(a) % flex
@@ -442,7 +469,7 @@ do a = 1 , MM % N_of_species
             counter = counter + 1
             FF(counter) % my_id     = species(a) % atom(i) % my_id
             FF(counter) % residue   = species(a) % atom(i) % residue
-            FF(counter) % Symbol    = species(a) % atom(i) % Symbol
+            FF(counter) % EHSymbol  = species(a) % atom(i) % EHSymbol
             FF(counter) % MMSymbol  = species(a) % atom(i) % MMSymbol
             FF(counter) % MM_charge = species(a) % atom(i) % MM_charge
 
