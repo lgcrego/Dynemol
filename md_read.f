@@ -33,9 +33,11 @@ implicit none
 
 ! local variables ...
 real*8          :: massa 
+integer         :: i1 , i2 , i3 , sp
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid , nr
 logical         :: exist , read_vel
 character(10)   :: string
+
 
 !=======================  setting up system  ============================= 
 
@@ -128,12 +130,13 @@ If( read_from_gmx ) then
 
     CALL itp2mdflex( MM , atom , species , FF)
 
-    do nr = 1 , atom( MM % N_of_atoms ) % nr
-        do i = 1 , MM % N_of_species
-
-            where( (atom % nr == nr) .AND. (atom % my_species == i) ) atom % MMSymbol = FF % MMSymbol
-
-        end do
+    i1 = 1
+    do nr = 1 , atom(MM%N_of_atoms) % nr
+        sp = atom(i1) % my_species
+        i3 = count(atom%nr==nr)
+        i2 = i1 + (i3-1)
+        atom(i1:i2)%MMSymbol = pack(FF % MMSymbol , FF % my_species == sp)
+        i1 = i2+1
     end do
 
     CALL top2mdflex( MM , atom , species , FF )

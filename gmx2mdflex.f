@@ -467,11 +467,12 @@ do a = 1 , MM % N_of_species
             where( atom % my_species == a ) atom % flex = species(a) % flex
 
             counter = counter + 1
-            FF(counter) % my_id     = species(a) % atom(i) % my_id
-            FF(counter) % residue   = species(a) % atom(i) % residue
-            FF(counter) % EHSymbol  = species(a) % atom(i) % EHSymbol
-            FF(counter) % MMSymbol  = species(a) % atom(i) % MMSymbol
-            FF(counter) % MM_charge = species(a) % atom(i) % MM_charge
+            FF(counter) % my_species = a
+            FF(counter) % my_id      = species(a) % atom(i) % my_id
+            FF(counter) % residue    = species(a) % atom(i) % residue
+            FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
+            FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
+            FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge
 
         end do
 
