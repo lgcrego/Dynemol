@@ -143,8 +143,6 @@ l = 1
 do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
        massa = Atomic_mass( atom(j) % AtNo )
-       ! put atom inside the box (note that here we use DINT instead of DNINT because did not change to CM yet) ...
-       atom(j) % xyz(:) = atom(j) % xyz(:) - MM % box(:) * DINT( atom(j) % xyz(:) * MM % ibox(:) ) * PBC(:)
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa
