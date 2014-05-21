@@ -420,6 +420,7 @@ character(18)                   :: keyword , keyword_tmp
 character(10)                   :: string
 character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
 real*8                          :: dummy_real , factor
+integer                         :: i1 , i2 , i3 , sp , nr
 integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
 
 allocate( InputChars    ( 10000 , 10 )                   )
@@ -621,6 +622,16 @@ end do
 FF % residue  = adjustl(FF % residue)
 FF % Symbol   = adjustl(FF % Symbol)
 FF % MMSymbol = adjustl(FF % MMSymbol)
+
+! passing MMSymbol from FF to atom ...
+i1 = 1
+    do nr = 1 , atom(MM%N_of_atoms) % nr
+    sp = atom(i1) % my_species
+    i3 = count(atom%nr==nr)
+    i2 = i1 + (i3-1)
+    atom(i1:i2)%MMSymbol = pack(FF % MMSymbol , FF % my_species == sp)
+    i1 = i2+1
+end do
 
 deallocate( InputChars , InputIntegers )
 

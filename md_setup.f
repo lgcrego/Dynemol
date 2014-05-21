@@ -87,10 +87,10 @@ end subroutine offset
  implicit none
 
 ! local variables ...
- integer :: i, xyz, k, l 
- real*8  :: massa 
+ integer              :: i, xyz, k, l 
+ real*8               :: massa 
  real*8, dimension(3) :: t0, t, t1, dr
- logical :: SmallMolecule
+ logical              :: SmallMolecule
 
 ! calculates the center of mass of molecule i ...
 

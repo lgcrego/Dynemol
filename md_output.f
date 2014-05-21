@@ -178,16 +178,40 @@ subroutine ReGroupMolecule
 implicit none
 
 ! local variables ...
-integer :: j, xyz 
+integer :: i , j , j1 , j2 , xyz , nresid , SmallMolecule
 real*8  :: CartesianDistance
-
+ 
 If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom )
 
- do j = 1 , MM % N_of_atoms
-    do xyz = 1 , 3
-       CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
-       If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
-    end do
+ do i = 1 , MM % N_of_molecules
+    nresid = molecule(i) % nr
+    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+    j2 = sum(molecule(1:nresid) % N_of_atoms)
+
+     SmallMolecule = NINT(float(molecule(i)%N_of_atoms) / float(MM%N_of_atoms)) 
+
+     select case (SmallMolecule)
+
+         ! Small ...
+         case (0)
+
+            do j = j1 , j2
+                do xyz = 1 , 3
+                    CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)
+                    If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+                end do
+            end do
+
+         ! Big ...
+         case (1) 
+
+            do xyz = 1 , 3
+                CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
+                If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+            end do
+
+     end select 
+
  end do
 
  previous = atom
