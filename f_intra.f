@@ -40,6 +40,12 @@ do j = 1 , MM % N_of_atoms
     atom(j) % fnonch(:) = 0.d0           ! Non-bonded coulomb 1-4
 end do
 
+bdpot     = 0.0d0
+angpot    = 0.0d0
+dihpot    = 0.0d0
+lj14pot   = 0.0d0
+coul14pot = 0.0d0
+
 ! new stretch ...
 do i = 1 , MM % N_of_molecules
     do j = 1 ,  molecule(i) % Nbonds
@@ -50,7 +56,7 @@ do i = 1 , MM % N_of_molecules
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             rijsq  = SQRT(rijq)
-            qterm  = 0.5d0 * molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )**2
+            qterm  = 0.5d0 * molecule(i) % kbond0(j,1) * ( rijsq - molecule(i) % kbond0(j,2) ) * ( rijsq - molecule(i) % kbond0(j,2) ) 
             coephi = molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )/rijsq
             atom(atj) % fbond(:) = atom(atj) % fbond(:) - coephi*rij(:)
             atom(ati) % fbond(:) = atom(ati) % fbond(:) + coephi*rij(:)
@@ -195,7 +201,7 @@ do i = 1 , MM % N_of_molecules
             atom(atl) % fdihed(1) = atom(atl) % fdihed(1) + f4x
             atom(atl) % fdihed(2) = atom(atl) % fdihed(2) + f4y
             atom(atl) % fdihed(3) = atom(atl) % fdihed(3) + f4z
-         
+
             dihpot = dihpot + pterm
     
         end if
@@ -267,6 +273,7 @@ end do
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
 pot2 = pot + ( bdpot + angpot + dihpot) * factor3 + lj14pot + coul14pot
+pot2 = pot2 * mol * 1.0d-6 / MM % N_of_molecules
 
 ! New Get total force ...
 

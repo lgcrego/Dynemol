@@ -9,6 +9,7 @@ module MM_dynamics_m
     use f_inter_m           , only : FORCEINTER
     use f_intra_m           , only : FORCEINTRA
     use QMMM_m              , only : QMMM_FORCE
+    use for_force           , only : pot2
     use verlet_m            , only : VV1 , VV2 , Summat , PRESS_Boundary
     use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
@@ -32,6 +33,7 @@ integer , intent(in)    :: frame
 
 ! local variables ...
 real*8  :: dt , Ttrans , pressure , density
+real*8  :: cin
 integer :: i
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosencond to second ...
@@ -44,19 +46,18 @@ CALL VV1( dt )
 CALL Molecular_CM
 CALL ForceInter
 CALL ForceIntra
-
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-CALL VV2 ( Ttrans , dt )
+CALL VV2 ( Ttrans , cin , dt )
 
 CALL Summat( density ) 
 CALL Press_Boundary( pressure , dt )
 
-if ( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
+if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-if ( mod(frame,MM_log_step) == 0   ) CALL output( Ttrans , frame , dt )
+if( mod(frame,MM_log_step) == 0   ) CALL output( Ttrans , frame , dt )
 
-if ( mod(frame,MM_log_step) == 0   ) write(*,'(I7,4F15.5)') frame , Ttrans , pressure , density
+if( mod(frame,MM_log_step) == 0   ) write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , cin , pot2 , cin + pot2
 
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)

@@ -23,7 +23,7 @@ implicit none
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-real*8  , dimension (3) :: ai
+real*8  , dimension(3)  :: ai
 real*8                  :: massa , dt_half
 integer                 :: i
 
@@ -34,7 +34,7 @@ do i = 1 , MM % N_of_atoms
     if( atom(i) % flex ) then
         massa = mol / atom(i) % mass 
         ai(1:3) = atom(i) % ftotal(1:3) * massa
-        atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + atom(i) % vel(1:3) * 1.0d10 * dt + dt * dt * ai(1:3) * 0.5d10
+        atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + ( atom(i) % vel(1:3) * dt + 0.5d0 * dt * dt * ai(1:3) ) * 1.0d10
         atom(i) % vel(1:3) = atom(i) % vel(1:3) + dt_half * ai(1:3)
     end if
 end do
@@ -43,17 +43,18 @@ end subroutine VV1
 !
 !
 !
-!=============================
- subroutine VV2( Ttrans , dt )
-!=============================
+!===================================
+ subroutine VV2( Ttrans , cin , dt )
+!===================================
 implicit none
-real*8     , intent(inout) :: Ttrans
-real*8     , intent(in)    :: dt
+real*8  , intent(inout) :: Ttrans
+real*8  , intent(out)   :: cin
+real*8  , intent(in)    :: dt
 
 ! local variables ...
-integer :: i, j, j1, j2, nresid
-real*8  :: massa, sumtemp, temp, lambda, dt_half
-real*8, dimension(3) :: vi
+real*8  , dimension(3)  :: vi
+real*8                  :: massa , sumtemp , temp , lambda , dt_half , viq
+integer                 :: i , j , j1 , j2 , nresid
 
 sumtemp = D_zero
 stresvv = D_zero
@@ -87,7 +88,7 @@ stresvv(3,1) = stresvv(1,3)
 stresvv(3,2) = stresvv(2,3)
 
 !######################################################
-if (sumtemp == 0.d0) then
+if( sumtemp == 0.d0 ) then
     temp = D_ONE
 else
     ! instantaneous temperature : E_kin/(3/2*NkB) ... 
@@ -112,7 +113,7 @@ do i = 1 , MM % N_of_molecules
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if ( atom(j) % flex ) then
-            massa = mol / Atomic_mass( atom(j) % AtNo )
+            massa = mol / atom(j) % mass
             atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
             vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
         end if
@@ -126,6 +127,16 @@ end do
 Ttrans = sumtemp * iboltz / real(MM % N_of_molecules)
 Ekin = Ekin + sumtemp
 TempToT = TempTot + Ttrans
+
+! calculation of the kinetic energy ...
+cin = 0.0d0
+
+do i = 1 , MM % N_of_atoms
+    viq = atom(i) % vel(1) * atom(i) % vel(1) + atom(i) % vel(2) * atom(i) % vel(2) + atom(i) % vel(3) * atom(i) % vel(3) 
+    cin = cin + ( atom(i) % mass / mol ) * viq * half
+end do
+
+cin = cin * mol * 1.0d-6 / MM % N_of_molecules
 
 end subroutine VV2
 !
