@@ -33,11 +33,11 @@ implicit none
 rtwopi = 1.d0/twopi
 
 do j = 1 , MM % N_of_atoms
-    atom(j) % fnonbd(:) = 0.d0           ! Non-bonded
-    atom(j) % fbond(:)  = 0.d0           ! Stretching/Bonding 
-    atom(j) % fang(:)   = 0.d0           ! Bending/Angular
-    atom(j) % fdihed(:) = 0.d0           ! Dihedral
-    atom(j) % fnonch(:) = 0.d0           ! Non-bonded coulomb 1-4
+    atom(j) % fnonbd14(:) = 0.d0           ! Non-bonded
+    atom(j) % fbond(:)    = 0.d0           ! Stretching/Bonding 
+    atom(j) % fang(:)     = 0.d0           ! Bending/Angular
+    atom(j) % fdihed(:)   = 0.d0           ! Dihedral
+    atom(j) % fnonch14(:) = 0.d0           ! Non-bonded coulomb 1-4
 end do
 
 bdpot     = 0.0d0
@@ -241,8 +241,8 @@ do i = 1 , MM % N_of_molecules
             sr12  = sr6 * sr6
             fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
             fs    = (fs / rklq) * molecule(i) % fact14(j)
-            atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
-            atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
+            atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
+            atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
             ! factor used to compensate the factor1 and factor2 factors ...
             ! factor3 = 1.0d-20
             sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 ) 
@@ -256,8 +256,8 @@ do i = 1 , MM % N_of_molecules
             expar = EXP( -(KRIJ*KRIJ) )
             freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
             freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * molecule(i) % fact14(j)
-            atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
-            atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
+            atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + freal * rij(1:3)
+            atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
             ! factor used to compensate the factor1 and factor2 factors ...
             ! factor3 = 1.0d-20
             tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * molecule(i) % fact14(j)
@@ -278,11 +278,11 @@ pot2 = pot2 * mol * 1.0d-6 / MM % N_of_molecules
 ! New Get total force ...
 
 do i = 1 , MM % N_of_atoms
-    atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)  +  &
-                                                  atom(i) % fang(:)   +  &
-                                                  atom(i) % fdihed(:) +  &
-                                                  atom(i) % fnonbd(:) +  & 
-                                                  atom(i) % fnonch(:)    &
+    atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
+                                                  atom(i) % fang(:)     +  &
+                                                  atom(i) % fdihed(:)   +  &
+                                                  atom(i) % fnonbd14(:) +  & 
+                                                  atom(i) % fnonch14(:)    &
                                                   ) * 1.d-10
 end do
 

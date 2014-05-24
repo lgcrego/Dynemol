@@ -484,30 +484,30 @@ integer :: i
 allocate( FF ( N ) )
 
 do i = 1 , N
-    FF(i) % AtNo       = 0
-    FF(i) % my_id      = 0
-    FF(i) % my_species = 0
-    FF(i) % nr         = 0
-    FF(i) % residue    = "XXX"
-    FF(i) % Symbol     = "XXX"
-    FF(i) % MMSymbol   = "XXX"
-    FF(i) % EHSymbol   = "XXX"
-    FF(i) % xyz(:)     = 0.0d0
-    FF(i) % vel(:)     = 0.0d0
-    FF(i) % fbond(:)   = 0.0d0
-    FF(i) % fang(:)    = 0.0d0
-    FF(i) % fdihed(:)  = 0.0d0
-    FF(i) % fnonbd(:)  = 0.0d0
-    FF(i) % fnonch(:)  = 0.0d0
-    FF(i) % ftotal(:)  = 0.0d0
-    FF(i) % fch(:)     = 0.0d0
-    FF(i) % fsr(:)     = 0.0d0
-    FF(i) % mass       = 0.0d0
-    FF(i) % charge     = 0.0d0
-    FF(i) % MM_charge  = 0.0d0
-    FF(i) % eps        = 0.0d0
-    FF(i) % sig        = 0.0d0
-    FF(i) % flex       = .false.
+    FF(i) % AtNo         = 0
+    FF(i) % my_id        = 0
+    FF(i) % my_species   = 0
+    FF(i) % nr           = 0
+    FF(i) % residue      = "XXX"
+    FF(i) % Symbol       = "XXX"
+    FF(i) % MMSymbol     = "XXX"
+    FF(i) % EHSymbol     = "XXX"
+    FF(i) % xyz(:)       = 0.0d0
+    FF(i) % vel(:)       = 0.0d0
+    FF(i) % fbond(:)     = 0.0d0
+    FF(i) % fang(:)      = 0.0d0
+    FF(i) % fdihed(:)    = 0.0d0
+    FF(i) % fnonbd14(:)  = 0.0d0
+    FF(i) % fnonch14(:)  = 0.0d0
+    FF(i) % ftotal(:)    = 0.0d0
+    FF(i) % fch(:)       = 0.0d0
+    FF(i) % fsr(:)       = 0.0d0
+    FF(i) % mass         = 0.0d0
+    FF(i) % charge       = 0.0d0
+    FF(i) % MM_charge    = 0.0d0
+    FF(i) % eps          = 0.0d0
+    FF(i) % sig          = 0.0d0
+    FF(i) % flex         = .false.
 end do
 
 end subroutine allocate_FF
@@ -585,28 +585,28 @@ do j = 1 , MM % N_of_atoms
 
     i = QMMM_key(j)
 
-    atom(i) % AtNo       = Unit_Cell % AtNo(j)
-    atom(i) % my_id      = i
-    atom(i) % nr         = Unit_Cell % nr(j)
-    atom(i) % residue    = adjustl(Unit_Cell % residue(j))
-    atom(i) % Symbol     = adjustl(Unit_Cell % Symbol(j))
-    atom(i) % EHSymbol   = adjustl(Unit_Cell % MMSymbol(j))
-    atom(i) % xyz(:)     = Unit_Cell % coord(j,:)
-    atom(i) % vel(:)     = 0.d0
-    atom(i) % fbond(:)   = 0.d0
-    atom(i) % fang(:)    = 0.d0
-    atom(i) % fdihed(:)  = 0.d0
-    atom(i) % fnonbd(:)  = 0.d0
-    atom(i) % fnonch(:)  = 0.d0
-    atom(i) % ftotal(:)  = 0.d0
-    atom(i) % fch(:)     = 0.d0
-    atom(i) % fsr(:)     = 0.d0
-    atom(i) % mass       = 0.d0
-    atom(i) % charge     = 0.d0
-    atom(i) % MM_charge  = 0.d0
-    atom(i) % eps        = 0.d0
-    atom(i) % sig        = 0.d0
-    atom(i) % flex       = .true.
+    atom(i) % AtNo         = Unit_Cell % AtNo(j)
+    atom(i) % my_id        = i
+    atom(i) % nr           = Unit_Cell % nr(j)
+    atom(i) % residue      = adjustl(Unit_Cell % residue(j))
+    atom(i) % Symbol       = adjustl(Unit_Cell % Symbol(j))
+    atom(i) % EHSymbol     = adjustl(Unit_Cell % MMSymbol(j))
+    atom(i) % xyz(:)       = Unit_Cell % coord(j,:)
+    atom(i) % vel(:)       = 0.d0
+    atom(i) % fbond(:)     = 0.d0
+    atom(i) % fang(:)      = 0.d0
+    atom(i) % fdihed(:)    = 0.d0
+    atom(i) % fnonbd14(:)  = 0.d0
+    atom(i) % fnonch14(:)  = 0.d0
+    atom(i) % ftotal(:)    = 0.d0
+    atom(i) % fch(:)       = 0.d0
+    atom(i) % fsr(:)       = 0.d0
+    atom(i) % mass         = 0.d0
+    atom(i) % charge       = 0.d0
+    atom(i) % MM_charge    = 0.d0
+    atom(i) % eps          = 0.d0
+    atom(i) % sig          = 0.d0
+    atom(i) % flex         = .true.
 end do
 
 indx = 1
