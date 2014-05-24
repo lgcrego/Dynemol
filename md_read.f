@@ -420,6 +420,15 @@ do i = 1 , MM % N_of_molecules
     k = k + molecule(i) % N_of_atoms
 end do
 
+do i = 1 , MM % N_of_species
+    k = count( molecule % my_species == species(i) % my_species )
+    where( molecule % my_species == i ) 
+        molecule % N_of_molecules = k
+        molecule % residue        = species(i) % residue
+        molecule % flex           = species(i) % flex
+    end where
+end do
+
 do i = 1 , size(atom)
     atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
@@ -444,7 +453,7 @@ allocate( molecule ( N ) )
 do i = 1 , N
     molecule(i) % my_species     = 0
     molecule(i) % N_of_atoms     = 0
-    molecule(i) % N_of_molecules = "XXX"
+    molecule(i) % N_of_molecules = 0
     molecule(i) % cm(:)          = 0.0d0
     molecule(i) % mass           = 0.0d0
     molecule(i) % flex           = .false.
