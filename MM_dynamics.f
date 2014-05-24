@@ -33,7 +33,7 @@ integer , intent(in)    :: frame
 
 ! local variables ...
 real*8  :: dt , Ttrans , pressure , density
-real*8  :: cin
+real*8  :: kinetic
 integer :: i
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosencond to second ...
@@ -48,7 +48,7 @@ CALL ForceInter
 CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-CALL VV2 ( Ttrans , cin , dt )
+CALL VV2 ( Ttrans , kinetic , dt )
 
 CALL Summat( density ) 
 CALL Press_Boundary( pressure , dt )
@@ -57,7 +57,7 @@ if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
 if( mod(frame,MM_log_step) == 0   ) CALL output( Ttrans , frame , dt )
 
-if( mod(frame,MM_log_step) == 0   ) write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , cin , pot2 , cin + pot2
+if( mod(frame,MM_log_step) == 0   ) write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot2 , kinetic + pot2
 
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)

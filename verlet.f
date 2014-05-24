@@ -1,7 +1,6 @@
 module verlet_m
 
     use constants_m
-    use atomicmass
     use syst        ! using all syst
     use parameters_m , only: PBC
     use MD_read_m    , only: MM , atom , molecule, species
@@ -23,9 +22,9 @@ implicit none
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-real*8  , dimension(3)  :: ai
-real*8                  :: massa , dt_half
-integer                 :: i
+real*8  :: ai(3)
+real*8  :: massa , dt_half
+integer :: i
 
 dt_half = dt / two
 
@@ -34,7 +33,7 @@ do i = 1 , MM % N_of_atoms
     if( atom(i) % flex ) then
         massa = mol / atom(i) % mass 
         ai(1:3) = atom(i) % ftotal(1:3) * massa
-        atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + ( atom(i) % vel(1:3) * dt + 0.5d0 * dt * dt * ai(1:3) ) * 1.0d10
+        atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + ( atom(i) % vel(1:3) * dt + HALF * dt * dt * ai(1:3) ) * 1.0d10
         atom(i) % vel(1:3) = atom(i) % vel(1:3) + dt_half * ai(1:3)
     end if
 end do
@@ -43,44 +42,44 @@ end subroutine VV1
 !
 !
 !
-!===================================
- subroutine VV2( Ttrans , cin , dt )
-!===================================
+!=======================================
+ subroutine VV2( Ttrans , kinetic , dt )
+!=======================================
 implicit none
 real*8  , intent(inout) :: Ttrans
-real*8  , intent(out)   :: cin
+real*8  , intent(out)   :: kinetic
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-real*8  , dimension(3)  :: vi
-real*8                  :: massa , sumtemp , temp , lambda , dt_half , viq
-integer                 :: i , j , j1 , j2 , nresid
+real*8  :: V_CM(3)
+real*8  :: massa , sumtemp , temp , lambda , dt_half 
+integer :: i , j , j1 , j2 , nresid
 
 sumtemp = D_zero
 stresvv = D_zero
 
 ! VV2 and thermostat ...
 do i = 1 , MM % N_of_molecules
-    vi = D_zero
+    V_CM = D_zero
     nresid = molecule(i) % nr
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
     do j = j1 , j2
         if( atom(j) % flex ) then
-            massa = Atomic_mass( atom(j) % AtNo )
-            vi(1:3) = vi(1:3) + massa * atom(j) % vel(1:3)
+            massa = atom(j) % mass   
+            V_CM(1:3) = V_CM(1:3) + massa * atom(j) % vel(1:3)
         end if
     end do   
     massa = molecule(i) % mass
-    vi(1:3) = vi(1:3) * imol / massa
-    stresvv(1,1) = stresvv(1,1) + massa * vi(1) * vi(1)
-    stresvv(2,2) = stresvv(2,2) + massa * vi(2) * vi(2)
-    stresvv(3,3) = stresvv(3,3) + massa * vi(3) * vi(3)
-    stresvv(1,2) = stresvv(1,2) + massa * vi(1) * vi(2)
-    stresvv(1,3) = stresvv(1,3) + massa * vi(1) * vi(3)
-    stresvv(2,3) = stresvv(2,3) + massa * vi(2) * vi(3)
+    V_CM(1:3) = V_CM(1:3) * imol / massa
+    stresvv(1,1) = stresvv(1,1) + massa * V_CM(1) * V_CM(1)
+    stresvv(2,2) = stresvv(2,2) + massa * V_CM(2) * V_CM(2)
+    stresvv(3,3) = stresvv(3,3) + massa * V_CM(3) * V_CM(3)
+    stresvv(1,2) = stresvv(1,2) + massa * V_CM(1) * V_CM(2)
+    stresvv(1,3) = stresvv(1,3) + massa * V_CM(1) * V_CM(3)
+    stresvv(2,3) = stresvv(2,3) + massa * V_CM(2) * V_CM(3)
     ! 2*kinetic energy of the system ...
-    sumtemp = sumtemp + massa * ( vi(1) * vi(1) + vi(2) * vi(2) + vi(3) * vi(3) )
+    sumtemp = sumtemp + massa * ( V_CM(1) * V_CM(1) + V_CM(2) * V_CM(2) + V_CM(3) * V_CM(3) )
 end do
 
 stresvv(2,1) = stresvv(1,2)
@@ -107,7 +106,7 @@ dt_half = dt / two
 
 sumtemp = 0.d0
 do i = 1 , MM % N_of_molecules
-    vi(1:3) = 0.0d0
+    V_CM(1:3) = D_zero
     nresid = molecule(i) % nr
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
@@ -115,28 +114,26 @@ do i = 1 , MM % N_of_molecules
         if ( atom(j) % flex ) then
             massa = mol / atom(j) % mass
             atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
-            vi(1:3) = vi(1:3) + atom(j) % vel(1:3) / massa
+            V_CM(1:3) = V_CM(1:3) + atom(j) % vel(1:3) / massa
         end if
     end do
     massa = molecule(i) % mass
-    vi(1:3) = vi(1:3) / massa
-    sumtemp = sumtemp + massa * ( sum( vi(:) * vi(:) ) )
+    V_CM(1:3) = V_CM(1:3) / massa
+    sumtemp = sumtemp + massa * ( sum( V_CM(:) * V_CM(:) ) )
 end do
 
 ! instantaneous temperature of the system after contact with thermostat ...
-Ttrans = sumtemp * iboltz / real(MM % N_of_molecules)
-Ekin = Ekin + sumtemp
-TempToT = TempTot + Ttrans
+Ttrans  =  sumtemp * iboltz / real(MM % N_of_molecules)
+Ekin    =  Ekin + sumtemp
+TempToT =  TempTot + Ttrans
+
 
 ! calculation of the kinetic energy ...
-cin = 0.0d0
-
+kinetic = 0.0d0
 do i = 1 , MM % N_of_atoms
-    viq = atom(i) % vel(1) * atom(i) % vel(1) + atom(i) % vel(2) * atom(i) % vel(2) + atom(i) % vel(3) * atom(i) % vel(3) 
-    cin = cin + ( atom(i) % mass / mol ) * viq * half
+    kinetic = kinetic + ( atom(i) % mass / mol ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
 end do
-
-cin = cin * mol * 1.0d-6 / MM % N_of_molecules
+kinetic = kinetic * mol * 1.0d-6 / MM % N_of_molecules
 
 end subroutine VV2
 !
