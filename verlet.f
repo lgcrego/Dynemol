@@ -91,7 +91,7 @@ if( sumtemp == 0.d0 ) then
     temp = D_ONE
 else
     ! instantaneous temperature : E_kin/(3/2*NkB) ... 
-    temp = sumtemp * iboltz / real( MM % N_of_molecules )
+    temp = sumtemp * iboltz / real( count(molecule%flex) )
 endif
 
 ! Berendsen Thermostat ; turned off for talt == infty ...
@@ -123,7 +123,7 @@ do i = 1 , MM % N_of_molecules
 end do
 
 ! instantaneous temperature of the system after contact with thermostat ...
-Ttrans  =  sumtemp * iboltz / real(MM % N_of_molecules)
+Ttrans  =  sumtemp * iboltz / real( count(molecule%flex) )
 Ekin    =  Ekin + sumtemp
 TempToT =  TempTot + Ttrans
 
