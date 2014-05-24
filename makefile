@@ -30,31 +30,31 @@ SOURCE1 = integ-Coul.o \
 		  ckplm-Coul.o \
 		  util-Coul.o
 
-SOURCE2 = constants_m.o  \
-		  exec_time.o  \
-		  types_EHT.o  \
+SOURCE2 = constants_m.o \
+		  exec_time.o \
+		  types_EHT.o \
 		  types_MM.o \
-		  parameters.o  \
+		  parameters.o \
 		  parameters_MM.o \
-		  allocation_m.o  \
-		  util.o  \
-		  EHT_input.o  \
+		  allocation_m.o \
+		  util.o \
+		  EHT_input.o \
 		  tuning.o \
 		  gmx2mdflex.o \
-		  babel_routines.o  \
-		  babel.o  \
-		  structure.o  \
+		  babel_routines.o \
+		  babel.o \
+		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
 		  f_intra.o \
 		  f_inter.o \
 		  CoulInt_QMMM.o \
 		  md_output.o \
-		  pbc.o  \
-		  overlap_D.o  \
+		  pbc.o \
+		  overlap_D.o \
 		  STO.o \
-		  multip_routines.o  \
-		  electron_hole_DP.o	\
+		  multip_routines.o \
+		  electron_hole_DP.o \
 		  FMO.o \
 		  DP_main.o \
 		  td_dp.o \
@@ -64,10 +64,10 @@ SOURCE2 = constants_m.o  \
 		  polarizability.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
-		  AlphaPolar.o  \
+		  AlphaPolar.o \
 		  data_output.o \
 		  verlet.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \
