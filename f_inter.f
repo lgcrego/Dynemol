@@ -8,6 +8,7 @@ module F_inter_m
     use MD_read_m    , only : atom , MM , molecule
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
+    use gmx2mdflex   , only : SpecialPairs
  
     public :: FORCEINTER
     
@@ -28,12 +29,13 @@ real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
 real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)
 real*8                  :: rij(3) , rjk(3) , rkl(3)
-real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl
+real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps, sig
 real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself
 real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
 real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 
-integer                 :: i , j , k , l , atk , atl , j1 , j2
+integer                 :: i , j , k , l , n , atk , atl , j1 , j2
 integer                 :: OMP_get_thread_num , ithr , numthr , nresid , nresidl , nresidk
+logical                 :: flag1 , flag2 
 
 CALL offset( species_offset )
 
@@ -166,22 +168,38 @@ do k = 1 , MM % N_of_atoms - 1
                         case (2) 
                             ! AMBER FF :: GMX COMB-RULE 2
 
-                            sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
+                            sig   = ( atom(k) % sig + atom(l) % sig ) 
 
                         case (3)
                             ! OPLS  FF :: GMX COMB-RULE 3
 
-                            sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
+                            sig   = ( atom(k) % sig * atom(l) % sig ) 
 
                     end select
+                    eps = atom(k) % eps * atom(l) % eps
 
+                    ! Nbond_parms directive on ...
+                    read_loop: do  n = 1, size(SpecialPairs)
+                       flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                               ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+                       flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                               ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+                       if ( flag1 .OR. flag2 ) then
+                          sig = SpecialPairs(n) % Parms(1) * SpecialPairs(n) % Parms(1)
+                          eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                          exit read_loop
+                       end if
+                       cycle  read_loop
+                    end do read_loop
+                   
+                    sr2 = ( sig * sig ) / rklq
                     sr6  = sr2 * sr2 * sr2
                     sr12 = sr6 * sr6
 
-                    fs   = 24.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
+                    fs   = 24.d0 * ( eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
                     fs   = fs / rklq - fscut(atk,atl) / rklsq
 
-                    vsr  = 4.d0 * ( atom(k) % eps * atom(l) % eps * factor3 ) * ( sr12 - sr6 )
+                    vsr  = 4.d0 * ( eps * factor3 ) * ( sr12 - sr6 )
                     vsr  = vsr - vscut(atk,atl) + fscut(atk,atl) * ( rklsq - rcut )
 
                     pot  = pot + vsr
@@ -229,6 +247,7 @@ do k = 1 , MM % N_of_atoms - 1
     end do
 end do
 !$OMP end parallel do
+
 ! ################################################################################3
 
 pot = pot - vself

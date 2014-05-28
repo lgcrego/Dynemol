@@ -3,17 +3,18 @@ module gmx2mdflex
 
 use constants_m
 use for_force
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles
+use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 
 private
  
-public :: top2mdflex, itp2mdflex
+public :: top2mdflex, itp2mdflex, SpecialPairs
 
     ! module variables ...
     real*8                           , save  :: fact14
     character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
     real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
+    type(DefinePairs) , allocatable :: SpecialPairs(:)
 
 contains
 !
@@ -35,7 +36,7 @@ real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:)
 real*8                          :: factQQ , dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
-integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes , NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types
+integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes , NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms
 
 character(1)                    :: keyword_1
 character(3)                    :: dummy_char
@@ -113,8 +114,32 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
 !=====================================================================================
 !  NonBonding parameters :: reading ...
+    do
+        read(33,100) keyword
+        if( trim(keyword) == "[ nonbond_params ]" ) exit
+    end do
 
-!  if there are [ nonbonding parameters ] read here...
+    i = 1
+    do
+        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
+        if( ioerr /= 0 ) exit
+        i = i + 1
+    end do
+    backspace(33)
+
+    NBondParms = i - 1
+
+    allocate( SpecialPairs ( NbondParms ) )
+
+    forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
+
+    SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
+    SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1)
+
+    ! conversion 
+    ! factor1 = 1.0d26      <== Factor used to correct the units readed from Gromacs
+    SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+    SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
 
 !=====================================================================================
 !  reads [ bondtypes ] ...

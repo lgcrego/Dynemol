@@ -4,6 +4,7 @@ module setup_m
     use atomicmass
     use parameters_m    , only : PBC
     use MD_read_m       , only : MM , atom , molecule , species , FF
+    use gmx2mdflex      , only : SpecialPairs
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
 
@@ -18,8 +19,9 @@ contains
  implicit none
  
 ! local variables
- integer :: i, j, atmax
- real*8  :: sr2, sr6, sr12, expar, ERFC, KRIJ
+ integer :: i, j, k, atmax
+ real*8  :: sr2, sr6, sr12, expar, ERFC, KRIJ, eps, sig
+ logical :: flag1 , flag2 
 
  rcutsq  = rcut * rcut
 
@@ -39,15 +41,32 @@ contains
        select case ( MM % CombinationRule )
             case (2)
             ! AMBER FF :: GMX COMB-RULE 2 
-            sr2 = ( (FF(i) % sig + FF(j) % sig ) * (FF(i) % sig + FF(j) % sig ) ) / rcutsq 
+            sig = FF(i) % sig + FF(j) % sig
             case (3)
             ! OPLS  FF :: GMX COMB-RULE 3  
-            sr2 = ( (FF(i) % sig * FF(j) % sig ) * (FF(j) % sig * FF(i) % sig ) ) / rcutsq  
+            sig = FF(i) % sig * FF(j) % sig
        end select
+       eps  = FF(i) % eps * FF(j) % eps
+
+       ! Nbond_parms directive on ...
+       read_loop: do  k = 1, size(SpecialPairs)
+            flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                    ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
+            flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                    ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
+            if ( flag1 .OR. flag2 ) then
+                sig = SpecialPairs(k) % Parms(1) * SpecialPairs(k) % Parms(1)
+                eps = SpecialPairs(k) % Parms(2) * SpecialPairs(k) % Parms(2) 
+                exit read_loop
+            end if
+       cycle  read_loop
+       end do read_loop
+
+       sr2  = ( sig * sig ) / rcutsq
        sr6  = sr2 * sr2 * sr2
        sr12 = sr6 * sr6
-       vscut(i,j) = 4.d0  * ( FF(i) % eps * FF(j) % eps * factor3 ) * (sr12 - sr6)
-       fscut(i,j) = 24.d0 * ( FF(i) % eps * FF(j) % eps * factor3 ) * (2.d0 * sr12 - sr6)
+       vscut(i,j) = 4.d0  * ( eps * factor3 ) * (sr12 - sr6)
+       fscut(i,j) = 24.d0 * ( eps * factor3 ) * (2.d0 * sr12 - sr6)
        fscut(i,j) = fscut(i,j) / rcut       
      end do
    end do 

@@ -2,7 +2,7 @@ module MM_types
 
 use constants_m
 
-    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , debug_MM
+    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , debug_MM
 
     type MM_atomic
         integer                             :: AtNo
@@ -84,6 +84,11 @@ use constants_m
         character(15)                       :: label
         real*8                              :: kang0(2)
     end type DefineAngles
+
+    type DefinePairs
+        character(3)                        :: MMSymbols(2)
+        real*8                              :: Parms(2)
+    end type DefinePairs
 
     interface debug_MM
         module procedure debug_MM_atomic 
