@@ -9,7 +9,7 @@ module verlet_m
 
     public :: VV1 , VV2 , SUMMAT , PRESS_BOUNDARY
 
-    ! local variables ...
+    ! module variables ...
     real*8  :: Astres(3,3) , stresvv(3,3)
 
 contains
@@ -32,9 +32,9 @@ dt_half = dt / two
 do i = 1 , MM % N_of_atoms
     if( atom(i) % flex ) then
         massa = mol / atom(i) % mass 
-        ai(1:3) = atom(i) % ftotal(1:3) * massa
-        atom(i) % xyz(1:3) = atom(i) % xyz(1:3) + ( atom(i) % vel(1:3) * dt + HALF * dt * dt * ai(1:3) ) * 1.0d10
-        atom(i) % vel(1:3) = atom(i) % vel(1:3) + dt_half * ai(1:3)
+        ai = atom(i) % ftotal * massa
+        atom(i) % xyz = atom(i) % xyz + ( atom(i) % vel*dt + HALF*dt*dt*ai ) * 1.0d10
+        atom(i) % vel = atom(i) % vel + dt_half*ai
     end if
 end do
 
@@ -51,36 +51,66 @@ real*8  , intent(out)   :: kinetic
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-real*8  :: V_CM(3)
-real*8  :: massa , sumtemp , temp , lambda , dt_half 
-integer :: i , j , j1 , j2 , nresid
+real*8  :: tmp(3) , V_CM(3) , V_atomic(3)
+real*8  :: massa , factor , sumtemp , temp , lambda , dt_half 
+integer :: i , j , j1 , j2 , k , nresid , thermostat_type
 
+! select atomic or molecular kinetic energy to calculate the temperature ...
+thermostat_type = NINT( float(maxval(molecule%N_of_atoms)) / float(MM%N_of_molecules) )
+
+! VV2 and thermostats ...
 sumtemp = D_zero
 stresvv = D_zero
 
-! VV2 and thermostat ...
-do i = 1 , MM % N_of_molecules
-    V_CM = D_zero
-    nresid = molecule(i) % nr
-    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-    j2 = sum(molecule(1:nresid) % N_of_atoms)
-    do j = j1 , j2
-        if( atom(j) % flex ) then
-            massa = atom(j) % mass   
-            V_CM(1:3) = V_CM(1:3) + massa * atom(j) % vel(1:3)
-        end if
-    end do   
-    massa = molecule(i) % mass
-    V_CM(1:3) = V_CM(1:3) * imol / massa
-    stresvv(1,1) = stresvv(1,1) + massa * V_CM(1) * V_CM(1)
-    stresvv(2,2) = stresvv(2,2) + massa * V_CM(2) * V_CM(2)
-    stresvv(3,3) = stresvv(3,3) + massa * V_CM(3) * V_CM(3)
-    stresvv(1,2) = stresvv(1,2) + massa * V_CM(1) * V_CM(2)
-    stresvv(1,3) = stresvv(1,3) + massa * V_CM(1) * V_CM(3)
-    stresvv(2,3) = stresvv(2,3) + massa * V_CM(2) * V_CM(3)
-    ! 2*kinetic energy of the system ...
-    sumtemp = sumtemp + massa * ( V_CM(1) * V_CM(1) + V_CM(2) * V_CM(2) + V_CM(3) * V_CM(3) )
-end do
+select case ( thermostat_type )
+
+    case(0:1)  ! <== molecular ...
+
+        do i = 1 , MM % N_of_molecules
+            tmp = D_zero
+            nresid = molecule(i) % nr
+            j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+            j2 = sum(molecule(1:nresid) % N_of_atoms)
+            do j = j1 , j2
+                if( atom(j) % flex ) then
+                    tmp = tmp + atom(j)%mass * atom(j)%vel
+                end if
+            end do   
+
+            V_CM = tmp * imol / molecule(i) % mass
+
+            forall(k=1:3) stresvv(k,k) = stresvv(k,k) +  molecule(i) % mass * V_CM(k) * V_CM(k)
+
+            stresvv(1,2) = stresvv(1,2) + molecule(i) % mass * V_CM(1) * V_CM(2)
+            stresvv(1,3) = stresvv(1,3) + molecule(i) % mass * V_CM(1) * V_CM(3)
+            stresvv(2,3) = stresvv(2,3) + molecule(i) % mass * V_CM(2) * V_CM(3)
+
+            ! 2*kinetic energy (molecular) of the system ...
+            sumtemp = sumtemp + molecule(i) % mass * sum( V_CM * V_CM )
+        end do
+
+    case (2:)  ! <== atomic ...
+
+        do i = 1 , MM % N_of_atoms 
+            If( atom(i) % flex ) then
+
+                V_atomic = atom(i) % vel 
+
+                factor   = imol * atom(i) % mass
+
+                forall( k=1:3) stresvv(k,k) = stresvv(k,k) + factor * V_atomic(k) * V_atomic(k)
+
+                stresvv(1,2) = stresvv(1,2) + factor * V_atomic(1) * V_atomic(2)
+                stresvv(1,3) = stresvv(1,3) + factor * V_atomic(1) * V_atomic(3)
+                stresvv(2,3) = stresvv(2,3) + factor * V_atomic(2) * V_atomic(3)
+
+                ! 2*kinetic energy (atomic) of the system ...
+                sumtemp = sumtemp + factor * sum( V_atomic * V_atomic )
+
+            end if
+        end do
+
+end select
 
 stresvv(2,1) = stresvv(1,2)
 stresvv(3,1) = stresvv(1,3)
@@ -91,7 +121,15 @@ if( sumtemp == 0.d0 ) then
     temp = D_ONE
 else
     ! instantaneous temperature : E_kin/(3/2*NkB) ... 
-    temp = sumtemp * iboltz / real( count(molecule%flex) )
+    select case (thermostat_type)
+
+        case (0:1) ! <== molecular ...
+        temp = sumtemp * iboltz / real( count(molecule%flex) )
+
+        case (2:)  ! <== atomic ...
+        temp = sumtemp * iboltz / real( count(atom%flex) )
+
+    end select
 endif
 
 ! Berendsen Thermostat ; turned off for talt == infty ...
@@ -105,35 +143,64 @@ end If
 dt_half = dt / two
 
 sumtemp = 0.d0
-do i = 1 , MM % N_of_molecules
-    V_CM(1:3) = D_zero
-    nresid = molecule(i) % nr
-    j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-    j2 = sum(molecule(1:nresid) % N_of_atoms)
-    do j = j1 , j2
-        if ( atom(j) % flex ) then
-            massa = mol / atom(j) % mass
-            atom(j) % vel(1:3) = atom(j) % vel(1:3) * lambda + ( dt_half * atom(j) % ftotal(1:3) ) * massa
-            V_CM(1:3) = V_CM(1:3) + atom(j) % vel(1:3) / massa
-        end if
-    end do
-    massa = molecule(i) % mass
-    V_CM(1:3) = V_CM(1:3) / massa
-    sumtemp = sumtemp + massa * ( sum( V_CM(:) * V_CM(:) ) )
-end do
+
+select case (thermostat_type)
+
+    case (0:1) ! <== molecular ...
+
+        do i = 1 , MM % N_of_molecules
+            tmp = D_zero
+            nresid = molecule(i) % nr
+            j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+            j2 = sum(molecule(1:nresid) % N_of_atoms)
+            do j = j1 , j2
+                if ( atom(j) % flex ) then
+                    massa = mol / atom(j) % mass
+                    atom(j) % vel = atom(j) % vel * lambda + ( dt_half * atom(j) % ftotal ) * massa
+
+                    tmp = tmp + atom(j) % vel / massa
+
+                end if
+            end do
+            V_CM    = tmp / molecule(i) % mass
+            sumtemp = sumtemp + molecule(i) % mass *  sum( V_CM * V_CM ) 
+        end do
+
+    case (2:) ! <== atomic ...
+
+        V_atomic = D_zero
+        do i = 1 , MM % N_of_atoms
+            if( atom(i) % flex ) then
+                massa = mol / atom(i) % mass
+                atom(i) % vel = atom(i) % vel * lambda + ( dt_half * atom(i) % ftotal ) * massa
+
+                V_atomic = atom(i) % vel 
+                factor   = imol * atom(i) % mass
+                sumtemp  = sumtemp + factor * sum( V_atomic * V_atomic )
+
+            end if
+        end do
+
+end select
 
 ! instantaneous temperature of the system after contact with thermostat ...
-Ttrans  =  sumtemp * iboltz / real( count(molecule%flex) )
+select case (thermostat_type)
+    case (0:1) ! <== molecular ...
+    Ttrans =  sumtemp * iboltz / real( count(molecule%flex) ) 
+
+    case (2:)  ! <atomic ...
+    Ttrans =  sumtemp * iboltz / real( count(atom%flex) ) 
+end select
 Ekin    =  Ekin + sumtemp
 TempToT =  TempTot + Ttrans
 
 
 ! calculation of the kinetic energy ...
-kinetic = 0.0d0
+kinetic = 0.d0
 do i = 1 , MM % N_of_atoms
-    kinetic = kinetic + ( atom(i) % mass / mol ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
+    kinetic = kinetic + ( atom(i) % mass ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
 end do
-kinetic = kinetic * mol * 1.0d-6 / MM % N_of_molecules
+kinetic = kinetic * 1.0d-6 / MM % N_of_Molecules
 
 end subroutine VV2
 !
@@ -153,10 +220,10 @@ subroutine SUMMAT( density )
 
  if (forcefield == 1) then
  else
-   stresvv(1:3,1:3) = stresvv(1:3,1:3) / (1.0d8 * volume)
-   stressr(1:3,1:3) = stressr(1:3,1:3) / (1.0d8 * volume)
-   stresre(1:3,1:3) = stresre(1:3,1:3) / (1.0d8 * volume)
-   Astres(1:3,1:3) = stresvv(1:3,1:3) + stressr(1:3,1:3) + stresre(1:3,1:3) 
+   stresvv = stresvv / (1.0d8 * volume)
+   stressr = stressr / (1.0d8 * volume)
+   stresre = stresre / (1.0d8 * volume)
+   Astres  = stresvv + stressr + stresre
  endif
 
  massa = 0.0d0
@@ -188,7 +255,7 @@ if (forcefield == 1) then
 else
     pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) * third
 endif
- 
+
 PressTot = pressure + PressTot
 
 ! Pressurestat ; turned off for talp == infty ...
@@ -199,7 +266,7 @@ else
     mip  = (D_one + mip)**third
 end If
 
-MM % box(1:3) = MM % box(1:3) * mip
+MM % box = MM % box * mip
  
 do i = 1 , MM % N_of_molecules
     nresid = molecule(i) % nr
