@@ -29,7 +29,7 @@ real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
 real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)
 real*8                  :: rij(3) , rjk(3) , rkl(3)
-real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps, sig
+real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps
 real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself
 real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
 real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 

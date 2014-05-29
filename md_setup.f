@@ -20,7 +20,7 @@ contains
  
 ! local variables
  integer :: i, j, k, atmax
- real*8  :: sr2, sr6, sr12, expar, ERFC, KRIJ, eps, sig
+ real*8  :: sr2, sr6, sr12, expar, ERFC, KRIJ, eps
  logical :: flag1 , flag2 
 
  rcutsq  = rcut * rcut
@@ -44,7 +44,7 @@ contains
             sr2 = ( (FF(i) % sig + FF(j) % sig) * (FF(i) % sig + FF(j) % sig) ) / rcutsq
             case (3)
             ! OPLS  FF :: GMX COMB-RULE 3  
-            sig = ( (FF(i) % sig * FF(j) % sig) * (FF(j) % sig * FF(i) % sig) ) / rcutsq
+            sr2 = ( (FF(i) % sig * FF(j) % sig) * (FF(j) % sig * FF(i) % sig) ) / rcutsq
        end select
        eps = FF(i) % eps * FF(j) % eps
 
