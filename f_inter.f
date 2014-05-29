@@ -168,12 +168,12 @@ do k = 1 , MM % N_of_atoms - 1
                         case (2) 
                             ! AMBER FF :: GMX COMB-RULE 2
 
-                            sig   = ( atom(k) % sig + atom(l) % sig ) 
+                            sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
 
                         case (3)
                             ! OPLS  FF :: GMX COMB-RULE 3
 
-                            sig   = ( atom(k) % sig * atom(l) % sig ) 
+                            sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
 
                     end select
                     eps = atom(k) % eps * atom(l) % eps
@@ -185,14 +185,13 @@ do k = 1 , MM % N_of_atoms - 1
                        flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
                                ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
                        if ( flag1 .OR. flag2 ) then
-                          sig = SpecialPairs(n) % Parms(1) * SpecialPairs(n) % Parms(1)
+                          sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
                           eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
                           exit read_loop
                        end if
                        cycle  read_loop
                     end do read_loop
                    
-                    sr2 = ( sig * sig ) / rklq
                     sr6  = sr2 * sr2 * sr2
                     sr12 = sr6 * sr6
 

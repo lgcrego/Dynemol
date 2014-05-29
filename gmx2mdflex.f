@@ -152,7 +152,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     i = 1
     do
         read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( ioerr /= 0 ) exit
+        if( ioerr /= 0 ) exit 
         i = i + 1
     end do
     backspace(33)

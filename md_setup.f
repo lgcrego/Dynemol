@@ -41,12 +41,12 @@ contains
        select case ( MM % CombinationRule )
             case (2)
             ! AMBER FF :: GMX COMB-RULE 2 
-            sig = FF(i) % sig + FF(j) % sig
+            sr2 = ( (FF(i) % sig + FF(j) % sig) * (FF(i) % sig + FF(j) % sig) ) / rcutsq
             case (3)
             ! OPLS  FF :: GMX COMB-RULE 3  
-            sig = FF(i) % sig * FF(j) % sig
+            sig = ( (FF(i) % sig * FF(j) % sig) * (FF(j) % sig * FF(i) % sig) ) / rcutsq
        end select
-       eps  = FF(i) % eps * FF(j) % eps
+       eps = FF(i) % eps * FF(j) % eps
 
        ! Nbond_parms directive on ...
        read_loop: do  k = 1, size(SpecialPairs)
@@ -55,14 +55,13 @@ contains
             flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
                     ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
             if ( flag1 .OR. flag2 ) then
-                sig = SpecialPairs(k) % Parms(1) * SpecialPairs(k) % Parms(1)
+                sr2 = ( (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) * (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) ) / rcutsq
                 eps = SpecialPairs(k) % Parms(2) * SpecialPairs(k) % Parms(2) 
                 exit read_loop
             end if
        cycle  read_loop
        end do read_loop
 
-       sr2  = ( sig * sig ) / rcutsq
        sr6  = sr2 * sr2 * sr2
        sr12 = sr6 * sr6
        vscut(i,j) = 4.d0  * ( eps * factor3 ) * (sr12 - sr6)
