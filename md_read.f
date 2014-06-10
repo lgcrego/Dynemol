@@ -388,6 +388,7 @@ do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % Ndiheds    = species(i) % Ndiheds
     where( molecule % my_species == i ) molecule % Nharm      = species(i) % Nharm
     where( molecule % my_species == i ) molecule % Nbonds14   = species(i) % Nbonds14
+    where( molecule % my_species == i ) molecule % NintraLJ   = species(i) % NintraLJ
 end do
 
 do i = 1 , MM % N_of_molecules
@@ -401,6 +402,7 @@ do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , 7 ) )
     allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
+    allocate( molecule(i) % IntraLJ       ( molecule(i) % NintraLJ , 2 ) )
 end do
 
 k = 0
@@ -415,6 +417,7 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
     molecule(i) % fact14        = species(molecule(i) % my_species) % fact14
     molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
+    molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
 
     k = k + molecule(i) % N_of_atoms

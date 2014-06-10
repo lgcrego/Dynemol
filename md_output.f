@@ -20,7 +20,7 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot , dihpot, lj14pot, coul14pot, pot2, forcefield
+use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot , dihpot, lj14pot, coul14pot, pot2, forcefield, ryck_dih, proper_dih
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -88,22 +88,24 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,*)
     write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
     write(10,*)'Energies (kJ/mol)'
-    write(10,'(''Bond Potential             :'',F12.4)') bdpot*mol*1.d-26    / n_t
-    write(10,'(''Angle Potential            :'',F12.4)') angpot*mol*1.d-26   / n_t
-    write(10,'(''Dihedral Potential         :'',F12.4)') dihpot*mol*1.d-26   / n_t
-    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') lj14pot*mol*1.d-6   / n_t
-    write(10,'(''Coulomb 1-4                :'',F12.4)') coul14pot*mol*1.d-6 / n_t
-    write(10,'(''Lennard-Jones              :'',F12.4)') evdw*mol*1.d-6 
-    write(10,'(''Coulomb self-interaction   :'',F12.4)') eintra *mol*1.d-6
-    write(10,'(''Coulomb short-range        :'',F12.4)') ecoul*mol*1.d-6 
-    write(10,'(''Total Coulomb              :'',F12.4)') (ecoul - eintra)*mol*1.d-6 
+    write(10,'(''Bond Potential             :'',F12.4)') bdpot     *mol*factor3*1.d-6    
+    write(10,'(''Angle Potential            :'',F12.4)') angpot    *mol*factor3*1.d-6   
+    write(10,'(''Dihedral Potential         :'',F12.4)') dihpot    *mol*factor3*1.d-6   
+    write(10,'(''Proper Dihedral            :'',F12.4)') proper_dih*mol*factor3*1.d-6   
+    write(10,'(''Ryckaert-Bell. Dihedral    :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
+    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') lj14pot   *mol*1.d-6  
+    write(10,'(''Coulomb 1-4                :'',F12.4)') coul14pot *mol*1.d-6  
+    write(10,'(''Lennard-Jones              :'',F12.4)') evdw      *mol*1.d-6      
+    write(10,'(''Coulomb self-interaction   :'',F15.4)') eintra    *mol*1.d-6    
+    write(10,'(''Coulomb short-range        :'',F15.4)') ecoul     *mol*1.d-6      
+    write(10,'(''Total Coulomb              :'',F15.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
     write(10,'(''Potential Energy           :'',F12.4)') pot*mol*1.d-6 / MM % N_of_molecules
-    write(10,'(''Potential Energy(gmx-like) :'',F12.4)') ( pot2*mol*1.d-6 / MM % N_of_molecules ) / n_t
+    write(10,'(''Potential Energy(gmx-like) :'',F15.4)') ( pot2*mol*1.d-3 / MM % N_of_molecules ) 
     write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
     write(10,*)
-    write(10,'(''Density     :'',F10.4,'' g/cm³'')') DensTot / n_t
+    write(10,'(''Density     :'',F10.4,'' g/cm³'')' ) DensTot / n_t
     write(10,'(''Temperature :'',F10.2,'' Kelvin'')') TempTot / n_t
-    write(10,'(''Pressure    :'',F10.2,'' atm'')') PressTot / n_t
+    write(10,'(''Pressure    :'',F10.2,'' atm'')'   ) PressTot / n_t
 
 close (10)
 

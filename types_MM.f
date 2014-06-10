@@ -21,6 +21,8 @@ use constants_m
         real*8                              :: fdihed(3)
         real*8                              :: fnonbd14(3)
         real*8                              :: fnonch14(3)
+        real*8                              :: fnonbd(3)
+        real*8                              :: fnonch(3)
         real*8                              :: fcoupling(3)
         real*8                              :: ftotal(3)
         real*8                              :: fch(3)
@@ -61,6 +63,8 @@ use constants_m
         integer                             :: Nbonds14
         integer             , allocatable   :: bonds14(:,:)
         real*8              , allocatable   :: fact14(:)
+        integer                             :: NintraLJ
+        integer             , allocatable   :: IntraLJ(:,:)
     end type MM_molecular
 
     type MM_system
