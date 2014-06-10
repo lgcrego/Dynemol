@@ -385,7 +385,7 @@ end subroutine FORCEINTRA
 implicit none
 
 ! local variables ...
-real*8  :: psi
+real*8  :: psi , cos_Psi
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61
@@ -396,22 +396,23 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
         gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
 
     case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)      <== Eq. 4.62
-        psi = phi - PI
+        psi     = phi - PI
+        cos_Psi = cos(psi)
 
         pterm = molecule(i) % kdihed0(j,1)                                                        + &
-                molecule(i) % kdihed0(j,2) * cos(psi)                                             + &
-                molecule(i) % kdihed0(j,3) * cos(psi) * cos(psi)                                  + &
-                molecule(i) % kdihed0(j,4) * cos(psi) * cos(psi) * cos(psi)                       + &
-                molecule(i) % kdihed0(j,5) * cos(psi) * cos(psi) * cos(psi) * cos(psi)            + &
-                molecule(i) % kdihed0(j,6) * cos(psi) * cos(psi) * cos(psi) * cos(psi) * cos(psi)
+                molecule(i) % kdihed0(j,2) * cos_Psi                                              + &
+                molecule(i) % kdihed0(j,3) * cos_Psi  * cos_Psi                                   + &
+                molecule(i) % kdihed0(j,4) * cos_Psi  * cos_Psi  * cos_Psi                        + &
+                molecule(i) % kdihed0(j,5) * cos_Psi  * cos_Psi  * cos_Psi  * cos_Psi             + &
+                molecule(i) % kdihed0(j,6) * cos_Psi  * cos_Psi  * cos_Psi  * cos_Psi  * cos_Psi 
 
         ryck_dih = ryck_dih + pterm
 
         gamma = - sin(psi) * ( molecule(i) % kdihed0(j,2) +                                                   &
-                               2.0d0 * molecule(i) % kdihed0(j,3) * cos(psi) +                                &
-                               3.0d0 * molecule(i) % kdihed0(j,4) * cos(psi) * cos(psi) +                     &
-                               4.0d0 * molecule(i) % kdihed0(j,5) * cos(psi) * cos(psi) * cos(psi) +          &
-                               5.0d0 * molecule(i) % kdihed0(j,6) * cos(psi) * cos(psi) * cos(psi) * cos(psi) ) * rsinphi * rijkj * rjkkl
+                               2.0d0 * molecule(i) % kdihed0(j,3) * cos_Psi  +                                &
+                               3.0d0 * molecule(i) % kdihed0(j,4) * cos_Psi  * cos_Psi  +                     &
+                               4.0d0 * molecule(i) % kdihed0(j,5) * cos_Psi  * cos_Psi  * cos_Psi  +          &
+                               5.0d0 * molecule(i) % kdihed0(j,6) * cos_Psi  * cos_Psi  * cos_Psi  * cos_PSi  ) * rsinphi * rijkj * rjkkl
 
 end select
 
