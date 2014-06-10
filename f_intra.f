@@ -2,11 +2,12 @@ module F_intra_m
    
     use constants_m
     use parameters_m , only : PBC
-    use for_force    , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot   , &
-                             vscut, fscut, KAPPA, lj14pot, coul14pot, pot2       , &    
-                             Dihedral_Potential_Type                            
+    use for_force    , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot   ,                   &
+                             vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot2 ,       &    
+                             Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih
     use MD_read_m    , only : atom , molecule , MM , read_from_gmx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
+    use gmx2mdflex   , only : SpecialPairs
 
     private
 
@@ -19,7 +20,9 @@ module F_intra_m
                                sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
                                term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , rterm , sterm , &
                                tterm , C0 , C1 , C2 , C3 , C4 , C5
-    integer                 :: i , j , k , l , ati , atj , atk , atl , loop
+    integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop
+    logical                 :: flag1, flag2
+
 
 contains
 !
@@ -33,20 +36,26 @@ implicit none
 rtwopi = 1.d0/twopi
 
 do j = 1 , MM % N_of_atoms
-    atom(j) % fnonbd14(:) = 0.d0           ! Non-bonded
-    atom(j) % fbond(:)    = 0.d0           ! Stretching/Bonding 
-    atom(j) % fang(:)     = 0.d0           ! Bending/Angular
-    atom(j) % fdihed(:)   = 0.d0           ! Dihedral
-    atom(j) % fnonch14(:) = 0.d0           ! Non-bonded coulomb 1-4
+    atom(j) % fnonbd14(:) = D_zero         ! Non-bonded 1-4
+    atom(j) % fnonbd(:)   = D_zero         ! Non-bonded Intramolecular
+    atom(j) % fbond(:)    = D_zero         ! Stretching/Bonding 
+    atom(j) % fang(:)     = D_zero         ! Bending/Angular
+    atom(j) % fdihed(:)   = D_zero         ! Dihedral
+    atom(j) % fnonch14(:) = D_zero         ! Non-bonded coulomb 1-4
+    atom(j) % fnonch(:)   = D_zero         ! Non-bonded coulomb Intramolecular
 end do
 
-bdpot     = 0.0d0
-angpot    = 0.0d0
-dihpot    = 0.0d0
-lj14pot   = 0.0d0
-coul14pot = 0.0d0
+bdpot      = D_zero
+angpot     = D_zero
+dihpot     = D_zero
+proper_dih = D_zero
+ryck_dih   = D_zero
+LJ_14      = D_zero
+LJ_intra   = D_zero
+Coul_14    = D_zero
+Coul_intra = D_zero
 
-! new stretch ...
+! Stretch ...
 do i = 1 , MM % N_of_molecules
     do j = 1 ,  molecule(i) % Nbonds
         ati = molecule(i) % bonds(j,1)
@@ -65,7 +74,7 @@ do i = 1 , MM % N_of_molecules
     end do
 end do
 
-! new bend ...
+! Bend ...
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Nangs
         atj = molecule(i) % angs(j,1)
@@ -209,7 +218,7 @@ do i = 1 , MM % N_of_molecules
 end do
  
 ! ####################################################################
-! New non-bonded 1,4 intramolecular interactions ...
+! Non-bonded 1,4 intramolecular interactions ...
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % Nbonds14
         ati    = molecule(i) % bonds14(j,1)
@@ -221,22 +230,22 @@ do i = 1 , MM % N_of_molecules
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
+
             ! Lennard Jones ...
             select case ( MM % CombinationRule )
 
-                 case (2)
+                case (2)
+                    ! AMBER FF :: GMX COMB-RULE 2
+                    sr2 = ( ( atom(ati) % sig + atom(atj) % sig  ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
 
-                     sig = atom(ati) % sig + atom(atj) % sig    ! AMBER FF :: GMX COMB-RULE 2
-
-                 case (3)
-
-                     sig = atom(ati) % sig * atom(atj) % sig    ! AMBER FF :: GMX COMB-RULE 3
+                case (3)
+                    ! AMBER FF :: GMX COMB-RULE 3
+                    sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
 
             end select
 
             eps   =  atom(ati) % eps * atom(atj) % eps 
             rklsq = sqrt(rklq)
-            sr2   = sig * sig / rklq
             sr6   = sr2 * sr2 * sr2
             sr12  = sr6 * sr6
             fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
@@ -263,26 +272,106 @@ do i = 1 , MM % N_of_molecules
             tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * molecule(i) % fact14(j)
 !           alternative cutoff formula ...
 !           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
-            lj14pot   = lj14pot + sterm
-            coul14pot = coul14pot + tterm
+            LJ_14   = LJ_14   + sterm
+            Coul_14 = Coul_14 + tterm
 
+        end if
+    end do
+end do
+
+! ####################################################################
+! Lennard-Jones intramolecular interactions ...
+do i = 1 , MM % N_of_molecules
+    do j   = 1 , molecule(i) % NintraLJ
+        ati    = molecule(i) % IntraLJ(j,1)
+        atj    = molecule(i) % IntraLJ(j,2)
+        if ( atom(atj) % flex .OR. atom(ati) % flex ) then
+
+            chrgi  = atom(ati) % charge
+            chrgj  = atom(atj) % charge
+            rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
+            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+            rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
+            if ( rklq < rcutsq ) then
+
+            ! Lennard Jones ...
+            select case ( MM % CombinationRule )
+
+                case (2)
+                    ! AMBER FF :: GMX COMB-RULE 2
+                    sr2 = ( ( atom(ati) % sig + atom(atj) % sig ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
+
+                case (3)
+                    ! AMBER FF :: GMX COMB-RULE 3
+                    sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
+
+            end select
+            eps   =  atom(ati) % eps * atom(atj) % eps
+
+            ! Nbond_params directive on ...
+            read_loop: do  n = 1, size(SpecialPairs)
+                flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+                flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+                if ( flag1 .OR. flag2 ) then
+                    sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                    eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                    exit read_loop
+                end if
+                cycle  read_loop
+            end do read_loop
+
+            rklsq = SQRT(rklq)
+            sr6   = sr2 * sr2 * sr2
+            sr12  = sr6 * sr6
+            fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
+            fs    = (fs / rklq) !- fscut(ati,atj) / rklsq     ! with force cut-off
+            atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
+            atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
+            ! factor used to compensate factor1 ...
+            ! factor3 = 1.0d-20
+            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 )
+            ! alternative formula with cutoff ...
+            !sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
+
+            !  Real part (Number of charges equal to the number of sites)
+            sr2   = 1.d0 / rklq
+            KRIJ  = KAPPA * rklsq
+            expar = EXP( -(KRIJ*KRIJ) )
+            freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
+            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar )
+            !freal = freal - frecut / rklsq * chrgi * chrgj   ! with force cut-off
+            atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
+            atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
+            ! factor used to compensate factor1 ...
+            ! factor3 = 1.0d-20
+            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
+            ! alternative formula with cutoff ...
+            !tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
+            LJ_intra   = LJ_intra   + sterm
+            Coul_intra = Coul_intra + tterm
+
+            end if
         end if
     end do
 end do
 
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot2 = pot + ( bdpot + angpot + dihpot) * factor3 + lj14pot + coul14pot
+pot2 = pot + ( bdpot + angpot + dihpot) * factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
 pot2 = pot2 * mol * 1.0d-6 / MM % N_of_molecules
 
-! New Get total force ...
+! Get total force ...
 
 do i = 1 , MM % N_of_atoms
     atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
                                                   atom(i) % fang(:)     +  &
                                                   atom(i) % fdihed(:)   +  &
                                                   atom(i) % fnonbd14(:) +  & 
-                                                  atom(i) % fnonch14(:)    &
+                                                  atom(i) % fnonch14(:) +  &
+                                                  atom(i) % fnonbd(:)   +  & 
+                                                  atom(i) % fnonch(:)      &
                                                   ) * 1.d-10
 end do
 
@@ -300,13 +389,13 @@ real*8  :: psi
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61
-
+        
         term  =   molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
         pterm =   molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
+        proper_dih =   proper_dih + pterm
         gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
 
     case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)      <== Eq. 4.62
-
         psi = phi - PI
 
         pterm = molecule(i) % kdihed0(j,1)                                                        + &
@@ -315,6 +404,8 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
                 molecule(i) % kdihed0(j,4) * cos(psi) * cos(psi) * cos(psi)                       + &
                 molecule(i) % kdihed0(j,5) * cos(psi) * cos(psi) * cos(psi) * cos(psi)            + &
                 molecule(i) % kdihed0(j,6) * cos(psi) * cos(psi) * cos(psi) * cos(psi) * cos(psi)
+
+        ryck_dih = ryck_dih + pterm
 
         gamma = - sin(psi) * ( molecule(i) % kdihed0(j,2) +                                                   &
                                2.0d0 * molecule(i) % kdihed0(j,3) * cos(psi) +                                &

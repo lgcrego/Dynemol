@@ -20,7 +20,9 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot , dihpot, lj14pot, coul14pot, pot2, forcefield, ryck_dih, proper_dih
+use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot, dihpot,   &
+                        LJ_14, LJ_intra, Coul_14, Coul_intra, pot2, forcefield,  &
+                        ryck_dih, proper_dih
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -93,8 +95,10 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Dihedral Potential         :'',F12.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral            :'',F12.4)') proper_dih*mol*factor3*1.d-6   
     write(10,'(''Ryckaert-Bell. Dihedral    :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
-    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') lj14pot   *mol*1.d-6  
-    write(10,'(''Coulomb 1-4                :'',F12.4)') coul14pot *mol*1.d-6  
+    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') LJ_14     *mol*1.d-6  
+    write(10,'(''Lennard-Jones Intra        :'',F12.4)') LJ_Intra  *mol*1.d-6  
+    write(10,'(''Coulomb 1-4                :'',F12.4)') Coul_14   *mol*1.d-6  
+    write(10,'(''Coulomb Intra              :'',F12.4)') Coul_Intra*mol*1.d-6  
     write(10,'(''Lennard-Jones              :'',F12.4)') evdw      *mol*1.d-6      
     write(10,'(''Coulomb self-interaction   :'',F15.4)') eintra    *mol*1.d-6    
     write(10,'(''Coulomb short-range        :'',F15.4)') ecoul     *mol*1.d-6      
