@@ -51,7 +51,7 @@ allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 forcefield = 2
   
 open(33, file='topol.top', status='old', iostat=ioerr, err=10)
-    
+
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"topol.top" file not found; terminating execution'
 
@@ -134,7 +134,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
 
     SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
-    SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1)
+    SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
 
     ! conversion 
     ! factor1 = 1.0d26      <== Factor used to correct the units readed from Gromacs
@@ -223,6 +223,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
                 ! kdihed0(:,4) = C3 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,5) = C4 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,6) = C5 (kJ/mol) * factor1 * imol
+                InputReals(i,1) = InputReals(i,1) * deg_2_rad
                 InputReals(i,2) = InputReals(i,2) * factor1 * imol
 
             case( 3 )
@@ -328,8 +329,8 @@ do a = 1 , MM % N_of_species
     allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 6 ) , source = D_zero )
     allocate( species(a) % harm    ( species(a) % Ndiheds     ) , source = I_zero )
 
-    do n = 1 , species(a) % Ndiheds
-        do k = 1 , NdihedTypes
+    read_loop: do n = 1 , species(a) % Ndiheds
+        do k = 1 , NdihedTypes 
 
             ! if funct = 1 (cos)
             ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61 (GMX manual 4.0)
@@ -351,14 +352,14 @@ do a = 1 , MM % N_of_species
 
                 flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
-                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 1 )
 
                 flag4 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. & 
-                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. & 
+                        ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 1 )
 
                 if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
@@ -366,7 +367,8 @@ do a = 1 , MM % N_of_species
                     ! kdihed0(:,2) = k_phi (kJ/mol)
                     ! harm(:)      = n
                     species(a) % kdihed0(n,1:2) = DihedParameters(k,1:2)
-                    species(a) % harm(n)        = int(DihedParameters(k,3))
+                    species(a) % harm(n)        = int(DihedParameters(k,3)) 
+                    cycle read_loop
                 end if
 
             end if
@@ -402,12 +404,13 @@ do a = 1 , MM % N_of_species
                         ( Dihed_Type(k) == 3 )
    
                 if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
-                     species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6)
+                     species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6) 
+                     cycle read_loop
                 end if
 
             end if
         end do
-    end do
+    end do read_loop
 
 end do
 
@@ -440,13 +443,19 @@ type(MM_molecular)  , intent(inout) :: species(:)
 ! local variables ...
 character(15)   , allocatable   :: InputChars(:,:)
 real*8          , allocatable   :: InputReals(:,:)
-integer         , allocatable   :: InputIntegers(:,:)
+integer         , allocatable   :: InputIntegers(:,:) , InputIntegers2(:,:) , InputIntegers3(:,:)
 character(18)                   :: keyword , keyword_tmp
 character(10)                   :: string
 character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
 real*8                          :: dummy_real , factor
 integer                         :: i1 , i2 , i3 , sp , nr
-integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
+integer                         :: i , j , k , m , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
+
+logical                         :: flagB1, flagB2, flagA1, flagA2, flagD1, flagD2, flagB11, flagB12, flagB21, flagB22
+logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222
+logical                         :: flag1, flag2, flag3, flag4
+logical         , allocatable   :: InputRef(:,:)
+
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
@@ -498,7 +507,7 @@ do a = 1 , MM % N_of_species
             FF(counter) % residue    = species(a) % atom(i) % residue
             FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
             FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
-            FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge
+            FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
 
         end do
 
@@ -635,6 +644,219 @@ do a = 1 , MM % N_of_species
             forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
 
             species(a) % fact14(:Nbonds14) = InputReals(:Nbonds14,1)
+
+        end if
+
+!==============================================================================================
+        ! Intramolecular LJ list generation ... 
+        ! Preparing ...
+        if( species(a) % Nbonds /= 0 ) then
+        allocate( InputRef(species(a)%N_of_Atoms,species(a)%N_of_Atoms) )
+        
+        ! Variable to differentiate between bonded and nonbonded interactions ... 
+        do i = 1 , species(a) % N_of_Atoms
+            do j = 1 , species(a) % N_of_Atoms
+
+                InputRef(i,j) = .true.
+
+            end do
+        end do
+
+        allocate( InputIntegers2(species(a)%N_of_Atoms,species(a)%N_of_Atoms) )
+
+        do i = 1 , species(a) % N_of_atoms
+
+            j = 1
+            ! Looking for bonds ...  
+            do k = 1 , species(a) % Nbonds
+                flagB1 = ( species(a) % atom(i) % my_id == species(a) % bonds(k,1) )
+                flagB2 = ( species(a) % atom(i) % my_id == species(a) % bonds(k,2) )
+
+                if ( flagB1 ) then
+                    InputIntegers2(i,j) = species(a) % bonds(k,2)
+                    InputRef(i,species(a)%bonds(k,2)) = .false.
+                    j = j + 1
+
+                    ! looking for angle connections ...  
+                    do n = 1 , species(a) % Nbonds
+                       flagB11 = ( species(a) % bonds(k,2) == species(a) % bonds(n,1) )
+                       flagB12 = ( species(a) % bonds(k,2) == species(a) % bonds(n,2) )
+
+                      if ( flagB11 ) then
+                          InputIntegers2(i,j) = species(a) % bonds(n,2)
+                          InputRef(i,species(a)%bonds(n,2)) = .false.
+                          j = j + 1
+
+                          ! looking for dihedral connections ...  
+                          do m = 1 , species(a) % Nbonds
+                             flagB111 = ( species(a) % bonds(n,2) == species(a) % bonds(m,1) )
+                             flagB112 = ( species(a) % bonds(n,2) == species(a) % bonds(m,2) )
+                             if ( flagB111 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,2)
+                                InputRef(i,species(a)%bonds(m,2)) = .false.
+                                j = j + 1
+                             elseif ( flagB112 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,1)
+                                InputRef(i,species(a)%bonds(m,1)) = .false.
+                                j = j + 1
+                             end if
+                          end do
+
+                       ! looking for angle connections ...  
+                       elseif ( flagB12 ) then
+                          InputIntegers2(i,j) = species(a) % bonds(n,1)
+                          InputRef(i,species(a)%bonds(n,1)) = .false.
+                          j = j + 1
+
+                          ! looking for dihedral connections ...  
+                          do m = 1 , species(a) % Nbonds
+                             flagB121 = ( species(a) % bonds(n,1) == species(a) % bonds(m,1) )
+                             flagB122 = ( species(a) % bonds(n,1) == species(a) % bonds(m,2) )
+                             if ( flagB121 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,2)
+                                InputRef(i,species(a)%bonds(m,2)) = .false.
+                                j = j + 1
+                             elseif ( flagB122 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,1)
+                                InputRef(i,species(a)%bonds(m,1)) = .false.
+                                j = j + 1
+
+                          end if
+                          end do
+
+                       end if
+                    end do
+
+                ! Looking for bonds ...  
+                elseif ( flagB2 ) then
+                    InputIntegers2(i,j) = species(a) % bonds(k,1)
+                    InputRef(i,species(a)%bonds(k,1)) = .false.
+                    j = j + 1
+
+                    ! looking for angle connections ... 
+                    do n = 1 , species(a) % Nbonds
+                       flagB21 = ( species(a) % bonds(k,1) == species(a) % bonds(n,1) )
+                       flagB22 = ( species(a) % bonds(k,1) == species(a) % bonds(n,2) )
+                       if ( flagB21 ) then
+                          InputIntegers2(i,j) = species(a) % bonds(n,2)
+                          InputRef(i,species(a)%bonds(n,2)) = .false.
+                          j = j + 1
+
+                          ! looking for dihedral connections ...  
+                          do m = 1 , species(a) % Nbonds
+                             flagB211 = ( species(a) % bonds(n,2) == species(a) % bonds(m,1) )
+                             flagB212 = ( species(a) % bonds(n,2) == species(a) % bonds(m,2) )
+                             if ( flagB211 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,2)
+                                InputRef(i,species(a)%bonds(m,2)) = .false.
+                                j = j + 1
+                             elseif ( flagB212 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,1)
+                                InputRef(i,species(a)%bonds(m,1)) = .false.
+                                j = j + 1
+                             end if
+                          end do
+
+                      ! looking for angle connections ... 
+                      elseif ( flagB22 ) then
+                          InputIntegers2(i,j) = species(a) % bonds(n,1)
+                          InputRef(i,species(a)%bonds(n,1)) = .false.
+                          j = j + 1
+
+                          ! looking for dihedral connections ...  
+                          do m = 1 , species(a) % Nbonds
+                             flagB221 = ( species(a) % bonds(n,1) == species(a) % bonds(m,1) )
+                             flagB222 = ( species(a) % bonds(n,1) == species(a) % bonds(m,2) )
+                             if ( flagB221 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,2)
+                                InputRef(i,species(a)%bonds(m,2)) = .false.
+                                j = j + 1
+                             elseif ( flagB222 ) then
+                                InputIntegers2(i,j) = species(a) % bonds(m,1)
+                                InputRef(i,species(a)%bonds(m,1)) = .false.
+                                j = j + 1
+                             end if
+                          end do
+
+                       end if
+                    end do
+
+                end if
+            end do
+
+            ! Looking for 'explicit' angles (just in case) ...
+            do k = 1 , species(a) % Nangs
+                flagA1 = ( species(a) % atom(i) % my_id == species(a) % angs(k,1) )
+                flagA2 = ( species(a) % atom(i) % my_id == species(a) % angs(k,3) )
+
+                if ( flagA1 ) then
+                    InputIntegers2(i,j) = species(a) % angs(k,3)
+                    InputRef(i,species(a)%angs(k,3)) = .false.
+                    j = j + 1
+                elseif ( flagA2 ) then
+                    InputIntegers2(i,j) = species(a) % angs(k,1)
+                    InputRef(i,species(a)%angs(k,1)) = .false.
+                    j = j + 1
+                end if
+
+            end do
+
+            ! Looking for 'explicit' dihedrals (just in case) ...
+            do k = 1 , species(a) % Ndiheds
+                flagD1 = ( species(a) % atom(i) % my_id == species(a) % diheds(k,1) )
+                flagD2 = ( species(a) % atom(i) % my_id == species(a) % diheds(k,4) )
+
+                if ( flagD1 ) then
+                    InputIntegers2(i,j) = species(a) % diheds(k,4)
+                    InputRef(i,species(a)%diheds(k,4)) = .false.
+                    j = j + 1
+                elseif ( flagD2 ) then
+                    InputIntegers2(i,j) = species(a) % diheds(k,1)
+                    InputRef(i,species(a)%diheds(k,1)) = .false.
+                    j = j + 1
+                end if
+
+            end do
+
+            ! Eliminating repeated indexes ... 
+            do j = 1 , species(a) % N_of_Atoms 
+                do k = 1 , species(a) % N_of_Atoms
+                    if ( j /= k ) then
+                       if ( InputIntegers2(i,j) == InputIntegers2(i,k) ) InputIntegers2(i,k) = 0
+                       if ( species(a) % atom(i) % my_id == InputIntegers2(i,k) ) InputIntegers2(i,k) = 0
+                    end if
+                end do
+            end do
+
+        end do 
+  
+        allocate( InputIntegers3(species(a)%N_of_Atoms*species(a)%N_of_Atoms,2) )
+
+        ! Intermediate variable ... 
+        InputIntegers3(:,:) = 0
+        k = 1
+        do i = 1 , species(a) % N_of_Atoms - 1
+
+            do j = i , species(a) % N_of_Atoms
+                if ( InputRef(i,j) == .true. ) then
+                    InputIntegers3(k,1) = i
+                    InputIntegers3(k,2) = j
+                    k = k + 1  
+                end if
+            end do
+
+        end do
+
+        allocate( species(a) % IntraLJ( size( pack( InputIntegers3, InputIntegers3 /= 0 ) ), 2 ) )
+        species(a)%NintraLJ = size( pack( InputIntegers3(:,2), InputIntegers3(:,2) /= 0 ) ) 
+
+        ! Finally associating the nonbonded interactions to species ...
+        do i = 1 , size( pack( InputIntegers3(:,2), InputIntegers3(:,2) /= 0 ) )
+            species(a) % IntraLJ(i,1) = InputIntegers3(i,1)
+            species(a) % IntraLJ(i,2) = InputIntegers3(i,2)
+        end do
+
+        deallocate( InputRef , InputIntegers2, InputIntegers3 )
 
         end if
 
