@@ -3,7 +3,7 @@ module gmx2mdflex
 
 use constants_m
 use for_force
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs
+use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 
@@ -37,8 +37,8 @@ real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:)
 real*8                          :: factQQ , dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
-integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes , NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms
-
+integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms
 character(1)                    :: keyword_1
 character(3)                    :: dummy_char
 character(9)                    :: keyword_9
@@ -576,7 +576,7 @@ do a = 1 , MM % N_of_species
         species(a) % funct_angle(:Nangs) = InputChars(:Nangs,1)
 
 !==============================================================================================
-        ! expecting for dihedrals OR special-pairs ...
+        ! expecting for dihedrals ...
         do
             read(33,100,iostat=ioerr) keyword
             if ( trim(keyword) == "[ dihedrals ]" .OR. trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
@@ -608,6 +608,7 @@ do a = 1 , MM % N_of_species
             ! define species(a) % dihedral_type ...
             CALL define_DihedralType( species(a) , Ndiheds )
 
+!==============================================================================================
             ! expecting for special-pairs ...
             do
                 read(33,100,iostat=ioerr) keyword
@@ -641,8 +642,10 @@ do a = 1 , MM % N_of_species
             species(a) % fact14(:Nbonds14) = InputReals(:Nbonds14,1)
 
         end if
+!==============================================================================================
 
-        CALL Identify_NonBondPairs( species , a )
+
+        If( species(a) % Nbonds /= 0 ) CALL Identify_NonBondPairs( species , a )
 
     close(33)
 

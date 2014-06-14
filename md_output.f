@@ -9,6 +9,8 @@ module MD_dump_m
 
     public :: output , cleanup , saving_MM_frame 
 
+    private 
+
 !   module variables ...
     logical         , save        :: first = .true. , done = .false.  
     type(MM_atomic) , allocatable :: previous(:)
@@ -212,8 +214,8 @@ If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom 
          case (1) 
 
             do xyz = 1 , 3
-                CartesianDistance = atom(j) % xyz(xyz) - previous(j) % xyz(xyz)
-                If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+                CartesianDistance = atom(i) % xyz(xyz) - previous(i) % xyz(xyz)
+                If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(i) % xyz(xyz) = atom(i) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
             end do
 
      end select 
