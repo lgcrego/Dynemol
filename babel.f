@@ -239,7 +239,7 @@ CALL Pack_Residues      ( system%atom , system%list_of_residues )
 ! vector QMMM_key is the key to exchange QM and MM atomic properties ...
 allocate( QMMM_key(system%N_of_atoms) , source=system%atom%my_id)
 
-If( verify(driver,'slice') == 6 ) then
+If( (verify(driver,'slice') == 6) .AND. (file_type == "trajectory") ) then
 
     ! replicate system throughout trj ...
     CALL input_2_frames( system , trj )
