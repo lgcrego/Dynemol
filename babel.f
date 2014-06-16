@@ -463,7 +463,7 @@ end do
 delta_t = time_2 - time_1
 
 ! Molecular Dynamics time step (pico-sec) ...
-MD_dt = delta_t + epsilon(1.0)
+MD_dt = delta_t + epsilon(1.d0)
 
 ! return to the top of the file ...
 rewind 31
