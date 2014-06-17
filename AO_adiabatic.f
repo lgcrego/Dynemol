@@ -298,12 +298,12 @@ do n = 1 , n_part
        
         case( "hl" )
 
-            If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> warning: hole state above the Fermi level <<<'
-
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+            If( (orbital(n) > hl_FMO%Fermi_State) ) print*,'>>> warning: hole state above the Fermi level <<<'
+
 
         end select
 end do
@@ -434,25 +434,42 @@ type(f_time)    , intent(in) :: QDyn
 integer         , intent(in) :: it 
 
 ! local variables ...
-integer :: nf , n
+integer    :: nf , n
+complex*16 :: wp_energy
 
 do n = 1 , n_part
 
+    wp_energy = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+
     If( it == 1 ) then
+
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,12) "#" , QDyn%fragments , "total"
-    else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
-    end If
 
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+        write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+
+    else
+
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
+
+    end If
+ 
+    ! dumps el-&-hl populations ...
     write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
 
+    ! dumps el-&-hl wavepachet energies ...
+    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+
     close(52)
+    close(53)
 
 end do
 
 12 FORMAT(10A10)
 13 FORMAT(10F10.5)
+14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
 !
