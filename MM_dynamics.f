@@ -2,7 +2,7 @@ module MM_dynamics_m
 
     use constants_m
     use parameters_m        , only : restart , step_security , QMMM 
-    use MM_input            , only : MM_log_step , MM_frame_step
+    use MM_input            , only : MM_log_step , MM_frame_step , Units_MM
     use MD_read_m           , only : atom , Reading , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
@@ -57,7 +57,19 @@ if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
 if( mod(frame,MM_log_step) == 0   ) CALL output( Ttrans , frame , dt )
 
-if( mod(frame,MM_log_step) == 0   ) write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot2 , kinetic + pot2
+if( mod(frame,MM_log_step) == 0   ) then 
+
+    select case (Units_MM)
+
+        case( "eV" )    
+        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic*kJmol_2_eV , pot2*kJmol_2_eV , (kinetic+pot2)*kJmol_2_eV
+
+        case default
+        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot2 , kinetic + pot2
+
+    end select
+
+end if
 
 ! pass nuclear configuration to QM ...
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
