@@ -249,7 +249,7 @@ do i = 1 , MM % N_of_molecules
             sr6   = sr2 * sr2 * sr2
             sr12  = sr6 * sr6
             fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            fs    = (fs / rklq) * molecule(i) % fact14(j)
+            fs    = (fs / rklq) * MM % fudgeLJ
             atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
             ! factor used to compensate the factor1 and factor2 factors ...
@@ -257,19 +257,19 @@ do i = 1 , MM % N_of_molecules
             sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 ) 
 !           alternative cutoff formula ...
 !           sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
-            sterm  = sterm * molecule(i) % fact14(j)
+            sterm  = sterm * MM % fudgeLJ
 
             !  Real part (Numero de cargas igual ao numero de sitios)
             sr2   = 1.d0 / rklq
             KRIJ  = KAPPA * rklsq
             expar = EXP( -(KRIJ*KRIJ) )
             freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * molecule(i) % fact14(j)
+            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * MM % fudgeQQ
             atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + freal * rij(1:3)
             atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
             ! factor used to compensate the factor1 and factor2 factors ...
             ! factor3 = 1.0d-20
-            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * molecule(i) % fact14(j)
+            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * MM % fudgeQQ
 !           alternative cutoff formula ...
 !           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
             LJ_14   = LJ_14   + sterm

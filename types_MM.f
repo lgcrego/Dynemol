@@ -62,7 +62,6 @@ use constants_m
         integer             , allocatable   :: harm(:)
         integer                             :: Nbonds14
         integer             , allocatable   :: bonds14(:,:)
-        real*8              , allocatable   :: fact14(:)
         integer                             :: NintraLJ
         integer             , allocatable   :: IntraLJ(:,:)
     end type MM_molecular
@@ -72,6 +71,8 @@ use constants_m
         type(MM_molecular)  , allocatable   :: molecule(:)        
         real*8                              :: box(3)
         real*8                              :: ibox(3)
+        real*8                              :: fudgeLJ
+        real*8                              :: fudgeQQ
         integer                             :: N_of_atoms
         integer                             :: N_of_species
         integer                             :: N_of_molecules

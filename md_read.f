@@ -258,16 +258,14 @@ else
                open (70, file=string, status='old',iostat=ioerr,err=101)
                read (70,*) species(a) % Nbonds14 
                allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 ) )
-               allocate( species(a) % fact14  ( species(a) % Nbonds14   ) )
                do b = 1 , species(a) % Nbonds14
-                   read(70,*) species(a) % bonds14(b,1:2) , species(a) % fact14(b)
+                   read(70,*) species(a) % bonds14(b,1:2) , MM % fudgeLJ , MM % fudgeQQ
                end do
                close (70)
             else
                allocate( species(a) % bonds14 ( species(a) % Nbonds14,2 ) )
-               allocate( species(a) % fact14  ( species(a) % Nbonds14   ) )
                do b = 1 , species(a) % Nbonds14
-                   read(30,*) species(a) % bonds14(b,1:2) , species(a) % fact14(b)
+                   read(30,*) species(a) % bonds14(b,1:2) , MM % fudgeLJ , MM % fudgeQQ
                end do        
             end if
 
@@ -391,7 +389,6 @@ end do
 
 do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
-    allocate( molecule(i) % fact14        ( molecule(i) % Nbonds14     ) )
     allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
     allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 2 ) )
     allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
@@ -413,7 +410,6 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
     molecule(i) % harm          = species(molecule(i) % my_species) % harm
     molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
-    molecule(i) % fact14        = species(molecule(i) % my_species) % fact14
     molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
     molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
@@ -466,7 +462,6 @@ do i = 1 , N
     molecule(i) % Ndiheds        = 0
     molecule(i) % Nharm          = 0
     molecule(i) % Nbonds14       = 0
-    molecule(i) % fact14         = 0.0d0
 end do
 
 end subroutine allocate_molecule

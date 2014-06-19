@@ -12,7 +12,6 @@ private
 public :: top2mdflex, itp2mdflex, SpecialPairs
 
     ! module variables ...
-    real*8                           , save  :: fact14
     character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
     real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
     type(DefinePairs) , allocatable :: SpecialPairs(:)
@@ -165,15 +164,14 @@ do a = 1 , MM % N_of_species
         species(a) % funct_angle(:Nangs) = InputChars(:Nangs,1)
 
 !==============================================================================================
-        ! expecting for dihedrals ...
+        ! Dihedral parameters :: reading ...
         do
             read(33,100,iostat=ioerr) keyword
-            if ( trim(keyword) == "[ dihedrals ]" .OR. trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
+            if ( trim(keyword) == "[ dihedrals ]" .OR. ioerr /= 0 ) exit
         end do
 
         if( trim(keyword) == "[ dihedrals ]" ) then
 
-            ! Dihedrals interactions :: reading ...
             CALL skip_lines(33,1)
 
             InputIntegers = I_zero
@@ -183,6 +181,7 @@ do a = 1 , MM % N_of_species
                 if( ioerr /= 0 ) exit
                 i = i + 1
             end do
+            backspace(33)
 
             Ndiheds = i - 1
             species(a) % Ndiheds = Ndiheds
@@ -197,19 +196,17 @@ do a = 1 , MM % N_of_species
             ! define species(a) % dihedral_type ...
             CALL define_DihedralType( species(a) , Ndiheds )
 
+        end if
+
 !==============================================================================================
-            ! expecting for special-pairs ...
+            ! Pairs 1-4 parameters :: reading ...
             do
                 read(33,100,iostat=ioerr) keyword
                 if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
             end do
-            CALL skip_lines(33,1)
-
-        end if
 
         if( trim(keyword) == "[ pairs ]" ) then
 
-            ! Special-pairs interactions :: reading ...
             CALL skip_lines(33,1)
 
             InputIntegers = I_zero
@@ -219,16 +216,14 @@ do a = 1 , MM % N_of_species
                 if( ioerr /= 0 ) exit
                 i = i + 1
             end do
+            backspace(33)
 
             Nbonds14 = i - 1
             species(a) % Nbonds14 = Nbonds14
 
             allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
-            allocate( species(a) % fact14  ( Nbonds14     ) )
 
             forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
-
-            species(a) % fact14(:Nbonds14) = InputReals(:Nbonds14,1)
 
         end if
 !==============================================================================================
@@ -246,7 +241,7 @@ FF % MMSymbol = adjustl(FF % MMSymbol)
 
 ! passing MMSymbol from FF to atom ...
 i1 = 1
-do nr = 1 , atom(MM%N_of_atoms) % nr
+    do nr = 1 , atom(MM%N_of_atoms) % nr
     sp = atom(i1) % my_species
     i3 = count(atom%nr==nr)
     i2 = i1 + (i3-1)
@@ -279,7 +274,7 @@ character(3)    , allocatable   :: InputChars(:,:)
 real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:)
-real*8                          :: factQQ , dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
+real*8                          :: dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms
 character(1)                    :: keyword_1
@@ -301,10 +296,10 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
 !   reading defaults ...
     CALL skip_lines(33,2)
-    read(33,*) dummy_int, MM % CombinationRule, dummy_char, fudgeLJ , fudgeQQ
+    read(33,*) dummy_int, MM % CombinationRule, dummy_char, MM % fudgeLJ , MM % fudgeQQ
 
 !=====================================================================================
-!   reading he number of [ atomtypes ] ...
+!   reading the number of [ atomtypes ] ...
     do
         read(33,100) keyword
         if( trim(keyword) == "[ atomtypes ]" ) exit

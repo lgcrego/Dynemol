@@ -19,7 +19,7 @@ contains
 !================================
 implicit none
 
-!------------------------------------------------------------------------------
+!------------------------------------------------------------------------------atom % MMSymbol = adjustl(atom % MMSymbol)
 ! SYSTEM  INFO
 !
   MM % N_of_molecules = 1                   ! <== total number of molecules
@@ -56,12 +56,12 @@ implicit none
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  
 
   MM_log_step            =  1                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  1                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  50                ! <== step for saving MM results & parameters
 
 !------------------------------------------------------------------------------
 ! UNITS ...
 !
-  Units_MM               = "kj-mol"           ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
+  Units_MM               = "eV"               ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 
 ! =====================================================================================
 
@@ -95,7 +95,6 @@ do i = 1 , N
     species(i) % Ndiheds        = 0
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
-    species(i) % fact14         = 0.0d0
 end do
 
 end subroutine allocate_species
