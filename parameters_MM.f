@@ -19,7 +19,7 @@ contains
 !================================
 implicit none
 
-!------------------------------------------------------------------------------atom % MMSymbol = adjustl(atom % MMSymbol)
+!------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
   MM % N_of_molecules = 1                   ! <== total number of molecules
