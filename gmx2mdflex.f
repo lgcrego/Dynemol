@@ -21,6 +21,249 @@ contains
 !
 !
 !
+!================================================
+ subroutine itp2mdflex( MM , atom , species , FF)
+!================================================
+implicit none
+type(MM_system)     , intent(in)    :: MM
+type(MM_atomic)     , intent(inout) :: atom(:)
+type(MM_atomic)     , intent(inout) :: FF(:)
+type(MM_molecular)  , intent(inout) :: species(:)
+
+! local variables ...
+character(15)   , allocatable   :: InputChars(:,:)
+real*8          , allocatable   :: InputReals(:,:)
+integer         , allocatable   :: InputIntegers(:,:) 
+character(18)                   :: keyword , keyword_tmp
+character(10)                   :: string
+character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
+real*8                          :: dummy_real , factor
+integer                         :: i1 , i2 , i3 , sp , nr
+integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
+
+allocate( InputChars    ( 10000 , 10 )                   )
+allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
+allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
+
+! Reading different '.itp' species files ...
+counter = 0
+do a = 1 , MM % N_of_species
+
+    string = species(a) % residue // '.itp'
+
+    open(33, file=string, status='old',iostat=ioerr,err=101)
+
+        101 if( ioerr > 0 ) then
+            print*, string,' file not found; terminating execution' ; stop
+        end if
+
+        ! start reading the molecular structure of species(a) ...
+        do
+            read(33,100) keyword
+            if( trim(keyword) == "[ atoms ]" ) exit
+        end do
+        CALL skip_lines(33,1)
+
+        allocate( species(a) % atom ( species(a) % N_of_atoms ) )
+
+        do i = 1 , species(a) % N_of_atoms
+
+            read(33,*) species(a) % atom(i) % my_id ,      &
+                       species(a) % atom(i) % MMSymbol ,   &
+                       dummy_int ,                         &
+                       species(a) % atom(i) % residue ,    &
+                       species(a) % atom(i) % EHSymbol ,   &
+                       dummy_int ,                         &
+                       species(a) % atom(i) % MM_charge ,  &
+                       species(a) % atom(i) % mass
+
+            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
+            species(a) % atom(i) % my_species = a
+            species(a) % my_species           = a
+            species(a) % atom(i) % flex       = species(a) % flex
+
+            ! this is the standard; atomic flexibity can also be defined @ ad_hoc_MM_tuning ...    
+            where( atom % my_species == a ) atom % flex = species(a) % flex
+
+            counter = counter + 1
+            FF(counter) % my_species = a
+            FF(counter) % my_id      = species(a) % atom(i) % my_id
+            FF(counter) % residue    = species(a) % atom(i) % residue
+            FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
+            FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
+            FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
+
+        end do
+
+        N_of_atoms = species(a) % N_of_atoms
+
+        i = 1
+        do
+
+            if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
+                atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
+                i = i + N_of_atoms
+            else
+                i = i + 1
+            end if
+
+            if( i > size(atom) ) exit
+
+        end do
+
+!==============================================================================================
+        ! Bonding parameters :: reading ...
+        do
+            read(33,100) keyword
+            if( trim(keyword) == "[ bonds ]" ) exit
+        end do
+        CALL skip_lines(33,1)
+
+        i = 1
+        do
+            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputChars(i,1)
+            if( ioerr /= 0 ) exit
+            i = i + 1
+        end do
+        backspace(33)
+
+        Nbonds = i - 1
+        species(a) % Nbonds = Nbonds
+
+        allocate( species(a) % bonds      ( Nbonds , 2 ) )
+        allocate( species(a) % funct_bond ( Nbonds     ) )
+
+        forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
+
+        species(a) % funct_bond(:Nbonds) = InputChars(:Nbonds,1)
+
+!==============================================================================================
+        ! Angle parameters :: reading ...
+        do
+            read(33,100) keyword
+            if ( trim(keyword) == "[ angles ]" ) exit
+        end do
+        CALL skip_lines(33,1)
+
+        InputIntegers = I_zero
+        i = 1
+        do
+            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,3 ) , InputChars(i,1)
+            if( ioerr /= 0 ) exit
+            i = i + 1
+        end do
+        backspace(33)
+           
+        Nangs = i - 1
+        species(a) % Nangs = Nangs
+
+        allocate( species(a) % angs        ( Nangs , 3 ) )
+        allocate( species(a) % funct_angle ( Nangs     ) )
+
+        forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
+
+        species(a) % funct_angle(:Nangs) = InputChars(:Nangs,1)
+
+!==============================================================================================
+        ! expecting for dihedrals ...
+        do
+            read(33,100,iostat=ioerr) keyword
+            if ( trim(keyword) == "[ dihedrals ]" .OR. trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
+        end do
+
+        if( trim(keyword) == "[ dihedrals ]" ) then
+
+            ! Dihedrals interactions :: reading ...
+            CALL skip_lines(33,1)
+
+            InputIntegers = I_zero
+            i = 1
+            do
+                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,5 )
+                if( ioerr /= 0 ) exit
+                i = i + 1
+            end do
+
+            Ndiheds = i - 1
+            species(a) % Ndiheds = Ndiheds
+
+            allocate( species(a) % diheds  ( Ndiheds , 4 ) )
+            allocate( species(a) % funct_dihed ( Ndiheds     ) )
+
+            forall(i=1:4) species(a) % diheds(:Ndiheds,i) = InputIntegers(:Ndiheds,i)
+
+            species(a) % funct_dihed(:Ndiheds) = InputIntegers(:Ndiheds,5)
+
+            ! define species(a) % dihedral_type ...
+            CALL define_DihedralType( species(a) , Ndiheds )
+
+!==============================================================================================
+            ! expecting for special-pairs ...
+            do
+                read(33,100,iostat=ioerr) keyword
+                if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
+            end do
+            CALL skip_lines(33,1)
+
+        end if
+
+        if( trim(keyword) == "[ pairs ]" ) then
+
+            ! Special-pairs interactions :: reading ...
+            CALL skip_lines(33,1)
+
+            InputIntegers = I_zero
+            i = 1
+            do
+                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
+                if( ioerr /= 0 ) exit
+                i = i + 1
+            end do
+
+            Nbonds14 = i - 1
+            species(a) % Nbonds14 = Nbonds14
+
+            allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
+            allocate( species(a) % fact14  ( Nbonds14     ) )
+
+            forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
+
+            species(a) % fact14(:Nbonds14) = InputReals(:Nbonds14,1)
+
+        end if
+!==============================================================================================
+
+
+        If( species(a) % Nbonds /= 0 ) CALL Identify_NonBondPairs( species , a )
+
+    close(33)
+
+end do
+
+FF % residue  = adjustl(FF % residue)
+FF % Symbol   = adjustl(FF % Symbol)
+FF % MMSymbol = adjustl(FF % MMSymbol)
+
+! passing MMSymbol from FF to atom ...
+i1 = 1
+do nr = 1 , atom(MM%N_of_atoms) % nr
+    sp = atom(i1) % my_species
+    i3 = count(atom%nr==nr)
+    i2 = i1 + (i3-1)
+    atom(i1:i2)%MMSymbol = pack(FF % MMSymbol , FF % my_species == sp)
+    i1 = i2+1
+end do
+
+atom % MMSymbol = adjustl(atom % MMSymbol)
+
+deallocate( InputChars , InputIntegers )
+
+100 format(a18)
+
+end subroutine itp2mdflex
+!
+!
+!
 !=================================================
  subroutine top2mdflex( MM , atom , species , FF )
 !=================================================
@@ -429,247 +672,6 @@ if( allocated(DihedSymbols)        ) deallocate( DihedSymbols        )
 120  format(4a5,t22,I2,t26,6f14.4)
 
 end subroutine top2mdflex
-!
-!
-!
-!================================================
- subroutine itp2mdflex( MM , atom , species , FF)
-!================================================
-implicit none
-type(MM_system)     , intent(in)    :: MM
-type(MM_atomic)     , intent(inout) :: atom(:)
-type(MM_atomic)     , intent(inout) :: FF(:)
-type(MM_molecular)  , intent(inout) :: species(:)
-
-! local variables ...
-character(15)   , allocatable   :: InputChars(:,:)
-real*8          , allocatable   :: InputReals(:,:)
-integer         , allocatable   :: InputIntegers(:,:) 
-character(18)                   :: keyword , keyword_tmp
-character(10)                   :: string
-character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
-real*8                          :: dummy_real , factor
-integer                         :: i1 , i2 , i3 , sp , nr
-integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
-
-allocate( InputChars    ( 10000 , 10 )                   )
-allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
-allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
-
-! Reading different '.itp' species files ...
-counter = 0
-do a = 1 , MM % N_of_species
-
-    string = species(a) % residue // '.itp'
-
-    open(33, file=string, status='old',iostat=ioerr,err=101)
-
-        101 if( ioerr > 0 ) then
-            print*, string,' file not found; terminating execution' ; stop
-        end if
-
-        ! start reading the molecular structure of species(a) ...
-        do
-            read(33,100) keyword
-            if( trim(keyword) == "[ atoms ]" ) exit
-        end do
-        CALL skip_lines(33,1)
-
-        allocate( species(a) % atom ( species(a) % N_of_atoms ) )
-
-        do i = 1 , species(a) % N_of_atoms
-
-            read(33,*) species(a) % atom(i) % my_id ,      &
-                       species(a) % atom(i) % MMSymbol ,   &
-                       dummy_int ,                         &
-                       species(a) % atom(i) % residue ,    &
-                       species(a) % atom(i) % EHSymbol ,   &
-                       dummy_int ,                         &
-                       species(a) % atom(i) % MM_charge ,  &
-                       species(a) % atom(i) % mass
-
-            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
-            species(a) % atom(i) % my_species = a
-            species(a) % my_species           = a
-            species(a) % atom(i) % flex       = species(a) % flex
-
-            ! this is the standard; atomic flexibity can also be defined @ ad_hoc_MM_tuning ...    
-            where( atom % my_species == a ) atom % flex = species(a) % flex
-
-            counter = counter + 1
-            FF(counter) % my_species = a
-            FF(counter) % my_id      = species(a) % atom(i) % my_id
-            FF(counter) % residue    = species(a) % atom(i) % residue
-            FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
-            FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
-            FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
-
-        end do
-
-        N_of_atoms = species(a) % N_of_atoms
-
-        i = 1
-        do
-
-            if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
-                atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
-                i = i + N_of_atoms
-            else
-                i = i + 1
-            end if
-
-            if( i > size(atom) ) exit
-
-        end do
-
-!==============================================================================================
-        ! Bonding parameters :: reading ...
-        do
-            read(33,100) keyword
-            if( trim(keyword) == "[ bonds ]" ) exit
-        end do
-        CALL skip_lines(33,1)
-
-        i = 1
-        do
-            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputChars(i,1)
-            if( ioerr /= 0 ) exit
-            i = i + 1
-        end do
-        backspace(33)
-
-        Nbonds = i - 1
-        species(a) % Nbonds = Nbonds
-
-        allocate( species(a) % bonds      ( Nbonds , 2 ) )
-        allocate( species(a) % funct_bond ( Nbonds     ) )
-
-        forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
-
-        species(a) % funct_bond(:Nbonds) = InputChars(:Nbonds,1)
-
-!==============================================================================================
-        ! Angle parameters :: reading ...
-        do
-            read(33,100) keyword
-            if ( trim(keyword) == "[ angles ]" ) exit
-        end do
-        CALL skip_lines(33,1)
-
-        InputIntegers = I_zero
-        i = 1
-        do
-            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,3 ) , InputChars(i,1)
-            if( ioerr /= 0 ) exit
-            i = i + 1
-        end do
-        backspace(33)
-           
-        Nangs = i - 1
-        species(a) % Nangs = Nangs
-
-        allocate( species(a) % angs        ( Nangs , 3 ) )
-        allocate( species(a) % funct_angle ( Nangs     ) )
-
-        forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
-
-        species(a) % funct_angle(:Nangs) = InputChars(:Nangs,1)
-
-!==============================================================================================
-        ! expecting for dihedrals ...
-        do
-            read(33,100,iostat=ioerr) keyword
-            if ( trim(keyword) == "[ dihedrals ]" .OR. trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
-        end do
-
-        if( trim(keyword) == "[ dihedrals ]" ) then
-
-            ! Dihedrals interactions :: reading ...
-            CALL skip_lines(33,1)
-
-            InputIntegers = I_zero
-            i = 1
-            do
-                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,5 )
-                if( ioerr /= 0 ) exit
-                i = i + 1
-            end do
-
-            Ndiheds = i - 1
-            species(a) % Ndiheds = Ndiheds
-
-            allocate( species(a) % diheds  ( Ndiheds , 4 ) )
-            allocate( species(a) % funct_dihed ( Ndiheds     ) )
-
-            forall(i=1:4) species(a) % diheds(:Ndiheds,i) = InputIntegers(:Ndiheds,i)
-
-            species(a) % funct_dihed(:Ndiheds) = InputIntegers(:Ndiheds,5)
-
-            ! define species(a) % dihedral_type ...
-            CALL define_DihedralType( species(a) , Ndiheds )
-
-!==============================================================================================
-            ! expecting for special-pairs ...
-            do
-                read(33,100,iostat=ioerr) keyword
-                if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
-            end do
-            CALL skip_lines(33,1)
-
-        end if
-
-        if( trim(keyword) == "[ pairs ]" ) then
-
-            ! Special-pairs interactions :: reading ...
-            CALL skip_lines(33,1)
-
-            InputIntegers = I_zero
-            i = 1
-            do
-                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
-                if( ioerr /= 0 ) exit
-                i = i + 1
-            end do
-
-            Nbonds14 = i - 1
-            species(a) % Nbonds14 = Nbonds14
-
-            allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
-            allocate( species(a) % fact14  ( Nbonds14     ) )
-
-            forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
-
-            species(a) % fact14(:Nbonds14) = InputReals(:Nbonds14,1)
-
-        end if
-!==============================================================================================
-
-
-        If( species(a) % Nbonds /= 0 ) CALL Identify_NonBondPairs( species , a )
-
-    close(33)
-
-end do
-
-FF % residue  = adjustl(FF % residue)
-FF % Symbol   = adjustl(FF % Symbol)
-FF % MMSymbol = adjustl(FF % MMSymbol)
-
-! passing MMSymbol from FF to atom ...
-i1 = 1
-    do nr = 1 , atom(MM%N_of_atoms) % nr
-    sp = atom(i1) % my_species
-    i3 = count(atom%nr==nr)
-    i2 = i1 + (i3-1)
-    atom(i1:i2)%MMSymbol = pack(FF % MMSymbol , FF % my_species == sp)
-    i1 = i2+1
-end do
-
-deallocate( InputChars , InputIntegers )
-
-100 format(a18)
-
-end subroutine itp2mdflex
 !
 !
 !

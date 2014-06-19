@@ -121,8 +121,6 @@ initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ib
 !=======================  reading  potential.inpt  ============================= 
 CALL allocate_FF( atmax )
 
-atom % MMSymbol = adjustl(atom % MMSymbol)
-
 If( read_from_gmx ) then
 
     CALL ad_hoc_MM_tuning(instance="SpecialBonds")
@@ -612,6 +610,9 @@ do j = 1 , MM % N_of_atoms
     atom(i) % flex         = .true.
 end do
 
+! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
+atom % MMSymbol = atom % EHSymbol  
+
 indx = 1
 do nr = 1 , atom( MM % N_of_atoms ) % nr
     do i = 1 , count( atom%nr == nr ) 
@@ -619,8 +620,6 @@ do nr = 1 , atom( MM % N_of_atoms ) % nr
         indx = indx + 1
     end do
 end do
-
-CALL MMSymbol_2_Symbol( atom )
 
 ! setting up initial velocities ...
 do i = 1 , MM % N_of_atoms
