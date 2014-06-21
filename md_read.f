@@ -430,8 +430,6 @@ do i = 1 , size(atom)
     atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
 
-CALL ad_hoc_MM_tuning( atom , instance = "General" )
-
 end subroutine Reading
 !
 !
@@ -607,6 +605,8 @@ end do
 
 ! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
 atom % MMSymbol = atom % EHSymbol  
+
+CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 indx = 1
 do nr = 1 , atom( MM % N_of_atoms ) % nr
