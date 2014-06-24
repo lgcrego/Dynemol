@@ -15,6 +15,7 @@ module MM_dynamics_m
     use Structure_Builder   , only : Unit_Cell
     use Backup_MM_m         , only : Security_Copy_MM , Restart_MM
     use Data_Output         , only : Net_Charge
+    use MM_types            , only : debug_MM
 
     public :: MolecularMechanics , preprocess_MM
 
@@ -46,6 +47,7 @@ CALL VV1( dt )
 CALL Molecular_CM
 CALL ForceInter
 CALL ForceIntra
+
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 CALL VV2 ( Ttrans , kinetic , dt )

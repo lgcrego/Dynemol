@@ -40,7 +40,8 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
-    use MM_dynamics_m               , only : MolecularMechanics
+    use MM_dynamics_m               , only : MolecularMechanics ,           &
+                                             preprocess_MM
 
     public :: ElHl_adiabatic
 
@@ -49,9 +50,10 @@ module ElHl_adiabatic_m
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase
     Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket
+    real*8     , ALLOCATABLE , dimension(:,:) :: Net_Charge_old(:,:)
     type(R_eigen)                             :: UNI , el_FMO , hl_FMO
     type(R_eigen)                             :: UNI_el , UNI_hl
-    integer                                   :: mm
+    integer                                   :: mm , nn
 
 contains
 !
@@ -64,21 +66,12 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...   
+real*8                 :: t , t_rate 
 integer                :: j , frame , frame_init , frame_final , frame_restart
-real*8                 :: t , t_rate , t_rate_MM
 type(universe)         :: Solvated_System
 
 it = 1
 t  = t_i
-
-If( restart ) then
-    CALL Restart_stuff( QDyn , t , it , frame_restart )
-    mm = size(ExCell_basis)
-else
-    CALL Preprocess( QDyn , it )
-end If
-
-frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
@@ -87,11 +80,20 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 If( nuclear_matter == "MDynamics" ) then
     t_rate      = t_f / float(n_t)
     frame_final = n_t
-    t_rate_MM   = 1.0d-12 * t_rate
 else
-    t_rate      = merge( t_f / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+    t_rate      = merge( t_f / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.d0) )
     frame_final = size(trj)
 end If
+
+If( restart ) then
+    CALL Restart_stuff( QDyn , t , it , frame_restart )
+    mm = size(ExCell_basis)
+    nn = n_part
+else
+    CALL Preprocess( QDyn , it )
+end If
+
+frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
 
@@ -119,6 +121,11 @@ do frame = frame_init , frame_final , frame_step
 
     ! save populations(t + t_rate) ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
+
+    If( NetCharge ) then
+        Net_Charge_old(:,2) = Net_Charge_old(:,1)
+        Net_Charge_old(:,1) = Net_Charge
+    end If
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -148,7 +155,14 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
-            CALL MolecularMechanics( t_rate_MM , frame - 1 )    ! <== MM precedes QM ...
+            If( NetCharge ) Net_Charge(:) = Net_Charge_old(:,2)
+
+            ! MM preprocess ...
+            if( frame == frame_init ) CALL preprocess_MM
+
+            CALL MolecularMechanics( t_rate , frame - 1 )    ! <== MM precedes QM ...
+
+            if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,1)
             
         case default
 
@@ -240,7 +254,10 @@ end select
 
 CALL Generate_Structure ( 1 )
 
-If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
+If( NetCharge ) then
+    allocate( Net_Charge     ( Extended_Cell%atoms     ) , source = D_zero )
+    allocate( Net_Charge_old ( Extended_Cell%atoms , 2 ) , source = D_zero )
+end If
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
@@ -264,6 +281,7 @@ CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UN
 
 ! build the initial electron-hole wavepacket ...
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )
+
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_hl%R , hl_FMO , instance="H" )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
@@ -309,6 +327,8 @@ CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm 
 
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+
+If( NetCharge ) Net_Charge_old(:,1) = Net_Charge
 
 CALL dump_Qdyn( Qdyn , it )
 
@@ -430,25 +450,50 @@ type(f_time)    , intent(in) :: QDyn
 integer         , intent(in) :: it 
 
 ! local variables ...
-integer :: nf , n
+integer     :: nf , n
+complex*16  :: wp_energy
 
 do n = 1 , n_part
 
+    select case( n_part )
+     
+        case( 1 ) 
+        wp_energy = sum(MO_bra(:,n)*UNI_el%erg(:)*MO_ket(:,n))
+
+        case( 2 ) 
+        wp_energy = sum(MO_bra(:,n)*UNI_hl%erg(:)*MO_ket(:,n))
+
+    end select
+
     If( it == 1 ) then
+
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,12) "#" , QDyn%fragments , "total"
+
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+        write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+
     else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
+
     end If
 
+    ! dumps el-&-hl populations ...
     write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
 
+    ! dumps el-&-hl wavepachet energies ...
+    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+
     close(52)
+    close(53)
 
 end do
 
 12 FORMAT(10A10)
 13 FORMAT(10F10.5)
+14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
 !

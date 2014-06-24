@@ -45,7 +45,7 @@ integer         , optional                 , intent(in)    :: flag2
 
 ! local variables ...
 real*8  , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
-real*8  , ALLOCATABLE   :: h(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE   :: h(:,:) , S_matrix(:,:) 
 integer                 :: i , j 
  
 PTheory = present(AO_bra) 
@@ -91,13 +91,14 @@ CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , in
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
 
+! re-initialize the hamiltonian ...
 h = Huckel( basis , S_matrix )
 
 if( DP_field_ .OR. Induced_ ) then
 
     CALL H_DP_Builder( basis , S_matrix )
 
-    h = transpose(h) + transpose(H_DP)
+    h = h + transpose(H_DP)
     if( PTheory ) then
         forall( j=1:size(basis) ) h(j,j) = h(j,j) - ( AO_bra(j,2)*AO_ket(j,2) * H_DP(j,j) )  + V_coul_Hl(j)
     else
@@ -106,7 +107,6 @@ if( DP_field_ .OR. Induced_ ) then
 
 else
 
-    h = transpose(h)
     forall( j=1:size(basis) ) h(j,j) = h(j,j) + V_coul_Hl(j)
 
 end if
@@ -257,6 +257,8 @@ do j = 1 , size(basis)
         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
         Huckel(i,j) = k_eff * S_matrix(i,j) * (basis(i)%IP + basis(j)%IP) / two
+
+        Huckel(j,i) = Huckel(i,j)
 
     end do
 

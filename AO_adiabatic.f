@@ -66,9 +66,9 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-type(universe)  :: Solvated_System
 real*8          :: t , t_rate 
 integer         :: j , frame , frame_init , frame_final , frame_restart
+type(universe)  :: Solvated_System
 
 it = 1
 t  = t_i
@@ -76,11 +76,12 @@ t  = t_i
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
+! time is PICOseconds in EHT & seconds in MM ...
 If( nuclear_matter == "MDynamics" ) then
     t_rate      = t_f / float(n_t)
     frame_final = n_t
 else
-    t_rate      = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+    t_rate      = merge( t_f / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.d0) )
     frame_final = size(trj)
 end If
 
@@ -89,7 +90,7 @@ If( restart ) then
     mm = size(ExCell_basis)
     nn = n_part
 else
-    CALL Preprocess( QDyn , t_rate , it )
+    CALL Preprocess( QDyn , it )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -200,12 +201,11 @@ end subroutine AO_adiabatic
 !
 !
 !
-!=======================================
- subroutine Preprocess( QDyn , dt , it )
-!=======================================
+!==================================
+ subroutine Preprocess( QDyn , it )
+!==================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-real*8          , intent(in)    :: dt
 integer         , intent(in)    :: it
 
 ! local variables
