@@ -226,10 +226,33 @@ do a = 1 , MM % N_of_species
             forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
 
         end if
+
 !==============================================================================================
 
+        If( species(a) % Nbonds /= 0 ) then 
 
-        If( species(a) % Nbonds /= 0 ) CALL Identify_NonBondPairs( species , a )
+            CALL Identify_NonBondPairs( species , a )
+
+        else 
+
+            ! Intermediate variable ... 
+            allocate( species(a) % IntraLJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
+
+            k = 1
+            do i = 1 , species(a) % N_of_Atoms - 1
+
+                do j = i + 1, species(a) % N_of_Atoms
+                    species(a) % IntraLJ(k,1) = i
+                    species(a) % IntraLJ(k,2) = j
+                    k = k + 1
+                end do
+
+            end do
+            species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
+        
+        end if
+
+!==============================================================================================
 
     close(33)
 

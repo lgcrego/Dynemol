@@ -430,6 +430,8 @@ do i = 1 , size(atom)
     atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
 
+CALL ad_hoc_MM_tuning( atom , instance = "General" )
+
 end subroutine Reading
 !
 !

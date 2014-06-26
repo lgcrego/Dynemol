@@ -40,11 +40,13 @@ integer :: i , ioerr
 !      define %residue
 !-----------------------------------
 
+univ % atom (49:50) % residue = "CCC"
 
 !-----------------------------------
 !      define %nr
 !-----------------------------------
 
+univ % atom(49:50) % nr = 2
  
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
@@ -54,13 +56,12 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where(univ % atom % residue == "BP1") univ % atom % El = .true.
+where(univ % atom % residue == "DPA") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "ION") univ % atom % Hl = .true.
-!where(univ % atom % residue == "BP1") univ % atom % Hl = .true.
+where(univ % atom % residue == "DPA") univ % atom % Hl = .true.
 
 !......................................................................
 
@@ -172,10 +173,10 @@ type(DefineAngles), allocatable :: SpecialAngs(:)
 contains
 
 !================================================
- subroutine ad_hoc_MM_tuning( system , instance )
+ subroutine ad_hoc_MM_tuning( atom , instance )
 !================================================
 implicit none
-type(MM_atomic) , optional , intent(inout) :: system(:)
+type(MM_atomic) , optional , intent(inout) :: atom(:)
 character(*)               , intent(in)    :: instance
 
 
@@ -197,11 +198,12 @@ select case ( instance )
 !----------------------------------
 
 !----------------------------------
-!      define resid's
+!      define residues
 !----------------------------------
 
+
 !----------------------------------
-!      define nresid's
+!      define nr
 !----------------------------------
 
 
