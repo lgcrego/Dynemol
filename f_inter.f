@@ -120,7 +120,7 @@ eintra = eintra + vself
 !##############################################################################
 !$OMP parallel DO &
 !$OMP private (k, l, atk, atl, rklq, rklsq, chrgk, chrgl, sr2, sr6, sr12, KRIJ, rij, rkl, fs, vsr, vreal, &
-!$OMP          expar, freal, nresidk, nresidl , ithr)                                                     &
+!$OMP          expar, freal, nresidk, nresidl , ithr , eps , n , flag1 , flag2)                           &
 !$OMP reduction (+ : pot, ecoul, evdw, stressr11, stressr22, stressr33, stressr12, stressr13, stressr23,  &
 !$OMP                                  stresre11, stresre22, stresre33, stresre12, stresre13, stresre23)
                    

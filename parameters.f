@@ -82,10 +82,10 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d0                               ! <== final time in PICOseconds
-  n_t  =  2000                                ! <== number of time steps
+  t_f  =  20.0d0                              ! <== final time in PICOseconds
+  n_t  =  20000                               ! <== number of time steps
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
   hole_state    = 01                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
@@ -134,7 +134,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "coupling_QMMM" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" )
         
         dynamic = T_ .OR. Survival 
 
@@ -145,6 +145,7 @@ select case( DRIVER )
     case( "MM_Dynamics" )
 
         QMMM = F_
+        dynamic = F_
         
     case default
         Print*, " >>> Check your driver options <<< :" , driver

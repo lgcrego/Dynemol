@@ -186,8 +186,9 @@ subroutine ReGroupMolecule
 implicit none
 
 ! local variables ...
-integer :: i , j , j1 , j2 , xyz , nresid , SmallMolecule
+integer :: i , j , j1 , j2 , xyz , nresid 
 real*8  :: CartesianDistance
+logical :: BigMolecule
  
 If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom )
 
@@ -196,29 +197,25 @@ If( .NOT. allocated(previous) ) allocate( previous(MM%N_of_atoms) , source=atom 
     j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
     j2 = sum(molecule(1:nresid) % N_of_atoms)
 
-     SmallMolecule = NINT(float(molecule(i)%N_of_atoms) / float(MM%N_of_atoms)) 
+    BigMolecule = any( [(maxval(atom(j1:j2)%xyz(j)) - minval(atom(j1:j2)%xyz(j)), j=1,3)] > MM%box(:)*HALF )
 
-     select case (SmallMolecule)
+    If( BigMolecule ) then
 
-         ! Small ...
-         case (0)
+        do xyz = 1 , 3
+            CartesianDistance = atom(i) % xyz(xyz) - previous(i) % xyz(xyz)
+            If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(i) % xyz(xyz) = atom(i) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+        end do
 
-            do j = j1 , j2
-                do xyz = 1 , 3
-                    CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)
-                    If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
-                end do
-            end do
+    else
 
-         ! Big ...
-         case (1) 
-
+        do j = j1 , j2
             do xyz = 1 , 3
-                CartesianDistance = atom(i) % xyz(xyz) - previous(i) % xyz(xyz)
-                If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(i) % xyz(xyz) = atom(i) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
+                CartesianDistance = atom(j) % xyz(xyz) - atom(j1) % xyz(xyz)
+                If( abs(CartesianDistance) > MM % box(xyz)*HALF ) atom(j) % xyz(xyz) = atom(j) % xyz(xyz) - sign( MM % box(xyz) , CartesianDistance )
             end do
+        end do
 
-     end select 
+    end iF
 
  end do
 
