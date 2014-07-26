@@ -243,8 +243,22 @@ do i = 1 , MM % N_of_molecules
                     sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
 
             end select
-
             eps   =  atom(ati) % eps * atom(atj) % eps 
+
+            ! Nbond_params directive on ...
+            read_loop1: do  n = 1, size(SpecialPairs)
+                flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+                flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+                if ( flag1 .OR. flag2 ) then
+                    sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                    eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                    exit read_loop1
+                end if
+                cycle  read_loop1
+            end do read_loop1
+
             rklsq = sqrt(rklq)
             sr6   = sr2 * sr2 * sr2
             sr12  = sr6 * sr6
@@ -284,7 +298,7 @@ end do
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % NintraLJ
         ati    = molecule(i) % IntraLJ(j,1)
-        atj    = molecule(i) % IntraLJ(j,2)
+        atj    = molecule(i) % IntraLJ(j,2) 
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
             chrgi  = atom(ati) % charge
@@ -326,14 +340,15 @@ do i = 1 , MM % N_of_molecules
             sr6   = sr2 * sr2 * sr2
             sr12  = sr6 * sr6
             fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            fs    = (fs / rklq) !- fscut(ati,atj) / rklsq     ! with force cut-off
+            ! with force cut-off ...
+            fs    = (fs / rklq) - fscut(ati,atj) / rklsq     
             atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
             ! factor used to compensate factor1 ...
             ! factor3 = 1.0d-20
             sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 )
             ! alternative formula with cutoff ...
-            !sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
+            sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
 
             !  Real part (Number of charges equal to the number of sites)
             sr2   = 1.d0 / rklq
@@ -341,14 +356,15 @@ do i = 1 , MM % N_of_molecules
             expar = EXP( -(KRIJ*KRIJ) )
             freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
             freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar )
-            !freal = freal - frecut / rklsq * chrgi * chrgj   ! with force cut-off
+            ! with force cut-off ...
+            freal = freal - frecut / rklsq * chrgi * chrgj   
             atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
             atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
             ! factor used to compensate factor1 ...
             ! factor3 = 1.0d-20
             tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
             ! alternative formula with cutoff ...
-            !tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
+            tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
             LJ_intra   = LJ_intra   + sterm
             Coul_intra = Coul_intra + tterm
 
@@ -365,6 +381,7 @@ pot2 = pot2 * mol * 1.0d-6 / MM % N_of_molecules
 ! Get total force ...
 
 do i = 1 , MM % N_of_atoms
+    
     atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
                                                   atom(i) % fang(:)     +  &
                                                   atom(i) % fdihed(:)   +  &
