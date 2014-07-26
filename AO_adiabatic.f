@@ -11,7 +11,7 @@ module AO_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart 
+                                             restart , QMMM
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -170,15 +170,15 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure ( frame )
 
-    CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )         CALL DP_stuff ( t , "DP_field"   )
+    If( DP_field_ )           CALL DP_stuff ( t , "DP_field"   )
 
-    If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_  .OR. QMMM ) CALL DP_stuff ( t , "Induced_DP" )
 
-    Deallocate              ( UNI%R , UNI%L , UNI%erg )
+    Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
@@ -250,7 +250,7 @@ end if
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_ ) CALL Build_Induced_DP( instance = "allocate" )
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -319,13 +319,13 @@ if( NetCharge ) Net_Charge_old(:,1) = Net_Charge
 
 CALL dump_Qdyn( Qdyn , it )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
+If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
+If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
 
-If( Induced_     ) CALL DP_stuff ( t_i , "Induced_DP" )
+If( Induced_ .OR. QMMM ) CALL DP_stuff ( t_i , "Induced_DP" )
 
 !..........................................................................
 

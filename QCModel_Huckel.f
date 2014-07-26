@@ -139,9 +139,9 @@ end subroutine EigenSystem
 !
 !
 !
-!====================================
- pure function Huckel(i,j,S_ij,basis)
-!====================================
+!============================================
+ pure function Huckel( i , j , S_ij , basis )
+!============================================
  implicit none
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
@@ -171,9 +171,9 @@ end subroutine EigenSystem
 !
 !
 !
-!================================================
- pure function Huckel_with_FIELDS(i,j,S_ij,basis)
-!================================================
+!========================================================
+ pure function Huckel_with_FIELDS( i , j , S_ij , basis )
+!========================================================
  implicit none
  integer         , intent(in) :: i , j
  real*8          , intent(in) :: S_ij
@@ -188,7 +188,9 @@ end subroutine EigenSystem
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
-    
+   
+ DP = D_zero
+
  c1 = basis(i)%IP - basis(j)%IP
  c2 = basis(i)%IP + basis(j)%IP
 
@@ -216,9 +218,9 @@ end subroutine EigenSystem
 
      vector = DEBYE_inv * DP_matrix_AO(i,j,:) + S_ij * ( Ri - r0 )    ! <== in Angs
 
-!     DP = DP_phi(i,j,basis)
-    
-     DP = Induced_DP_phi(i,j,basis)
+     If( Induced_  ) DP = Induced_DP_phi( i , j , basis )
+
+     If( DP_field_ ) DP = DP + DP_phi( i , j , basis )
 
      huckel_with_FIELDS = huckel_with_FIELDS + S_ij*DP(1) + dot_product( vector(1:3) , DP(2:4) )
 

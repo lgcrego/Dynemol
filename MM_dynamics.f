@@ -57,9 +57,9 @@ CALL Press_Boundary( pressure , dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-if( mod(frame,MM_log_step) == 0   ) CALL output( Ttrans , frame , dt )
-
 if( mod(frame,MM_log_step) == 0   ) then 
+
+    CALL output( Ttrans , frame , dt )
 
     select case (Units_MM)
 

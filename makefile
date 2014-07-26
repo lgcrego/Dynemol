@@ -40,7 +40,7 @@ SOURCE2 = constants_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  gmx2mdflex.o \
 		  babel_routines.o \
 		  babel.o \
@@ -49,7 +49,6 @@ SOURCE2 = constants_m.o \
 		  md_setup.o \
 		  f_intra.o \
 		  f_inter.o \
-		  CoulInt_QMMM.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -63,12 +62,13 @@ SOURCE2 = constants_m.o \
 		  dipole_phi.o \
 		  Coulomb.o \
 		  polarizability.o \
+		  CoulInt_QMMM.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
 		  AlphaPolar.o \
 		  data_output.o \
 		  verlet.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \

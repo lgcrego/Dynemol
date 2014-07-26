@@ -9,13 +9,13 @@
     use Semi_Empirical_Parms    , only : atom
     use Structure_Builder       , only : system => Extended_Cell    
 
-    public :: Build_Induced_DP , Induced_DP_phi
+    public :: Build_Induced_DP , Induced_DP_phi , Induced_DP
 
     private
     
     ! module variables ...       
     integer              , save :: counter = 0
-    real*8 , allocatable , save :: Induced_DP(:,:) , net_charge(:)
+    real*8 , allocatable , save :: Induced_DP(:,:) , Induced_DP_Dressed(:,:) , net_charge(:)
 
     ! module parameters ...
     real*8  , parameter :: c0 = 1.5d0               ,&   ! 3/2
@@ -55,8 +55,9 @@ N_of_atoms = system%atoms
 
 ! setup of Induced_DP ... 
 If( instance == "allocate" ) then
-    allocate( Induced_DP (N_of_atoms,3) , source = D_zero )
-    allocate( net_charge (N_of_atoms)   , source = D_zero )
+    allocate( Induced_DP         (N_of_atoms,3) , source = D_zero )
+    allocate( Induced_DP_Dressed (N_of_atoms,3) , source = D_zero )
+    allocate( net_charge         (N_of_atoms)   , source = D_zero )
     return
 end If
 
@@ -98,10 +99,10 @@ do ati = 1 , N_of_atoms
 
 end do
 
-! NOTICE: dipole moment is multiplied by DP_potential_factor ...
-Induced_DP = Induced_DP * DP_potential_factor * half
-
 If( CH_and_DP .AND. (mod(counter,CH_and_DP_step)==0) ) CALL visualize_Induced_DP (t)
+
+! NOTICE: dipole moment is multiplied by DP_potential_factor ...
+Induced_DP_Dressed = Induced_DP * DP_potential_factor * half
 
 counter = counter + 1
 
@@ -139,7 +140,7 @@ midpoint_ab(3) = ( basis(a)%z + basis(b)%z ) / two
 !------------------------------------------------------------------------
 !------------------------------------------------------------------------
 
-N_of_DP = size( Induced_DP(:,1) )
+N_of_DP = size( Induced_DP_Dressed(:,1) )
 
 allocate( vector_ALL   ( N_of_DP , 3 ) , source = D_zero  )
 allocate( distance_ALL ( N_of_DP     ) , source = D_zero  )
@@ -163,11 +164,11 @@ allocate( mol_phi ( N_of_DP     ) , source = D_zero )
 allocate( id_atom ( N_of_DP     ) , source = I_zero )   
 
 do j = 1 , 3 
-    vector(:,j)  = pack( vector_ALL(:,j) , mask , vector(:,j)  )
-    DP_Mols(:,j) = pack( Induced_DP(:,j) , mask , DP_Mols(:,j) )
+    vector(:,j)  = pack( vector_ALL(:,j)         , mask , vector(:,j)  )
+    DP_Mols(:,j) = pack( Induced_DP_Dressed(:,j) , mask , DP_Mols(:,j) )
 end do
 
-id_atom  = pack( [ ( i , i=1,size(Induced_DP(:,1)) ) ] , mask , id_atom  )  
+id_atom  = pack( [ ( i , i=1,size(Induced_DP_Dressed(:,1)) ) ] , mask , id_atom  )  
 distance = pack( distance_ALL   , mask , distance )
 
 deallocate( vector_ALL , distance_ALL , mask )

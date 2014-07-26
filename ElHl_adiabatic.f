@@ -11,7 +11,7 @@ module ElHl_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart , Coulomb_          
+                                             restart , Coulomb_ , QMMM   
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -171,13 +171,13 @@ do frame = frame_init , frame_final , frame_step
 
     end select
 
-    CALL Generate_Structure ( frame )
+    CALL Generate_Structure  ( frame )
 
-    CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder       ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )         CALL DP_stuff ( t , "DP_field"   )
+    If( DP_field_ )          CALL DP_stuff ( t , "DP_field"   )
 
-    If( Induced_  )         CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ .OR. QMMM ) CALL DP_stuff ( t , "Induced_DP" )
 
     ! LOCAL representation for Coulomb calculation ...
     AO_bra = DUAL_bra
@@ -261,7 +261,7 @@ end If
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_ ) CALL Build_Induced_DP ( instance = "allocate" )
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP ( instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -275,7 +275,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-If( DP_Field_ .OR. Induced_ ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
+If( DP_Field_ .OR. Induced_ .OR. QMMM ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
 
@@ -332,13 +332,13 @@ If( NetCharge ) Net_Charge_old(:,1) = Net_Charge
 
 CALL dump_Qdyn( Qdyn , it )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix" )
+If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix" )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment" )
+If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment" )
 
-If( Induced_     ) CALL DP_stuff ( t_i , "Induced_DP" )
+If( Induced_ .OR. QMMM ) CALL DP_stuff ( t_i , "Induced_DP" )
 
 !..........................................................................
 

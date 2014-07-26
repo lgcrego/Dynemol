@@ -278,7 +278,7 @@ type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
 
 ! local variables ... 
-real*8  :: DP(4)
+real*8  :: DP(4) = D_zero
 real*8  :: vector(3)
 integer :: i , j
 logical :: flag
@@ -288,7 +288,7 @@ logical :: flag
 
 ALLOCATE( H_DP(size(basis),size(basis)) , source = D_zero )
 
-!$OMP PARALLEL DO schedule( GUIDED , 10 )
+!$OMP PARALLEL DO private ( i , j , flag , DP , vector ) schedule( GUIDED , 10 )
 do j = 1 , size(basis)
     do i = 1 , j
 
@@ -296,9 +296,9 @@ do j = 1 , size(basis)
 
         if( flag ) then
 
-!            DP = DP_phi(i,j,basis)
+            If( Induced_  ) DP = Induced_DP_phi( i , j , basis )
 
-            DP = Induced_DP_phi(i,j,basis)
+            If( DP_field_ ) DP = DP + DP_phi( i , j , basis )
 
             vector = DEBYE_inv * DP_matrix_AO(i,j,:) + S_matrix(i,j) * ( Ri(basis(i)) - r0(basis(i),basis(j)) )
 
