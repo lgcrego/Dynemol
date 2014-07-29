@@ -18,7 +18,7 @@ module MD_read_m
     ! module variables ...
     logical :: read_from_gmx
 
-    public :: Reading , MM , atom , molecule , species , FF , read_from_gmx
+    public :: Build_MM_Environment , MM , atom , molecule , species , FF , read_from_gmx
 
     private
 
@@ -26,9 +26,9 @@ contains
 !
 !
 !
-!=================
-subroutine Reading
-!=================
+!================================
+subroutine Build_MM_Environment
+!================================
 implicit none
 
 ! local variables ...
@@ -44,7 +44,7 @@ CALL Define_MM_Environment
 
 bath_T        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure
-rcut          = cutoff_radius                   !  Cutoff radius (A)
+rcut          = cutoff_radius                   !  Cutoff radius (Angs.)
 talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
@@ -52,6 +52,8 @@ read_vel      = read_velocities                 ! .T. , .F.
 read_from_gmx = gmx_input_format                ! .T. , .F.
 
 atmax = sum( species(:) % N_of_atoms )
+
+If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check parameters_MM.f << '
 
 ! =====================================================================================
 ! types of molecules ...
@@ -80,8 +82,6 @@ end do
 
 ! ==============  pass information from structure to molecular dynamics  ==============
 CALL Structure_2_MD( read_vel )
-
-KAPPA = KAPPA / MM % box(3)
 
 do i = 1 , MM % N_of_atoms
     nresid = atom(i) % nr
@@ -432,7 +432,7 @@ end do
 
 CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
-end subroutine Reading
+end subroutine Build_MM_Environment
 !
 !
 !
@@ -636,7 +636,7 @@ if( read_vel ) then
         end do
         close(33)
     else
-        STOP ' velocity_MM.inpt file not found !'
+        STOP ' >> read_velocity = .true. but file velocity_MM.inpt was not found ! << '
     endif
 
 end if

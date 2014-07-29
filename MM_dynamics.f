@@ -3,7 +3,7 @@ module MM_dynamics_m
     use constants_m
     use parameters_m        , only : restart , step_security , QMMM 
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM
-    use MD_read_m           , only : atom , Reading , MM
+    use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
     use f_inter_m           , only : FORCEINTER
@@ -91,8 +91,6 @@ integer , optional  , intent(inout) :: frame_init
 
 !local variables ...
 integer :: frame , i 
-
-CALL Reading
 
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 

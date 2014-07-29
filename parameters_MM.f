@@ -46,9 +46,9 @@ implicit none
   pressure_relaxation_time  = infty             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  cutoff_radius             = 16.d0             ! <== Cut off radius (Angs) for electrostatic interactions
-  damping_Wolf              = 0.2d0             ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
-
+  cutoff_radius             = 15.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
+  damping_Wolf              = 0.2d0             ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+                                                ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
@@ -56,7 +56,7 @@ implicit none
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  
 
   MM_log_step            =  1                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  50                ! <== step for saving MM results & parameters
+  MM_frame_step          =  10                ! <== step for saving MM results & parameters
 
 !------------------------------------------------------------------------------
 ! UNITS ...
@@ -95,6 +95,7 @@ do i = 1 , N
     species(i) % Ndiheds        = 0
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
+    species(i) % NIntraLJ       = 0
 end do
 
 end subroutine allocate_species
