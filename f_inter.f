@@ -80,7 +80,7 @@ do i = 1 , MM % N_of_atoms
             if ( i /= j ) then
 
                 rjk(:)     = atom(i) % xyz(:) - atom(j) % xyz(:)
-                rjk(:)     = rjk(:) - MM % box * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+                rjk(:)     = rjk(:) - MM % box(:) * DNINT( rjk(:) * MM % ibox(:) ) * PBC(:)
                 rjkq       = sum( rjk(:) * rjk(:) )
                 rjksq      = sqrt(rjkq)
                 tmp        = KAPPA * rjksq
