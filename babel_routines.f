@@ -35,6 +35,7 @@
     interface Identify_Fragments
         module procedure Identify_Fragments_Structure
         module procedure Identify_Fragments_Universe
+        module procedure Identify_Fragments_Basis
     end interface
 
 contains
@@ -429,6 +430,48 @@ a%list_of_fragments = temp(1:counter)
 deallocate( temp )
 
 end subroutine Identify_Fragments_Structure
+!
+!
+!
+!================================================
+ subroutine Identify_Fragments_Basis ( a , basis)
+!================================================
+implicit none
+type(structure)  , intent(inout) :: a
+type(STO_basis)  , intent(in)    :: basis(:)
+
+! local variables ...
+integer                         :: i , j , counter
+character(3)    , allocatable   :: temp(:)
+logical                         :: flag
+
+If( allocated(a%list_of_fragments) ) deallocate( a%list_of_fragments )
+
+allocate( temp(a % atoms) )
+
+temp(1) = basis(1) % fragment
+counter = 1
+
+do i = 1 , size(basis)
+
+    flag = .true.
+    do j = 1 , counter
+     flag = flag .AND. ( temp(j) /= basis(i)%fragment )
+    end do
+
+    if( flag ) then
+        counter = counter + 1
+        temp(counter) = basis(i)%fragment
+    end if
+
+end do
+
+! build list of fragments in a ...
+allocate( a%list_of_fragments(counter) )
+a%list_of_fragments = temp(1:counter)
+deallocate( temp )
+
+end subroutine Identify_Fragments_Basis
 !
 !
 !

@@ -103,7 +103,7 @@ else
         
             case( "hl" )
 
-                If( (orbital(n) > hl_FMO%Fermi_State) ) pause '>>> warning: hole state above the Fermi level <<<'
+                    If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
                 MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
                 MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -412,6 +412,27 @@ select case( flag )
     case( "dealloc" )
 
         deallocate( QDyn%dyn , QDyn%fragments )
+
+    case( "update" )
+
+        ! start re-building ...
+        deallocate( Qdyn%fragments , Qdyn%dyn )
+
+        N_of_fragments = size( Extended_Cell%list_of_fragments ) 
+
+        ! for the sake of having the DONOR or EXCITON survival probability in the first column at output ...
+        E_flag = any(Extended_Cell%list_of_fragments == "E")
+        first_in_line = Extended_Cell%list_of_fragments(1)
+        If( E_flag ) then
+            where( Extended_Cell%list_of_fragments == "E" ) Extended_Cell%list_of_fragments = first_in_line
+        else
+            where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
+        end If
+        Extended_Cell%list_of_fragments(1) = merge( "E" , "D" , E_flag ) 
+
+        ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
+        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
+        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
 
 end select
 
