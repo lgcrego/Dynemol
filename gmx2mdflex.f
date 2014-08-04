@@ -56,6 +56,8 @@ do a = 1 , MM % N_of_species
             print*, string,' file not found; terminating execution' ; stop
         end if
 
+        write(*,'(/2a9)',advance='no') "Reading ", string
+
         ! start reading the molecular structure of species(a) ...
         do
             read(33,100) keyword
@@ -93,6 +95,9 @@ do a = 1 , MM % N_of_species
             FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
 
         end do
+
+        If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
+        stop "residue size of this species differs from atom%residue; check tuning.f"
 
         N_of_atoms = species(a) % N_of_atoms
 
@@ -255,6 +260,8 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
 
     close(33)
+
+    write(*,'(a9)') " << done "
 
 end do
 
