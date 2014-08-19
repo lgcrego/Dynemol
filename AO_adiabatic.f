@@ -188,6 +188,8 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
+    print*, frame 
+
 end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
