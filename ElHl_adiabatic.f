@@ -54,6 +54,7 @@ module ElHl_adiabatic_m
     type(R_eigen)                             :: UNI , el_FMO , hl_FMO
     type(R_eigen)                             :: UNI_el , UNI_hl
     integer                                   :: mm , nn
+    logical                                   :: static_hole = .false.
 
 contains
 !
@@ -68,6 +69,7 @@ integer         , intent(out)   :: it
 ! local variables ...   
 real*8                 :: t , t_rate 
 integer                :: j , frame , frame_init , frame_final , frame_restart
+character(11)          :: argument
 type(universe)         :: Solvated_System
 
 it = 1
@@ -93,6 +95,24 @@ else
     CALL Preprocess( QDyn , it )
 end If
 
+!-------------------------------------------------------------
+! get command line argument to turn off hole dynamics ...
+CALL GET_COMMAND_ARGUMENT( 1 , argument ) 
+
+if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
+    select case ( argument )
+
+        case( "static_hole" ) 
+        static_hole = .true.
+
+        case default 
+        write(*,'(a11)', advance="no") argument
+        stop " >>> wrong input argument in ElHl_dynamics <<< "
+
+    end select
+end if
+!-------------------------------------------------------------
+
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
@@ -107,6 +127,8 @@ do frame = frame_init , frame_final , frame_step
     !============================================================================
     phase(:,1) = cdexp(- zi * UNI_el%erg(:) * t_rate / h_bar)
     phase(:,2) = cdexp(- zi * UNI_hl%erg(:) * t_rate / h_bar)
+
+    if( static_hole ) phase(:,2) = (1.d0,0.d0)
 
     forall( j=1:n_part )   
         MO_bra(:,j) = conjg(phase(:,j)) * MO_bra(:,j) 
@@ -259,7 +281,7 @@ If( NetCharge ) then
     allocate( Net_Charge_old ( Extended_Cell%atoms , 2 ) , source = D_zero )
 end If
 
-CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder ( Extended_Cell , ExCell_basis )    
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP ( instance = "allocate" )
 
@@ -491,8 +513,8 @@ do n = 1 , n_part
 
 end do
 
-12 FORMAT(10A10)
-13 FORMAT(10F10.5)
+12 FORMAT(15A10)
+13 FORMAT(15F10.5)
 14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
