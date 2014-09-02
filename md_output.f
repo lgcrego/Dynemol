@@ -24,7 +24,7 @@ contains
 !========================================
 use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot, dihpot,   &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot2, forcefield,  &
-                        ryck_dih, proper_dih
+                        ryck_dih, proper_dih, harmpot, Morspot
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -93,6 +93,8 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
     write(10,*)'Energies (kJ/mol)'
     write(10,'(''Bond Potential             :'',F12.4)') bdpot     *mol*factor3*1.d-6    
+    write(10,'(''Harm Bond Potential        :'',F12.4)') harmpot   *mol*factor3*1.d-6    
+    write(10,'(''Morse Bond Potential       :'',F12.4)') Morspot   *mol*factor3*1.d-6    
     write(10,'(''Angle Potential            :'',F12.4)') angpot    *mol*factor3*1.d-6   
     write(10,'(''Dihedral Potential         :'',F12.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral            :'',F12.4)') proper_dih*mol*factor3*1.d-6   
@@ -114,7 +116,6 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Pressure    :'',F10.2,'' atm'')'   ) PressTot / n_t
 
 close (10)
-
 10 format(A2,3F10.4,2X,F10.4)
 
 end subroutine OUTPUT

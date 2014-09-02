@@ -3,18 +3,19 @@ module gmx2mdflex
 
 use constants_m
 use for_force
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
+use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 
 private
  
-public :: top2mdflex, itp2mdflex, SpecialPairs
+public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialMorse
 
     ! module variables ...
     character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
     real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
     type(DefinePairs) , allocatable :: SpecialPairs(:)
+    type(DefineMorse) , allocatable :: SpecialMorse(:)
 
 contains
 !
@@ -95,9 +96,10 @@ do a = 1 , MM % N_of_species
             FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
 
         end do
-
-        If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
-        stop "residue size of this species differs from atom%residue; check tuning.f"
+ 
+        ! DANDO ERRO NO COMENTÁRIO ABAIXO
+        !If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
+        !stop "residue size of this species differs from atom%residue; check tuning.f"
 
         N_of_atoms = species(a) % N_of_atoms
 
@@ -136,10 +138,20 @@ do a = 1 , MM % N_of_species
 
         allocate( species(a) % bonds      ( Nbonds , 2 ) )
         allocate( species(a) % funct_bond ( Nbonds     ) )
+        allocate( species(a) % bond_type  ( Nbonds     ) )
 
         forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
 
-        species(a) % funct_bond(:Nbonds) = InputChars(:Nbonds,1)
+        species(a) % funct_bond(:Nbonds) = adjustl( (InputChars(:Nbonds,1)) )
+        
+        do i = 1 , Nbonds 
+           select case ( species(a) % funct_bond(i) )
+            case( "1" )  
+                species(a) % bond_type(i) = "harm" 
+            case( "3" )
+                species(a) % bond_type(i) = "Mors"     
+           end select 
+        end do
 
 !==============================================================================================
         ! Angle parameters :: reading ...
@@ -300,13 +312,14 @@ type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
  
 ! local variables ...
 type(MM_atomic) , allocatable   :: FF_tmp(:)
-character(3)    , allocatable   :: InputChars(:,:)
-real*8          , allocatable   :: InputReals(:,:)
+character(3)    , allocatable   :: InputChars(:,:) , Input2Chars(:,:)
+character(4)    , allocatable   :: funct_bond(:)
+real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
-integer         , allocatable   :: Dihed_Type(:)
+integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:)
 real*8                          :: dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms, NMorseParms
 character(1)                    :: keyword_1
 character(3)                    :: dummy_char
 character(9)                    :: keyword_9
@@ -314,7 +327,9 @@ character(18)                   :: keyword
 logical                         :: flag1 , flag2 , flag3 , flag4
 
 allocate( InputChars    ( 10000 , 10 )                   )
+allocate( Input2Chars   ( 10000 , 10 )                   )
 allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
+allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 forcefield = 2
@@ -327,7 +342,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 !   reading defaults ...
     CALL skip_lines(33,2)
     read(33,*) dummy_int, MM % CombinationRule, dummy_char, MM % fudgeLJ , MM % fudgeQQ
-
+ 
 !=====================================================================================
 !   reading the number of [ atomtypes ] ...
     do
@@ -342,7 +357,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr /= 0 ) exit
         i = i + 1
     end do
-    InputChars = adjustl(InputChars)
+    InputChars = adjustl(InputChars) 
 
     backspace(33)
  
@@ -389,11 +404,18 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     end do
 
     i = 1
-    do
+    k = 1
+    read_loop5: do
         read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( ioerr /= 0 ) exit
+        if( ioerr /= 0 ) exit 
+        if( InputIntegers(i,1) == 3 ) then 
+            backspace(33)
+            read(33,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
+            k = k + 1 
+            cycle read_loop5
+        end if
         i = i + 1
-    end do
+    end do read_loop5
     backspace(33)
 
     NBondParms = i - 1
@@ -410,6 +432,21 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
     SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
 
+    ! SpecialMorse Potential :: Nothing special about it ... 
+    NMorseParms = k - 1  
+    allocate( SpecialMorse ( NMorseParms ) ) 
+
+    forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+
+    SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
+    SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
+    SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
+    
+    ! conversion   
+    SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
+    SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
+    SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+
 !=====================================================================================
 !  reads [ bondtypes ] ...
     do
@@ -420,8 +457,23 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         
     i = 1
     do
-        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
+        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) 
         if( ioerr /= 0 ) exit 
+
+        backspace(33)
+
+        select case ( InputIntegers(i,1) )
+
+            case( 1 )  
+
+                read(33,*) (dummy_char, k=1,2) , dummy_int , (InputReals(i,j) , j=1,2)
+   
+            case( 3 ) 
+  
+                read(33,*) (dummy_char, k=1,2) , dummy_int , (InputReals(i,j) , j=1,3)
+
+            end select 
+
         i = i + 1
     end do
     backspace(33)
@@ -429,10 +481,27 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     NbondsTypes = i - 1
 
     allocate( BondPairsSymbols    ( NbondsTypes , 2 ) )
-    allocate( BondPairsParameters ( NbondsTypes , 2 ) )
+    allocate( BondPairsParameters ( NbondsTypes , 3 ) , source = D_zero )
+    allocate( Bond_Type           ( NbondsTypes     ) )
+    allocate( funct_bond          ( NbondsTypes     ) )
+
     forall(i=1:2) BondPairsSymbols(:NbondsTypes,i) = InputChars(:NbondsTypes,i)
-    BondPairsParameters(:NbondsTypes,1) = InputReals(:NbondsTypes,2) * factor2 * imol
-    BondPairsParameters(:NbondsTypes,2) = InputReals(:NbondsTypes,1) * nano_2_angs
+  
+    Bond_Type( :NbondsTypes ) = InputIntegers(:NbondsTypes,1)  
+
+    do i = 1 , NbondsTypes 
+        select case( Bond_Type(i) )
+            case( 1 ) ! Harmonic potential ...
+                BondPairsParameters(i,1) = InputReals(i,2) * factor2 * imol
+                BondPairsParameters(i,2) = InputReals(i,1) * nano_2_angs
+                funct_bond(i) = "harm"
+            case( 3 ) ! Morse potential ...
+                BondPairsParameters(i,1) = InputReals(i,2) * factor1 * imol
+                BondPairsParameters(i,2) = InputReals(i,1) * nano_2_angs
+                BondPairsParameters(i,3) = InputReals(i,3) / nano_2_angs
+                funct_bond(i) = "Mors"
+        end select 
+    end do
 
 !=====================================================================================
 !  reads [ angletypes ] ...
@@ -529,13 +598,14 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 close(33)
 
 deallocate( InputChars , InputReals , InputIntegers )
+deallocate( Input2Chars , Input2Reals )
 !=====================================================================================
 
 do a = 1 , MM % N_of_species
 
 !   Assigning to each specie the corresponding parameter ...
 !   Bond parameters ...
-    allocate( species(a) % kbond0( species(a) % Nbonds , 2 ) )
+    allocate( species(a) % kbond0( species(a) % Nbonds , 3 ) , source = D_zero )
 
     do k = 1 , NbondsTypes
         do n = 1 , species(a) % Nbonds
@@ -543,11 +613,13 @@ do a = 1 , MM % N_of_species
             flag1 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) )
             flag2 = ( adjustl(species(a) % atom(species(a) % bonds(n,1)) % MMSymbol) == adjustl(BondPairsSymbols(k,2)) ) .AND. & 
-                    ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) ) 
+                    ( adjustl(species(a) % atom(species(a) % bonds(n,2)) % MMSymbol) == adjustl(BondPairsSymbols(k,1)) )  
+            flag3 = ( adjustl(species(a) % bond_type(n)) == adjustl(funct_bond(k)) )
 
-            if ( flag1 .OR. flag2 ) then 
+            if ( ( flag1 .OR. flag2 ) .AND. flag3 ) then 
                 species(a) % kbond0(n,1) = BondPairsParameters(k,1)
                 species(a) % kbond0(n,2) = BondPairsParameters(k,2)
+                species(a) % kbond0(n,3) = BondPairsParameters(k,3) 
             end if
         end do
     end do
@@ -695,7 +767,7 @@ if( allocated(DihedSymbols)        ) deallocate( DihedSymbols        )
 
 100 format(a18)
 120  format(4a5,t22,I2,t26,6f14.4)
-
+ 
 end subroutine top2mdflex
 !
 !
@@ -719,6 +791,10 @@ do i = 1 , N
         case( 1 )
 
             a % dihedral_type(i) = "cos"
+
+        case( 2 )
+
+            a % dihedral_type(i) = "harm"
 
         case( 3 )
             

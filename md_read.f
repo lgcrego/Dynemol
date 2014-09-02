@@ -390,13 +390,14 @@ end do
 do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
     allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
-    allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 2 ) )
+    allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
     allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
     allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 2 ) )
     allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
     allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , 7 ) )
     allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
+    allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
     allocate( molecule(i) % IntraLJ       ( molecule(i) % NintraLJ , 2 ) )
 end do
 
@@ -413,6 +414,7 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
     molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
+    molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
 
     k = k + molecule(i) % N_of_atoms
 end do

@@ -2,7 +2,7 @@ module MM_types
 
 use constants_m
 
-    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , debug_MM
+    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , DefineMorse, debug_MM
 
     type MM_atomic
         integer                             :: AtNo
@@ -27,6 +27,7 @@ use constants_m
         real*8                              :: ftotal(3)
         real*8                              :: fch(3)
         real*8                              :: fsr(3)
+        real*8                              :: fMorse(3)
         real*8                              :: mass
         real*8                              :: charge
         real*8                              :: MM_charge
@@ -57,6 +58,7 @@ use constants_m
         character(3)        , allocatable   :: funct_angle(:)
         integer             , allocatable   :: funct_dihed(:)
         real*8              , allocatable   :: kdihed0(:,:)
+        character(4)        , allocatable   :: bond_type(:)
         character(4)        , allocatable   :: dihedral_type(:)
         integer                             :: Nharm
         integer             , allocatable   :: harm(:)
@@ -94,6 +96,11 @@ use constants_m
         character(3)                        :: MMSymbols(2)
         real*8                              :: Parms(2)
     end type DefinePairs
+
+    type DefineMorse
+        character(3)                        :: MMSymbols(2)
+        real*8                              :: Parms(3)
+    end type DefineMorse
 
     interface debug_MM
         module procedure debug_MM_atomic 

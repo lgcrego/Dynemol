@@ -4,7 +4,7 @@ module F_inter_m
     use omp_lib
     use parameters_m , only : PBC
     use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot , ecoul , &
-                             eintra , evdw , vscut , fscut , KAPPA
+                              eintra , evdw , vscut , fscut , KAPPA
     use MD_read_m    , only : atom , MM , molecule
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
@@ -25,12 +25,12 @@ contains
 implicit none
 
 !local variables ...
-real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
+real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
 real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)
 real*8                  :: rij(3) , rjk(3) , rkl(3)
-real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps
-real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself
+real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps 
+real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself 
 real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
 real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 
 integer                 :: i , j , k , l , n , atk , atl , j1 , j2
@@ -120,7 +120,7 @@ eintra = eintra + vself
 !##############################################################################
 !$OMP parallel DO &
 !$OMP private (k, l, atk, atl, rklq, rklsq, chrgk, chrgl, sr2, sr6, sr12, KRIJ, rij, rkl, fs, vsr, vreal, &
-!$OMP          expar, freal, nresidk, nresidl , ithr , eps , n , flag1 , flag2)                           &
+!$OMP          expar, freal, nresidk, nresidl , ithr , eps , n , flag1 , flag2 )                          &
 !$OMP reduction (+ : pot, ecoul, evdw, stressr11, stressr22, stressr33, stressr12, stressr13, stressr23,  &
 !$OMP                                  stresre11, stresre22, stresre33, stresre12, stresre13, stresre23)
                    
@@ -275,7 +275,7 @@ do i = 1, MM % N_of_atoms
         atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
         atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
-    atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * 1.d-10
+    atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * 1.d-10 
 end do
 
 deallocate ( tmp_fsr , tmp_fch , erfkr )
