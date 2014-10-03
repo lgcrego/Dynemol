@@ -27,7 +27,8 @@
     Complex*16 , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra 
     Complex*16 , ALLOCATABLE , dimension(:)     :: bra , ket
     Real*8     , ALLOCATABLE , dimension(:,:,:) :: Pops(:,:,:)
-    logical    :: static_hole = .false.
+    type(R_eigen)                               :: UNI_el , UNI_hl
+    logical                                     :: static_hole = .false.
 
  contains
 !
@@ -50,7 +51,6 @@ real*8                              :: t , t_rate
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:,:)
 character(11)                       :: argument
-type(R_eigen)                       :: UNI_el , UNI_hl
 
 real*8 :: E_el , E_hl
 
@@ -126,6 +126,7 @@ else
 !   save populations ...
     Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
+    QDyn%dyn(1,:,:) = Pops(1,:,:)
     CALL dump_QDyn( QDyn , 1 )
 
 !   save the initial GaussianCube file ...
@@ -192,6 +193,7 @@ DO it = it_init , n_t
     ! save populations ...
     Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
+    QDyn%dyn(it,:,:) = Pops(it,:,:)
     CALL dump_QDyn( QDyn , it )
 
     ! LOCAL representation for film STO production ...
@@ -232,6 +234,7 @@ DO it = it_init , n_t
 END DO
 
 ! sum population dynamics over frames ...
+QDyn%dyn = D_zero
 QDyn%dyn = QDyn%dyn + Pops
 
 deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
@@ -338,25 +341,49 @@ type(f_time)    , intent(in) :: QDyn
 integer         , intent(in) :: it 
 
 ! local variables ...
-integer :: nf , n
+integer     :: nf , n
+complex*16  :: wp_energy
 
 do n = 1 , n_part
 
+    select case( n_part )
+
+        case( 1 )
+        wp_energy = sum(MO_bra(:,n)*UNI_el%erg(:)*MO_ket(:,n))
+
+        case( 2 )
+        wp_energy = sum(MO_bra(:,n)*UNI_hl%erg(:)*MO_ket(:,n))
+
+    end select
+
     If( it == 1 ) then
+
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,12) "#" , QDyn%fragments , "total"
+
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+
     else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
+
     end If
 
-    write(52,13) ( Pops(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
+    ! dumps el-&-hl populations ...
+    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
+
+    ! dumps el-&-hl wavepachet energies ...
+    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
 
     close(52)
+    close(53)
 
 end do
 
-12 FORMAT(10A10)
-13 FORMAT(10F10.5)
+12 FORMAT(15A10)
+13 FORMAT(15F10.5)
+14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
 !
