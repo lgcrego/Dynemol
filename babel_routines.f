@@ -297,6 +297,8 @@ character(len=2)    :: element2
             a(i)%Symbol = 'N' 
         case( 'O' ) 
             a(i)%Symbol = 'O' 
+        case( 'F' ) 
+            a(i)%Symbol = 'F' 
         case( 'H' ) 
             a(i)%Symbol = 'H' 
         case( 'I' ) 
