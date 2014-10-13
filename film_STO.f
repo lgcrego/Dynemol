@@ -304,7 +304,7 @@
 
  allocate( Psi_2(n_xyz_steps(1)+1,n_xyz_steps(2)+1,n_xyz_steps(3)+1) , source = D_zero ) 
 
-!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,TotalPsiBra,TotalPsiKet)
+!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,l,TotalPsiBra,TotalPsiKet)
 !$OMP single
  DO ix = 0 , n_xyz_steps(1)
     x = (a + ix * dx) / a_Bohr
