@@ -3,7 +3,7 @@ module F_inter_m
     use constants_m
     use omp_lib
     use parameters_m , only : PBC
-    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot , ecoul , &
+    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot_INTER , ecoul , &
                               eintra , evdw , vscut , fscut , KAPPA
     use MD_read_m    , only : atom , MM , molecule
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
@@ -30,7 +30,7 @@ real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)
 real*8                  :: rij(3) , rjk(3) , rkl(3)
 real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps 
-real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself 
+real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself , pot
 real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
 real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 
 integer                 :: i , j , k , l , n , atk , atl , j1 , j2
@@ -252,6 +252,7 @@ end do
 ! ################################################################################3
 
 pot = pot - vself
+pot_INTER = pot
 
 stresre11 = stresre11 * factor3
 stresre22 = stresre22 * factor3

@@ -15,7 +15,6 @@ module CG_class_m
     public :: CG_OPT
 
     type , extends(OPT) :: CG_OPT
-        real*8                        :: InitialCost
         real*8          , allocatable :: p(:)
         type(STO_basis) , allocatable :: basis(:)
     contains

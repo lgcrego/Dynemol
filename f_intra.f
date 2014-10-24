@@ -2,8 +2,8 @@ module F_intra_m
    
     use constants_m
     use parameters_m , only : PBC
-    use for_force    , only : rcut, vrecut, frecut, pot, bdpot, angpot, dihpot, Morspot, harmpot ,   &
-                              vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot2 ,      &    
+    use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot, harmpot ,   &
+                              vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total , &    
                               Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih
     use MD_read_m    , only : atom , molecule , MM , read_from_gmx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
@@ -33,6 +33,9 @@ subroutine FORCEINTRA
 !====================
 implicit none
 
+!local_variables ...
+real*8 :: pot_INTRA
+
 rtwopi = 1.d0/twopi
 
 do j = 1 , MM % N_of_atoms
@@ -49,14 +52,14 @@ end do
 bdpot      = D_zero
 angpot     = D_zero
 dihpot     = D_zero
+Morspot    = D_zero
+harmpot    = D_zero
 proper_dih = D_zero
 ryck_dih   = D_zero
 LJ_14      = D_zero
 LJ_intra   = D_zero
 Coul_14    = D_zero
 Coul_intra = D_zero
-Morspot    = D_zero
-harmpot    = D_zero
 
 ! Stretch ...
 do i = 1 , MM % N_of_molecules
@@ -64,26 +67,32 @@ do i = 1 , MM % N_of_molecules
         ati = molecule(i) % bonds(j,1)
         atj = molecule(i) % bonds(j,2)
         if( atom(atj) % flex .OR. atom(ati) % flex ) then 
+
             rij(:)  = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:)  = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq    = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
             rijsq   = SQRT(rijq)
-            ! harmonic potential ...
-            if( molecule(i) % bond_type(j) == "harm" ) then 
-                qterm   = 0.5d0 * molecule(i) % kbond0(j,1) * ( rijsq - molecule(i) % kbond0(j,2) ) * ( rijsq - molecule(i) % kbond0(j,2) ) 
+
+            select case ( molecule(i) % bond_type(j) )
+
+                case ( "harm" )
+                ! harmonic potential ...
+                qterm   = HALF * molecule(i) % kbond0(j,1) * ( rijsq - molecule(i) % kbond0(j,2) ) * ( rijsq - molecule(i) % kbond0(j,2) ) 
                 coephi  = molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )/rijsq
                 harmpot = qterm + harmpot 
-            end if
-            ! morse potential ...
-            if( molecule(i) % bond_type(j) == "Mors" ) then 
+
+                case ( "Mors" )
+                ! Morse potential ...
                 qterm0 = exp( -molecule(i) % kbond0(j,3) * ( rijsq - molecule(i) % kbond0(j,2) ) ) 
-                qterm  = molecule(i) % kbond0(j,1) * ( 1 - qterm0 )*( 1 - qterm0 )
-                coephi = 2.d0 * molecule(i) % kbond0(j,1) * molecule(i) % kbond0(j,3) * & 
-                       & qterm0 * ( 1.d0 - qterm0 ) / rijsq 
-            end if
+                qterm  = molecule(i) % kbond0(j,1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
+                coephi = TWO * molecule(i) % kbond0(j,1) * molecule(i) % kbond0(j,3) * qterm0 * ( D_ONE - qterm0 ) / rijsq 
+
+            end select
+
             atom(atj) % fbond(:) = atom(atj) % fbond(:) - coephi*rij(:)
             atom(ati) % fbond(:) = atom(ati) % fbond(:) + coephi*rij(:)  
             bdpot = qterm + bdpot
+
         end if 
     end do
 end do 
@@ -404,9 +413,8 @@ do k = 1 , MM % N_of_atoms - 1
             rklsq   = SQRT(rklq)
             ! morse potential ...
             qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
-            qterm  = SpecialMorse(n) % Parms(1) * ( 1 - qterm0 )*( 1 - qterm0 )
-            coephi = 2.d0 * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) *                 &
-                   & qterm0 * ( 1.d0 - qterm0 ) / rklsq
+            qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
+            coephi = TWO * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) * qterm0 * ( 1.d0 - qterm0 ) / rklsq
             atom(atk) % fMorse(:) = atom(atk) % fMorse(:) - coephi*rkl(:)
             atom(atl) % fMorse(:) = atom(atl) % fMorse(:) + coephi*rkl(:)
             Morspot = qterm + Morspot
@@ -418,8 +426,9 @@ end do
 
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot2 = pot + ( bdpot + angpot + dihpot) * factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
-pot2 = pot2 * mol * 1.0d-6 / MM % N_of_molecules
+pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
+pot_total = pot_INTER + pot_INTRA
+pot_total = pot_total * mol * 1.0d-6 / MM % N_of_molecules
 
 ! Get total force ...
 

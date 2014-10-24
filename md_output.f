@@ -22,8 +22,8 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot, ecoul, eintra, evdw, bdpot, angpot, dihpot,   &
-                        LJ_14, LJ_intra, Coul_14, Coul_intra, pot2, forcefield,  &
+use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,          &
+                        LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harmpot, Morspot
 implicit none
 real*8  , intent(in)    :: Ttrans
@@ -107,8 +107,8 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Coulomb self-interaction   :'',F15.4)') eintra    *mol*1.d-6    
     write(10,'(''Coulomb short-range        :'',F15.4)') ecoul     *mol*1.d-6      
     write(10,'(''Total Coulomb              :'',F15.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
-    write(10,'(''Potential Energy           :'',F12.4)') pot*mol*1.d-6 / MM % N_of_molecules
-    write(10,'(''Potential Energy(gmx-like) :'',F15.4)') ( pot2*mol*1.d-3 / MM % N_of_molecules ) 
+    write(10,'(''Potential (INTER) Energy   :'',F12.4)') pot_INTER*mol*1.d-6 / MM % N_of_molecules
+    write(10,'(''Potential Energy(gmx-like) :'',F15.4)') pot_total*mol*1.d-3 / MM % N_of_molecules  
     write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
     write(10,*)
     write(10,'(''Density     :'',F10.4,'' g/cm³'')' ) DensTot / n_t

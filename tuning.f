@@ -238,9 +238,12 @@ end module syst
 !
 module for_force
  integer                               :: forcefield
- real*8                                :: rcut, vrecut, frecut, rcutsq, pot, ecoul, eintra, evdw, bdpot, angpot, dihpot, proper_dih, ryck_dih
  real*8, dimension(:,:)  , allocatable :: vscut, fscut
- real*8                                :: KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot2, Morspot, harmpot
+ real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
+ real*8                                :: ecoul, eintra, evdw
+ real*8                                :: bdpot, Morspot, harmpot, angpot, dihpot, proper_dih, ryck_dih
+ real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
+ real*8                                :: pot_INTER, pot_total
  character(4)                          :: Dihedral_Potential_Type
 end module for_force
 !

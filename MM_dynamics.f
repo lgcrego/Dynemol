@@ -9,7 +9,7 @@ module MM_dynamics_m
     use f_inter_m           , only : FORCEINTER
     use f_intra_m           , only : FORCEINTRA
     use QMMM_m              , only : QMMM_FORCE
-    use for_force           , only : pot2
+    use for_force           , only : pot_total
     use verlet_m            , only : VV1 , VV2 , Summat , PRESS_Boundary
     use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
@@ -64,10 +64,10 @@ if( mod(frame,MM_log_step) == 0   ) then
     select case (Units_MM)
 
         case( "eV" )    
-        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic*kJmol_2_eV , pot2*kJmol_2_eV , (kinetic+pot2)*kJmol_2_eV
+        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic*kJmol_2_eV , pot_total*kJmol_2_eV , (kinetic+pot_total)*kJmol_2_eV
 
         case default
-        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot2 , kinetic + pot2
+        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot_total , kinetic + pot_total
 
     end select
 
