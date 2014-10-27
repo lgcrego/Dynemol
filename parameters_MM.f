@@ -1,7 +1,8 @@
 module MM_input
 
 use constants_m
-use MM_types , only : MM_molecular , MM_system 
+use parameters_m    , only : driver
+use MM_types        , only : MM_molecular , MM_system 
 
 type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
@@ -52,7 +53,10 @@ implicit none
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-  read_velocities        = T_                 ! <== reads the initial velocities : T_ , F_
+
+  driver                 = "MM_Optimize"      ! <== MM_Dynamics , MM_optimize
+
+  read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  
 
   MM_log_step            =  1                 ! <== step for saving MM results & parameters

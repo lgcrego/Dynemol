@@ -11,7 +11,7 @@ module F_intra_m
 
     private
 
-    public :: FORCEINTRA
+    public :: FORCEINTRA, pot_INTRA
 
     ! module variables ...
     real*8  , dimension (3) :: rij , rjk , rkl , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
@@ -22,6 +22,7 @@ module F_intra_m
                                sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5
     integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop
     logical                 :: flag1, flag2
+    real*8                  :: pot_INTRA
 
 
 contains
@@ -34,7 +35,6 @@ subroutine FORCEINTRA
 implicit none
 
 !local_variables ...
-real*8 :: pot_INTRA
 
 rtwopi = 1.d0/twopi
 

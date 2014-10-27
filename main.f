@@ -13,6 +13,7 @@ use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
+use vibrational_modes_m     , only : Optimize_Structure
 
 ! local variables ...
  
@@ -53,6 +54,9 @@ select case ( driver )
 
     case ( "MM_Dynamics" )
         CALL MMechanics
+
+    case ( "MM_Optimize" )
+        CALL Optimize_Structure
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver

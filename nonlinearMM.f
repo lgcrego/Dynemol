@@ -1,8 +1,8 @@
-module NonlinearCG_m
+module NonlinearMM_m
 
         use constants_m             , only: real_large , prec => mid_prec 
-        use parameters_m            , only: profiling , driver   
-        use CG_class_m              , only: CG_OPT
+        use parameters_m            , only: profiling , driver
+        use MM_ERG_class_m          , only: CG_OPT
 
         implicit none
 
@@ -11,7 +11,7 @@ module NonlinearCG_m
         private
 
         ! module parameters ...
-            integer   , parameter :: ITMAX = 3!50     ! <== 100-300 is a good compromise of accuracy and safety
+            integer   , parameter :: ITMAX = 600     ! <== 100-300 is a good compromise of accuracy and safety
 
         ! module types ...
         type f1com
@@ -61,6 +61,7 @@ real*8  :: g(N),h(N),xi(N)
            If( profiling ) then
                Print*, its , local_minimum
                write(32,*) its , local_minimum 
+               call this%output( iter )
            end If
 
            if( local_minimum > fp ) then
@@ -122,7 +123,7 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 
  local_minimum = brent(this,ax,xx,bx,xmin)
-
+ 
  If( driver == "Genetic_Alg" .AND. profiling ) CALL this % output
 
  do j=1,n                                               ! Construct the vector results to return.
@@ -229,7 +230,7 @@ real*8      :: xt(NMAX)
         this%p(:) = xt(:)
 
         f1dim = this % cost()
-      
+
 end function f1dim
 !
 !
@@ -327,4 +328,4 @@ end function brent
 !
 !
 !
-end module NonlinearCG_m
+end module NonlinearMM_m

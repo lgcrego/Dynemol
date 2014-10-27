@@ -1,7 +1,8 @@
 module CG_class_m
 
     use type_m
-    use constants_m
+    use constants_m             , only : a_Bohr
+    use Semi_Empirical_Parms    , only : atom
     use parameters_m            , only : DP_Moment ,        &
                                          Alpha_Tensor
     use Structure_Builder       , only : Extended_Cell 
@@ -22,6 +23,7 @@ module CG_class_m
         procedure :: cost_variation
         procedure :: modify_EHT_parameters
         procedure :: normalization
+        procedure :: output => Dump_OPT_parameters
     end type CG_OPT
 
     interface CG_OPT
@@ -241,6 +243,72 @@ else
 end If
 
 end subroutine normalization
+!
+!
+!
+!
+!======================================
+ subroutine Dump_OPT_parameters( me )
+!======================================
+implicit none
+class(CG_OPT) , intent(in) :: me
+
+! local variables ...
+integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable   :: indx_EHS(:)
+
+! local parameters ...
+character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
+integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
+
+N_of_EHSymbol = size( me % EHSymbol )
+
+allocate( indx_EHS(N_of_EHSymbol) )
+
+! locate position of the first appearance of EHS-atoms in OPT_basis
+indx_EHS = [ ( minloc(me % basis % EHSymbol , 1 , me % basis % EHSymbol == me % EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
+
+!==================================================================================
+! creating file CG_OPT_eht_parameters.dat with temporary optimized parameters ...
+!==================================================================================
+
+! print heading ...
+write(42,48)
+
+do n_EHS = 1 , N_of_EHSymbol
+
+    i = indx_EHS(n_EHS)
+
+    AngMax = atom(me % basis(i) % AtNo) % AngMax
+
+    do L = 0 , AngMax
+
+        j = (i-1) + DOS(L)
+    
+        write(42,17)    me % basis(j) % Symbol          ,   &
+                        me % basis(j) % EHSymbol        ,   &
+                        me % basis(j) % AtNo            ,   &
+                   atom(me % basis(j) % AtNo) % Nvalen  ,   &
+                        me % basis(j) % Nzeta           ,   &
+                        me % basis(j) % n               ,   &
+                 Lquant(me % basis(j) % l)              ,   &
+                        me % basis(j) % IP              ,   &
+                        me % basis(j) % zeta(1)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        me % basis(j) % zeta(2)*a_Bohr  ,   &      ! <== zetas of OPT_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        me % basis(j) % coef(1)         ,   &
+                        me % basis(j) % coef(2)         ,   &
+                        me % basis(j) % k_WH
+    end do
+
+enddo
+
+rewind(42)
+
+17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
+
+include 'formats.h'
+
+end subroutine Dump_OPT_parameters
 !
 !
 !
