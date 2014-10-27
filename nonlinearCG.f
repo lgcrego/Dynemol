@@ -61,6 +61,7 @@ real*8  :: g(N),h(N),xi(N)
            If( profiling ) then
                Print*, its , local_minimum
                write(32,*) its , local_minimum 
+               if (driver == "MM_Optimize" ) call this%output( iter )
            end If
 
            if( local_minimum > fp ) then
