@@ -247,11 +247,12 @@ end subroutine normalization
 !
 !
 !
-!======================================
- subroutine Dump_OPT_parameters( me )
-!======================================
+!===========================================
+ subroutine Dump_OPT_parameters( me , dumb )
+!===========================================
 implicit none
-class(CG_OPT) , intent(in) :: me
+class(CG_OPT)               , intent(in) :: me
+integer         , optional  , intent(in) :: dumb
 
 ! local variables ...
 integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
