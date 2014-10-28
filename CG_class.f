@@ -21,9 +21,9 @@ module CG_class_m
     contains
         procedure :: cost
         procedure :: cost_variation
-        procedure :: modify_EHT_parameters
-        procedure :: normalization
         procedure :: output => Dump_OPT_parameters
+        procedure , private :: modify_EHT_parameters
+        procedure , private :: normalization
     end type CG_OPT
 
     interface CG_OPT
