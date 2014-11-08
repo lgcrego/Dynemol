@@ -60,6 +60,12 @@
 
 73    FORMAT(1x,'Sparsity of DIPOLE Mtrx =',3F7.4)
 
+74    FORMAT(/,"======================   TDDFT-Casida  Parameters  ==========================")
+
+75    FORMAT(/,"occupied state  |   unoccupied state   |   transition density  ")
+
+76    FORMAT(t6,I4,t26,I4,t49,F10.7)
+
 100   FORMAT(I5,A4,F10.5,F10.5,F10.5)
 
 101   FORMAT(F10.5,F10.5,F10.5,A3,A3,A3)

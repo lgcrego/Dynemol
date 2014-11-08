@@ -4,7 +4,8 @@
     use parameters_m                , only : n_part ,                   &
                                              Survival ,                 &
                                              initial_state ,            &
-                                             hole_state
+                                             hole_state ,               &
+                                             LCMO
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
@@ -13,6 +14,7 @@
     use Semi_Empirical_Parms        , only : atom
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
+    use LCMO_m                      , only : LCMO_Builder
 
     integer      , allocatable , public :: orbital(:)
     character(2) , allocatable , public :: eh_tag(:) 
@@ -71,6 +73,10 @@
  CALL Basis_Builder( FMO_system , FMO_basis )
 
  CALL eigen_FMO( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
+
+ If ( LCMO ) CALL LCMO_Builder( wv_FMO , FMO%erg , instance )
+! the following subroutine can be used to check the LCMO packets ... 
+! call check_casida_builder( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
 
  If( present(MO) ) then
 
@@ -319,6 +325,58 @@ implicit none
  IF(i == j) huckel = basis(i)%IP
 
  end function Huckel
+!
+!
+!
+!--------------------------------------------------------------------------
+ subroutine  check_casida_builder( system, basis, wv_FMO, FMO , fragment )
+!--------------------------------------------------------------------------
+ implicit none
+ type(structure) , intent(in)  :: system
+ type(STO_basis) , intent(in)  :: basis(:)
+ real*8          , intent(in)  :: wv_FMO(:,:)
+ type(R_eigen)   , intent(in)  :: FMO       
+ character(*)    , intent(in)  :: fragment
+
+! local variables ... 
+ integer               :: i, j , nn
+ real*8                :: erg , pop
+ real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , tmp_S(:) , tmp_E(:)
+
+nn = size(basis)
+
+ALLOCATE( s_FMO(nn,nn) , h_FMO(nn,nn) , tmp_S(nn) , tmp_E(nn) ) 
+
+!-----------------------------------------------------------------------
+
+CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
+
+DO j = 1 , nn
+   DO i = 1 , j 
+
+      h_FMO(i,j) = huckel( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
+      h_FMO(j,i) = h_FMO(i,j)
+ 
+   END DO
+END DO
+
+pop = D_zero
+do i = 1 , nn
+   
+    tmp_S = matmul( S_FMO , wv_FMO(i,:) )
+    tmp_E = matmul( h_FMO , wv_FMO(i,:) )
+
+    pop = dot_product( wv_FMO(i,:) , tmp_S ) + pop
+    erg = dot_product( wv_FMO(i,:) , tmp_E )
+
+    print*, i, erg , FMO % erg(i)
+end do
+
+print*, pop
+
+deallocate( s_FMO , h_FMO , tmp_S , tmp_E )
+
+end subroutine  check_casida_builder
 ! 
 !
 ! 
