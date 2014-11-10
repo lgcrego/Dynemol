@@ -55,6 +55,7 @@ SOURCE2 = constants_m.o \
 		  STO.o \
 		  multip_routines.o \
 		  electron_hole_DP.o \
+		  LCMO_Builder.o \
 		  FMO.o \
 		  DP_main.o \
 		  td_dp.o \
