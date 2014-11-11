@@ -94,7 +94,7 @@ logical :: dynamic
   initial_state = 40                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
-  LCMO = T_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
+  LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !

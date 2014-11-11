@@ -3,6 +3,7 @@ Program qdynamo
 use type_m
 use constants_m
 use parameters_m            , only : Define_Environment , driver , nuclear_matter              
+use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
@@ -13,7 +14,7 @@ use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
-use vibrational_modes_m     , only : Optimize_Structure
+use vibrational_modes_m     , only : Optimize_Structure , normal_modes
 
 ! local variables ...
  
@@ -53,10 +54,19 @@ select case ( driver )
         CALL diagnostic
 
     case ( "MM_Dynamics" )
-        CALL MMechanics
 
-    case ( "MM_Optimize" )
-        CALL Optimize_Structure
+        select case ( driver_MM )
+
+            case ( "MM_Dynamics" )
+                CALL MMechanics
+
+            case ( "MM_Optimize" )
+                CALL Optimize_Structure
+
+            case ( "NormalModes" )
+                CALL normal_modes
+
+        end select
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver

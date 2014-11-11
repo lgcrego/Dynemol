@@ -215,7 +215,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 
 ! building AO basis ...  
  allocate( basis(N_of_orbitals) )
- 
+
  k = 1
  do i = 1 , system%atoms
 

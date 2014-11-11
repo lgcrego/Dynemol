@@ -34,7 +34,6 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %atom
 !-----------------------------------
- 
 
 !-----------------------------------
 !      define %residue
@@ -52,12 +51,12 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where(univ % atom % residue == "LIG") univ % atom % El = .true.
+where(univ % atom % residue == "HBT") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "LIG") univ % atom % Hl = .true.
+where(univ % atom % residue == "HBT") univ % atom % Hl = .true.
 
 !......................................................................
 

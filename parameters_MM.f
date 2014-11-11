@@ -7,9 +7,10 @@ use MM_types        , only : MM_molecular , MM_system
 type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
-real*8       :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
-integer      :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step
-character(5) :: Units_MM
+real*8              :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
+integer             :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step
+character (5)       :: Units_MM
+character (len=11)  :: driver_MM
 
 logical , parameter :: T_ = .true. , F_ = .false. 
 
@@ -54,7 +55,7 @@ implicit none
 ! GENERAL INFO ...
 !
 
-  driver                 = "MM_Optimize"      ! <== MM_Dynamics , MM_optimize
+  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_optimize , NormalModes
 
   read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  

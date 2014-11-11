@@ -2,7 +2,7 @@ module verlet_m
 
     use constants_m
     use syst        ! using all syst
-    use parameters_m , only: PBC
+    use parameters_m , only: PBC 
     use MD_read_m    , only: MM , atom , molecule, species
     use for_force    , only: forcefield
     use f_inter_m    , only: stressr , stresre
@@ -282,6 +282,7 @@ end do
 !
 ! 
 end subroutine PRESS_BOUNDARY
+!
 !
 !
 end module verlet_m
