@@ -151,7 +151,7 @@ close(11)
 
         do i = 1 , MM % N_of_atoms
              write(14,992)  atom(i) % my_id          ,          &     ! <== global number
-                            atom(i) % MMSymbol       ,          &     ! <== atom type  
+                            atom(i) % EHSymbol       ,          &     ! <== atom type of Huckel's 
                             ' '                      ,          &     ! <== alternate location indicator
                             atom(i) % residue        ,          &     ! <== residue name
                             ' '                      ,          &     ! <== chain identifier
@@ -163,7 +163,8 @@ close(11)
                             ' '                      ,          &     ! <== segment identifier
                             ' '                      ,          &     ! <== here only for tabulation purposes
                             atom(i) % Symbol         ,          &     ! <== chemical element symbol
-                            atom(i) % charge                          ! <== charge on the atom
+                            atom(i) % charge         ,          &     ! <== charge on the atom
+                            atom(i) % MMSymbol                        ! <== atom type of Molecular Mechanics
         end do
         write(14,'(''MASTER'')')
         write(14,'(''END'')')
@@ -171,7 +172,7 @@ close(11)
  first = .false.
 
 991 FORMAT(a6,3F9.3,3F7.2,a11,a4)
-992 FORMAT('ATOM  ',i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
+992 FORMAT('ATOM  ',i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4,t90,a3)
 993 FORMAT(a5,i8)
 994 FORMAT(a6,t15,a21)
 995 FORMAT(a5,t15,a29,F12.6)
