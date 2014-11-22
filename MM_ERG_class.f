@@ -4,6 +4,7 @@ module MM_ERG_class_m
     use constants_m
     use MD_read_m       , only : atom , MM 
     use MM_types        , only : MM_system , MM_atomic , debug_MM
+    use MM_input        , only : driver_MM
     use MD_dump_m       , only : saving_MM_frame
     use F_intra_m       , only : ForceIntra, Pot_Intra                                     
 
@@ -12,8 +13,10 @@ module MM_ERG_class_m
     private
 
     type :: CG_OPT
-        integer               :: N_of_Freedom
-        real*8  , allocatable :: p(:)
+        integer                 :: N_of_Freedom
+        real*8  , allocatable   :: p(:)
+        character (len=11)      :: driver
+        logical                 :: profiling = .false.
     contains
         procedure :: cost => energy
         procedure :: cost_variation => forces
@@ -40,6 +43,10 @@ type(CG_OPT) :: me
 
 !local variable ...
 integer :: i 
+
+me % driver = driver_MM
+
+If( driver_MM == "MM_Optimize" .OR. driver_MM == "NormalModes" ) me % profiling = .true.
 
 ! number of degrees of freedom ...
 me % N_of_Freedom = 3 * MM % N_of_atoms
@@ -101,7 +108,7 @@ integer         , optional , intent(in) :: iter
 
 ! local variables ...
 
-if( iter == 1 ) call system( "rm frames-MM.pdb" )
+if( iter == 0 ) call system( "rm frames-MM.pdb" )
 
 call saving_MM_frame( iter , D_zero )
 

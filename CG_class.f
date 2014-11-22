@@ -3,8 +3,9 @@ module CG_class_m
     use type_m
     use constants_m             , only : a_Bohr
     use Semi_Empirical_Parms    , only : atom
-    use parameters_m            , only : DP_Moment ,        &
-                                         Alpha_Tensor
+    use parameters_m            , only : driver, profiling, &
+                                         DP_Moment ,        &
+                                         Alpha_Tensor 
     use Structure_Builder       , only : Extended_Cell 
     use GA_QCModel_m            , only : GA_eigen ,         &
                                          GA_DP_Analysis ,   &
@@ -18,6 +19,8 @@ module CG_class_m
     type , extends(OPT) :: CG_OPT
         real*8          , allocatable :: p(:)
         type(STO_basis) , allocatable :: basis(:)
+        character (len=11)            :: driver
+        logical                       :: profiling = .false.
     contains
         procedure :: cost
         procedure :: cost_variation
@@ -46,6 +49,9 @@ type(STO_basis) , intent(in)  :: GA_basis(:)
 type(OPT)       , intent(in)  :: GA
 
 type(CG_OPT) :: me
+
+me % driver     = driver
+me % profiling  = profiling
 
 me % DP = GA % DP
 

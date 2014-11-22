@@ -34,7 +34,8 @@ real*8          , allocatable :: Hessian(:,:)
 type(R_eigen)                 :: Hesse
 
 !local parameters ...
-real*8 , parameter :: delta = 1.d-5   ! <== displacement in Angs.
+real*8 , parameter :: delta         = 1.d-5             ! <== displacement in Angs.
+real*8 , parameter :: eV_2_cm_inv   = 1.d-12*8065.73    ! <== displacement in Angs.
 
 ! start the normal mode calculations from an energy minimum ...
 CALL Optimize_Structure ( )
@@ -86,15 +87,41 @@ deallocate( equilibrium , atom_fwd , atom_bwd )
 forall( i=1:MM%N_of_atoms , l=1:3 ) Hessian( (i-1)*3 + l , : ) = Hessian( (i-1)*3 + l , : ) / sqrt( atom(i)%mass*imol )
 forall( j=1:MM%N_of_atoms , k=1:3 ) Hessian( : , (j-1)*3 + k ) = Hessian( : , (j-1)*3 + k ) / sqrt( atom(j)%mass*imol )
 
+! fixing correct units ...
+Hessian = Hessian / Angs_2_mts
+
 size_Hessian = 3 * MM % N_of_atoms
 
 allocate( Hesse%erg(size_Hessian) , source=D_zero )
 
 CALL SYEV( Hessian , Hesse % erg , 'V' , 'U' , info )
-
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYEV in vibes normal modes '
 
-print*, hesse%erg
+! transforming back the normal modes: A --> M^{-1/2}*A ...
+forall( i=1:MM%N_of_atoms , l=1:3 ) Hessian( (i-1)*3 + l , : ) = Hessian( (i-1)*3 + l , : ) / sqrt(atom(i)%mass)
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+OPEN( unit=3 , file='normal_modes.nmd' , status='unknown' )
+
+write(3,*) "Normal Mode Analysis"
+
+write( 3 , '(A6 ,1000A3)'   ) "names "         , atom % Symbol 
+write( 3 , '(A9 ,1000A4)'   ) "resnames "      , atom % residue
+write( 3 , '(A6 ,1000A2)'   ) "chids "         , [("A" , i=1,MM%N_of_atoms)]             
+write( 3 , '(A7 ,1000I4)'   ) "resids "        , atom % nr
+write( 3 , '(A6 ,1000A2)'   ) "betas "         , [("0" , i=1,MM%N_of_atoms)]             
+write( 3 , '(A12,3000F8.4)' ) "coordinates "   , ( atom(i) % xyz(:) , i = 1 , MM%N_of_atoms )
+
+do i = 7 , size_Hessian
+    write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , i ,  Hessian(:,i) 
+end do
+
+close(3)
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+do i = 1 , size_Hessian
+write(30,*) i , sqrt( abs(hesse%erg(i)))*h_bar*ev_2_cm_inv
+end do
 
 stop
 

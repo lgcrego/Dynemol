@@ -1,7 +1,6 @@
 module NonlinearCG_m
 
         use constants_m             , only: real_large , prec => mid_prec 
-        use parameters_m            , only: profiling , driver   
         use CG_class_m              , only: CG_OPT
 
         implicit none
@@ -58,10 +57,10 @@ real*8  :: g(N),h(N),xi(N)
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
-           If( profiling ) then
+           If( this % profiling ) then
                Print*, its , local_minimum
                write(32,*) its , local_minimum 
-               if (driver == "MM_Optimize" ) call this%output( iter )
+               if (this % driver == "MM_Optimize" ) call this%output( iter )
            end If
 
            if( local_minimum > fp ) then
@@ -124,7 +123,7 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
 
  local_minimum = brent(this,ax,xx,bx,xmin)
 
- If( driver == "Genetic_Alg" .AND. profiling ) CALL this % output
+ If( this % driver == "Genetic_Alg" .AND. this % profiling ) CALL this % output
 
  do j=1,n                                               ! Construct the vector results to return.
     xi(j)=xmin*xi(j)
