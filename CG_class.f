@@ -17,10 +17,12 @@ module CG_class_m
     public :: CG_OPT
 
     type , extends(OPT) :: CG_OPT
-        real*8          , allocatable :: p(:)
-        type(STO_basis) , allocatable :: basis(:)
-        character (len=11)            :: driver
-        logical                       :: profiling = .false.
+        real*8          , allocatable   :: p(:)
+        integer                         :: ITMAX = 50               ! <== 50-200 is a good compromise of accuracy and safety
+        real*8                          :: BracketSize = 1.d-4      ! <== this value may vary between 1.0d-3 and 1.0d-5
+        type(STO_basis) , allocatable   :: basis(:)
+        character (len=11)              :: driver
+        logical                         :: profiling = .false.
     contains
         procedure :: cost
         procedure :: cost_variation

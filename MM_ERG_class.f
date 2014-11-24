@@ -13,7 +13,9 @@ module MM_ERG_class_m
     private
 
     type :: CG_OPT
-        integer                 :: N_of_Freedom
+        integer                 :: N_of_Freedom 
+        integer                 :: ITMAX = 200              ! <== 100-300 is a good compromise of accuracy and safety
+        real*8                  :: BracketSize = 5.d-3      ! <== this value may vary between 1.0d-2 and 1.0d-3
         real*8  , allocatable   :: p(:)
         character (len=11)      :: driver
         logical                 :: profiling = .false.

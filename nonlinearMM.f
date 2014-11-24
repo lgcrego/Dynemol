@@ -9,9 +9,6 @@ module NonlinearMM_m
 
         private
 
-        ! module parameters ...
-            integer   , parameter :: ITMAX = 600      ! <== 100-300 is a good compromise of accuracy and safety
-
         ! module types ...
         type f1com
             integer               :: ncom
@@ -21,7 +18,6 @@ module NonlinearMM_m
 
         ! module variables ...
         integer     :: NMAX  
-        real*8      :: BracketSize = 5.d-3      ! <== this value may vary between 1.0d-3 and 1.0d-5
         type(f1com) :: f1
 
 contains      
@@ -55,7 +51,7 @@ if ( this % profiling ) call this%output( 0 )
            xi(j) = h(j)
         end do 
 
-        do its=1,ITMAX                                                                          ! Loop over iterations.
+        do its=1,this % ITMAX                                                                   ! Loop over iterations.
            iter=its
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
@@ -120,7 +116,7 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
 
 ! Initial guess for brackets.
  ax=0.0d0                                            
- xx=BracketSize
+ xx=this % BracketSize
 
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 
@@ -261,12 +257,12 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
         fx=f1dim(this,x)
         fv=fx
         fw=fx
-        do iter=1,ITMAX                 !Main program loop.
+        do iter=1,this % ITMAX                          ! Main program loop.
            xm=0.5*(a+b)
            tol1=prec*abs(x)+prec
            tol2=2.*tol1
-           if(abs(x-xm).le.(tol2-.5*(b-a))) goto 3    ! Test for done here.
-           if(abs(e).gt.tol1) then                    ! Construct a trial parabolic fit.
+           if(abs(x-xm).le.(tol2-.5*(b-a))) goto 3      ! Test for done here.
+           if(abs(e).gt.tol1) then                      ! Construct a trial parabolic fit.
            r=(x-w)*(fx-fv)
            q=(x-v)*(fx-fw)
            p=(x-v)*q-(x-w)*r
