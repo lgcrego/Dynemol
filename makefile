@@ -12,22 +12,36 @@ FFLAGS2 = -O1 -openmp -parallel $(FREE) -static
 CXX = icpc -std=c++11
 CFLAGS = -O2 -xHost -ip -fno-exceptions  
 
+# MKLROOT  = If MKLROOT is not defined in your environment, edit and uncomment this line
 LIB_BLAS   = -lmkl_blas95_lp64
 LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
 LIB_OMP    = -liomp5 -lmatmul -lpthread
 INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64
 
-GPU_DEFS  = -DFORTRAN -DGPU_TIMING #-DUSE_GPU -DGPU_SYGVDM_VER 
-#-DGPU_DEBUG -DGPU_SYGVDM_VER -DGPU_SYGVD2S_VER #-DGPU_PIN_MEM -DGPU_PIN_MEM_WORK
+# GPU_DEFS options:
+#   -DFORTRAN          : Use always
+#   -DGPU_TIMING       : Print timings (CPU/GPU)
+#   -DUSE_GPU          : Compile with GPU support
+#   -DGPU_DEBUG        : Print some debug messages
+#   -DGPU_SYGVDM_VER   : Use multi-gpu version of SYGVD (faster than single-gpu even with 1 gpu)
+#   -DGPU_SYGVD2S_VER  : Use two stage version of SYGVD (faster, but needs more memory)
+#   -DGPU_PIN_MEM      : Use pinned memory for faster transfers (in Fortran code)
+#   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
+GPU_DEFS  = -DFORTRAN -DGPU_TIMING #-DUSE_GPU -DGPU_SYGVDM_VER
+
+# CUDA and MAGMA paths:
 CUDADIR   = /usr/local/cuda
-LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
 MAGMADIR  = /opt/magma
+
+# CUDA and MAGMA libs:
+LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
 LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
-#LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
+
+LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
 INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
 
-LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
-INCS = $(INCS_MKL)  
+LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
+INCS = $(INCS_MKL)
 
 #-----------------------------------------------------------------------
 # general rules
