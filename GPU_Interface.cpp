@@ -45,8 +45,8 @@
   #define time_end()   __my_time = get_wtime()-__my_time; printf("Time %s: %.4f\n", __func__,__my_time); fflush(stdout)
 #else
   #warning "Timing disabled"
-  #define time_init 
-  #define time_end 
+  #define time_init()  /* No timing */
+  #define time_end()   /* No timing */
 #endif
 
 // Debug
