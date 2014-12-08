@@ -1,4 +1,4 @@
-module vibrational_modes_m
+module good_vibrations_m
 
     use type_m
     use constants_m
@@ -11,7 +11,7 @@ module vibrational_modes_m
     use F_intra_m               , only : ForceIntra
     use NonlinearMM_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
 
-    public :: Optimize_Structure , normal_modes
+    public :: Optimize_Structure , normal_modes 
 
     private 
 
@@ -22,9 +22,10 @@ contains
 !
 !
 !
-!=================================
+!
+!==========================
  subroutine normal_modes( )
-!=================================
+!==========================
 implicit none
 
 ! local variables ...
@@ -135,9 +136,7 @@ end subroutine normal_modes
 implicit none
 
 ! local variables ...
-integer :: i , GlobalMinimum
-real*8  :: local_minimum , InitialERG
-real*8  ,  allocatable :: forces(:)
+real*8  :: local_minimum 
 
 ! instantiating MM ...
 MM_erg = CG_OPT( )
@@ -147,4 +146,5 @@ CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , 
 end subroutine Optimize_Structure
 !
 !
-end module vibrational_modes_m
+!
+end module good_vibrations_m

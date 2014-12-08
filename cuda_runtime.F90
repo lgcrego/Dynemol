@@ -14,7 +14,7 @@ module cuda_runtime
             implicit none 
             type (C_PTR) :: ptr 
             integer (C_SIZE_T), value :: size
-        end function cudaHostAlloc
+        end function cudaMallocHost
 
         integer function cudaFreeHost( ptr ) bind(C, name = "cudaFreeHost") 
             use, intrinsic :: iso_c_binding 

@@ -23,7 +23,7 @@ CUDADIR   = /usr/local/cuda
 LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
 MAGMADIR  = /opt/magma
 LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
-LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
+#LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
 INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
 
 LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
