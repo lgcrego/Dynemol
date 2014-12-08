@@ -1,3 +1,5 @@
+#include "GPU.fi"
+ 
  module QCModel_Huckel_ElHl
 
     use type_m

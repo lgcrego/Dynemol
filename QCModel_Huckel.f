@@ -1,3 +1,5 @@
+#include "GPU.fi"
+
  module QCModel_Huckel
 
     use type_m
@@ -31,6 +33,10 @@
 !=============================================================
  subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
 !=============================================================
+#ifdef GPU_PIN_MEM
+use iso_c_binding
+use cuda_runtime
+#endif
 implicit none
 type(structure)                             , intent(in)    :: system
 type(STO_basis)                             , intent(in)    :: basis(:)
@@ -39,18 +45,25 @@ integer          , optional                 , intent(inout) :: flag1
 integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)
+real*8  , ALLOCATABLE :: S_matrix(:,:)
 integer               :: i , j , info
+#ifdef GPU_PIN_MEM
+    #warning "Using pinned memory in QCModel_Huckel.f: EigenSystem"
+    real*8, pointer :: h(:,:), dumb_s(:,:)
+    type(C_PTR)     :: h_cptr, dumb_s_cptr
+#else
+    real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:)
+#endif
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 CALL Overlap_Matrix(system,basis,S_matrix)
 
-If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis))) 
+If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis)))
 
-ALLOCATE( h     (size(basis),size(basis)) , source=D_zero)
-ALLOCATE( dumb_s(size(basis),size(basis)) , source=D_zero)
+GPU_ALLOCATE( h, size(basis), size(basis), source=D_zero )
+GPU_ALLOCATE( dumb_s, size(basis), size(basis), source=D_zero )
 
 ! clone S_matrix because SYGVD will destroy it ... 
 dumb_s = S_matrix
@@ -59,7 +72,7 @@ If( DP_field_ .OR. Induced_ ) then
 
 !$OMP PARALLEL DO schedule( GUIDED , 10 )
     do j = 1 , size(basis)
-        do i = 1 , j
+        do i = j, size(basis)
      
             h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
 
@@ -68,23 +81,21 @@ If( DP_field_ .OR. Induced_ ) then
 !$OMP END PARALLEL DO
 
 else
- 
     do j = 1 , size(basis)
-        do i = 1 , j
-     
+        do i = j, size(basis)
+
             h(i,j) = huckel(i,j,S_matrix(i,j),basis)
 
         end do
-    end do  
-
+    end do
 end If
 
-CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'U' , info )
+CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'L' , info )
 
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 If ( present(flag1) ) flag1 = info
 
-DEALLOCATE(dumb_s)
+GPU_Deallocate(dumb_s)
 
 !     ---------------------------------------------------
 !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
@@ -94,18 +105,20 @@ DEALLOCATE(dumb_s)
 !   Rv = <AO|MO> coefficients
 !     ---------------------------------------------------
 
-ALLOCATE(Lv(size(basis),size(basis)))
+GPU_Allocate(Lv,size(basis),size(basis))
 
 Lv = h
 
-DEALLOCATE(h)
+GPU_Deallocate(h)
 
 ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
 If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
-ALLOCATE(Rv(size(basis),size(basis)))
+!ALLOCATE(Rv(size(basis),size(basis)))
+GPU_Allocate( Rv, size(basis), size(basis) )
 
-CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+!CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+call DGEMM('N','N', size(basis), size(basis), size(basis), D_one, S_matrix, size(basis), Lv, size(basis), D_zero, Rv, size(basis))
 
 DEALLOCATE( S_matrix )
 
@@ -115,12 +128,12 @@ DEALLOCATE( S_matrix )
 If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
 ! eigenvectors in the rows of QM%L
 QM%L = transpose(Lv) 
-DEALLOCATE( Lv )
+GPU_Deallocate( Lv )
 
 If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
 ! eigenvectors in the columns of QM%R
 QM%R = Rv
-DEALLOCATE( Rv )
+GPU_Deallocate( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
 !----------------------------------------------------------
@@ -154,18 +167,20 @@ end subroutine EigenSystem
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
  
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
+ if (i == j) then
+    huckel = basis(i)%IP
+ else
+    c1 = basis(i)%IP - basis(j)%IP
+    c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+    c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
-
- IF(i == j) huckel = basis(i)%IP
+    huckel = k_eff * S_ij * c2 / two
+ endif
 
  end function Huckel
 !

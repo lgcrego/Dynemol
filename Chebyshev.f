@@ -106,7 +106,6 @@ real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
 integer                     :: j , k_ref , N
 logical                     :: OK
 
-
 If ( necessary ) then
     
     ! building  S_matrix  and  H'= S_inv * H ...
@@ -355,39 +354,24 @@ real*8                  , intent(in)  :: matrix(:,:)
 real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
 
 ! local variables...
-real*8  , allocatable   :: work(:)
-integer , allocatable   :: ipiv(:)
 real*8                  :: n_null
-integer                 :: i , j , info , sparse , N
+integer                 :: i, j, info, N
 
 N = size( matrix(:,1) )
 
-! compute inverse of S_matrix...
-allocate( ipiv       ( N     ) )
-allocate( work       ( N     ) )
-allocate( matrix_inv ( N , N ) )
+Allocate( matrix_inv ( N , N ) )
 
 matrix_inv = matrix
 
-CALL dsytrf( 'u' , N , matrix_inv , N , ipiv , work , N , info )
-if ( info /= 0 ) then
-    write(*,*) 'info = ',info,' in DSYTRF '
-    stop
-end if
+call GPU_syInvert( 'U', matrix_inv, N, info )
 
-CALL dsytri( 'u' , N , matrix_inv , N , ipiv , work , info )
-if ( info /= 0 ) then
-    write(*,*) 'info = ',info,' in DSYTRI '
-    stop
-end if
-
-deallocate( ipiv , work )
-
+#ifndef USE_GPU
 do i = 2 , N
     do j = 1 , i - 1
         matrix_inv(i,j) = matrix_inv(j,i)
     end do
 end do
+#endif
 
 end subroutine Invertion_Matrix
 !

@@ -1,21 +1,33 @@
 #
-.SUFFIXES: .f .F .for
+.SUFFIXES: .f .F .for .cpp .F90 
 
-FC=/opt2/intel/bin/ifort 
+FC=ifort -xHost -ip -fpp
 FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
 
-FFLAGS1 = -O3 
-FFLAGS2 = -O1 -openmp -parallel $(FREE) -static
+FFLAGS1 = -O3
+FFLAGS2 = -O1 -openmp -parallel $(FREE) -static 
 
-LIB_BLAS   = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_blas95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
-LIB_LAPACK = -L/opt2/intel/composer_xe_2011_sp1.9.293/mkl/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lpthread
-LIB_OMP    = -L/opt2/intel/lib/intel64 -liomp5 -lmatmul
-INCS_MKL   = -I/opt2/intel/composer_xe_2011_sp1.9.293/mkl/include/intel64/lp64 
+CXX = icpc -std=c++11
+CFLAGS = -O2 -xHost -ip -fno-exceptions  
 
-LIB  = $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
-INCS = $(INCS_MKL) 
+LIB_BLAS   = -lmkl_blas95_lp64
+LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
+LIB_OMP    = -liomp5 -lmatmul -lpthread
+INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64
+
+GPU_DEFS  = -DFORTRAN -DGPU_TIMING #-DUSE_GPU -DGPU_SYGVDM_VER 
+#-DGPU_DEBUG -DGPU_SYGVDM_VER -DGPU_SYGVD2S_VER #-DGPU_PIN_MEM -DGPU_PIN_MEM_WORK
+CUDADIR   = /usr/local/cuda
+LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
+MAGMADIR  = /opt/magma
+LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
+LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
+INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
+
+LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP)
+INCS = $(INCS_MKL)  
 
 #-----------------------------------------------------------------------
 # general rules
@@ -55,7 +67,7 @@ SOURCE2 = constants_m.o \
 		  STO.o \
 		  multip_routines.o \
 		  electron_hole_DP.o \
-		  LCMO_Builder.o \
+		  LCMO_Builder.o  \
 		  FMO.o \
 		  DP_main.o \
 		  td_dp.o \
@@ -100,17 +112,29 @@ SOURCE2 = constants_m.o \
 		  avrg_confgs.o \
  		  main.o
 
+SOURCE_GPU = GPU_Interface.o \
+             cuda_runtime.o
 
-a: $(SOURCE1) $(SOURCE2)
+
+a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU)
 	rm -f a
-	$(FC) $(INCS) -o a $(SOURCE1) $(SOURCE2) $(LIB) 
+	$(FC) $(INCS) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(LIB) 
 	-rm -f *.log
 
 .F.o:
 	$(FC) $(FFLAGS1) $(INCS) -c $*.F
 
 .f.o:
-	$(FC) $(FFLAGS2) $(INCS) -c $*.f
- 
+	$(FC) $(FFLAGS2) $(INCS) $(GPU_DEFS) -c $*.f
+
+.F90.o:
+	$(FC) $(FFLAGS1) $(INCS) $(GPU_DEFS) -c $<
+
+.cpp.o:
+	$(CXX) $(CFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+
+
 clean: 
 	-rm -f *.o *.mod; touch *.f
+
+
