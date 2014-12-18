@@ -50,7 +50,7 @@ module ElHl_adiabatic_m
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase
     Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket
-    real*8     , ALLOCATABLE , dimension(:,:) :: Net_Charge_old(:,:)
+    real*8     , ALLOCATABLE , dimension(:)   :: Net_Charge_MM(:)
     type(R_eigen)                             :: UNI , el_FMO , hl_FMO
     type(R_eigen)                             :: UNI_el , UNI_hl
     integer                                   :: mm , nn
@@ -141,13 +141,10 @@ do frame = frame_init , frame_final , frame_step
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
     CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
+    If( QMMM ) Net_Charge_MM = Net_Charge
+
     ! save populations(t + t_rate) ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
-
-    If( NetCharge ) then
-        Net_Charge_old(:,2) = Net_Charge_old(:,1)
-        Net_Charge_old(:,1) = Net_Charge
-    end If
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -177,15 +174,11 @@ do frame = frame_init , frame_final , frame_step
 
         case( "MDynamics" )
 
-            If( NetCharge ) Net_Charge(:) = Net_Charge_old(:,2)
-
             ! MM preprocess ...
-            if( frame == frame_init ) CALL preprocess_MM
+            if( frame == frame_init ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )
 
-            CALL MolecularMechanics( t_rate , frame - 1 )    ! <== MM precedes QM ...
+            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )    ! <== MM precedes QM ...
 
-            if( NetCharge ) Net_Charge(:) = Net_Charge_old(:,1)
-            
         case default
 
             Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -276,11 +269,6 @@ end select
 
 CALL Generate_Structure ( 1 )
 
-If( NetCharge ) then
-    allocate( Net_Charge     ( Extended_Cell%atoms     ) , source = D_zero )
-    allocate( Net_Charge_old ( Extended_Cell%atoms , 2 ) , source = D_zero )
-end If
-
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )    
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP ( instance = "allocate" )
@@ -311,6 +299,8 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           AO_bra   , AO_ket   ,       &
                           DUAL_bra , DUAL_ket ,       &
                           bra      , ket      , phase )
+
+If( QMMM ) allocate( Net_Charge_MM(Extended_Cell%atoms) , source = D_zero )
 
 mm = size(ExCell_basis)                         
 
@@ -349,8 +339,6 @@ CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm 
 
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
-
-If( NetCharge ) Net_Charge_old(:,1) = Net_Charge
 
 CALL dump_Qdyn( Qdyn , it )
 

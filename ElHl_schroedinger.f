@@ -13,7 +13,7 @@
  use QCModel_Huckel_ElHl        , only : EigenSystem_ElHl 
  use FMO_m                      , only : orbital , eh_tag
  use DP_main_m                  , only : Dipole_Moment
- use Data_Output                , only : Populations
+ use Data_Output                , only : Populations , Net_Charge
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
  use PDOS_tool_m                , only : Partial_DOS
  use Backup_m                   , only : Security_Copy , Restart_state
@@ -433,6 +433,9 @@ select case( flag )
         allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
         allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
 
+        ! allocatating Net_Charte for future use ...
+        allocate( Net_Charge(Extended_Cell%atoms) , source = D_zero )
+
         ! cleaning the mess ...
         CALL DeAllocate_Structures( Extended_Cell )
 
@@ -440,7 +443,7 @@ select case( flag )
 
         deallocate( QDyn%dyn , QDyn%fragments )
 
-    case( "update" )
+    case( "update" )  ! <== used for saving populations of atomic orbitals ...
 
         ! start re-building ...
         deallocate( Qdyn%fragments , Qdyn%dyn )

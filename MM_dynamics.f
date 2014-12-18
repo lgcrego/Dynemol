@@ -14,7 +14,6 @@ module MM_dynamics_m
     use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
     use Backup_MM_m         , only : Security_Copy_MM , Restart_MM
-    use Data_Output         , only : Net_Charge
     use MM_types            , only : debug_MM
 
     public :: MolecularMechanics , preprocess_MM
@@ -25,12 +24,13 @@ contains
 !
 !
 !
-!==============================================
-subroutine MolecularMechanics( t_rate , frame )
-!==============================================
+!===========================================================
+subroutine MolecularMechanics( t_rate , frame , Net_Charge )
+!===========================================================
 implicit none
-real*8  , intent(in)    :: t_rate
-integer , intent(in)    :: frame
+real*8             , intent(in) :: t_rate
+integer            , intent(in) :: frame
+real*8  , optional , intent(in) :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Ttrans , pressure , density
@@ -83,11 +83,12 @@ end subroutine MolecularMechanics
 !
 !
 !
-!=====================================
-subroutine preprocess_MM( frame_init )
-!=====================================
+!==================================================
+subroutine preprocess_MM( frame_init , Net_Charge )
+!==================================================
 implicit none
-integer , optional  , intent(inout) :: frame_init
+integer , optional , intent(inout) :: frame_init
+real*8  , optional , intent(in)    :: Net_Charge(:)
 
 !local variables ...
 integer :: frame , i 
