@@ -7,11 +7,11 @@ module AO_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
-                                             Induced_ , NetCharge ,         &
+                                             Induced_ , QMMM ,              &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart , QMMM
+                                             restart 
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
