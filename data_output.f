@@ -66,15 +66,13 @@ end do
 Populations_vct(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
 
 ! atomic net-charge ...
-If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
+do ati = 1 , system%atoms
+    Net_Charge(ati) = abs( sum( bra(:)*ket(:) , basis(:)%atom == ati ) )
+end do
 
-    do ati = 1 , system%atoms
-        Net_Charge(ati) = abs( sum( bra(:)*ket(:) , basis(:)%atom == ati ) )
-    end do
+! dump atomic net-charges for visualization
+If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
 
-    CALL dump_NetCharge (t) 
-
-end If
 counter = counter + 1
 
 !---------------------------------------------------- 
@@ -128,18 +126,16 @@ do n = 1 , n_part
 end do
 
 ! atomic net-charge ...
-If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) then
+do ati = 1 , system%atoms
+    charge_El = abs( sum( bra(:,1)*ket(:,1) , basis(:)%atom == ati ) )
+    charge_Hl = abs( sum( bra(:,2)*ket(:,2) , basis(:)%atom == ati ) )
 
-    do ati = 1 , system%atoms
-        charge_El = abs( sum( bra(:,1)*ket(:,1) , basis(:)%atom == ati ) )
-        charge_Hl = abs( sum( bra(:,2)*ket(:,2) , basis(:)%atom == ati ) )
+    Net_Charge(ati) = charge_HL - charge_EL
+end do
 
-        Net_Charge(ati) = charge_HL - charge_EL
-    end do
+! dump atomic net-charges for visualization
+If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
 
-    CALL dump_NetCharge (t) 
-
-end If
 counter = counter + 1
 
 !---------------------------------------------------- 
@@ -265,7 +261,7 @@ end do
 close(112)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=114 , file="tmp_data/DipoleFrames.pdb" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=114 , file="tmp_data/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
 If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
 
@@ -284,7 +280,7 @@ do i = 1 , system%atoms
                         system%nr(i)                    ,  &    ! <== residue sequence number
                         ( system%coord(i,j) , j=1,3 )   ,  &    ! <== xyz coordinates
                         net_charge(i)                   ,  &    ! <== wavepacket occupancy
-                        0.d0                            ,  &    ! <== modulus of atomic dipole moment
+                        0.d0                            ,  &    
                         system%Symbol(i)                        ! <== chemical element symbol
 
 end do

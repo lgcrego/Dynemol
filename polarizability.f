@@ -3,7 +3,6 @@
     use type_m
     use constants_m
     use parameters_m            , only : file_type ,                &
-                                         CH_and_DP ,                &
                                          CH_and_DP_step
     use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
@@ -71,9 +70,6 @@ do ati = 1 , N_of_atoms
 
 end do
 
-print*, " "
-print*, " --> net_charge = " , sum(net_charge)
-
 ! calculate induced atomic DP moment ...
 allocate( local_E_field (N_of_atoms,3) , source = D_zero )
 
@@ -99,7 +95,7 @@ do ati = 1 , N_of_atoms
 
 end do
 
-If( CH_and_DP .AND. (mod(counter,CH_and_DP_step)==0) ) CALL visualize_Induced_DP (t)
+If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP (t)
 
 ! NOTICE: dipole moment is multiplied by DP_potential_factor ...
 Induced_DP_Dressed = Induced_DP * DP_potential_factor * half
@@ -230,60 +226,12 @@ do ati = 1 , N_of_DP
     mod_p(ati) = sqrt( sum(Induced_DP(ati,:)*Induced_DP(ati,:)) )
 end do
 
-
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-!saving net_charge ...
-OPEN(unit=112 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
-do ati = 1 , N_of_DP
-    write(112,'(F9.5)',advance='no') net_charge(ati) 
-end do
-close(112)
-
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving Induced atomic dipole sizes ...
 OPEN(unit=113 , file="tmp_data/DipoleSize.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , N_of_DP
     write(113,'(F9.5)',advance='no') mod_p(ati) 
 end do
 close(113)
-
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=114 , file="tmp_data/DipoleFrames.pdb" , status = "unknown", action = "write" , position = "append" )
-
-If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
-
-write(114,4) 'REMARK' , 'manipulated by charge-transfer'
-write(114,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
-write(114,4) 'REMARK' , 'manipulated by charge-transfer'
-write(114,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-write(114,3) 'MODEL'  , counter
-
-do i = 1 , system%atoms
-
-            write(114,2)'HETATM'                        ,  &    ! <== non-standard atom
-                        i                               ,  &    ! <== global number
-                        system%Symbol(i)                ,  &    ! <== atom type
-                        system%residue(i)               ,  &    ! <== residue name
-                        system%nr(i)                    ,  &    ! <== residue sequence number
-                        ( system%coord(i,j) , j=1,3 )   ,  &    ! <== xyz coordinates
-                        net_charge(i)                   ,  &    ! <== wavepacket occupancy
-                        mod_p(i)                        ,  &    ! <== modulus of atomic dipole moment
-                        system%Symbol(i)                        ! <== chemical element symbol
-
-end do
-
-write(114,'(a)') 'TER'
-write(114,'(a)') 'ENDMDL'
-
-close(114)
-
-1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
-2 FORMAT(a6,i5,t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t56,f8.5,t65,f8.5,t77,a2)
-3 FORMAT(a6,i9,11i7)
-4 FORMAT(a6,t15,a31)
-5 FORMAT(a5,t15,a39,f9.5)
-6 FORMAT(a6,a72)
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine visualize_Induced_DP
 !

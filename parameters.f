@@ -14,7 +14,7 @@ character (len=11)      :: DRIVER , file_type
 character (len=12)      :: nuclear_matter
 logical                 :: Mutate_Cross , QMMM , LCMO
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , CH_and_DP , NetCharge
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -31,14 +31,14 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
   Survival       = T_                       
   SPECTRUM       = F_                          
   DP_Moment      = F_                       
-  QMMM           = F_
+  QMMM           = T_
   Alpha_Tensor   = F_                        ! <== Embeded Finite Field Polarizability 
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
@@ -55,12 +55,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           VISUALIZATION flags
 !
-  GaussianCube      = T_                       
-  GaussianCube_step = 1                       ! <== time step for saving Gaussian Cube files
+  GaussianCube      = F_                       
+  GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = F_                      ! <== pdb format charge Occupancy ONLY
-  CH_and_DP         = F_                      ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
-  CH_and_DP_step    = 4                       ! <== time step for saving charge and Induced DP values
+  NetCharge         = F_                      ! <== pdb format charge Occupancy 
+  CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
+                                              ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
@@ -82,8 +82,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  20.0d-8                             ! <== final time in PICOseconds
-  n_t  =  2                                   ! <== number of time steps
+  t_f  =  1.0d0                              ! <== final time in PICOseconds
+  n_t  =  100000                             ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -102,7 +102,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -161,8 +161,6 @@ static = .not. dynamic
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
-
-If ( NetCharge .AND. Ch_and_DP ) stop ">>> NetCharge and Ch_and_DP should not be set simultaneously <<< "
 
 end subroutine Define_Environment
 !
