@@ -2,7 +2,8 @@ module Backup_m
 
     use type_m
     use mkl95_blas
-    use parameters_m        , only : nuclear_matter             , &
+    use parameters_m        , only : QMMM                       , &
+                                     nuclear_matter             , &
                                      DP_field_                  , &
                                      DP_Moment                  , &
                                      Coulomb_                   , &
@@ -19,6 +20,9 @@ module Backup_m
     use DP_potential_m      , only : Molecular_DPs
     use TD_Dipole_m         , only : wavepacket_DP
     use DP_main_m           , only : Dipole_Matrix   
+    use MM_dynamics_m       , only : preprocess_MM              , &
+                                     Saving_MM_Backup
+    use Data_Output         , only : Net_Charge
                                      
 
     public  :: Security_Copy , Restart_State , Restart_Sys
@@ -33,7 +37,7 @@ contains
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
-type(structure)                 , intent(out)   :: Unit_Cell
+type(structure)                 , intent(inout)   :: Unit_Cell
 complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
@@ -56,6 +60,11 @@ select case ( nuclear_matter )
     case( "extended_sys" )
 
         CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+
+    case( "MDynamics" )
+
+        ! MM preprocess ...
+        CALL preprocess_MM( Net_Charge = Net_Charge )   
 
     case default
 
@@ -91,7 +100,6 @@ else
 
 end if
 
-
 end subroutine Restart_Sys
 !
 !                                                                    
@@ -123,6 +131,8 @@ if( (.NOT. restart) .AND. first_time ) then
     first_time = .false.
 end if
 
+if( QMMM ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
+
 open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
 
 if( present(frame) ) write(33) frame
@@ -135,25 +145,19 @@ write(33) size(eh_tag)
 basis_size = size(MO_bra(:,1))
 n_part     = size(MO_bra(1,:))
 
-do i = 1 , n_part
-    write(33) orbital(i) , eh_tag(i)
-end do
+write(33) ( orbital(i) , eh_tag(i) , i=1,n_part )
 
 do j = 1 , n_part
 
-    do i = 1 , basis_size
-        write(33) MO_bra(i,j) , MO_ket(i,j)
-    end do
+    write(33) ( MO_bra(i,j)   , MO_ket   (i,j) , i=1,basis_size )
 
-    do i = 1 , basis_size
-        write(33) DUAL_bra(i,j) , DUAL_ket(i,j)
-    end do
+    write(33) ( DUAL_bra(i,j) , DUAL_ket (i,j) , i=1,basis_size )
 
-    do i = 1 , basis_size
-        write(33) AO_bra(i,j) , AO_ket(i,j)
-    end do
+    write(33) ( AO_bra(i,j)   , AO_ket   (i,j) , i=1,basis_size )
 
 end do
+
+write(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
@@ -200,25 +204,19 @@ allocate( AO_ket   ( size_r , size_c ) )
 if( .NOT. allocated( orbital) ) allocate( orbital(size_eh_tag) )
 if( .NOT. allocated( eh_tag ) ) allocate( eh_tag(size_eh_tag) )
 
-do i = 1 , size_eh_tag
-    read(33) orbital(i) , eh_tag(i)
-end do
+read(33) ( orbital(i) , eh_tag(i) , i=1,size_eh_tag )
 
 do j = 1 , size_c
 
-    do i = 1 , size_r
-        read(33) MO_bra(i,j) , MO_ket(i,j)
-    end do
+    read(33) ( MO_bra(i,j)   , MO_ket   (i,j) , i=1,size_r )
 
-    do i = 1 , size_r
-        read(33) DUAL_bra(i,j) , DUAL_ket(i,j)
-    end do
+    read(33) ( DUAL_bra(i,j) , DUAL_ket (i,j) , i=1,size_r )
 
-    do i = 1 , size_r
-        read(33) AO_bra(i,j) , AO_ket(i,j)
-    end do
+    read(33) ( AO_bra(i,j)   , AO_ket   (i,j) , i=1,size_r )
 
 end do
+
+read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 

@@ -95,7 +95,7 @@ do ati = 1 , N_of_atoms
 
 end do
 
-If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP (t)
+If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP ( t )
 
 ! NOTICE: dipole moment is multiplied by DP_potential_factor ...
 Induced_DP_Dressed = Induced_DP * DP_potential_factor * half

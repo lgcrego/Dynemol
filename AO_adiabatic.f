@@ -87,8 +87,6 @@ end If
 
 If( restart ) then
     CALL Restart_stuff( QDyn , t , it , frame_restart )
-    mm = size(ExCell_basis)
-    nn = n_part
 else
     CALL Preprocess( QDyn , it )
 end If
@@ -119,7 +117,7 @@ do frame = frame_init , frame_final , frame_step
     ! save for use in MM ...
     If( QMMM ) Net_Charge_MM = Net_Charge
 
-    ! save populations(t + t_rate) ...
+    ! save populations(t + t_rate)  and  update Net_Charge ...
     QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t )
 
     CALL dump_Qdyn( Qdyn , it )
@@ -151,7 +149,7 @@ do frame = frame_init , frame_final , frame_step
         case( "MDynamics" )
 
             ! MM preprocess ...
-            if( frame == frame_init ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
+            if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
 
@@ -483,6 +481,19 @@ CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket ,
 allocate( phase(size(MO_bra(:,1))) )
 
 CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
+
+mm = size(ExCell_basis)
+nn = n_part
+
+If( QMMM ) then 
+
+    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+
+    CALL Build_Induced_DP( instance = "allocate" )
+
+    CALL DP_stuff ( t , "Induced_DP" )
+
+end If
 
 end subroutine Restart_stuff
 !

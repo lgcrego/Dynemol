@@ -16,7 +16,7 @@ module MM_dynamics_m
     use Backup_MM_m         , only : Security_Copy_MM , Restart_MM
     use MM_types            , only : debug_MM
 
-    public :: MolecularMechanics , preprocess_MM
+    public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup
 
     private
 
@@ -44,15 +44,20 @@ atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 ! Molecuar dynamic ...
 CALL VV1( dt )
+
 CALL Molecular_CM
+
 CALL ForceInter
+
 CALL ForceIntra
 
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
+
 CALL VV2 ( Ttrans , kinetic , dt )
 
 CALL Summat( density ) 
+
 CALL Press_Boundary( pressure , dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
@@ -77,7 +82,7 @@ end if
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
 ! saving backup stuff ...
-if( mod(frame,step_security) == 0 ) CALL Security_Copy_MM( MM , atom , frame )
+if( .not. QMMM ) CALL Saving_MM_Backup( frame , instance = "from_MM" )
 
 end subroutine MolecularMechanics
 !
@@ -105,6 +110,9 @@ if( restart ) then
 
     if( present(frame_init) ) frame_init = frame + 1
 
+    ! pass nuclear configuration to QM ...
+    If( QMMM ) forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
+
 else
 
     CALL Cleanup
@@ -123,6 +131,29 @@ else
 endif
 
 end subroutine preprocess_MM
+!
+!
+!
+!==============================================
+subroutine Saving_MM_Backup( frame , instance )
+!==============================================
+implicit none
+integer          , intent(in) :: frame
+character(len=*) , intent(in) :: instance
+
+select case( instance )
+
+        case( "from_MM" )
+
+            if( mod(frame,step_security) == 0 ) CALL Security_Copy_MM( MM , atom , frame )
+
+        case( "from_QM" )
+
+            CALL Security_Copy_MM( MM , atom , frame )
+
+end select
+
+end subroutine Saving_MM_Backup
 !
 !
 !

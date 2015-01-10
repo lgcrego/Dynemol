@@ -39,7 +39,7 @@ do i = 1 , size(atom)
 
     ! charge/charge interaction ...
     do j = i + 1 , size(atom)
-    
+
         rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
         rij(:) = rij(:) - MM % box(:) * DINT( rij(:) * MM % ibox(:) )
 
@@ -47,7 +47,7 @@ do i = 1 , size(atom)
         rijsq = sqrt( rijq )
 
         freal = coulomb * NetCharge(i) * NetCharge(j) * ( D_ONE / rijq  ) * ( D_ONE / rijsq )
-        
+
         atom(i) % fcoupling(1:3) = atom(i) % fcoupling(1:3) + freal * rij(1:3)
         atom(j) % fcoupling(1:3) = atom(j) % fcoupling(1:3) - freal * rij(1:3)
 
@@ -57,7 +57,7 @@ do i = 1 , size(atom)
 
     ! charge/induced-dipole interaction ...
     do j = 1 , size(atom)
-    
+
         rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
         rij(:) = rij(:) - MM % box(:) * DINT( rij(:) * MM % ibox(:) )
 
@@ -68,6 +68,7 @@ do i = 1 , size(atom)
 
             ! a = (p.r)r ...
             a(1:3) = dot_product(Induced_DP(j,1:3),rij(1:3)) * rij(1:3)
+
             ! a = 3*(p.r)*r / ( |r|^2 ) - p ...
             a(1:3) = THREE * a(1:3) * ( D_ONE / rijq ) - Induced_DP(j,1:3)
 
