@@ -132,7 +132,7 @@ if( (.NOT. restart) .AND. first_time ) then
     first_time = .false.
 end if
 
-if( QMMM ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
+if( nuclear_matter == "MDynamics" ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
 
 open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
 

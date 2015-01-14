@@ -1,7 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
-    use parameters_m        , only : restart , step_security , QMMM 
+    use parameters_m        , only : driver , restart , step_security , QMMM 
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
@@ -82,7 +82,7 @@ end if
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
 ! saving backup stuff ...
-if( .not. QMMM ) CALL Saving_MM_Backup( frame , instance = "from_MM" )
+if( driver == "MM_Dynamics" ) CALL Saving_MM_Backup( frame , instance = "from_MM" )
 
 end subroutine MolecularMechanics
 !
@@ -110,8 +110,8 @@ if( restart ) then
 
     if( present(frame_init) ) frame_init = frame + 1
 
-    ! pass nuclear configuration to QM ...
-    If( QMMM ) forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
+    ! pass nuclear configuration for QM ...
+    forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
 else
 
