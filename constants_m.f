@@ -55,6 +55,7 @@ MODULE constants_m
     real*8  , parameter :: nano_2_angs = 1.0d1                      ! converts nanometer units to angstron units
     real*8  , parameter :: mts_2_nano  = 1.0d9                      ! converts meter units to nanometer units
     real*8  , parameter :: Angs_2_mts  = 1.0d-10                    ! converts Angs units to meter units
+    real*8  , parameter :: mts_2_Angs  = 1.0d+10                    ! converts meter units to Angs units
     real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors

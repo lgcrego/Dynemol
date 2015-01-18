@@ -1,7 +1,9 @@
 module NonlinearMM_m
 
         use constants_m             , only: real_large , prec => mid_prec 
-        use MM_ERG_class_m          , only: CG_OPT
+        use MM_ERG_class_m          , only: MM_OPT
+        use FF_OPT_class_m          , only: FF_OPT
+        use OPT_Parent_class_m      , only: OPT_Parent
 
         implicit none
 
@@ -25,9 +27,9 @@ contains
 !=================================================================================
  subroutine Fletcher_Reeves_Polak_Ribiere_minimization( this , n , local_minimum ) 
 !=================================================================================
-type(CG_OPT) , intent(inout) :: this
-integer      , intent(in)    :: n
-real*8       , intent(out)   :: local_minimum
+class(OPT_Parent)   , intent(inout) :: this
+integer             , intent(in)    :: n
+real*8              , intent(out)   :: local_minimum 
 
 !local variables ...
 INTEGER :: its,j,iter
@@ -97,10 +99,10 @@ end subroutine Fletcher_Reeves_Polak_Ribiere_minimization
 !======================================================
 subroutine Linear_Minimization(this,xi,n,local_minimum)
 !======================================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(inout) :: xi(:)
-integer      , intent(in)    :: n
-real*8       , intent(out)   :: local_minimum
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(inout) :: xi(:)
+integer             , intent(in)    :: n
+real*8              , intent(out)   :: local_minimum
 
 ! local variables ...
 INTEGER     :: j
@@ -138,9 +140,9 @@ end subroutine Linear_Minimization
 !========================================
 SUBROUTINE mnbrak(this,ax,bx,cx,fa,fb,fc)
 !========================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(inout) :: ax , bx , cx
-real*8       , intent(inout) :: fa , fb , fc
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(inout) :: ax , bx , cx
+real*8              , intent(inout) :: fa , fb , fc
 
 !local parameters ...
 real*8  , PARAMETER :: GOLD=1.618034d0 , GLIMIT=2000.d0 , WEE=1.d-20
@@ -213,9 +215,9 @@ end subroutine mnbrak
 !======================
  function f1dim(this,x)
 !======================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(in)    :: x
-real*8                       :: f1dim
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(in)    :: x
+real*8                              :: f1dim
 
 ! local variables ...
 INTEGER     :: j
@@ -236,10 +238,10 @@ end function f1dim
 !=================================
 function brent(this,ax,bx,cx,xmin)
 !=================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(in)    :: ax , bx , cx
-real*8       , intent(out)   :: xmin
-real*8                       :: brent
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(in)    :: ax , bx , cx
+real*8              , intent(out)   :: xmin
+real*8                              :: brent
 
 ! local parameters ...  
 real*8 , PARAMETER :: CGOLD=0.3819660d0

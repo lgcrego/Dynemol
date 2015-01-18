@@ -7,19 +7,59 @@ module good_vibrations_m
     use mkl95_lapack
     use MD_read_m               , only : atom , MM 
     use MM_types                , only : MM_system , MM_atomic , debug_MM    
-    use MM_ERG_class_m          , only : CG_OPT
     use F_intra_m               , only : ForceIntra
+    use MM_ERG_class_m          , only : MM_OPT
+    use FF_OPT_class_m          , only : FF_OPT
     use NonlinearMM_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
+!###################
+!    use MM_OPT_routines         
+!###################
 
-    public :: Optimize_Structure , normal_modes 
+    public :: Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
     private 
 
     ! module variables ...
-    type(CG_OPT) :: MM_erg
+    type(MM_OPT) :: MM_erg
+    type(FF_OPT) :: MM_parms
 
 contains
 !
+!
+!
+!======================================
+ subroutine Optimize_Parameters_Driver
+!======================================
+implicit none
+
+! local variables ...
+real*8  :: local_minimum 
+
+! instantiating MM ...
+MM_parms = FF_OPT( )
+
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end subroutine Optimize_Parameters_Driver 
 !
 !
 !
@@ -139,7 +179,7 @@ implicit none
 real*8  :: local_minimum 
 
 ! instantiating MM ...
-MM_erg = CG_OPT( )
+MM_erg = MM_OPT( )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 

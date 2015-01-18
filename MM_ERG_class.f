@@ -2,31 +2,31 @@ module MM_ERG_class_m
 
     use type_m
     use constants_m
-    use MD_read_m       , only : atom , MM 
-    use MM_types        , only : MM_system , MM_atomic , debug_MM
-    use MM_input        , only : driver_MM
-    use MD_dump_m       , only : saving_MM_frame
-    use F_intra_m       , only : ForceIntra, Pot_Intra                                     
+    use MD_read_m               , only : atom , MM 
+    use MM_types                , only : MM_system , MM_atomic , debug_MM
+    use MM_input                , only : driver_MM
+    use MD_dump_m               , only : saving_MM_frame
+    use F_intra_m               , only : ForceIntra, Pot_Intra                                     
+    use OPT_Parent_class_m      , only : OPT_Parent
 
-    public :: CG_OPT
+    implicit none
 
-    private
+    private 
 
-    type :: CG_OPT
-        integer                 :: N_of_Freedom 
-        integer                 :: ITMAX = 200              ! <== 100-300 is a good compromise of accuracy and safety
-        real*8                  :: BracketSize = 5.d-3      ! <== this value may vary between 1.0d-2 and 1.0d-3
-        real*8  , allocatable   :: p(:)
-        character (len=11)      :: driver
-        logical                 :: profiling = .false.
+    public :: MM_OPT
+
+    type, extends(OPT_Parent)    :: MM_OPT
+        integer                  :: ITMAX_MM = 200              ! <== 100-300 is a good compromise of accuracy and safety
+        real*8                   :: BracketSize_MM = 1.d-2      ! <== this value may vary between 1.0d-2 and 1.0d-3
+        logical                  :: profiling_MM = .true.
     contains
         procedure :: cost => energy
         procedure :: cost_variation => forces
         procedure :: output => dump_geometry
-    end type CG_OPT
+    end type MM_OPT
 
 
-    interface CG_OPT
+    interface MM_OPT
         module procedure  constructor
     end interface
 
@@ -41,10 +41,15 @@ contains
 !====================================
 implicit none
 
-type(CG_OPT) :: me 
+type(MM_OPT) :: me 
 
 !local variable ...
 integer :: i 
+
+! Cause you are my kind / You're all that I want ...
+me % ITMAX       = me % ITMAX_MM
+me % BracketSize = me % BracketSize_MM
+me % profiling   = me % profiling_MM
 
 me % driver = driver_MM
 
@@ -64,7 +69,7 @@ end function constructor
  function Energy( me )
 !=====================
 implicit none
-class(CG_OPT) , intent(inout)  :: me
+class(MM_OPT) , intent(inout)  :: me
 real*8                         :: Energy
 
 !local variables ...
@@ -85,17 +90,17 @@ end function Energy
 !
 !
 !
-!=================================
- subroutine Forces( me , f_intra )
-!=================================
+!================================
+ subroutine Forces( me , vector )
+!================================
 implicit none
-class(CG_OPT)   , intent(in)    :: me
-real*8          , intent(out)   :: f_intra(:)
+class(MM_OPT)   , intent(in)     :: me
+real*8          , intent(inout)  :: vector(:)
 
 ! local variables ...
 integer :: i , GeneSize
 
-f_intra = - [(atom(:)%ftotal(i) , i=1,3)] * 1.d10
+vector = - [(atom(:)%ftotal(i) , i=1,3)] * mts_2_Angs
 
 end subroutine Forces
 !
@@ -105,7 +110,7 @@ end subroutine Forces
  subroutine dump_geometry( me , iter)
 !====================================
 implicit none
-class(CG_OPT)   , intent(in) :: me
+class(MM_OPT)   , intent(in) :: me
 integer         , optional , intent(in) :: iter
 
 ! local variables ...

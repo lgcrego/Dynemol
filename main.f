@@ -14,7 +14,7 @@ use Chebyshev_driver_m      , only : Chebyshev_driver
 use Eigen_driver_m          , only : Eigen_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
-use good_vibrations_m       , only : Optimize_Structure , normal_modes 
+use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
 ! local variables ...
 
@@ -69,7 +69,13 @@ select case ( driver )
                 CALL normal_modes
 
             case ( "Parametrize" )
-!                CALL Optimize_Parameters_Driver
+                CALL Optimize_Parameters_Driver
+
+            case default
+                Print*, " >>> Check your driver options <<< :" , driver
+                stop
+
+        end select
 
             case default
                 Print*, " >>> Check your driver options <<< :" , driver
