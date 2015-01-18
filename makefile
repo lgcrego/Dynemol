@@ -60,13 +60,14 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
+                  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-          IdentifyNonBonded.o \
+                  IdentifyNonBonded.o \
 		  gmx2mdflex.o \
 		  babel_routines.o \
 		  babel.o \
@@ -95,7 +96,7 @@ SOURCE2 = constants_m.o \
 		  AlphaPolar.o \
 		  data_output.o \
 		  verlet.o \
-          backup_MM.o \
+                  backup_MM.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \
@@ -105,6 +106,7 @@ SOURCE2 = constants_m.o \
 		  cost_tuning.o \
 		  CG_class.o \
 		  MM_ERG_class.o \
+                  FF_OPT_class.o \
 		  nonlinearMM.o \
 		  nonlinearCG.o \
 		  vibes_driver.o \
