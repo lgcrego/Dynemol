@@ -37,6 +37,7 @@ integer         , allocatable   :: InputIntegers(:,:)
 character(18)                   :: keyword , keyword_tmp
 character(10)                   :: string
 character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
+character(200)                  :: line 
 real*8                          :: dummy_real , factor
 integer                         :: i1 , i2 , i3 , sp , nr
 integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
@@ -64,20 +65,26 @@ do a = 1 , MM % N_of_species
             read(33,100) keyword
             if( trim(keyword) == "[ atoms ]" ) exit
         end do
-        CALL skip_lines(33,1)
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
 
-        do i = 1 , species(a) % N_of_atoms
-
-            read(33,*) species(a) % atom(i) % my_id ,      &
-                       species(a) % atom(i) % MMSymbol ,   &
-                       dummy_int ,                         &
-                       species(a) % atom(i) % residue ,    &
-                       species(a) % atom(i) % EHSymbol ,   &
-                       dummy_int ,                         &
-                       species(a) % atom(i) % MM_charge ,  &
-                       species(a) % atom(i) % mass
+        i = 1
+        read_loop1: do
+            read(33, '(A)', iostat=ioerr) line
+            if ( ioerr /= 0 ) exit read_loop1
+            read(line,*,iostat=ioerr) InputChars(i,1) 
+            if( index(InputChars(i,1),";") /= 0 ) cycle read_loop1
+            if( trim(InputChars(i,1)) == "[  "  ) exit
+            if( ioerr > 0  ) exit
+            if( ioerr /=  0 ) cycle read_loop1
+            read(line,*,iostat=ioerr) species(a) % atom(i) % my_id ,      &
+                                      species(a) % atom(i) % MMSymbol ,   &
+                                      dummy_int ,                         &
+                                      species(a) % atom(i) % residue ,    &
+                                      species(a) % atom(i) % EHSymbol ,   &
+                                      dummy_int ,                         &
+                                      species(a) % atom(i) % MM_charge ,  &
+                                      species(a) % atom(i) % mass
 
             species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
             species(a) % atom(i) % my_species = a
@@ -95,7 +102,10 @@ do a = 1 , MM % N_of_species
             FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
             FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
 
-        end do
+            i = i + 1
+ 
+        end do read_loop1
+        backspace(33)
  
         ! DANDO ERRO NO COMENTÁRIO ABAIXO
         !If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
@@ -123,14 +133,20 @@ do a = 1 , MM % N_of_species
             read(33,100) keyword
             if( trim(keyword) == "[ bonds ]" ) exit
         end do
-        CALL skip_lines(33,1)
 
         i = 1
-        do
-            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputChars(i,1)
-            if( ioerr /= 0 ) exit
+        read_loop2: do
+            read(33, '(A)', iostat=ioerr) line
+            if ( ioerr /= 0 ) exit read_loop2
+            read(line,*,iostat=ioerr) InputChars(i,1)
+            if( index(InputChars(i,1),";") /= 0 ) cycle read_loop2
+            if( trim(InputChars(i,1)) == "[  "  ) exit 
+            if( ioerr > 0  ) exit
+            if( ioerr /= 0 ) cycle read_loop2
+            read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputChars(i,1)
+
             i = i + 1
-        end do
+        end do read_loop2
         backspace(33)
 
         Nbonds = i - 1
@@ -159,15 +175,21 @@ do a = 1 , MM % N_of_species
             read(33,100) keyword
             if ( trim(keyword) == "[ angles ]" ) exit
         end do
-        CALL skip_lines(33,1)
 
         InputIntegers = I_zero
         i = 1
-        do
-            read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,3 ) , InputChars(i,1)
-            if( ioerr /= 0 ) exit
+        read_loop3: do
+            read(33, '(A)', iostat=ioerr) line
+            if ( ioerr /= 0 ) exit read_loop3
+            read(line,*,iostat=ioerr) InputChars(i,1)
+            if( index(InputChars(i,1),";") /= 0 ) cycle read_loop3
+            if( trim(InputChars(i,1)) == "[  "  ) exit
+            if( ioerr > 0  ) exit
+            if( ioerr /= 0 ) cycle read_loop3
+            read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,3 ) , InputChars(i,1)
+
             i = i + 1
-        end do
+        end do read_loop3
         backspace(33)
            
         Nangs = i - 1
@@ -189,15 +211,20 @@ do a = 1 , MM % N_of_species
 
         if( trim(keyword) == "[ dihedrals ]" ) then
 
-            CALL skip_lines(33,1)
-
             InputIntegers = I_zero
             i = 1
-            do
-                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,5 )
-                if( ioerr /= 0 ) exit
+            read_loop4: do
+                read(33, '(A)', iostat=ioerr) line
+                if ( ioerr /= 0 ) exit read_loop4
+                read(line,*,iostat=ioerr) InputChars(i,1)
+                if( index(InputChars(i,1),";") /= 0 ) cycle read_loop4
+                if( trim(InputChars(i,1)) == "[  "  ) exit
+                if( ioerr > 0  ) exit
+                if( ioerr /= 0 ) cycle read_loop4
+                read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,5 )
+
                 i = i + 1
-            end do
+            end do read_loop4
             backspace(33)
 
             Ndiheds = i - 1
@@ -217,22 +244,27 @@ do a = 1 , MM % N_of_species
 
 !==============================================================================================
             ! Pairs 1-4 parameters :: reading ...
-            do
-                read(33,100,iostat=ioerr) keyword
-                if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
-            end do
+        do
+            read(33,100,iostat=ioerr) keyword
+            if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
+        end do
 
         if( trim(keyword) == "[ pairs ]" ) then
 
-            CALL skip_lines(33,1)
-
             InputIntegers = I_zero
             i = 1
-            do
-                read(33,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
-                if( ioerr /= 0 ) exit
+            read_loop5: do
+                read(33, '(A)', iostat=ioerr) line
+                if ( ioerr /= 0 ) exit read_loop5
+                read(line,*,iostat=ioerr) InputChars(i,1)
+                if( index(InputChars(i,1),";") /= 0 ) cycle read_loop5
+                if( trim(InputChars(i,1)) == "[  "  ) exit
+                if( ioerr > 0  ) exit
+                if( ioerr /= 0 ) cycle read_loop5
+                read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
+
                 i = i + 1
-            end do
+            end do read_loop5
             backspace(33)
 
             Nbonds14 = i - 1
@@ -324,6 +356,7 @@ character(1)                    :: keyword_1
 character(3)                    :: dummy_char
 character(9)                    :: keyword_9
 character(18)                   :: keyword
+character(200)                  :: line
 logical                         :: flag1 , flag2 , flag3 , flag4
 
 allocate( InputChars    ( 10000 , 10 )                   )
@@ -339,9 +372,20 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"topol.top" file not found; terminating execution'
 
-!   reading defaults ...
-    CALL skip_lines(33,2)
-    read(33,*) dummy_int, MM % CombinationRule, dummy_char, MM % fudgeLJ , MM % fudgeQQ
+    do
+      read(33,100) keyword
+      if( trim(keyword) == "[ defaults ]" ) exit
+    end do
+
+    i=1
+    read_loop: do
+        read(33,*,iostat=ioerr) dummy_char, MM % CombinationRule, dummy_char, fudgeLJ, fudgeQQ 
+        if ( index( dummy_char, ";") /= 0 ) cycle read_loop
+        if( ioerr /= 0 ) exit
+        i = i + 1
+    end do read_loop
+
+    backspace(33)
  
 !=====================================================================================
 !   reading the number of [ atomtypes ] ...
@@ -349,14 +393,20 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         read(33,100) keyword
         if( trim(keyword) == "[ atomtypes ]" ) exit
     end do
-    CALL skip_lines(33,2)
 
     i=1
-    do
-        read(33,*,iostat=ioerr) InputChars(i,1) , (InputReals(i,j) , j=1,2) , InputChars(i,2) , (InputReals(i,j) , j=3,4)
-        if( ioerr /= 0 ) exit
+    read_loop1: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop1
+        read(line,*,iostat=ioerr) InputChars(i,1)
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop1
+        if( trim(InputChars(i,1)) == "[  "  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loop1
+        read(line,*,iostat=ioerr) InputChars(i,1) , (InputReals(i,j) , j=1,2) , InputChars(i,2) , (InputReals(i,j) , j=3,4)
+
         i = i + 1
-    end do
+    end do read_loop1
     InputChars = adjustl(InputChars) 
 
     backspace(33)
@@ -453,12 +503,17 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         read(33,100) keyword
         if( trim(keyword) == "[ bondtypes ]" ) exit
     end do
-    CALL skip_lines(33,2)
         
     i = 1
-    do
-        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) 
-        if( ioerr /= 0 ) exit 
+    read_loop2: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop2
+        read(line,*,iostat=ioerr) InputChars(i,1), InputChars(i,2)
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop2
+        if( trim(InputChars(i,1)) == "[  "  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loop2
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1), (InputReals(i,j) , j=1,2)
 
         backspace(33)
 
@@ -475,7 +530,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
             end select 
 
         i = i + 1
-    end do
+    end do read_loop2
     backspace(33)
 
     NbondsTypes = i - 1
@@ -509,14 +564,21 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         read(33,100) keyword
         if( trim(keyword) == "[ angletypes ]" ) exit
     end do
-    CALL skip_lines(33,1)
 
     i = 1
-    do
-        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,3) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( ioerr /= 0 ) exit
+    read_loop3: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop3
+        read(line,*,iostat=ioerr) InputChars(i,1), InputChars(i,2)
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop3
+        if( trim(InputChars(i,1)) == "[  "  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loop3
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,3) , InputIntegers(i,1), (InputReals(i,j) , j=1,2 )
+
+
         i = i + 1
-    end do
+    end do read_loop3
     backspace(33)
     backspace(33)
 
@@ -541,9 +603,15 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     end do
 
     i = 1
-    do
-        read( 33 , * , iostat=ioerr ) (InputChars(i,k) , k=1,4) , InputIntegers(i,1) 
-        if( ioerr /= 0 ) exit
+    read_loop4: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop4
+        read(line,*,iostat=ioerr) InputChars(i,1), InputChars(i,2)
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop4
+        if( trim(InputChars(i,1)) == "#in"  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loop4
+        read(line,*,iostat=ioerr) (InputChars(i,k) , k=1,4) , InputIntegers(i,1)
 
         backspace(33)
 
@@ -582,7 +650,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
         i = i + 1
 
-    end do
+    end do read_loop4
 
     NdihedTypes = i - 1
 
@@ -670,7 +738,7 @@ do a = 1 , MM % N_of_species
     allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 6 ) , source = D_zero )
     allocate( species(a) % harm    ( species(a) % Ndiheds     ) , source = I_zero )
 
-    read_loop: do n = 1 , species(a) % Ndiheds
+    read_loop0: do n = 1 , species(a) % Ndiheds
         do k = 1 , NdihedTypes 
 
             ! if funct = 1 (cos)
@@ -709,7 +777,7 @@ do a = 1 , MM % N_of_species
                     ! harm(:)      = n
                     species(a) % kdihed0(n,1:2) = DihedParameters(k,1:2)
                     species(a) % harm(n)        = int(DihedParameters(k,3)) 
-                    cycle read_loop
+                    cycle read_loop0
                 end if
 
             end if
@@ -746,12 +814,12 @@ do a = 1 , MM % N_of_species
    
                 if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
                      species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6) 
-                     cycle read_loop
+                     cycle read_loop0
                 end if
 
             end if
         end do
-    end do read_loop
+    end do read_loop0
 
 end do
 
