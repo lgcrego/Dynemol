@@ -37,7 +37,8 @@ real*8  :: dgg,fp,gam,gg
 real*8  :: g(N),h(N),xi(N)
 
 ! saving first geometry ...
-if ( this % profiling ) call this%output( 0 )
+if ( this % driver == "Parametrize" .and. this % profiling ) call this%output( 0 )
+if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
 
 ! Initializations ...
 
@@ -59,7 +60,7 @@ if ( this % profiling ) call this%output( 0 )
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
            If( this % profiling ) then
-               Print*, its , local_minimum
+!               Print*, its , local_minimum
                write(32,*) its , local_minimum 
                if (this % driver == "MM_Optimize" .OR. this % driver == "NormalModes") call this%output( iter )
            end If

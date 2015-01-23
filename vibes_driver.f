@@ -5,8 +5,8 @@ module good_vibrations_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use MD_read_m               , only : atom , MM 
-    use MM_types                , only : MM_system , MM_atomic , debug_MM    
+    use MD_read_m               , only : atom , MM , molecule  ! #####
+    use MM_types                , only : MM_system , MM_atomic 
     use F_intra_m               , only : ForceIntra
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT
@@ -40,9 +40,11 @@ MM_parms = FF_OPT( )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
+print*, "==> FF_OPT done"
 
+CALL Optimize_Structure ( )
 
-
+!CALL normal_modes
 
 
 
@@ -180,7 +182,7 @@ real*8  :: local_minimum
 
 ! instantiating MM ...
 MM_erg = MM_OPT( )
-
+MM_erg % driver = "MM_Optimize"
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 
 end subroutine Optimize_Structure

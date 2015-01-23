@@ -9,7 +9,7 @@ use NonBondPairs           , only : Identify_NonBondPairs
 
 private
  
-public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialMorse
+public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialMorse 
 
     ! module variables ...
     character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
