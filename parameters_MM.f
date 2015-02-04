@@ -31,9 +31,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "Ru2"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "HBT"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 61         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 25         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
 !------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ implicit none
 ! GENERAL INFO ...
 !
 
-  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_optimize , NormalModes
+  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  

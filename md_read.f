@@ -398,6 +398,9 @@ do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
+    allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
+    allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
+    allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % IntraLJ       ( molecule(i) % NintraLJ , 2 ) )
 end do
 
@@ -415,6 +418,9 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
     molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
+    molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
+    molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
+    molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
 
     k = k + molecule(i) % N_of_atoms
 end do

@@ -699,8 +699,6 @@ do a = 1 , MM % N_of_species
         end do
     end if
 
-    if( allocated(species(a) % funct_bond) ) deallocate( species(a) % funct_bond )
-
 !   Angle parameters ...
     allocate( species(a) % kang0(species(a) % Nangs , 2 ) )
 
@@ -731,8 +729,6 @@ do a = 1 , MM % N_of_species
             where( species(a) % funct_angle == SpecialAngs(k) % label ) species(a) % kang0(:,2) = SpecialAngs(k) % kang0(2) * deg_2_rad
         end do
     end if
-
-    if( allocated(species(a) % funct_angle) ) deallocate( species(a) % funct_angle )
 
     ! Dihedral parameters ...
     allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 6 ) , source = D_zero )
