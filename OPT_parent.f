@@ -3,7 +3,7 @@ module OPT_Parent_class_m
     implicit none
     private
 
-    type , public :: OPT_Parent
+    type, public :: OPT_Parent
         integer                 :: N_of_Freedom 
         integer                 :: ITMAX 
         real*8                  :: BracketSize 
@@ -15,6 +15,15 @@ module OPT_Parent_class_m
         procedure :: cost_variation
         procedure :: output 
     end type 
+
+
+    type, extends(OPT_Parent), public :: GA_OPT
+        real*8                          :: DP(3)
+        real*8          , allocatable   :: erg(:)
+        integer         , allocatable   :: key(:,:)
+        integer                         :: GeneSize
+        character(3)    , allocatable   :: EHSymbol(:)               
+    end type GA_OPT
 
 
     contains
@@ -33,5 +42,6 @@ module OPT_Parent_class_m
             class(OPT_Parent) ,            intent(in) :: me
             Integer           , optional , intent(in) :: iter
         end subroutine
+
 
 end module OPT_Parent_class_m

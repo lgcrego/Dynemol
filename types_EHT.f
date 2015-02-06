@@ -217,15 +217,6 @@ module type_m
     end type f_time
 
 
-    type OPT
-        real*8                      :: DP(3)
-        real*8       , allocatable  :: erg(:)
-        integer      , allocatable  :: key(:,:)
-        integer                     :: GeneSize
-        character(3) , allocatable  :: EHSymbol(:)               
-    end type OPT
-
-
     type dipoles
         integer ,  allocatable  :: nr   (:)
         real*8  ,  allocatable  :: CC   (:,:)

@@ -1,6 +1,7 @@
 module GA_m
 
     use type_m
+    use OPT_Parent_class_m      , only : GA_OPT
     use constants_m
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
@@ -21,7 +22,7 @@ module GA_m
 
     private 
 
-    type(OPT) :: GA
+    type(GA_OPT) :: GA
 
 contains
 !

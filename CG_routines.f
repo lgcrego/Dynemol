@@ -3,7 +3,8 @@ module CG_driver_m
     use type_m
     use constants_m
     use parameters_m            , only : profiling
-    use CG_class_m              , only : CG_OPT
+    use OPT_Parent_class_m      , only : GA_OPT
+    use CG_class_m              , only : EH_OPT
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
 
     public :: CG_driver
@@ -11,7 +12,6 @@ module CG_driver_m
     private 
 
     ! module variables ...
-    type(CG_OPT) :: CG
 
 contains
 !
@@ -22,7 +22,7 @@ contains
 !============================================================= 	
 implicit none
 type(structure)                 , intent(in)    :: system
-type(OPT)                       , intent(in)    :: GA
+type(GA_OPT)                    , intent(in)    :: GA
 type(STO_basis)                 , intent(inout) :: GA_Selection(:,:)
 type(STO_basis) , allocatable   , intent(out)   :: CG_basis(:)
 
@@ -31,7 +31,8 @@ integer                 :: i , GlobalMinimum
 integer                 :: Top_Selection 
 real*8  , allocatable   :: local_minimum(:) , InitialCost(:)
 character(len=2)        :: string
-character(len=21)       ::f_name
+character(len=21)       :: f_name
+type(EH_OPT)            :: CG
 
 If( profiling ) OPEN( unit=32 , file='CG-log.dat' , status='unknown' )
 
@@ -51,7 +52,7 @@ do i = 1 , Top_Selection
     end If
 
     ! instantiating CG ...
-    CG = CG_OPT( GA_Selection(:,i) , GA )
+    CG = EH_OPT( GA_Selection(:,i) , GA )
 
     InitialCost(i) = CG%cost() 
 

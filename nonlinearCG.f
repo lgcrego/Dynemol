@@ -1,7 +1,7 @@
 module NonlinearCG_m
 
         use constants_m             , only: real_large , prec => mid_prec 
-        use CG_class_m              , only: CG_OPT
+        use OPT_Parent_class_m      , only: OPT_Parent
 
         implicit none
 
@@ -25,17 +25,19 @@ contains
 !=================================================================================
  subroutine Fletcher_Reeves_Polak_Ribiere_minimization( this , n , local_minimum ) 
 !=================================================================================
-type(CG_OPT) , intent(inout) :: this
-integer      , intent(in)    :: n
-real*8       , intent(out)   :: local_minimum
+class(OPT_Parent)   , intent(inout) :: this
+integer             , intent(in)    :: n
+real*8              , intent(out)   :: local_minimum 
 
 !local variables ...
 INTEGER :: its,j,iter
 real*8  :: dgg,fp,gam,gg
 real*8  :: g(N),h(N),xi(N)
 
-! Initializations ...
+! saving first geometry ...
+if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
 
+! Initializations ...
         NMAX = n
         allocate( f1%xicom(NMAX) , f1%pcom(NMAX) )
 
@@ -47,16 +49,16 @@ real*8  :: g(N),h(N),xi(N)
            h(j)  = g(j)
            xi(j) = h(j)
         end do 
-
+print*, fp
         do its=1,this % ITMAX                                                                   ! Loop over iterations.
            iter=its
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
-
+print*, "MM-FF = " , iter , local_minimum
            If( this % profiling ) then
-               Print*, its , local_minimum
+!               Print*, its , local_minimum
                write(32,*) its , local_minimum 
-               if (this % driver == "MM_Optimize" ) call this%output( iter )
+               if ( any(this % driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this%output( iter )
            end If
 
            if( local_minimum > fp ) then
@@ -85,8 +87,10 @@ real*8  :: g(N),h(N),xi(N)
            end do 
         enddo 
 
+if ( this % driver == "Parametrize" .and. this % profiling ) call this%output( 0 )
+
 100     deallocate( f1%xicom , f1%pcom )
-       
+     
 end subroutine Fletcher_Reeves_Polak_Ribiere_minimization
 !        
 !
@@ -94,10 +98,10 @@ end subroutine Fletcher_Reeves_Polak_Ribiere_minimization
 !======================================================
 subroutine Linear_Minimization(this,xi,n,local_minimum)
 !======================================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(inout) :: xi(:)
-integer      , intent(in)    :: n
-real*8       , intent(out)   :: local_minimum
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(inout) :: xi(:)
+integer             , intent(in)    :: n
+real*8              , intent(out)   :: local_minimum
 
 ! local variables ...
 INTEGER     :: j
@@ -118,7 +122,7 @@ real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 
  local_minimum = brent(this,ax,xx,bx,xmin)
-
+ 
  If( this % driver == "Genetic_Alg" .AND. this % profiling ) CALL this % output
 
  do j=1,n                                               ! Construct the vector results to return.
@@ -135,9 +139,9 @@ end subroutine Linear_Minimization
 !========================================
 SUBROUTINE mnbrak(this,ax,bx,cx,fa,fb,fc)
 !========================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(inout) :: ax , bx , cx
-real*8       , intent(inout) :: fa , fb , fc
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(inout) :: ax , bx , cx
+real*8              , intent(inout) :: fa , fb , fc
 
 !local parameters ...
 real*8  , PARAMETER :: GOLD=1.618034d0 , GLIMIT=2000.d0 , WEE=1.d-20
@@ -210,9 +214,9 @@ end subroutine mnbrak
 !======================
  function f1dim(this,x)
 !======================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(in)    :: x
-real*8                       :: f1dim
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(in)    :: x
+real*8                              :: f1dim
 
 ! local variables ...
 INTEGER     :: j
@@ -225,7 +229,7 @@ real*8      :: xt(NMAX)
         this%p(:) = xt(:)
 
         f1dim = this % cost()
-      
+
 end function f1dim
 !
 !
@@ -233,10 +237,10 @@ end function f1dim
 !=================================
 function brent(this,ax,bx,cx,xmin)
 !=================================
-type(CG_OPT) , intent(inout) :: this
-real*8       , intent(in)    :: ax , bx , cx
-real*8       , intent(out)   :: xmin
-real*8                       :: brent
+class(OPT_Parent)   , intent(inout) :: this
+real*8              , intent(in)    :: ax , bx , cx
+real*8              , intent(out)   :: xmin
+real*8                              :: brent
 
 ! local parameters ...  
 real*8 , PARAMETER :: CGOLD=0.3819660d0

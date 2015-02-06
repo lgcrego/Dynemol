@@ -1,6 +1,7 @@
 module CG_class_m
 
     use type_m
+    use OPT_Parent_class_m      , only : GA_OPT
     use constants_m             , only : a_Bohr
     use Semi_Empirical_Parms    , only : atom
     use parameters_m            , only : driver, profiling, &
@@ -14,24 +15,20 @@ module CG_class_m
 
     private
 
-    public :: CG_OPT
+    public :: EH_OPT
 
-    type , extends(OPT) :: CG_OPT
-        real*8          , allocatable   :: p(:)
-        integer                         :: ITMAX = 50               ! <== 50-200 is a good compromise of accuracy and safety
-        real*8                          :: BracketSize = 1.d-4      ! <== this value may vary between 1.0d-3 and 1.0d-5
+    type , extends(GA_OPT) :: EH_OPT
+        integer                         :: ITMAX_EH = 50               ! <== 50-200 is a good compromise of accuracy and safety
+        real*8                          :: BracketSize_EH = 1.d-4      ! <== this value may vary between 1.0d-3 and 1.0d-5
+        logical                         :: profiling_EH = .false.
         type(STO_basis) , allocatable   :: basis(:)
-        character (len=11)              :: driver
-        logical                         :: profiling = .false.
     contains
         procedure :: cost
         procedure :: cost_variation
         procedure :: output => Dump_OPT_parameters
-        procedure , private :: modify_EHT_parameters
-        procedure , private :: normalization
-    end type CG_OPT
+    end type EH_OPT
 
-    interface CG_OPT
+    interface EH_OPT
         module procedure   preprocess 
     end interface
 
@@ -48,12 +45,16 @@ contains
 !=================================================
 implicit none
 type(STO_basis) , intent(in)  :: GA_basis(:)
-type(OPT)       , intent(in)  :: GA
+type(GA_OPT)    , intent(in)  :: GA
 
-type(CG_OPT) :: me
+type(EH_OPT) :: me
 
-me % driver     = driver
-me % profiling  = profiling
+! Cause you are my kind / You're all that I want ...
+me % ITMAX       = me % ITMAX_EH
+me % BracketSize = me % BracketSize_EH
+me % profiling   = me % profiling_EH
+
+me % driver      = driver
 
 me % DP = GA % DP
 
@@ -73,7 +74,7 @@ end function preprocess
  function cost( me )
 !===================
 implicit none
-class(CG_OPT) , intent(inout)  :: me
+class(EH_OPT) , intent(inout)  :: me
 real*8                         :: cost
 
 !local variables ...
@@ -82,7 +83,7 @@ real*8      :: CG_DP(3) , CG_Alpha_ii(3)
 
 If( .NOT. allocated(CG_basis) ) allocate( CG_basis(size(me%basis)) , source = me%basis)
 
-call me % modify_EHT_parameters( )
+call modify_EHT_parameters( me )
 
 info = 0
 CALL GA_eigen( Extended_Cell , me%basis , CG_UNI , info )
@@ -97,19 +98,19 @@ end function cost
 !
 !
 !
-!====================================
- subroutine cost_variation( me , df )
-!====================================
+!========================================
+ subroutine cost_variation( me , vector )
+!========================================
 implicit none
-class(CG_OPT)   , intent(in)    :: me
-real*8          , intent(out)   :: df(:)
+class(EH_OPT)   , intent(in)    :: me
+real*8          , intent(inout) :: vector(:)
 
 ! local parameters ...
 real*8  , parameter :: small = 1.d-8
 
 ! local variables ...
 integer         :: i , GeneSize
-type(CG_OPT)    :: before , after
+type(EH_OPT)    :: before , after
 
 
 GeneSize = size(me%p(:))
@@ -122,7 +123,7 @@ do i = 1 , GeneSize
     after  % p(i) = me % p(i) + small
     before % p(i) = me % p(i) - small
 
-    df(i) = ( after%cost() - before%cost() ) / (two*small)
+    vector(i) = ( after%cost() - before%cost() ) / (two*small)
 
 end do
 
@@ -134,7 +135,7 @@ end subroutine cost_variation
  subroutine modify_EHT_parameters( me )
 !======================================
 implicit none
-class(CG_OPT)   , intent(inout)    :: me
+class(EH_OPT)   , intent(inout)    :: me
 
 ! local variables ...
 integer :: L , gene , EHS , N_of_EHSymbol 
@@ -190,7 +191,7 @@ do  L = 0 , 2
             gene    = gene + 1
             zeta(2) = abs( me%p(gene) + me%basis(k)%zeta(2) )
             coef(2) = abs( me%p(gene) )
-            CALL me % normalization( zeta , coef , CG_basis(k)%n , k , 1 , 2 )
+            CALL normalization( me , zeta , coef , CG_basis(k)%n , k , 1 , 2 )
             where( (CG_basis%EHSymbol == me%EHSymbol(EHS)) .AND. (CG_basis%l == L) ) 
                 me % basis % zeta(1) = zeta(1) 
                 me % basis % zeta(2) = zeta(2) 
@@ -217,7 +218,7 @@ end subroutine modify_EHT_parameters
  subroutine normalization( me , zeta , coef , n , k , i , j )
 !============================================================
 implicit none
-class(CG_OPT)   , intent(in)    :: me
+class(EH_OPT)   , intent(in)    :: me
 real*8          , intent(inout) :: zeta(:)
 real*8          , intent(inout) :: coef(:)
 integer         , intent(in)    :: n
@@ -256,11 +257,11 @@ end subroutine normalization
 !
 !
 !===========================================
- subroutine Dump_OPT_parameters( me , dumb )
+ subroutine Dump_OPT_parameters( me , iter )
 !===========================================
 implicit none
-class(CG_OPT)               , intent(in) :: me
-integer         , optional  , intent(in) :: dumb
+class(EH_OPT)               , intent(in) :: me
+integer         , optional  , intent(in) :: iter
 
 ! local variables ...
 integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
@@ -278,7 +279,7 @@ allocate( indx_EHS(N_of_EHSymbol) )
 indx_EHS = [ ( minloc(me % basis % EHSymbol , 1 , me % basis % EHSymbol == me % EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
 !==================================================================================
-! creating file CG_OPT_eht_parameters.dat with temporary optimized parameters ...
+! creating file EH_OPT_eht_parameters.dat with temporary optimized parameters ...
 !==================================================================================
 
 ! print heading ...
