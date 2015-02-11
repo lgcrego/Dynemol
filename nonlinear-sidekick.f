@@ -1,4 +1,4 @@
-module NonlinearCG_m
+module NonlinearSidekick_m
 
         use constants_m             , only: real_large , prec => mid_prec 
         use OPT_Parent_class_m      , only: OPT_Parent
@@ -35,6 +35,7 @@ real*8  :: dgg,fp,gam,gg
 real*8  :: g(N),h(N),xi(N)
 
 ! saving first geometry ...
+if ( this % driver == "Parametrize" .and. this % profiling ) call this%output( 0 )
 if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
 
 ! Initializations ...
@@ -56,9 +57,9 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
            If( this % profiling ) then
-               Print*, its , local_minimum
+!               Print*, its , local_minimum
                write(32,*) its , local_minimum 
-               if ( any(this % driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this%output( iter )
+               if (this % driver == "MM_Optimize" .OR. this % driver == "NormalModes") call this%output( iter )
            end If
 
            if( local_minimum > fp ) then
@@ -87,10 +88,8 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
            end do 
         enddo 
 
-if ( this % driver == "Parametrize" .and. this % profiling ) call this%output( 0 )
-
 100     deallocate( f1%xicom , f1%pcom )
-     
+       
 end subroutine Fletcher_Reeves_Polak_Ribiere_minimization
 !        
 !
@@ -327,4 +326,4 @@ end function brent
 !
 !
 !
-end module NonlinearCG_m
+end module NonlinearSidekick_m

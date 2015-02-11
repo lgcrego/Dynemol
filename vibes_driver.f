@@ -1,19 +1,17 @@
 module good_vibrations_m
 
-    use type_m
+    use type_m                  
     use constants_m
     use mkl95_precision
     use mkl95_blas
     use mkl95_lapack
-    use MD_read_m               , only : atom , MM , molecule  ! #####
-    use MM_types                , only : MM_system , MM_atomic 
+    use parameters_m            , only : PBC
+    use MD_read_m               , only : atom , MM 
+    use MM_types                , only : MM_atomic 
     use F_intra_m               , only : ForceIntra
     use MM_ERG_class_m          , only : MM_OPT
-    use FF_OPT_class_m          , only : FF_OPT
-    use NonlinearMM_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
-!###################
-!    use MM_OPT_routines         
-!###################
+    use FF_OPT_class_m          , only : FF_OPT , LogicalKey 
+    use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
 
     public :: Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
@@ -22,6 +20,7 @@ module good_vibrations_m
     ! module variables ...
     type(MM_OPT) :: MM_erg
     type(FF_OPT) :: MM_parms
+    type(MM_atomic) , allocatable :: atom0(:)
 
 contains
 !
@@ -33,23 +32,37 @@ contains
 implicit none
 
 ! local variables ...
-real*8  :: local_minimum 
+real*8                        :: local_minimum 
+type(LogicalKey)              :: key
+logical                       :: F_ = .false. , T_ = .true.
+
+! saving reference structure for future use ...
+allocate( atom0 , source = atom )
 
 ! instantiating MM ...
-MM_parms = FF_OPT( )
+key%bonds  = [T_,T_,F_]
+key%angs   = [T_,T_]
+key%diheds = F_
+
+MM_parms = FF_OPT( key , kernel = "energy" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
-print*, "==> FF_OPT done"
+print*, "==> first part of FF_OPT done"
 
-CALL Optimize_Structure ( )
+print*, RMSD()
 
-!CALL normal_modes
+! instantiating MM ...
+key%bonds  = [T_,F_,F_]
+key%angs   = [T_,F_]
+key%diheds = F_
 
+MM_parms = FF_OPT( key , kernel = "NormalModes" )
 
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
-
-
+call normal_modes()
+stop
 
 
 
@@ -143,6 +156,9 @@ If ( info /= 0 ) write(*,*) 'info = ',info,' in SYEV in vibes normal modes '
 ! transforming back the normal modes: A --> M^{-1/2}*A ...
 forall( i=1:MM%N_of_atoms , l=1:3 ) Hessian( (i-1)*3 + l , : ) = Hessian( (i-1)*3 + l , : ) / sqrt(atom(i)%mass)
 
+! convert units to cm^{-1} ...
+hesse%erg = sqrt( abs(hesse%erg) ) * h_bar*ev_2_cm_inv
+
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 OPEN( unit=3 , file='normal_modes.nmd' , status='unknown' )
 
@@ -163,10 +179,8 @@ close(3)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 do i = 1 , size_Hessian
-write(30,*) i , sqrt( abs(hesse%erg(i)))*h_bar*ev_2_cm_inv
+write(30,*) i , hesse%erg(i)
 end do
-
-stop
 
 end subroutine normal_modes
 !
@@ -182,10 +196,32 @@ real*8  :: local_minimum
 
 ! instantiating MM ...
 MM_erg = MM_OPT( )
+
 MM_erg % driver = "MM_Optimize"
+
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 
 end subroutine Optimize_Structure
+!
+!
+!=============
+ function RMSD 
+!=============
+implicit none
+real*8  :: RMSD
+
+!local variable ...
+integer  :: i
+real*8   :: rij(3) , distance
+
+distance = D_zero
+do i = 1 , size(atom)
+    rij(:)   = atom(i) % xyz(:) - atom0(i) % xyz(:)
+    rij(:)   = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+    RMSD = RMSD + SQRT( rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3) )
+end do
+
+end function RMSD
 !
 !
 !
