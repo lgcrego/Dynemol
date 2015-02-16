@@ -48,9 +48,10 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
-print*, "==> first part of FF_OPT done"
-
+call optimize_structure()
 print*, RMSD()
+
+print*, "==> first part of FF_OPT done"
 
 ! instantiating MM ...
 key%bonds  = [T_,F_,F_]
@@ -60,6 +61,12 @@ key%diheds = F_
 MM_parms = FF_OPT( key , kernel = "NormalModes" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+
+atom = atom0
+call optimize_structure()
+
+print*, MM_parms%modes
+print*, RMSD()
 
 call normal_modes()
 stop

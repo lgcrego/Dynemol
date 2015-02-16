@@ -5,23 +5,30 @@ module cost_tuning_m
     use GA_QCModel_m            , only : Mulliken
 
 
-    public :: evaluate_cost
+    public :: evaluate_cost , list_of_modes
 
     private 
 
+    interface evaluate_cost
+        module procedure evaluate_cost_EHT
+        module procedure evaluate_cost_nmd
+    end interface
+
+    ! module variables ...
+    integer  , allocatable :: list_of_modes(:)
 contains
 !
 !
 !
-!=========================================================
- function evaluate_cost( OPT_UNI , basis , DP , Alpha_ii )
-!=========================================================
+!=============================================================
+ function evaluate_cost_EHT( OPT_UNI , basis , DP , Alpha_ii )
+!=============================================================
 implicit none
 type(R_eigen)               , intent(in)  :: OPT_UNI
 type(STO_basis)             , intent(in)  :: basis(:)
 real*8          , optional  , intent(in)  :: DP(3)
 real*8          , optional  , intent(in)  :: Alpha_ii(3)
-real*8                                    :: evaluate_cost
+real*8                                    :: evaluate_cost_EHT
 
 ! local variables ...
 real*8   :: chi(20) , weight(20)
@@ -79,9 +86,55 @@ chi(11) = Alpha_ii(3) - REF_Alpha(3)     ; weight(11) = 1.4d0
 ! apply weight on chi and evaluate cost ...
 
 chi = chi * weight
-evaluate_cost = sqrt( dot_product(chi,chi) )
+evaluate_cost_EHT = sqrt( dot_product(chi,chi) )
 
-end function evaluate_cost
+end function evaluate_cost_EHT
+!
+!
+!
+!
+!=============================================================
+ function evaluate_cost_nmd( Hesse_erg , nmd_list , instance )
+!=============================================================
+implicit none
+real*8           , optional , intent(in)  :: Hesse_erg(:)
+integer          , optional , intent(in)  :: nmd_list(:)
+character(*)     , optional , intent(in)  :: instance
+real*8           :: evaluate_cost_nmd
+
+! local variables ...
+real*8           :: chi(20)    = D_zero
+real*8           :: weight(20) = D_zero
+
+select case (instance)
+    case("preprocess")
+            
+        allocate( list_of_modes , source = [10,13,16,17] )
+
+    case default
+
+!------------------------
+! NMD frequencies (cm-1})
+!------------------------
+
+chi(1) = Hesse_erg(nmd_list(1))  - 113.d0                             ; weight(1) = 1.0d0
+
+chi(2) = Hesse_erg(nmd_list(2))  - 255.d0                             ; weight(2) = 1.0d0
+
+chi(3) = Hesse_erg(nmd_list(3))  - 289.d0                             ; weight(3) = 0.9d0
+
+chi(4) = Hesse_erg(nmd_list(4))  - 528.d0                             ; weight(4) = 0.7d0
+
+!--------------------------------------------------------------------
+
+! apply weight on chi and evaluate cost ...
+
+chi = chi * weight
+evaluate_cost_nmd = sqrt( dot_product(chi,chi) )
+
+end select
+
+end function evaluate_cost_nmd
 !
 !
 !

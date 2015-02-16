@@ -12,6 +12,7 @@ module FF_OPT_class_m
     use F_intra_m               , only : ForceIntra, Pot_Intra                                     
     use OPT_Parent_class_m      , only : OPT_Parent
     use NonlinearSidekick_m     , only : Fletcher_Reeves_Polak_Ribiere_minimization
+    use cost_tuning_m           , only : evaluate_cost , nmd => list_of_modes
 
     public :: FF_OPT , LogicalKey
 
@@ -21,6 +22,7 @@ module FF_OPT_class_m
         integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
+        integer  , pointer      :: modes(:) => null()
     contains
         procedure :: cost => cost_evaluator
         procedure :: cost_variation => Generalized_Forces
@@ -40,52 +42,54 @@ module FF_OPT_class_m
 
     ! module variables ...
     integer                                     :: bonds , angs , diheds
+    integer             , allocatable , target  :: nmd_list(:) 
+    integer             , allocatable           :: nmd_ref(:) , nmd_id(:)
+    real*8              , allocatable           :: nmd_mtx(:,:)
+    logical                                     :: done = .false.
     logical             , allocatable           :: bonds_mask(:,:) , angs_mask(:,:) , diheds_mask(:,:)
     real*8              , allocatable , target  :: bond_target(:,:) , ang_target(:,:) , dihed_target(:,:)
     type(real_pointer)  , allocatable           :: bond(:,:) , ang(:,:) , dihed(:,:)
-    type(MM_atomic)     , allocatable           :: atom0(:)
+    type(R_eigen)                               :: Hesse
     character(len=11)                           :: method
-    logical                                     :: done = .false.
 
 contains
 !
 !
 !
-!=========================================================
- function constructor( key , kernel , ref ) result( me )
-!=========================================================
+!=================================================
+ function constructor( key , kernel ) result( me )
+!=================================================
 implicit none
-type(LogicalKey)            , intent(in) :: key
-character(*)                , intent(in) :: kernel
-type(MM_atomic)  , optional , intent(in) :: ref(:)
-type(FF_OPT)                             :: me 
+type(LogicalKey)  , intent(in) :: key
+character(*)      , intent(in) :: kernel
+type(FF_OPT)                   :: me 
 
 !local variable ...
 integer :: i , j 
 
 method = kernel
-if( present(ref) ) allocate( atom0 , source = ref )
 
 ! Cause you are my kind / You're all that I want ...
 me % ITMAX       = me % ITMAX_FF
 me % BracketSize = me % BracketSize_FF
 me % profiling   = me % profiling_FF
-if( kernel == "NormalModes" ) me % BracketSize = 100000*me % BracketSize
-if( kernel == "NormalModes" ) me % itmax = 20
-me % driver = driver_MM
+me % driver      = driver_MM
 
 If( driver_MM == "Parametrize" ) me % profiling = .true.
 
-if( .NOT. done ) then
+If( kernel == "NormalModes" ) me % BracketSize = 10000 * me % BracketSize
+If( kernel == "NormalModes" ) me % itmax = 600
+
+If( .NOT. done ) then
     ! catch the distinct parameters and make (bond, ang, dihed) point to them ...
-    allocate(bond_target , source=Select_Different( molecule(1)%kbond0                 ) )
-    allocate(bond        , source=Define_Pointer  ( molecule(1)%kbond0  , bond_target  ) )
+    allocate( bond_target , source=Select_Different( molecule(1)%kbond0                 ) )
+    allocate( bond        , source=Define_Pointer  ( molecule(1)%kbond0  , bond_target  ) )
 
-    allocate(ang_target  , source=Select_Different( molecule(1)%kang0                  ) )
-    allocate(ang         , source=Define_Pointer  ( molecule(1)%kang0   , ang_target   ) )
+    allocate( ang_target  , source=Select_Different( molecule(1)%kang0                  ) )
+    allocate( ang         , source=Define_Pointer  ( molecule(1)%kang0   , ang_target   ) )
 
-    allocate(dihed_target, source=Select_Different( molecule(1)%kdihed0                ) )
-    allocate(dihed       , source=Define_Pointer  ( molecule(1)%kdihed0 , dihed_target ) )
+    allocate( dihed_target, source=Select_Different( molecule(1)%kdihed0                ) )
+    allocate( dihed       , source=Define_Pointer  ( molecule(1)%kdihed0 , dihed_target ) )
 
     ! the parameters = zero are not optimized ...
     allocate( bonds_mask  ( size(bond_target (:,1)) , size(bond_target (1,:)) ) , source = (abs(bond_target)  > low_prec) )
@@ -95,9 +99,9 @@ if( .NOT. done ) then
 end if
 
 ! logical key to set the optimization routine ...
-forall(j=1:3) bonds_mask(:,j)  =  key%bonds(j)
-forall(j=1:2) angs_mask(:,j)   =  key%angs(j)
-forall(j=1:7) diheds_mask(:,j) =  key%diheds(j)
+forall(j=1:3) bonds_mask(:,j)  =  bonds_mask (:,j) .AND. key%bonds(j)
+forall(j=1:2) angs_mask(:,j)   =  angs_mask  (:,j) .AND. key%angs(j)
+forall(j=1:7) diheds_mask(:,j) =  diheds_mask(:,j) .AND. key%diheds(j)
 
 ! number of degrees of freedom in optimization space ...
 bonds  = count( bonds_mask  ) 
@@ -126,7 +130,6 @@ real*8                         :: cost
 ! local variables ...
 integer         :: i , j  
 real*8          :: energy 
-type(R_eigen)   :: Hesse
     
 ! reset forces ...
 forall( i=1:3 ) atom(:) % ftotal(i) = D_zero
@@ -152,9 +155,18 @@ select case ( method )
 
     case( "NormalModes" )
 
-        CALL normal_modes( Hesse )
+        CALL normal_modes()
 
-        cost = sqrt( (hesse%erg(10)-116.d0)**2 + (hesse%erg(14)-258.d0)**2 ) 
+        If( .not. associated(me%modes) ) me%modes => nmd_list
+
+        do j = 1 , size( nmd_list )
+            nmd_mtx(:,j) = [ (dot_product(hesse%L(:,nmd_ref(j)),hesse%R(:,nmd_list(j)+i)) , i = -4,4) ]
+        end do
+        nmd_id  = maxloc( abs(nmd_mtx) , dim=1 )
+
+        nmd_list = nmd_list + (nmd_id - 5)
+
+        cost = evaluate_cost( Hesse%erg , nmd_list )
 
     case default 
 
@@ -337,6 +349,7 @@ do j = 2 , size(a(:,1))
         if( all(tmp(k,:) == a(j,:)) )  exit
     end do
 
+    ! there's some difference between a(j,:) and any of the other tmp(diff_size,:) ...
     if( k > diff_size ) then
         tmp(k,:)  = a(j,:)
         indx(k)   = j
@@ -378,19 +391,21 @@ end function Define_Pointer
 !
 !
 !================================
- subroutine normal_modes( Hesse )
+ subroutine normal_modes()
 !================================
 use MM_ERG_class_m  , only    : MM_OPT
 
 implicit none
-type(R_eigen)   , intent(out) :: Hesse
 
 ! local variables ...
 integer                       :: i , j , k , l , column , info
-real*8                        :: local_energy_minimum
+real*8                        :: local_energy_minimum , dull
 real*8          , allocatable :: Hessian(:,:)
 type(MM_atomic) , allocatable :: equilibrium(:) , atom_fwd(:) , atom_bwd(:)
 type(MM_OPT)                  :: MM_erg
+
+!saving ...
+save :: equilibrium , atom_fwd , atom_bwd , Hessian
 
 !local parameters ...
 real*8 , parameter :: delta         = 1.d-5             ! <== displacement in Angs.
@@ -419,7 +434,8 @@ end do
 forall(i=1:3) atom % ftotal(i) = D_zero
 
 ! start build up of Hessian matrix ...
-column = 1
+Hessian = D_zero
+column  = 1
 do k = 1 , MM%N_of_atoms
 
     do j = 1 , 3
@@ -456,34 +472,32 @@ Hessian = Hessian / Angs_2_mts
 CALL SYEV( Hessian , Hesse % erg , 'V' , 'U' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYEV in vibes normal modes '
 
-! transforming back the normal modes: A --> M^{-1/2}*A ...
-forall( i=1:MM%N_of_atoms , l=1:3 ) Hessian( (i-1)*3 + l , : ) = Hessian( (i-1)*3 + l , : ) / sqrt(atom(i)%mass)
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+! build up Hesse ...
 
 ! convert units to cm^{-1} ...
 hesse%erg = sqrt( abs(hesse%erg) ) * h_bar*ev_2_cm_inv
 
+if( .NOT. allocated(Hesse%L) ) then
+
+     ! setting up stuff for NMD optimization ...
+     allocate( Hesse%L , source = Hessian )    
+     allocate( Hesse%R , source = Hessian )    
+
+     dull = evaluate_cost( instance = "preprocess" )
+     allocate( nmd_list , source = nmd )
+     allocate( nmd_ref  , source = nmd )
+     allocate( nmd_id (size(nmd_list)) )
+     allocate( nmd_mtx(9,size(nmd_list)) )
+
+else
+
+     Hesse%R = Hessian
+
+end if
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 end subroutine normal_modes
-!
-!
-!
-!=============
- function RMSD 
-!=============
-implicit none
-real*8  :: RMSD
-
-!local variable ...
-integer  :: i
-real*8   :: rij(3) , distance
-
-distance = D_zero
-do i = 1 , size(atom)
-    rij(:)   = atom(i) % xyz(:) - atom0(i) % xyz(:)
-    rij(:)   = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-    RMSD = RMSD + SQRT( rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3) )
-end do
-
-end function RMSD
 !
 !
 !
