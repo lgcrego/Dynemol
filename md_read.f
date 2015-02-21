@@ -561,6 +561,8 @@ integer :: i
             a(i)%AtNo = 44
         case( 'I')
             a(i)%AtNo = 53
+        case( 'Pb')
+            a(i)%AtNo = 82
         case default
             print*, ' >> Symbol_2_AtNo ; unknown atom found <<' , '[',a(i)%Symbol,']' , i
             stop
@@ -700,6 +702,8 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'C'
         case( 'SS' )
             a(i)%Symbol = 'S'
+        case( 'Pb' , 'PB' )
+            a(i)%Symbol = 'Pb'
     end select
 
 END DO

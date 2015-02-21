@@ -90,6 +90,8 @@ integer :: i
             a(i)%AtNo = 44 
         case( 'I' ) 
             a(i)%AtNo = 53 
+        case( 'Pb' ) 
+            a(i)%AtNo = 82
         case( '$$' ) 
             a(i)%AtNo = 90      ! <== special atoms
         case default
@@ -148,6 +150,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 44 
         case( 'I' ) 
             a%AtNo(i) = 53 
+        case( 'Pb' ) 
+            a%AtNo(i) = 82
         case( '$$' ) 
             a%AtNo(i) = 90          ! <== special atoms ... 
         case default
@@ -209,6 +213,8 @@ integer :: i
             a(i)%Symbol = 'Ru'
         case( 53 ) 
             a(i)%Symbol = 'I'
+        case( 82 ) 
+            a(i)%Symbol = 'Pb'
         case( 90 ) 
             a(i)%Symbol = '$$'         ! <== special atoms 
         case default
@@ -270,6 +276,8 @@ integer :: i
             a%Symbol(i) = 'Ru'
         case( 53 ) 
             a%Symbol(i) = 'I'
+        case( 82 ) 
+            a%Symbol(i) = 'Pb'
         case( 90 ) 
             a%Symbol(i) = '$$'          ! <== special atoms ...
         case default
@@ -353,6 +361,9 @@ character(len=2)    :: element2
 
         case( 'SS','S' ) 
             a(i)%Symbol = 'S' 
+
+        case( 'Pb','PB' ) 
+            a(i)%Symbol = 'Pb' 
 
         case( '$$') 
             a(i)%Symbol = '$$'           !  <==special atoms ...
