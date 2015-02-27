@@ -428,7 +428,7 @@ end do
 ! factor3 = 1.0d-20
 pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
 pot_total = pot_INTER + pot_INTRA
-pot_total = pot_total * mol * 1.0d-6 / MM % N_of_molecules
+pot_total = pot_total * mol * micro / MM % N_of_molecules
 
 ! Get total force ...
 

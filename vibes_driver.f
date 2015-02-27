@@ -8,6 +8,8 @@ module good_vibrations_m
     use parameters_m            , only : PBC
     use MD_read_m               , only : atom , MM 
     use MM_types                , only : MM_atomic 
+    use setup_m                 , only : Setup
+    use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT , LogicalKey 
@@ -18,6 +20,7 @@ module good_vibrations_m
     private 
 
     ! module variables ...
+    logical      :: done = .false.
     type(MM_OPT) :: MM_erg
     type(FF_OPT) :: MM_parms
     type(MM_atomic) , allocatable :: atom0(:)
@@ -200,6 +203,15 @@ implicit none
 
 ! local variables ...
 real*8  :: local_minimum 
+
+! setting up the MM system ...
+If( .not. done ) then
+
+    CALL Setup
+    atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
+    done = .true. 
+
+end If
 
 ! instantiating MM ...
 MM_erg = MM_OPT( )

@@ -7,6 +7,8 @@ module MM_ERG_class_m
     use MM_input                , only : driver_MM
     use MD_dump_m               , only : saving_MM_frame
     use F_intra_m               , only : ForceIntra, Pot_Intra                                     
+    use F_inter_m               , only : ForceInter
+    use for_force               , only : Pot_Total 
     use OPT_Parent_class_m      , only : OPT_Parent
 
     implicit none
@@ -16,7 +18,7 @@ module MM_ERG_class_m
     public :: MM_OPT
 
     type, extends(OPT_Parent)    :: MM_OPT
-        integer                  :: ITMAX_MM = 200              ! <== 100-300 is a good compromise of accuracy and safety
+        integer                  :: ITMAX_MM = 4000             ! <== 100-300 is a good compromise of accuracy and safety
         real*8                   :: BracketSize_MM = 1.d-2      ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_MM = .true.
     contains
@@ -31,6 +33,7 @@ module MM_ERG_class_m
     end interface
 
     ! module variables ...
+    integer :: N_of_free
 
 contains
 !
@@ -44,7 +47,7 @@ implicit none
 type(MM_OPT) :: me 
 
 !local variable ...
-integer :: i 
+integer :: i , j
 
 ! Cause you are my kind / You're all that I want ...
 me % ITMAX       = me % ITMAX_MM
@@ -55,10 +58,12 @@ me % driver = driver_MM
 
 If( driver_MM == "MM_Optimize" .OR. driver_MM == "NormalModes" ) me % profiling = .true.
 
-! number of degrees of freedom ...
-me % N_of_Freedom = 3 * MM % N_of_atoms
+! number of degrees of freedom allowed to relax ...
+N_of_free = count( atom % flex )
+me % N_of_Freedom = 3 * N_of_free
 
-allocate( me % p( me % N_of_Freedom ) , source = [(atom(:)%xyz(i) , i=1,3)] )
+allocate( me % p( me % N_of_Freedom ) )
+forall(i=1:3) me % p( (i-1)*N_of_free+1 : i*N_of_free ) = pack( atom(:)%xyz(i) , atom(:)%flex , me%p)
 
 end function constructor
 !
@@ -73,18 +78,25 @@ class(MM_OPT) , intent(inout)  :: me
 real*8                         :: Energy
 
 !local variables ...
-integer :: i
+integer :: i , j
 
 do i = 1 , 3
-
     atom(:) % ftotal(i) = D_zero
-    atom(:) % xyz(i)    = me % p( (i-1)*MM%N_of_atoms+1 : i*MM%N_of_atoms ) 
-
+    where( atom % flex ) atom(:) % xyz(i) = me % p( (i-1)*N_of_free+1 : i*N_of_free ) 
 end do
 
-CALL ForceIntra
+If( MM % N_of_molecules == 1 ) then
 
-Energy = Pot_Intra * mol * micro / MM % N_of_molecules
+    CALL ForceIntra
+    Energy = Pot_Intra * mol * micro / MM % N_of_molecules
+
+else
+
+    CALL ForceInter
+    CALL ForceIntra
+    Energy = Pot_Total
+
+end if
 
 end function Energy
 !
@@ -100,7 +112,9 @@ real*8          , intent(inout)  :: vector(:)
 ! local variables ...
 integer :: i , GeneSize
 
-vector = - [(atom(:)%ftotal(i) , i=1,3)] * mts_2_Angs
+do i = 1 , 3 
+    where( atom % flex ) vector( (i-1)*N_of_free+1 : i*N_of_free ) = - atom(:)%ftotal(i) * mts_2_Angs
+end do
 
 end subroutine Forces
 !
