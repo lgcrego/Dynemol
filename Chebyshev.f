@@ -2,8 +2,8 @@ module Chebyshev_m
 
     use type_m              , g_time => f_time  
     use constants_m
-    use mkl95_blas
-    use mkl95_lapack
+    use blas95
+    use lapack95
     use ifport
     use parameters_m        , only : t_i , t_f , n_t ,              &
                                      frame_step , DP_Field_ ,       &
@@ -14,6 +14,7 @@ module Chebyshev_m
     use QCmodel_Huckel      , only : Huckel ,                       &
                                      Huckel_with_FIELDS
     use Data_Output         , only : Populations
+    use Matrix_Math
 
     public  :: Chebyshev , preprocess_Chebyshev
 
@@ -60,19 +61,19 @@ li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
 allocate( Psi(size(basis)) , source=C_zero )
-Psi(li:li+N-1) = cmplx( wv_FMO(:) )
+Psi(li:li+N-1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra (size(basis)), source=C_zero )
-allocate( Dual_ket (size(basis)), source=C_zero )
+allocate( Dual_bra (size(basis)) )
+allocate( Dual_ket (size(basis)) )
 CALL Overlap_Matrix( system , basis , S_matrix )
-DUAL_bra(:) = conjg( Psi )
-DUAL_ket(:) = matmul( S_matrix , Psi )
+DUAL_bra(:) = dconjg( Psi )
+call op_x_ket( DUAL_ket, S_matrix , Psi )
 
-allocate( Psi_bra (size(basis)), source=C_zero )
-allocate( Psi_ket (size(basis)), source=C_zero )
-Psi_bra = matmul( Psi , S_matrix )
+allocate( Psi_bra (size(basis)) )
+allocate( Psi_ket (size(basis)) )
+call bra_x_op( Psi_bra, Psi , S_matrix )
 Psi_ket = Psi
 
 ! save populations(time=t_i) ...
@@ -103,8 +104,11 @@ integer          , intent(in)    :: it
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
 real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
-integer                     :: j , k_ref , N
+real*8      , parameter     :: t_max = MD_dt*frame_step*(it-1)  ! max time inside slice
+integer                     :: j , k , k_ref , N
 logical                     :: OK
+
+call start_clock
 
 If ( necessary ) then
     
@@ -121,12 +125,10 @@ N = size(basis)
 allocate( C_Psi_bra   (N , order ) , source=C_zero )
 allocate( C_Psi_ket   (N , order ) , source=C_zero )
 allocate( C_k         (order     ) , source=C_zero )
-allocate( Psi_tmp_bra (N         ) , source=C_zero )
-allocate( Psi_tmp_ket (N         ) , source=C_zero )
+allocate( Psi_tmp_bra (N         ) )
+allocate( Psi_tmp_ket (N         ) )
 
-norm_ref = dot_product( Psi_t_bra , Psi_t_ket )
-
-delta_t = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
+delta_t = merge( (t_f) / dfloat(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
 tau_max = delta_t / h_bar
 
 ! constants of evolution ...
@@ -136,67 +138,79 @@ tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
 ! but tau should be never bigger than tau_max ...
 tau = merge( tau_max , tau , tau > tau_max )
 
+
+#ifdef USE_GPU
+call chebyshev_gpucaller( N, tau, save_tau, t_max), t, Psi_t_bra, Psi_t_ket, H_prime )
+#else
+
+norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
+k_ref = 0
+
 ! first convergence: best tau-parameter for k_ref ...
 do
     CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
 
-    if( OK ) then
-        t = t + tau * h_bar 
-        save_tau = tau
-        exit
-    else            
-        tau = tau * 0.9d0
-    end if
+    if( OK ) exit       
+    tau = tau * 0.9d0
 end do
 
-if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
-    tau = ( MD_dt*frame_step*(it-1)-t ) / h_bar
+t = t + tau * h_bar 
+save_tau = tau
+
+if( t_max-t < tau*h_bar ) then
+    tau = ( t_max-t ) / h_bar
     C_k = coefficient(tau,order)
 end if
 
 ! proceed evolution with best tau ...
-do
+do while( t < t_max )
 
-    if( t >= MD_dt*frame_step*(it-1) ) exit
+    C_Psi_bra(:,1) = Psi_t_bra(:)
+    C_Psi_ket(:,1) = Psi_t_ket(:)
 
-    C_Psi_bra(:,1) = Psi_t_bra(:)                                               ;   C_Psi_ket(:,1) = Psi_t_ket(:)
-
-    C_Psi_bra(:,2) = matmul(C_Psi_bra(:,1),H_prime)                             ;   C_Psi_ket(:,2) = matmul(H_prime,C_Psi_ket(:,1))
+    call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
+    call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
 
     do j = 3 , k_ref
-        C_Psi_bra(:,j) = two*matmul(C_Psi_bra(:,j-1),H_prime)-C_Psi_bra(:,j-2)  ;   C_Psi_ket(:,j) = two*matmul(H_prime,C_Psi_ket(:,j-1))-C_Psi_ket(:,j-2)
+        call bra_x_op( C_Psi_bra(:,j), C_Psi_bra(:,j-1), H_prime, C_two )
+        C_Psi_bra(:,j) = C_Psi_bra(:,j) - C_Psi_bra(:,j-2)
+        call op_x_ket( C_Psi_ket(:,j), H_prime, C_Psi_ket(:,j-1), C_two )
+        C_Psi_ket(:,j) = C_Psi_ket(:,j) - C_Psi_ket(:,j-2)
     end do
 
-    forall(j=1:N)
-        Psi_tmp_bra(j) = sum( C_k(:) * C_Psi_bra(j,:) )                         ;   Psi_tmp_ket(j) = sum( C_k(:) * C_Psi_ket(j,:) )
-    end forall
+    do j = 1, N
+        Psi_tmp_bra(j) = sum( C_k(1:k_ref) * C_Psi_bra(j,1:k_ref) )
+        Psi_tmp_ket(j) = sum( C_k(1:k_ref) * C_Psi_ket(j,1:k_ref) )
+    end do
 
 !   convergence criteria ...
-    norm_test = dot_product( Psi_tmp_bra , Psi_tmp_ket )
+    norm_test = abs(dotc( Psi_tmp_bra , Psi_tmp_ket ))
     if( abs( norm_test - norm_ref ) < norm_error ) then
-        Psi_t_bra(:) = Psi_tmp_bra(:)                                           ;   Psi_t_ket(:) = Psi_tmp_ket(:)
+        Psi_t_bra(:) = Psi_tmp_bra(:)
+        Psi_t_ket(:) = Psi_tmp_ket(:)
     else
-        do
+        OK = .false.
+        do while( .not. OK )
             tau = tau * 0.975d0
-            print*, "rescaling tau" , tau 
+            print*, "rescaling tau" , tau
             CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
-            if( OK ) exit
         end do
     end if
 
     t = t + (tau * h_bar)
 
-    if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
-        tau = ( MD_dt*frame_step*(it-1)-t ) / h_bar
+    if( t_max-t < tau*h_bar ) then
+        tau = (t_max - t) / h_bar
         C_k = coefficient(tau,order)
     end if
 
 end do
+#endif
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra (N) , source=C_zero )
-allocate( Dual_ket (N) , source=C_zero )
-DUAL_bra = conjg(Psi_t_ket)
+allocate( Dual_bra (N) )
+allocate( Dual_ket (N) )
+DUAL_bra = dconjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
 ! save populations(time) ...
@@ -211,6 +225,8 @@ If( file_type == 'trajectory' ) deallocate( H_prime )
 Print 186, t
 
 include 'formats.h'
+
+call stop_clock('Chebyshev')
 
 end subroutine Chebyshev
 !
@@ -227,7 +243,7 @@ integer     , intent(inout) :: k_ref
 real*8      , intent(in)    :: tau
 real*8      , intent(in)    :: H_prime(:,:)
 real*8      , intent(in)    :: norm_ref
-logical     , intent(inout) :: OK
+logical     , intent(out)   :: OK
 
 ! local variables...
 integer                     :: j , l , k , N  
@@ -238,57 +254,56 @@ N = size(Psi_bra)
 
 allocate( C_Psi_bra    ( N , order ) , source=C_zero )
 allocate( C_Psi_ket    ( N , order ) , source=C_zero )
-allocate( Psi_tmp_bra  ( N , 2     ) , source=C_zero )
-allocate( Psi_tmp_ket  ( N , 2     ) , source=C_zero )
+allocate( Psi_tmp_bra  ( N , 2     ) )
+allocate( Psi_tmp_ket  ( N , 2     ) )
 
 OK = .false.
 
 ! get C_k coefficients ...
-C_k = coefficient(tau,order)
+ C_k = coefficient(tau, order)
 
-C_Psi_bra(:,1) = Psi_bra(:)                                                 ;   C_Psi_ket(:,1) = Psi_ket(:)
-C_Psi_bra(:,2) = matmul(C_Psi_bra(:,1),H_prime)                             ;   C_Psi_ket(:,2) = matmul(H_prime,C_Psi_ket(:,1))
+ C_Psi_bra(:,1) = Psi_bra(:)
+ C_Psi_ket(:,1) = Psi_ket(:)
+call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
+call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
 
-forall( j=1:N )
-    Psi_tmp_bra(j,1) = sum( C_k(1:2) * C_Psi_bra(j,1:2) )                   ;   Psi_tmp_ket(j,1) = sum( C_k(1:2) * C_Psi_ket(j,1:2) )
-end forall
+Psi_tmp_bra(:,1) = C_k(1)*C_Psi_bra(:,1) + C_k(2)*C_Psi_bra(:,2)
+Psi_tmp_ket(:,1) = C_k(1)*C_Psi_ket(:,1) + C_k(2)*C_Psi_ket(:,2)
 
-k = 3
-do
+do k = 3, order
 
-    C_Psi_bra(:,k) = two*matmul(C_Psi_bra(:,k-1),H_prime)-C_Psi_bra(:,k-2)  ;   C_Psi_ket(:,k) = two*matmul(H_prime,C_Psi_ket(:,k-1))-C_Psi_ket(:,k-2)
+    k_ref = k
 
-    forall( j=1:N )
-        Psi_tmp_bra(j,2) = Psi_tmp_bra(j,1) + C_k(k)*C_Psi_bra(j,k)         ;   Psi_tmp_ket(j,2) = Psi_tmp_ket(j,1) + C_k(k)*C_Psi_ket(j,k)
-    end forall
+    call bra_x_op( C_Psi_bra(:,k), C_Psi_bra(:,k-1), H_prime, C_two )
+    C_Psi_bra(:,k) = C_Psi_bra(:,k) - C_Psi_bra(:,k-2)
+    call op_x_ket( C_Psi_ket(:,k), H_prime, C_Psi_ket(:,k-1), C_two )
+    C_Psi_ket(:,k) = C_Psi_ket(:,k) - C_Psi_ket(:,k-2)
+
+    Psi_tmp_bra(:,2) = Psi_tmp_bra(:,1) + C_k(k)*C_Psi_bra(:,k)
+    Psi_tmp_ket(:,2) = Psi_tmp_ket(:,1) + C_k(k)*C_Psi_ket(:,k)
 
 !   convergence criteria...
-    l = count( abs( Psi_tmp_bra(:,2) - Psi_tmp_bra(:,1) ) <= error ) + &
-        count( abs( Psi_tmp_ket(:,2) - Psi_tmp_ket(:,1) ) <= error )
-
-    if( l == 2*N ) then
-        norm_tmp = dot_product( Psi_tmp_bra(:,2) , Psi_tmp_ket(:,2) )
+    if( isConverged( Psi_tmp_bra(:,2), Psi_tmp_bra(:,1), error ) ) then
+    if( isConverged( Psi_tmp_ket(:,2), Psi_tmp_ket(:,1), error ) ) then
+        norm_tmp = abs(dotc( Psi_tmp_bra(:,2) , Psi_tmp_ket(:,2) ))
         if( abs( norm_tmp - norm_ref ) < norm_error ) then
-            Psi_bra(:) = Psi_tmp_bra(:,2)                                   ;   Psi_ket(:) = Psi_tmp_ket(:,2)
+            Psi_bra = Psi_tmp_bra(:,2)
+            Psi_ket = Psi_tmp_ket(:,2)
             OK = .true.
             exit
         end if
-    end if
+    end if ! ket conv.
+    end if ! bra conv.
 
-    Psi_tmp_bra(:,1) =  Psi_tmp_bra(:,2)                                    ;   Psi_tmp_ket(:,1) =  Psi_tmp_ket(:,2)
+    Psi_tmp_bra(:,1) = Psi_tmp_bra(:,2)
+    Psi_tmp_ket(:,1) = Psi_tmp_ket(:,2)
 
-    k = k + 1
-
-    if( k == order+1 ) exit
-
-end do
-
-k_ref = k
+end do !k = 3, order
 
 deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
 
 end subroutine Convergence
-!
+
 !
 !
 !=========================================
@@ -300,16 +315,18 @@ type(STO_basis)                 , intent(in)  :: basis(:)
 
 ! local variables...
 real*8  , allocatable   :: Hamiltonian(:,:)
-real*8  , allocatable   :: S(:,:) , S_inv(:,:)
-integer                 :: i , j
+real*8  , allocatable   :: S(:,:)
+integer                 :: i, j, n
 
+n = size(basis)
 CALL Overlap_Matrix( system , basis , S )
 
-allocate( Hamiltonian ( size(basis) , size(basis) ) )
+allocate( Hamiltonian(n,n) )
+call GPU_Pin( Hamiltonian, n*n*8)
 
 If( DP_field_ ) then
  
-    do j = 1 , size(basis)
+    do j = 1 , n
         do i = 1 , j
      
             Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
@@ -320,7 +337,7 @@ If( DP_field_ ) then
 
 else
 
-    do j = 1 , size(basis)
+    do j = 1 , n
         do i = 1 , j
      
             Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
@@ -332,48 +349,19 @@ else
 end If
 
 ! compute S_inverse...
-CALL Invertion_Matrix( S , S_inv )
-deallocate( S )
+call GPU_Pin( S, n*n*8)
+call Matrix_syInvert( S, 'U' )
 
 ! allocate and compute H' = S_inv * H ...
-allocate( H_prime ( size(basis) , size(basis) ) )
+allocate( H_prime(n,n) )
 
-CALL symm( S_inv , Hamiltonian , H_prime )
+call syMultiply( 'L', 'U', S, Hamiltonian, H_prime )
 
-deallocate( S_inv , Hamiltonian )
+call GPU_Unpin(S)
+call GPU_Unpin(Hamiltonian)
+deallocate( S , Hamiltonian )
 
 end subroutine Build_Hprime
-!
-!
-!
-!=================================================
-subroutine Invertion_Matrix( matrix , matrix_inv )
-!=================================================
-implicit none
-real*8                  , intent(in)  :: matrix(:,:)
-real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
-
-! local variables...
-real*8                  :: n_null
-integer                 :: i, j, info, N
-
-N = size( matrix(:,1) )
-
-Allocate( matrix_inv ( N , N ) )
-
-matrix_inv = matrix
-
-call GPU_syInvert( 'U', matrix_inv, N, info )
-
-#ifndef USE_GPU
-do i = 2 , N
-    do j = 1 , i - 1
-        matrix_inv(i,j) = matrix_inv(j,i)
-    end do
-end do
-#endif
-
-end subroutine Invertion_Matrix
 !
 !
 !
@@ -391,9 +379,9 @@ integer :: k
 !local parameters ...
 complex*16  , parameter :: zi_k(0:3) = [ zi , C_one , -zi , -C_one ]
 
-coefficient(1) = dbesjn(0,tau)
+ coefficient(1) = dcmplx( dbesjn(0,tau), 0.d0 )
 do k = 2 , k_max
-   coefficient(k) = two * zi_k(mod(k,4)) * dbesjn(k-1,tau)
+   coefficient(k) = (two * dbesjn(k-1,tau)) * zi_k(mod(k,4))
 end do
 
 end function coefficient
@@ -432,4 +420,20 @@ end subroutine dump_Qdyn
 !
 !
 !
+!==============================
+function isConverged( a, b, tol )
+! returns true if abs(a-b)<tol
+!==============================
+    logical                :: isConverged
+    complex*16, intent(in) :: a(:), b(:)
+    real*8,     intent(in) :: tol
+    integer :: i
+    
+    isConverged = .false.
+    do i = 1, size(a)
+        if( abs(a(i) - b(i) ) >= tol ) return  ! allow earlier return if not convverged
+    end do
+    isConverged = .true.
+end function isConverged
+
 end module Chebyshev_m
