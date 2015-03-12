@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sources="*.f *.f90 *.F *.F90"
+sources="*.f *.F"
 
 files=$(grep 'use ' $sources | awk -v FS=':' '{print $1}' | uniq)
 

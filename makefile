@@ -7,8 +7,8 @@ FREE = -free
 #FC=gfortran
 #FREE = -ffree-form 
 
-FFLAGS1 = -O3 -align array64byte
-FFLAGS2 = -O2 -align array64byte -openmp -parallel $(FREE) -static 
+FFLAGS1 = -O3 -align #array64byte
+FFLAGS2 = -O2 -align -openmp -parallel $(FREE) -static #array64byte 
 
 CXX = icpc -std=c++11
 CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict 

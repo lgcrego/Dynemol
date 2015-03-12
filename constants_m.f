@@ -38,6 +38,7 @@ MODULE constants_m
     integer    , parameter :: I_zero =  0
 
     complex*16 , parameter :: C_one = (1.d0,0.d0)
+    complex*16 , parameter :: C_two = (2.d0,0.d0)
     real*8     , parameter :: D_one =  1.d0
     integer    , parameter :: I_one =  1
 
