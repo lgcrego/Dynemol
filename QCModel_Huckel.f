@@ -1,4 +1,4 @@
-#include "GPU.fi"
+#include "GPU.h"
 
  module QCModel_Huckel
 
@@ -9,9 +9,9 @@
                                              Induced_ ,         &
                                              driver ,           &
                                              verbose
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use DP_main_m                   , only : DP_matrix_AO
@@ -33,10 +33,7 @@
 !=============================================================
  subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
 !=============================================================
-#ifdef GPU_PIN_MEM
-use iso_c_binding
-use cuda_runtime
-#endif
+use Matrix_math
 implicit none
 type(structure)                             , intent(in)    :: system
 type(STO_basis)                             , intent(in)    :: basis(:)
@@ -46,15 +43,9 @@ integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)
+real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:)
 real*8  , ALLOCATABLE :: S_matrix(:,:)
 integer               :: i , j , info
-#ifdef GPU_PIN_MEM
-    #warning "Using pinned memory in QCModel_Huckel.f: EigenSystem"
-    real*8, pointer :: h(:,:), dumb_s(:,:)
-    type(C_PTR)     :: h_cptr, dumb_s_cptr
-#else
-    real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:)
-#endif
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -62,8 +53,8 @@ CALL Overlap_Matrix(system,basis,S_matrix)
 
 If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis)))
 
-GPU_ALLOCATE( h, size(basis), size(basis), source=D_zero )
-GPU_ALLOCATE( dumb_s, size(basis), size(basis), source=D_zero )
+Allocate(      h( size(basis), size(basis)) )
+Allocate( dumb_s( size(basis), size(basis)) )
 
 ! clone S_matrix because SYGVD will destroy it ... 
 dumb_s = S_matrix
@@ -95,7 +86,7 @@ CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'L' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 If ( present(flag1) ) flag1 = info
 
-GPU_Deallocate(dumb_s)
+Deallocate(dumb_s)
 
 !     ---------------------------------------------------
 !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
@@ -105,20 +96,19 @@ GPU_Deallocate(dumb_s)
 !   Rv = <AO|MO> coefficients
 !     ---------------------------------------------------
 
-GPU_Allocate(Lv,size(basis),size(basis))
+Allocate( Lv(size(basis),size(basis)) )
 
 Lv = h
 
-GPU_Deallocate(h)
+Deallocate(h)
 
 ! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
 If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
 
-!ALLOCATE(Rv(size(basis),size(basis)))
-GPU_Allocate( Rv, size(basis), size(basis) )
+Allocate( Rv(size(basis), size(basis)) )
 
 !CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
-call DGEMM('N','N', size(basis), size(basis), size(basis), D_one, S_matrix, size(basis), Lv, size(basis), D_zero, Rv, size(basis))
+call Multiply( S_matrix, Lv, Rv )
 
 DEALLOCATE( S_matrix )
 
@@ -128,12 +118,12 @@ DEALLOCATE( S_matrix )
 If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
 ! eigenvectors in the rows of QM%L
 QM%L = transpose(Lv) 
-GPU_Deallocate( Lv )
+Deallocate( Lv )
 
 If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
 ! eigenvectors in the columns of QM%R
 QM%R = Rv
-GPU_Deallocate( Rv )
+Deallocate( Rv )
 
 !  the order of storage is the ascending order of eigenvalues
 !----------------------------------------------------------

@@ -1,0 +1,142 @@
+allocation_m.o: types_EHT.o parameters.o 
+
+AlphaPolar.o: types_EHT.o constants_m.o parameters.o overlap_D.o QCModel_ElHl.o QCModel_Huckel.o DP_main.o 
+
+AO_adiabatic.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.o structure.o FMO.o DP_main.o td_dp.o dipole_phi.o polarizability.o solvated_M.o QCModel_ElHl.o QCModel_Huckel.o ElHl_schroedinger.o film_STO.o data_output.o backup.o backup_MM.o MM_dynamics.o 
+
+avrg_confgs.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.o solvated_M.o QCModel_ElHl.o QCModel_Huckel.o FMO.o structure.o DOS_m.o oscillator.o DP_main.o dipole_phi.o ElHl_schroedinger.o data_output.o 
+
+babel.o: types_EHT.o parameters.o allocation_m.o tuning.o babel_routines.o EHT_input.o tuning.o parameters.o 
+
+babel_routines.o: types_EHT.o allocation_m.o tuning.o 
+
+backup.o: types_EHT.o parameters.o solvated_M.o babel.o structure.o FMO.o QCModel_ElHl.o QCModel_Huckel.o QCModel_ElHl.o dipole_phi.o td_dp.o DP_main.o MM_dynamics.o data_output.o 
+
+backup_MM.o: parameters.o types_MM.o 
+
+CG_class.o: types_EHT.o OPT_parent.o constants_m.o EHT_input.o parameters.o structure.o ga_QCModel.o cost_tuning.o 
+
+CG_routines.o: types_EHT.o constants_m.o parameters.o OPT_parent.o CG_class.o nonlinearCG.o 
+
+Chebyshev_driver.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.o structure.o solvated_M.o ElHl_schroedinger.o dipole_phi.o data_output.o ElHl_Chebyshev.o Chebyshev.o 
+
+Chebyshev.o: types_EHT.o constants_m.o parameters.o babel.o overlap_D.o FMO.o QCModel_ElHl.o QCModel_Huckel.o data_output.o Matrix_math.o 
+
+cost_tuning.o: types_EHT.o constants_m.o ga_QCModel.o 
+
+CoulInt_QMMM.o: constants_m.o md_read.o polarizability.o 
+
+Coulomb.o: constants_m.o types_EHT.o util.o EHT_input.o 
+
+data_output.o: types_EHT.o parameters.o FMO.o babel.o structure.o 
+
+diagnostic.o: types_EHT.o constants_m.o parameters.o solvated_M.o QCModel_ElHl.o QCModel_Huckel.o DOS_m.o structure.o ga_QCModel.o DP_main.o dipole_phi.o oscillator.o film_STO.o data_output.o AlphaPolar.o 
+
+dipole_phi.o: types_EHT.o constants_m.o parameters.o structure.o EHT_input.o DP_FMO.o multip_routines.o pbc.o 
+
+DOS_m.o: types_EHT.o constants_m.o parameters.o EHT_input.o 
+
+DOS_tool.o: types_EHT.o constants_m.o parameters.o solvated_M.o EHT_input.o 
+
+DP_FMO.o: types_EHT.o parameters.o EHT_input.o multip_routines.o allocation_m.o overlap_D.o structure.o td_dp.o 
+
+DP_main.o: types_EHT.o constants_m.o EHT_input.o parameters.o multip_routines.o electron_hole_DP.o FMO.o 
+
+EHT_input.o: types_EHT.o parameters.o 
+
+eigen_driver.o: types_EHT.o constants_m.o parameters.o FMO.o data_output.o ElHl_schroedinger.o AO_adiabatic.o ElHl_adiabatic.o 
+
+electron_hole_DP.o: types_EHT.o parameters.o allocation_m.o EHT_input.o overlap_D.o structure.o multip_routines.o 
+
+ElHl_adiabatic.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.o structure.o FMO.o DP_main.o td_dp.o dipole_phi.o polarizability.o solvated_M.o QCModel_ElHl.o ElHl_schroedinger.o film_STO.o data_output.o backup.o backup_MM.o MM_dynamics.o 
+
+ElHl_Chebyshev.o: types_EHT.o constants_m.o parameters.o babel.o overlap_D.o FMO.o data_output.o Coulomb.o 
+
+ElHl_schroedinger.o: types_EHT.o constants_m.o parameters.o allocation_m.o babel.o structure.o QCModel_ElHl.o FMO.o DP_main.o data_output.o film_STO.o DOS_tool.o backup.o backup_MM.o 
+
+FF_OPT_class.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o parameters_MM.o f_intra.o OPT_parent.o nonlinear-sidekick.o cost_tuning.o MM_ERG_class.o 
+
+film_STO.o: types_EHT.o constants_m.o parameters.o babel.o EHT_input.o structure.o STO.o 
+
+f_inter.o: constants_m.o parameters.o tuning.o md_read.o types_MM.o md_setup.o gmx2mdflex.o 
+
+f_intra.o: constants_m.o parameters.o tuning.o md_read.o types_MM.o gmx2mdflex.o 
+
+FMO.o: types_EHT.o parameters.o allocation_m.o EHT_input.o overlap_D.o structure.o LCMO_Builder.o 
+
+ga_driver.o: types_EHT.o constants_m.o parameters.o solvated_M.o ga_routines.o ga_QCModel.o DOS_m.o multip_routines.o structure.o oscillator.o data_output.o film_STO.o 
+
+ga_QCModel.o: types_EHT.o constants_m.o parameters.o EHT_input.o structure.o overlap_D.o multip_routines.o 
+
+ga_routines.o: types_EHT.o OPT_parent.o constants_m.o parameters.o EHT_input.o structure.o ga_QCModel.o cost_tuning.o CG_routines.o 
+
+gmx2mdflex.o: constants_m.o tuning.o types_MM.o tuning.o IdentifyNonBonded.o 
+
+IdentifyNonBonded.o: constants_m.o types_MM.o 
+
+interfaces_m.o: types_EHT.o 
+
+LCMO_Builder.o: types_EHT.o constants_m.o parameters.o 
+
+main.o: types_EHT.o constants_m.o parameters.o parameters_MM.o EHT_input.o structure.o qdynamics.o avrg_confgs.o ga_driver.o diagnostic.o Chebyshev_driver.o eigen_driver.o MM_driver.o md_read.o vibes_driver.o 
+
+Matrix_math.o: constants_m.o 
+
+md_output.o: constants_m.o types_MM.o parameters_MM.o parameters.o tuning.o md_read.o tuning.o 
+
+md_read.o: constants_m.o tuning.o parameters_MM.o parameters.o types_MM.o tuning.o gmx2mdflex.o babel.o structure.o 
+
+md_setup.o: constants_m.o tuning.o parameters.o md_read.o gmx2mdflex.o tuning.o 
+
+MM_driver.o: types_EHT.o constants_m.o parameters.o MM_dynamics.o 
+
+MM_dynamics.o: constants_m.o parameters.o parameters_MM.o md_read.o md_setup.o md_output.o f_inter.o f_intra.o CoulInt_QMMM.o tuning.o verlet.o babel.o structure.o backup_MM.o types_MM.o 
+
+MM_ERG_class.o: types_EHT.o constants_m.o md_read.o types_MM.o parameters_MM.o md_output.o f_intra.o f_inter.o tuning.o OPT_parent.o 
+
+multip_routines.o: types_EHT.o constants_m.o EHT_input.o 
+
+nonlinearCG.o: constants_m.o OPT_parent.o 
+
+nonlinear-sidekick.o: constants_m.o OPT_parent.o 
+
+oscillator.o: types_EHT.o constants_m.o DP_main.o parameters.o 
+
+overlap_D.o: types_EHT.o constants_m.o parameters.o pbc.o EHT_input.o allocation_m.o util.o 
+
+parameters.o: types_EHT.o 
+
+parameters_MM.o: constants_m.o parameters.o types_MM.o 
+
+pbc.o: types_EHT.o parameters.o babel.o constants_m.o allocation_m.o structure.o EHT_input.o 
+
+polarizability.o: types_EHT.o constants_m.o parameters.o babel.o EHT_input.o structure.o 
+
+projectors.o: types_EHT.o constants_m.o structure.o EHT_input.o 
+
+QCModel_ElHl.o: types_EHT.o constants_m.o parameters.o overlap_D.o dipole_phi.o Coulomb.o DP_main.o polarizability.o 
+
+QCModel_Huckel.o: types_EHT.o constants_m.o parameters.o overlap_D.o dipole_phi.o DP_main.o polarizability.o 
+
+qdynamics.o: types_EHT.o constants_m.o parameters.o solvated_M.o FMO.o QCModel_ElHl.o QCModel_Huckel.o DOS_m.o structure.o DP_main.o dipole_phi.o oscillator.o ElHl_schroedinger.o data_output.o 
+
+solvated_M.o: types_EHT.o constants_m.o parameters.o allocation_m.o babel.o structure.o 
+
+STO.o: types_EHT.o EHT_input.o structure.o 
+
+structure.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.o EHT_input.o 
+
+td_dp.o: types_EHT.o constants_m.o parameters.o structure.o DP_main.o FMO.o 
+
+tuning.o: types_EHT.o constants_m.o parameters.o types_MM.o 
+
+types_EHT.o: constants_m.o exec_time.o 
+
+types_MM.o: constants_m.o 
+
+util.o: constants_m.o 
+
+verlet.o: constants_m.o tuning.o parameters.o md_read.o tuning.o f_inter.o 
+
+vibes_driver.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o md_setup.o babel.o f_intra.o MM_ERG_class.o FF_OPT_class.o nonlinearCG.o 
+

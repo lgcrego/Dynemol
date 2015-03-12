@@ -2,8 +2,8 @@
 
  use type_m
  use constants_m
- use mkl95_precision
- use mkl95_blas
+ use f95_precision
+ use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
                                          GaussianCube_step ,  DP_Moment , initial_state ,   &
                                          Coulomb_ , restart

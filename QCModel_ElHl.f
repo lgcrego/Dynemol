@@ -1,4 +1,4 @@
-#include "GPU.fi"
+#include "GPU.h"
  
  module QCModel_Huckel_ElHl
 
@@ -10,9 +10,9 @@
                                              Coulomb_ ,         &
                                              driver ,           &
                                              verbose
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential

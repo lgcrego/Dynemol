@@ -3,7 +3,7 @@ module ElHl_adiabatic_m
 
     use type_m
     use constants_m
-    use mkl95_blas
+    use blas95
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &

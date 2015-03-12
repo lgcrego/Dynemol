@@ -168,9 +168,9 @@ clean:
 	-rm -f a *.o *.mod; touch *.f
 
 depend:
-	echo -en "Searching module dependencies..."
-	./makedepend.bsh > dependencies.txt
-	echo -en " done.\n"
+	@echo -en "Searching module dependencies..."
+	@./makedepend.bsh > dependencies.txt
+	@echo -en " done.\n"
 
 
 ## Dependency list:

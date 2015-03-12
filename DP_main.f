@@ -3,8 +3,8 @@ module DP_main_m
     use type_m
     use omp_lib
     use constants_m
-    use mkl95_precision
-    use mkl95_blas
+    use f95_precision
+    use blas95
     use Semi_Empirical_Parms    , only  : atom
     use parameters_m            , only  : verbose ,                             &
                                           DP_Moment ,                           &

@@ -6,9 +6,9 @@
                                              initial_state ,            &
                                              hole_state ,               &
                                              LCMO
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
     use Semi_Empirical_Parms        , only : atom

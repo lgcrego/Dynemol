@@ -3,7 +3,7 @@ module TD_Dipole_m
     use type_m
     use omp_lib
     use constants_m
-    use mkl95_blas
+    use blas95
     use parameters_m                , only : n_part
     use Structure_Builder           , only : Extended_Cell ,                &
                                              ExCell_basis

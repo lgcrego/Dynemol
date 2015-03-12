@@ -1,9 +1,9 @@
  module Embedded_FF_Alpha
 
     use type_m
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use constants_m
     use parameters_m                , only : DP_Field_, Induced_ , verbose
     use Overlap_Builder             , only : Overlap_Matrix

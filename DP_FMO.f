@@ -1,9 +1,9 @@
  module DP_FMO_m
 
     use type_m
-    use mkl95_blas
-    use mkl95_lapack
-    use mkl95_precision
+    use blas95
+    use lapack95
+    use f95_precision
     use parameters_m            , only : OPT_parms ,                    &
                                          static ,                       &
                                          hole_state ,                   &

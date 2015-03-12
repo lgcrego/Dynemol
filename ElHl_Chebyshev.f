@@ -1,8 +1,8 @@
 module ElHl_Chebyshev_m
 
     use type_m              , g_time => f_time  
-    use mkl95_blas
-    use mkl95_lapack
+    use blas95
+    use lapack95
     use constants_m
     use ifport
     use parameters_m        , only : t_i , t_f , n_t , frame_step , &

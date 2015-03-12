@@ -2,8 +2,8 @@ module DP_potential_m
 
     use type_m                  
     use constants_m
-    use mkl95_blas
-    use mkl95_precision
+    use blas95
+    use f95_precision
     use parameters_m            , only : PBC
     use Structure_Builder       , only : Extended_Cell
     use Semi_Empirical_Parms    , only : atom

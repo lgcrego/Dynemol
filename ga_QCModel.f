@@ -2,9 +2,9 @@ module GA_QCModel_m
 
     use type_m
     use constants_m
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use parameters_m            , only : Alpha_Tensor
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 

@@ -2,9 +2,9 @@ module FF_OPT_class_m
 
     use type_m
     use constants_m
-    use mkl95_precision
-    use mkl95_blas
-    use mkl95_lapack
+    use f95_precision
+    use blas95
+    use lapack95
     use parameters_m            , only : PBC
     use MD_read_m               , only : atom , molecule , MM 
     use MM_types                , only : MM_system , MM_atomic , MM_molecular , debug_MM

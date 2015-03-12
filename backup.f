@@ -1,7 +1,7 @@
 module Backup_m
 
     use type_m
-    use mkl95_blas
+    use blas95
     use parameters_m        , only : driver                     , &
                                      QMMM                       , &
                                      nuclear_matter             , &

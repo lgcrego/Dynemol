@@ -2,8 +2,8 @@ module Oscillator_m
 
     use type_m
     use constants_m
-    use mkl95_precision
-    use mkl95_blas
+    use f95_precision
+    use blas95
     use DP_main_m                   , only  : DP_matrix_AO
     use parameters_m                , only  : empty ,               &
                                               occupied ,            &
