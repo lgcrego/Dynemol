@@ -12,9 +12,9 @@ module FF_OPT_class_m
     use F_intra_m               , only : ForceIntra, Pot_Intra                                     
     use OPT_Parent_class_m      , only : OPT_Parent
     use NonlinearSidekick_m     , only : Fletcher_Reeves_Polak_Ribiere_minimization
-    use cost_tuning_m           , only : evaluate_cost , nmd => list_of_modes
+    use cost_tuning_m           , only : evaluate_cost 
 
-    public :: FF_OPT , LogicalKey
+    public :: FF_OPT , LogicalKey 
 
     private
 
@@ -22,7 +22,8 @@ module FF_OPT_class_m
         integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
-        integer  , pointer      :: modes(:) => null()
+        integer  , pointer      :: nmd_OPT_indx(:) => null()
+        integer  , pointer      :: nmd_REF_indx(:) => null()
     contains
         procedure :: cost => cost_evaluator
         procedure :: cost_variation => Generalized_Forces
@@ -42,12 +43,11 @@ module FF_OPT_class_m
 
     ! module variables ...
     integer                                     :: bonds , angs , diheds
-    integer             , allocatable , target  :: nmd_list(:) 
-    integer             , allocatable           :: nmd_ref(:) , nmd_id(:)
+    integer             , allocatable , target  :: nmd_list(:) , nmd_ref(:) 
     real*8              , allocatable           :: nmd_mtx(:,:)
+    real*8              , allocatable , target  :: bond_target(:,:) , ang_target(:,:) , dihed_target(:,:)
     logical                                     :: done = .false.
     logical             , allocatable           :: bonds_mask(:,:) , angs_mask(:,:) , diheds_mask(:,:)
-    real*8              , allocatable , target  :: bond_target(:,:) , ang_target(:,:) , dihed_target(:,:)
     type(real_pointer)  , allocatable           :: bond(:,:) , ang(:,:) , dihed(:,:)
     type(R_eigen)                               :: Hesse
     character(len=11)                           :: method
@@ -77,31 +77,33 @@ me % driver      = driver_MM
 
 If( driver_MM == "Parametrize" ) me % profiling = .true.
 
-If( kernel == "NormalModes" ) me % BracketSize = 10000 * me % BracketSize
-If( kernel == "NormalModes" ) me % itmax = 600
-
 If( .NOT. done ) then
+
     ! catch the distinct parameters and make (bond, ang, dihed) point to them ...
+    where( abs(molecule(1)%kbond0) < high_prec ) molecule(1)%kbond0 = D_zero
     allocate( bond_target , source=Select_Different( molecule(1)%kbond0                 ) )
     allocate( bond        , source=Define_Pointer  ( molecule(1)%kbond0  , bond_target  ) )
 
+    where( abs(molecule(1)%kang0) < high_prec ) molecule(1)%kang0 = D_zero
     allocate( ang_target  , source=Select_Different( molecule(1)%kang0                  ) )
     allocate( ang         , source=Define_Pointer  ( molecule(1)%kang0   , ang_target   ) )
 
+    where( abs(molecule(1)%kdihed0) < high_prec ) molecule(1)%kdihed0 = D_zero
     allocate( dihed_target, source=Select_Different( molecule(1)%kdihed0                ) )
     allocate( dihed       , source=Define_Pointer  ( molecule(1)%kdihed0 , dihed_target ) )
 
     ! the parameters = zero are not optimized ...
-    allocate( bonds_mask  ( size(bond_target (:,1)) , size(bond_target (1,:)) ) , source = (abs(bond_target)  > low_prec) )
-    allocate( angs_mask   ( size(ang_target  (:,1)) , size(ang_target  (1,:)) ) , source = (abs(ang_target)   > low_prec) )
-    allocate( diheds_mask ( size(dihed_target(:,1)) , size(dihed_target(1,:)) ) , source = (abs(dihed_target) > low_prec) )
+    allocate( bonds_mask  ( size(bond_target (:,1)) , size(bond_target (1,:)) ) )
+    allocate( angs_mask   ( size(ang_target  (:,1)) , size(ang_target  (1,:)) ) )
+    allocate( diheds_mask ( size(dihed_target(:,1)) , size(dihed_target(1,:)) ) )
     done = .true.
+
 end if
 
 ! logical key to set the optimization routine ...
-forall(j=1:3) bonds_mask(:,j)  =  bonds_mask (:,j) .AND. key%bonds(j)
-forall(j=1:2) angs_mask(:,j)   =  angs_mask  (:,j) .AND. key%angs(j)
-forall(j=1:7) diheds_mask(:,j) =  diheds_mask(:,j) .AND. key%diheds(j)
+forall( j=1:size(bonds_mask  (1,:)) )  bonds_mask(:,j)  = ( abs(bond_target (:,j)) > low_prec ) .AND. key%bonds(j)
+forall( j=1:size(angs_mask   (1,:)) )  angs_mask(:,j)   = ( abs(ang_target  (:,j)) > low_prec ) .AND. key%angs(j)
+forall( j=1:size(diheds_mask (1,:)) )  diheds_mask(:,j) = ( abs(dihed_target(:,j)) > low_prec ) .AND. key%diheds(j)
 
 ! number of degrees of freedom in optimization space ...
 bonds  = count( bonds_mask  ) 
@@ -115,6 +117,17 @@ allocate( me % p( me % N_of_Freedom ) , source = D_zero )
 me % p( 1 :            ) = pack( bond_target  , bonds_mask  , me%p )
 me % p( bonds+1 :      ) = pack( ang_target   , angs_mask   , me%p ) 
 me % p( bonds+angs+1 : ) = pack( dihed_target , diheds_mask , me%p ) 
+
+If( kernel == "NormalModes" ) then
+    me % itmax = 250
+!    If( maxval(abs(me%p),dim=1) > 1.d2 ) me % BracketSize = 1.d+4 * me % BracketSize_FF
+!    If( maxval(abs(me%p),dim=1) < 1.d1 ) me % BracketSize = 5.d+2 * me % BracketSize_FF
+    If( any(key%bonds)  )                me % BracketSize = 1.d+5 * me % BracketSize_FF
+    If( any(key%angs)   )                me % BracketSize = 1.d+3 * me % BracketSize_FF
+    If( any(key%diheds) )                me % BracketSize = 1.d+2 * me % BracketSize_FF
+
+    If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+end If
 
 end function constructor
 !
@@ -157,20 +170,19 @@ select case ( method )
 
         CALL normal_modes()
 
-        If( .not. associated(me%modes) ) me%modes => nmd_list
+        ! nmd_list and nmd_ref are created in the first call to normal_modes() and abide ...
+        If( .not. associated(me%nmd_OPT_indx) ) me%nmd_OPT_indx => nmd_list
+        If( .not. associated(me%nmd_REF_indx) ) me%nmd_REF_indx => nmd_ref
 
         do j = 1 , size( nmd_list )
-            nmd_mtx(:,j) = [ (dot_product(hesse%L(:,nmd_ref(j)),hesse%R(:,nmd_list(j)+i)) , i = -4,4) ]
+            nmd_mtx(:,j) = [ (dot_product(hesse%L(:,nmd_ref(j)),hesse%R(:,i)) , i = 1,size(Hesse%erg)) ]
         end do
-        nmd_id  = maxloc( abs(nmd_mtx) , dim=1 )
 
-        nmd_list = nmd_list + (nmd_id - 5)
+        nmd_list = maxloc( abs(nmd_mtx) , dim=1 ) 
 
         cost = evaluate_cost( Hesse%erg , nmd_list )
 
     case default 
-
-        stop
 
 end select
 
@@ -213,7 +225,7 @@ end subroutine Generalized_Forces
  subroutine dump_parameters( me , iter)
 !======================================
 implicit none
-class(FF_OPT)   , intent(in) :: me
+class(FF_OPT)              , intent(in) :: me
 integer         , optional , intent(in) :: iter
 
 ! local variables ...
@@ -305,13 +317,17 @@ character(len=:) , allocatable  :: string(:)
 
         factor = factor1 * imol
 
-        write(51,'(4A4,I5,2F15.5)') atom(at1)%MMSymbol                  , &
+        write(51,'(4A4,I5,6F12.5)') atom(at1)%MMSymbol                  , &
                                     atom(at2)%MMSymbol                  , &
                                     atom(at3)%MMSymbol                  , &
                                     atom(at4)%MMSymbol                  , &
                                     funct_dih                           , &
                                     molecule(1)%kdihed0(i,1) / factor   , &
-                                    molecule(1)%kdihed0(i,2) / factor   
+                                    molecule(1)%kdihed0(i,2) / factor   , &  
+                                    molecule(1)%kdihed0(i,3) / factor   , &
+                                    molecule(1)%kdihed0(i,4) / factor   , & 
+                                    molecule(1)%kdihed0(i,5) / factor   , &
+                                    molecule(1)%kdihed0(i,6) / factor   
     end if
  end  do
  deallocate(string)
@@ -332,15 +348,12 @@ real*8        , allocatable :: b(:,:)
 
 ! local variables ...
 integer                 :: j , k , diff , diff_size
-integer , allocatable   ::  indx(:)
-real*8  , allocatable   ::  tmp(:,:)
+real*8  , allocatable   ::  tmp(:,:) 
 
 allocate( tmp  (size(a(:,1)),size(a(1,:))), source=D_zero )
-allocate( indx (size(a(:,1))             ), source=I_zero )
 
 ! select different elements of a ...
 diff_size = 1
-indx(1)   = 1
 tmp(1,:)  = a(1,:)
 
 do j = 2 , size(a(:,1))
@@ -352,7 +365,6 @@ do j = 2 , size(a(:,1))
     ! there's some difference between a(j,:) and any of the other tmp(diff_size,:) ...
     if( k > diff_size ) then
         tmp(k,:)  = a(j,:)
-        indx(k)   = j
         diff_size = k
     end if
 
@@ -360,7 +372,7 @@ end do
 
 allocate( b , source=tmp(1:diff_size,:) )
 
-deallocate( tmp , indx )
+deallocate( tmp )
 
 end function Select_Different
 !
@@ -390,9 +402,9 @@ end function Define_Pointer
 !
 !
 !
-!================================
+!=========================
  subroutine normal_modes()
-!================================
+!=========================
 use MM_ERG_class_m  , only    : MM_OPT
 
 implicit none
@@ -408,7 +420,7 @@ type(MM_OPT)                  :: MM_erg
 save :: equilibrium , atom_fwd , atom_bwd , Hessian
 
 !local parameters ...
-real*8 , parameter :: delta         = 1.d-5             ! <== displacement in Angs.
+real*8 , parameter :: delta         = 1.d-8             ! <== displacement in Angs.
 real*8 , parameter :: eV_2_cm_inv   = 1.d-12*8065.73    ! <== displacement in Angs.
 
 ! start the normal mode calculations from an energy minimum ...
@@ -484,11 +496,9 @@ if( .NOT. allocated(Hesse%L) ) then
      allocate( Hesse%L , source = Hessian )    
      allocate( Hesse%R , source = Hessian )    
 
-     dull = evaluate_cost( instance = "preprocess" )
-     allocate( nmd_list , source = nmd )
-     allocate( nmd_ref  , source = nmd )
-     allocate( nmd_id (size(nmd_list)) )
-     allocate( nmd_mtx(9,size(nmd_list)) )
+     dull = evaluate_cost( nmd_indx = nmd_ref , instance = "preprocess" )
+     allocate( nmd_list , source = nmd_ref )
+     allocate( nmd_mtx(size(Hesse%erg),size(nmd_list)) )
 
 else
 

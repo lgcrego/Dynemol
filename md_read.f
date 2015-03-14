@@ -109,10 +109,6 @@ molecule % mass = molecule % mass * imol
 ! initial density of the box ... 
 initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ibox(3) * (mts_2_nano**3)
 
-10 if( ioerr > 0 ) stop "file_name file not found; terminating execution"
-11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
-12 if( ioerr > 0 ) stop "input.gro file not found; terminating execution"
-
 99  format(a72)
 100 format(t10, f6.3, t19, f6.3, t28, f6.3)
 105 format(a6)
@@ -388,41 +384,70 @@ do i = 1 , MM % N_of_species
 end do
 
 do i = 1 , MM % N_of_molecules
+
+    k = size( species(molecule(i) % my_species) % kdihed0(1,:) )
+
+    If( molecule(i)%Nbonds14 > 0 ) & 
     allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
+
+    If( molecule(i)%Nbonds > 0 ) then
     allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
     allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
-    allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
-    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 2 ) )
-    allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
-    allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , 7 ) )
-    allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
-    allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
     allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
+    End If
+
+    If( molecule(i)%Nangs > 0 ) then
+    allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
+    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 2 ) )
     allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
+    End If
+
+    If( molecule(i)%Ndiheds > 0 ) then
+    allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
+    allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , k ) )
+    allocate( molecule(i) % harm          ( molecule(i) % Ndiheds      ) )
+    allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
     allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
+    End If
+
+    If( molecule(i)%NintraLJ > 0 ) & 
     allocate( molecule(i) % IntraLJ       ( molecule(i) % NintraLJ , 2 ) )
+
 end do
 
 k = 0
 do i = 1 , MM % N_of_molecules
 
+    If( molecule(i)%Nbonds14 > 0 ) & 
+    molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
+
+    If( molecule(i)%Nbonds > 0 ) then
     molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
     molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
+    molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
+    molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
+    End If
+
+    If( molecule(i)%Nangs > 0 ) then
     molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
     molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
+    molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
+    End If
+
+    If( molecule(i)%Ndiheds > 0 ) then
     molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
     molecule(i) % harm          = species(molecule(i) % my_species) % harm
     molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
-    molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
-    molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
     molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
-    molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
-    molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
-    molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
     molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
+    End If
+
+    If( molecule(i)%NintraLJ > 0 ) & 
+    molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
 
     k = k + molecule(i) % N_of_atoms
+
 end do
 
 do i = 1 , MM % N_of_species
@@ -459,13 +484,12 @@ do i = 1 , N
     molecule(i) % my_species     = 0
     molecule(i) % N_of_atoms     = 0
     molecule(i) % N_of_molecules = 0
-    molecule(i) % cm(:)          = 0.0d0
+    molecule(i) % cm(3)          = 0.0d0
     molecule(i) % mass           = 0.0d0
     molecule(i) % flex           = .false.
     molecule(i) % residue        = "XXX"
     molecule(i) % nr             = 0
     molecule(i) % Nbonds         = 0
-    molecule(i) % bonds          = 0.0d0
     molecule(i) % Nangs          = 0
     molecule(i) % Ndiheds        = 0
     molecule(i) % Nharm          = 0

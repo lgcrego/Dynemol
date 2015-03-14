@@ -39,9 +39,9 @@ contains
 !
 !
 !
-!====================================
- function constructor( ) result( me )
-!====================================
+!===================================
+ function constructor() result( me )
+!===================================
 implicit none
 
 type(MM_OPT) :: me 
@@ -56,7 +56,7 @@ me % profiling   = me % profiling_MM
 
 me % driver = driver_MM
 
-If( driver_MM == "MM_Optimize" .OR. driver_MM == "NormalModes" ) me % profiling = .true.
+If( driver_MM == "Parametrize" ) me % profiling = .false.
 
 ! number of degrees of freedom allowed to relax ...
 N_of_free = count( atom % flex )
@@ -124,7 +124,7 @@ end subroutine Forces
  subroutine dump_geometry( me , iter)
 !====================================
 implicit none
-class(MM_OPT)   , intent(in) :: me
+class(MM_OPT)              , intent(in) :: me
 integer         , optional , intent(in) :: iter
 
 ! local variables ...
