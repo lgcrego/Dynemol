@@ -11,11 +11,12 @@ module good_vibrations_m
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
+    use cost_tuning_m           , only : nmd_REF_erg , nmd_NOPT_erg
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT , LogicalKey 
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
 
-    public :: Optimize_Structure , normal_modes , Optimize_Parameters_Driver
+    public :: Optimize_Structure , Normal_Modes , Optimize_Parameters_Driver
 
     private 
 
@@ -37,11 +38,15 @@ implicit none
 ! local variables ...
 real*8                        :: local_minimum 
 type(LogicalKey)              :: key
-logical                       :: F_ = .false. , T_ = .true.
+logical                       :: F_ = .false. , T_ = .true. , pausing
+
+! reading command line argument for pausing between optimization turns ...
+pausing = ( COMMAND_ARGUMENT_COUNT() > 0 ) 
 
 ! saving reference structure for future use ...
 allocate( atom0 , source = atom )
 
+print*, "==> kernel = energy"
 ! instantiating MM ...
 key%bonds  = [T_,T_,F_]
 key%angs   = [T_,T_]
@@ -50,28 +55,55 @@ key%diheds = F_
 MM_parms = FF_OPT( key , kernel = "energy" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-
-call optimize_structure()
-print*, RMSD()
-
-print*, "==> first part of FF_OPT done"
-
+If( pausing ) pause
+print*, "==> bond length optimization"
 ! instantiating MM ...
 key%bonds  = [T_,F_,F_]
-key%angs   = [T_,F_]
-key%diheds = F_
+key%angs   = [F_,F_]
+key%diheds = [F_,F_,F_,F_,F_,F_,F_]
 
 MM_parms = FF_OPT( key , kernel = "NormalModes" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+If( pausing ) pause
+print*, "==> bond angle optimization"
+! instantiating MM ...
+key%bonds  = [F_,F_,F_]
+key%angs   = [T_,F_]
+key%diheds = [F_,F_,F_,F_,F_,F_,F_]
 
+MM_parms = FF_OPT( key , kernel = "NormalModes" )
+
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+If( pausing ) pause
+print*, "==> dihedral optimization"
+! instantiating MM ...
+key%bonds  = [F_,F_,F_]
+key%angs   = [F_,F_]
+key%diheds = [F_,F_,T_,F_,F_,F_,F_]
+
+MM_parms = FF_OPT( key , kernel = "NormalModes" )
+
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+If( pausing ) pause
+print*, "==> optimize all"
+! instantiating MM ...
+key%bonds  = [T_,F_,F_]
+key%angs   = [T_,F_]
+key%diheds = [F_,F_,T_,F_,F_,F_,F_]
+
+MM_parms = FF_OPT( key , kernel = "NormalModes" )
+
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
+If( pausing ) pause
+print*, "==> done"
 atom = atom0
 call optimize_structure()
 
-print*, MM_parms%modes
+print*, MM_parms%nmd_OPT_indx
 print*, RMSD()
 
-call normal_modes()
+call normal_modes( )
 stop
 
 
@@ -94,13 +126,13 @@ end subroutine Optimize_Parameters_Driver
 implicit none
 
 ! local variables ...
-integer                       :: i , j , k , l , column , size_Hessian , info
+integer                       :: i , j , k , l , column , size_Hessian , info , list_size
 type(MM_atomic) , allocatable :: equilibrium(:) , atom_fwd(:) , atom_bwd(:)
 real*8          , allocatable :: Hessian(:,:)
 type(R_eigen)                 :: Hesse
 
 !local parameters ...
-real*8 , parameter :: delta         = 1.d-5             ! <== displacement in Angs.
+real*8 , parameter :: delta         = 1.d-8             ! <== displacement in Angs.
 real*8 , parameter :: eV_2_cm_inv   = 1.d-12*8065.73    ! <== displacement in Angs.
 
 ! start the normal mode calculations from an energy minimum ...
@@ -174,23 +206,50 @@ OPEN( unit=3 , file='normal_modes.nmd' , status='unknown' )
 
 write(3,*) "Normal Mode Analysis"
 
-write( 3 , '(A6 ,1000A3)'   ) "names "         , atom % Symbol 
-write( 3 , '(A9 ,1000A4)'   ) "resnames "      , atom % residue
-write( 3 , '(A6 ,1000A2)'   ) "chids "         , [("A" , i=1,MM%N_of_atoms)]             
-write( 3 , '(A7 ,1000I4)'   ) "resids "        , atom % nr
-write( 3 , '(A6 ,1000A2)'   ) "betas "         , [("0" , i=1,MM%N_of_atoms)]             
-write( 3 , '(A12,3000F8.4)' ) "coordinates "   , ( atom(i) % xyz(:) , i = 1 , MM%N_of_atoms )
+write( 3 , '(A6 ,1000A3)'   ) "names "         , (atom(i) % Symbol   , i = 1 , MM%N_of_atoms)
+write( 3 , '(A9 ,1000A4)'   ) "resnames "      , (atom(i) % residue  , i = 1 , MM%N_of_atoms)
+write( 3 , '(A6 ,1000A2)'   ) "chids "         , [("A"               , i = 1 , MM%N_of_atoms)]             
+write( 3 , '(A7 ,1000I4)'   ) "resids "        , (atom(i) % nr       , i = 1 , MM%N_of_atoms)
+write( 3 , '(A6 ,1000A2)'   ) "betas "         , [("0"               , i = 1 , MM%N_of_atoms)]             
+write( 3 , '(A12,3000F8.4)' ) "coordinates "   , ( atom(i) % xyz(:)  , i = 1 , MM%N_of_atoms )
 
-do i = 7 , size_Hessian
-    write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , i ,  Hessian(:,i) 
-end do
+OPEN( unit=4 , file='nmd_erg.dat' , status='unknown' )
+
+write(4,'(a86)',advance="no") "# nmd_indx | OPT nmd ergs | REF nmd ergs | NOPT nmd ergs | OPT %-ERROR  | NOPT %-ERROR "
+write(4,*) " "
+
+If( MM_parms%driver == "Parametrize" ) then
+
+    list_size = size(MM_parms%nmd_OPT_indx)
+
+    call sort( MM_parms%nmd_REF_indx )
+
+    do i = 1 , list_size
+
+       write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , MM_parms%nmd_REF_indx(i) , Hessian(:,MM_parms%nmd_OPT_indx(i)) 
+
+       write(4,4)               MM_parms%nmd_REF_indx(i)      , &
+                  hesse%erg   ( MM_parms%nmd_OPT_indx(i) )    , &
+                  nmd_REF_erg ( i )                           , &
+                  nmd_NOPT_erg( i )                           , &
+                  abs( hesse%erg(MM_parms%nmd_OPT_indx(i)) - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 , &
+                  abs( nmd_NOPT_erg(i)                     - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 
+    end do
+
+else
+
+    do i = 1 , size_Hessian
+        write(4,*) i , hesse%erg(i)
+        write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , i ,  Hessian(:,i) 
+    end do
+
+end If
 
 close(3)
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+close(4)
 
-do i = 1 , size_Hessian
-write(30,*) i , hesse%erg(i)
-end do
+4 FORMAT(i4,t15,F10.3,t30,F10.3,t45,F10.3,t60,F10.3,t75,F10.3)
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 end subroutine normal_modes
 !
@@ -207,7 +266,7 @@ real*8  :: local_minimum
 ! setting up the MM system ...
 If( .not. done ) then
 
-    CALL Setup
+    If( MM%N_of_molecules > I_one ) CALL Setup
     atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
     done = .true. 
 
@@ -216,16 +275,14 @@ end If
 ! instantiating MM ...
 MM_erg = MM_OPT( )
 
-MM_erg % driver = "MM_Optimize"
-
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 
 end subroutine Optimize_Structure
 !
 !
-!=============
- function RMSD 
-!=============
+!===============
+ function RMSD() 
+!===============
 implicit none
 real*8  :: RMSD
 
@@ -233,7 +290,9 @@ real*8  :: RMSD
 integer  :: i
 real*8   :: rij(3) , distance
 
+RMSD     = D_zero
 distance = D_zero
+
 do i = 1 , size(atom)
     rij(:)   = atom(i) % xyz(:) - atom0(i) % xyz(:)
     rij(:)   = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
@@ -241,6 +300,115 @@ do i = 1 , size(atom)
 end do
 
 end function RMSD
+!
+!
+!
+!===================
+ subroutine  sort(a)
+!===================
+implicit none
+integer , intent(inout) :: a(:)
+
+! local variables ...
+integer  :: ra, l, n, ir, i, j
+
+!-----------------------------------------------------------
+!  SORT IRA(I) , SO THAT THE ELEMENTS IRB(I) FOLLOW TOGETHER
+!-----------------------------------------------------------
+      n = size(a)
+      l = n/2+1
+      ir = n
+
+10    continue
+      if(l .gt. 1) then
+         l = l -1
+         ra  = a(l)
+      else
+         ra = a(ir)
+         a(ir) = a(1)
+         ir = ir - 1
+         if(ir .eq. 1) then
+             a(1) = ra
+             return
+         endif
+      endif
+      i = l
+      j = l + l
+20    if(j .le. ir) then
+        if(j .lt. ir)then
+          if(a(j) .lt. a(j+1)) j = j + 1
+        endif
+      if(ra .lt. a(j)) then
+        a(i) = a(j)
+        i = j
+        j = j + j
+      else
+      j = ir + 1
+      endif
+      goto 20
+      endif
+      a(i) = ra
+      goto 10
+
+end subroutine sort
+!
+!
+!
+!======================
+ subroutine  sort2(a,b)
+!======================
+implicit none
+integer , intent(inout) :: a(:)
+integer , intent(inout) :: b(:)
+
+! local variables ...
+integer  :: ra, rb , l, n, ir, i, j
+
+!-----------------------------------------------------------
+!  SORT IRA(I) , SO THAT THE ELEMENTS IRB(I) FOLLOW TOGETHER
+!-----------------------------------------------------------
+      n = size(a)
+      l = n/2+1
+      ir = n
+
+10    continue
+      if(l .gt. 1) then
+         l = l -1
+         ra  = a(l)
+         rb = b(l)
+      else
+         ra = a(ir)
+         rb = b(ir)
+         a(ir) = a(1)
+         b(ir) = b(1)
+         ir = ir - 1
+         if(ir .eq. 1) then
+             a(1) = ra
+             b(1) = rb
+             return
+         endif
+      endif
+      i = l
+      j = l + l
+20    if(j .le. ir) then
+        if(j .lt. ir)then
+          if(a(j) .lt. a(j+1)) j = j + 1
+        endif
+      if(ra .lt. a(j)) then
+        a(i) = a(j)
+        b(i) = b(j)
+        i = j
+        j = j + j
+      else
+      j = ir + 1
+      endif
+      goto 20
+      endif
+      a(i) = ra
+      b(i) = rb
+      goto 10
+
+end subroutine sort2
 !
 !
 !
