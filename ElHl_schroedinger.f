@@ -25,7 +25,6 @@
 
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra 
-    Complex*16 , ALLOCATABLE , dimension(:)     :: bra , ket
     Real*8     , ALLOCATABLE , dimension(:,:,:) :: Pops(:,:,:)
     type(R_eigen)                               :: UNI_el , UNI_hl
     logical                                     :: static_hole = .false.
@@ -60,7 +59,7 @@ allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 , n_part ) )
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
-CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
+CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
 mm = size(basis)                          
 
@@ -237,7 +236,7 @@ END DO
 QDyn%dyn = D_zero
 QDyn%dyn = QDyn%dyn + Pops
 
-deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
+deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
 include 'formats.h'
 
@@ -268,7 +267,7 @@ allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 , n_part ) )
 
 Print 56 , initial_state     ! <== initial state of the isolated molecule 
  
-CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase ) 
+CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase ) 
 
 mm = size(basis)                          
 
@@ -324,7 +323,7 @@ END DO
 ! sum population dynamics over frames ...
 QDyn%dyn = QDyn%dyn + Pops
 
-deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , bra , ket , phase )
+deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
 include 'formats.h'
 

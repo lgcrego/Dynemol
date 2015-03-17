@@ -25,12 +25,10 @@ contains
 
  rcutsq  = rcut * rcut
 
- fscut = 0.d0
- vscut = 0.d0
- 
 !################################################
  atmax = sum( species(:) % N_of_atoms )                 
- allocate ( fscut(atmax,atmax), vscut(atmax,atmax) )
+ allocate ( fscut(atmax,atmax) , source = D_zero )
+ allocate ( vscut(atmax,atmax) , source = D_zero )
 
  if (forcefield == 1) then
   ! Born-Mayer

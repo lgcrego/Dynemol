@@ -127,15 +127,19 @@ implicit none
 
 ! orbitals to be propagated ...
  If( (.NOT. done) .AND. Survival ) then
-    allocate( orbital(n_part) , eh_tag(n_part) )
-
-    orbital(1) = initial_state ; eh_tag(1) = "el"
-    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
 
     If( any(system%Hl)          .AND. n_part == 1 )  stop ">> n_part = 1 , but El/Hl is .true.   <<"
     If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
 
+    allocate( orbital(n_part) , eh_tag(n_part) )
+
+    orbital(1) = initial_state ; eh_tag(1) = "el"
+    If( any(system%Hl) ) then
+    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
+    End If
+
     done = .true.
+
  end If
 
 ! setting the fragment ...

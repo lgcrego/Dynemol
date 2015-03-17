@@ -49,7 +49,7 @@ module AO_adiabatic_m
 
     ! module variables ...
     Complex*16      , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Complex*16      , allocatable , dimension(:)    :: bra , ket , phase
+    Complex*16      , allocatable , dimension(:)    :: phase
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
     type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
     integer                                         :: mm , nn
@@ -118,7 +118,11 @@ do frame = frame_init , frame_final , frame_step
     If( QMMM ) Net_Charge_MM = Net_Charge
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
-    QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t )
+    If( nn == 1) then
+        QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t_i )
+    else
+        QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+    end If
 
     CALL dump_Qdyn( Qdyn , it )
 
@@ -185,9 +189,6 @@ do frame = frame_init , frame_final , frame_step
 end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-
-If( allocated(bra) ) deallocate(bra)
-If( allocated(ket) ) deallocate(ket)
 
 include 'formats.h'
 
@@ -265,7 +266,7 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           MO_bra   , MO_ket   ,       &
                           AO_bra   , AO_ket   ,       &
                           DUAL_bra , DUAL_ket ,       &
-                          bra      , ket      , phase )
+                          phase )
                           
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
@@ -304,7 +305,11 @@ CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zer
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
 ! save populations ...
-QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1:nn) , DUAL_ket(:,1:nn) , t_i )
+If( nn == 1) then
+    QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t_i )
+else
+    QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+end If
 
 CALL dump_Qdyn( Qdyn , it )
 

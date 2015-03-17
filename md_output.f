@@ -74,7 +74,7 @@ IF( .NOT. done ) then
     write(10,*)
     do i = 1, MM % N_of_species
         if (species(i) % N_of_atoms > 1) then
-            write(10,'(''Species'',i2,'' comprised of '',i2,'' atoms'')') i, species(i) % N_of_atoms
+            write(10,'(''Species'',i2,'' comprised of '',i4,'' atoms'')') i, species(i) % N_of_atoms
         endif
         write(10,*)
     end do 
@@ -108,7 +108,7 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Coulomb short-range        :'',F15.4)') ecoul     *mol*1.d-6      
     write(10,'(''Total Coulomb              :'',F15.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
     write(10,'(''Potential (INTER) Energy   :'',F12.4)') pot_INTER*mol*1.d-6 / MM % N_of_molecules
-    write(10,'(''Potential Energy(gmx-like) :'',F15.4)') pot_total*mol*1.d-3 / MM % N_of_molecules  
+    write(10,'(''Potential Energy(gmx-like) :'',ES16.7E3)') pot_total*mol*1.d-3 / MM % N_of_molecules  
     write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
     write(10,*)
     write(10,'(''Density     :'',F10.4,'' g/cm³'')' ) DensTot / n_t

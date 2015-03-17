@@ -49,7 +49,6 @@ module ElHl_adiabatic_m
 
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra , phase
-    Complex*16 , ALLOCATABLE , dimension(:)   :: bra , ket
     real*8     , ALLOCATABLE , dimension(:)   :: Net_Charge_MM(:)
     type(R_eigen)                             :: UNI , el_FMO , hl_FMO
     type(R_eigen)                             :: UNI_el , UNI_hl
@@ -220,9 +219,6 @@ end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
-If( allocated(bra) ) deallocate(bra)
-If( allocated(ket) ) deallocate(ket)
-
 include 'formats.h'
 
 end subroutine ElHl_adiabatic
@@ -296,7 +292,7 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           MO_bra   , MO_ket   ,       &
                           AO_bra   , AO_ket   ,       &
                           DUAL_bra , DUAL_ket ,       &
-                          bra      , ket      , phase )
+                          phase )
 
 If( QMMM ) allocate( Net_Charge_MM(Extended_Cell%atoms) , source = D_zero )
 
