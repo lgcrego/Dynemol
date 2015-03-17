@@ -119,9 +119,9 @@ do frame = frame_init , frame_final , frame_step
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
     If( nn == 1) then
-        QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t_i )
+        QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
     else
-        QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+        QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
     end If
 
     CALL dump_Qdyn( Qdyn , it )
