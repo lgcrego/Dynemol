@@ -143,7 +143,7 @@ tau = merge( tau_max , tau , tau > tau_max )
 
 
 #ifdef USE_GPU
-call chebyshev_gpucaller( N, tau, save_tau, t_max), t, Psi_t_bra, Psi_t_ket, H_prime )
+call chebyshev_gpucaller( N, tau, save_tau, t_max, t, Psi_t_bra, Psi_t_ket, H_prime )
 #else
 
 norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
