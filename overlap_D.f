@@ -4,7 +4,7 @@ module Overlap_Builder
 
     use type_m
     use constants_m
-    use parameters_m            , only  : verbose , PBC
+    use parameters_m            , only  : verbose , PBC , static
     use PBC_m                   , only  : Generate_Periodic_Structure
     use Semi_Empirical_Parms    , only  : atom
     use Allocation_m            , only  : DeAllocate_Structures    
@@ -12,6 +12,13 @@ module Overlap_Builder
     public :: Overlap_Matrix 
 
     private
+
+    !module variables ...
+    logical               , save :: done = .false. , ready = .false.
+    integer , allocatable , save :: ija(:)
+    real*8  , allocatable , save :: a_xyz(:,:)
+    real*8  , allocatable , save :: b_xyz(:,:)
+    real*8  , allocatable , save :: S_pack(:)
 
 contains
 !
@@ -31,7 +38,7 @@ contains
  type(STO_basis) , allocatable :: pbc_basis(:)
  integer                       :: NonZero , S_size
  real*8                        :: Sparsity
- logical                       :: GACG_flag
+ logical                       :: GACG_flag 
 
  CALL util_overlap     
 
@@ -69,7 +76,7 @@ contains
         ! if no PBC pbc_system = system ...
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
 
-        CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix )
+        CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix , recycle = .true. )
 
         NonZero  = count(S_matrix /= 0.d0)
         Sparsity = float(NonZero)/float((S_size**2))
@@ -91,9 +98,9 @@ contains
 !
 !
 !
-!================================================================================
-subroutine Build_OVERLAP_Matrix( b_system, b_basis, a_system, a_basis, S_matrix )
-!================================================================================
+!===========================================================================================
+ subroutine Build_OVERLAP_Matrix( b_system, b_basis, a_system, a_basis, S_matrix , recycle )
+!===========================================================================================
 use util_m , factorial => fact
 implicit none
 type(structure)            , intent(in)                  :: b_system
@@ -101,6 +108,7 @@ type(STO_basis)            , intent(in)                  :: b_basis(:)
 type(structure) , optional , intent(in)                  :: a_system
 type(STO_basis) , optional , intent(in)                  :: a_basis(:)
 real*8                     , intent(inout) , allocatable :: S_matrix(:,:)
+logical         , optional , intent(in)                  :: recycle
 
 ! local variables ...
 real*8  :: expa, expb, Rab , aux , anor
@@ -111,23 +119,55 @@ integer :: a , b , ia , ib , ja , jb
 integer :: na , la , ma 
 integer :: nb , lb , mb
 integer :: msup , i , j , k , m 
+logical :: motion_detector_ready , atom_not_moved
 
 ! local parameters ....
 integer , parameter :: mxn = 15 , mxl = 5
-real*8  , parameter :: cutoff_Angs = 10.d0
+real*8  , parameter :: cutoff_Angs = 12.d0
 
 ! local arrays ...
 real*8  , dimension(0:mxl)                   :: solvec 
 real*8  , dimension(0:mxl)                   :: solnorm , sol_partial
 real*8  , dimension(-mxl:mxl,-mxl:mxl,0:mxl) :: rl , rl2
 
-S_matrix = 0.d0
+motion_detector_ready = present(recycle) .AND. ready  
+
+S_matrix = D_zero
 
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
 
-! calculate rotation matrix for the highest l
+     ! if atoms ia and ib remaing fixed => recover S_matrix
+     If( motion_detector_ready ) then
 
+         atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
+
+         Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
+
+         If(Rab > cutoff_Angs) goto 10
+
+         If( atom_not_moved ) then
+
+             do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
+             do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
+
+                 a = a-(a_basis(a)%copy_No)*size(b_basis)
+
+                 If( S_matrix(a,b) /= D_zero ) cycle
+                 
+                 do k = ija(a) , ija(a+1)-1
+                     if( ija(k) == b ) S_matrix(a,b) = S_pack(k)
+                 end do
+
+             enddo
+             enddo
+
+             goto 10
+
+         end if
+     end if
+
+    ! if atoms ia and ib move => calculate rotation matrix for the highest l
     call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
 
     If(Rab > cutoff_Angs) goto 10
@@ -183,7 +223,20 @@ do ia = ib+1 , a_system% atoms
 end do
 
 ! diagonal elements
-forall(i=1:size(b_basis)) S_matrix(i,i) = 1.d0
+forall(i=1:size(b_basis)) S_matrix(i,i) = D_one
+
+! save overlap data for reuse ...
+If( present(recycle) .AND. (.NOT. static) .AND. (.NOT. done) ) then
+
+    allocate( a_xyz , source = a_system%coord)
+    allocate( b_xyz , source = b_system%coord)
+
+    CALL sprsin( S_matrix )
+
+    done  = .true.
+    ready = .true.
+
+End If
 
 ! symmetric overlap matrix
 forall(i=1:size(b_basis))  S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
@@ -255,6 +308,66 @@ lmax = max(la_max,lb_max)
 call rotar(lmax, mxl, cosal, sinal, cosbet, sinbet, cosga, singa, rl2, rl)
 
 end subroutine RotationOverlap
+!
+!
+!
+!=============================
+ subroutine sprsin( S_matrix )
+!=============================
+implicit none
+real*8 , intent(in) :: S_matrix(:,:)
+
+!=====================================================================
+! converts a square matrix a(1:n,1:n) with physical dimension np into 
+! row-indexed sparse storage mode. Only elements of a with magnitude >= 
+! thresh are retained. Output is in two linear arrays with physical 
+! dimension nmax (an input parameter): sa(1:) contains array lines, 
+! indexed by ija(1:). The logical sizes of sa and ija on output are 
+! both  ija(ija(1)-1)-1
+!=====================================================================
+
+!local variables ...
+integer               :: i , j , k , n , length, nnz
+real*8                :: thresh = mid_prec
+integer , allocatable :: tmp_ij(:)
+real*8  , allocatable :: tmp_S(:)
+
+!local parameters ...
+integer  :: nmax = 1000000000
+
+n = size( S_matrix(:,1) )
+
+allocate( tmp_ij(nmax) )
+allocate( tmp_S (nmax) , source=D_zero )
+
+      DO 11 j = 1 , n
+         tmp_S(j) = S_matrix(j,j)
+11    END DO 
+      tmp_ij(1) = n + 2
+      k = n + 1
+      DO 13 i = 1 , n
+         DO 12 j = 1 , n
+            IF(abs(S_matrix(i,j)) >= thresh) then
+              IF(i .NE. j) then
+                k = k + 1
+                IF(k > nmax) pause 'nmax too small in sprsin'
+                tmp_S(k) = S_matrix(i,j)
+                tmp_ij(k) = j
+              END IF
+            END IF
+12       END DO 
+         tmp_ij(i+1) = k + 1
+13    END DO  
+
+length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of S_pack and ija
+nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
+
+allocate( S_pack(length) , source = tmp_S  )
+allocate( ija   (length) , source = tmp_ij ) 
+
+deallocate( tmp_S , tmp_IJ )
+
+END subroutine sprsin
 !
 !
 !
