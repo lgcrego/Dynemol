@@ -34,13 +34,11 @@ type(MM_molecular)  , intent(inout) :: species(:)
 character(15)   , allocatable   :: InputChars(:,:)
 real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:) 
-character(18)                   :: keyword , keyword_tmp
+character(18)                   :: keyword 
 character(10)                   :: string
-character(3)                    :: dummy_char , angatm1 , angatm2 , angatm3
 character(200)                  :: line 
-real*8                          :: dummy_real , factor
 integer                         :: i1 , i2 , i3 , sp , nr
-integer                         :: i , j , k , n , a , ioerr , ilines , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
+integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
@@ -343,18 +341,15 @@ type(MM_atomic)                     , intent(inout) :: atom(:)
 type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
  
 ! local variables ...
-type(MM_atomic) , allocatable   :: FF_tmp(:)
 character(3)    , allocatable   :: InputChars(:,:) , Input2Chars(:,:)
 character(4)    , allocatable   :: funct_bond(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:)
-real*8                          :: dummy_real , theta0 , ktheta0 , fudgeLJ , fudgeQQ
+real*8                          :: fudgeLJ , fudgeQQ
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , Nbonds14Types, NBondParms, NMorseParms
-character(1)                    :: keyword_1
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NMorseParms
 character(3)                    :: dummy_char
-character(9)                    :: keyword_9
 character(18)                   :: keyword
 character(200)                  :: line
 logical                         :: flag1 , flag2 , flag3 , flag4

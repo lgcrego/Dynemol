@@ -20,8 +20,6 @@ module tuning_m
 implicit none
 type(universe) , intent(inout) :: univ
 
-! local variables ...
-integer :: i , ioerr
 
 ! edit structure  ...
 
@@ -38,11 +36,11 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-
+univ % atom (35:36) % residue = "CCC"
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-
+univ % atom(35:36) % nr = 2
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
@@ -51,12 +49,12 @@ integer :: i , ioerr
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where(univ % atom % residue == "HBT") univ % atom % El = .true.
+where(univ % atom % residue == "PRC") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "HBT") univ % atom % Hl = .true.
+where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
 
 !......................................................................
 
@@ -160,7 +158,34 @@ select case ( instance )
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
-
+atom(743)  % flex = .true.
+atom(770)  % flex = .true.
+atom(1087) % flex = .true.
+atom(766)  % flex = .true.
+atom(142)  % flex = .true.
+atom(332)  % flex = .true.
+atom(752)  % flex = .true.
+atom(139)  % flex = .true.
+atom(740)  % flex = .true.
+atom(328)  % flex = .true.
+atom(742)  % flex = .true.
+atom(1061) % flex = .true.
+atom(744)  % flex = .true.
+atom(1064) % flex = .true.
+atom(745)  % flex = .true.
+atom(146)  % flex = .true.
+atom(1066) % flex = .true.
+atom(910)  % flex = .true.
+atom(918)  % flex = .true.
+atom(232)  % flex = .true.
+atom(747)  % flex = .true.
+atom(143)  % flex = .true.
+atom(1068) % flex = .true.
+atom(335)  % flex = .true.
+atom(921)  % flex = .true.
+atom(924)  % flex = .true.
+atom(1497) % flex = .true.
+atom(243)  % flex = .true.
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -172,13 +197,11 @@ select case ( instance )
 !----------------------------------
 !      define residues
 !----------------------------------
-
-
+atom(35:36) % residue = "PRC"
 !----------------------------------
 !      define nr
 !----------------------------------
-
-
+atom(35:36) % nr = 1
 !----------------------------------
 !     Selective_Dynamics
 !----------------------------------
