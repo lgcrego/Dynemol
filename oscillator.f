@@ -21,6 +21,7 @@ module Oscillator_m
 !=============================================================================
 subroutine  Optical_Transitions( system , basis , QM , SPEC , internal_sigma )
 !=============================================================================
+implicit none
 type(structure)                , intent(in)     :: system
 type(STO_basis)                , intent(in)     :: basis(:)
 type(R_eigen)                  , intent(in)     :: QM
@@ -28,7 +29,7 @@ type(f_grid)                   , intent(inout)  :: SPEC
 real*8          , OPTIONAL     , intent(in)     :: internal_sigma
 
 ! . local variables: transition dipole
-integer                        :: i , j , dim_bra , dim_ket
+integer                        :: i , j , k , dim_bra , dim_ket, npoints
 real*8           , allocatable :: Transition_Strength(:,:)
 
 ! . local variables: resonance spectrum
@@ -113,6 +114,7 @@ end subroutine Optical_Transitions
 !------------------------------------------------------------
 subroutine  Transition_Dipole_Builder(system, basis, QM, DP)
 !------------------------------------------------------------
+implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 type(R_eigen)   , intent(in)    :: QM

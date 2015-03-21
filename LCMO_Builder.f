@@ -4,7 +4,7 @@
     use constants_m
     use parameters_m                , only : initial_state , hole_state
                                              
-    public :: LCMO_Builder, coeff_el , coeff_hl 
+    public :: LCMO_Builder
 
     private
 
