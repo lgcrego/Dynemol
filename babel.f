@@ -35,12 +35,11 @@ contains
 !
 !
 !=============================================================
- subroutine Coords_from_Universe( Unit_Cell , System , frame )
+ subroutine Coords_from_Universe( Unit_Cell , System )
 !=============================================================
  implicit none
  type(structure)            , intent(out)   :: Unit_Cell
  type(universe)             , intent(inout) :: System
- integer        , optional  , intent(in)    :: frame
 
 ! local variables ... 
 integer         :: j , n_residues
@@ -167,7 +166,7 @@ end subroutine Coords_from_Universe
  type(structure)   , intent(out) :: Unit_Cell
 
 ! local variables ...
-integer             :: i , j , N_of_atoms , nresidue
+integer             :: i , j , N_of_atoms 
 integer             :: file_err , io_err
 character(len=5)    :: MMSymbol_char
 character(len=6)    :: keyword
@@ -392,7 +391,7 @@ implicit none
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ...
-integer      :: i , j , k  , n , m , dumb_number , openstatus , inputstatus , model , number_of_atoms
+integer      :: i , j , k  , dumb_number , openstatus , inputstatus , model , number_of_atoms
 real*8       :: time_1 , time_2 , delta_t 
 character(1) :: test
 character(4) :: keyword
@@ -612,7 +611,7 @@ type(universe)  , allocatable   , intent(out) :: trj(:)
 
 ! local variables ....
 character(1)  :: idx
-integer       :: openstatus , inputstatus , atoms , i , j , k , indx1 , indx2 , model 
+integer       :: openstatus , inputstatus , atoms , i , j , k , model 
 integer       :: j1 , j2 , n_residues 
 character(1)  :: fragment
 character(3)  :: residue

@@ -76,11 +76,11 @@ select case ( nuclear_matter )
 
         CALL Prepare_Solvated_System( Solvated_System , 1 )
 
-        CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
+        CALL Coords_from_Universe( Unit_Cell , Solvated_System )
 
     case( "extended_sys" )
 
-        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+        CALL Coords_from_Universe( Unit_Cell , trj(1) )
 
     case default
 
@@ -115,11 +115,11 @@ do frame = 2 , size(trj) , frame_step
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
-            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System )
 
         case( "extended_sys" )
 
-            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) )
 
         case default
 
@@ -176,11 +176,11 @@ select case ( nuclear_matter )
 
         CALL Prepare_Solvated_System( Solvated_System , 1 )
 
-        CALL Coords_from_Universe( Unit_Cell , Solvated_System , 1 )
+        CALL Coords_from_Universe( Unit_Cell , Solvated_System )
 
     case( "extended_sys" )
 
-        CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
+        CALL Coords_from_Universe( Unit_Cell , trj(1) )
 
     case default
 
@@ -215,11 +215,11 @@ do frame = 2 , size(trj) , frame_step
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
-            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System )
 
         case( "extended_sys" )
 
-            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) )
 
         case default
 

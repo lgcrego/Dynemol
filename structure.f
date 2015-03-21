@@ -304,9 +304,8 @@ If( GaussianCube .AND. (.NOT. done) ) then
  type(structure) , intent(inout) :: a
 
 ! local variables ...
-integer :: N_of_orbitals, N_of_electron, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
+integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
 integer :: first_nr , last_nr , N_of_residue_members 
-integer :: i
 
 ! total number of orbitals ...
 N_of_orbitals = sum(atom(a%AtNo)%DOS)

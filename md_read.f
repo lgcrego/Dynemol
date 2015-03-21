@@ -32,9 +32,8 @@ subroutine Build_MM_Environment
 implicit none
 
 ! local variables ...
-real*8          :: massa 
 integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i , ioerr , nresid 
-logical         :: exist , read_vel
+logical         :: read_vel
 character(10)   :: string
 
 

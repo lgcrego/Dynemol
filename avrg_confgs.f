@@ -48,9 +48,8 @@ contains
  implicit none
 
 ! local variables ...
-integer                         :: i , frame , frame_init , nr , N_of_residues
+integer                         :: frame , frame_init , nr , N_of_residues
 real*8                          :: internal_sigma
-character(3)                    :: residue
 logical                         :: FMO_ , DIPOLE_
 type(R_eigen)                   :: UNI , FMO
 type(f_grid)                    :: TDOS , SPEC
@@ -91,11 +90,11 @@ do frame = frame_init , size(trj) , frame_step
 
             CALL Prepare_Solvated_System( Solvated_System , frame )
 
-            CALL Coords_from_Universe( Unit_Cell , Solvated_System , frame )
+            CALL Coords_from_Universe( Unit_Cell , Solvated_System )
 
         case( "extended_sys" )
 
-            CALL Coords_from_Universe( Unit_Cell , trj(frame) , frame )
+            CALL Coords_from_Universe( Unit_Cell , trj(frame) )
 
         case default
 
