@@ -23,6 +23,9 @@
                            c3 = 15.d0               ,&
                            c4 = 22.5d0              ,&   ! 45/2
                            c5 = 11.25d0             ,&   ! 45/4
+                           c6 = 6.349206d-3         ,&   ! 2/315
+                           c7 = 2.821869d-4         ,&   ! 4/14175
+                           c8 = 85511197d-6         ,&   ! 4/467775
                            c0_inv = 1.d0/c0
 
 contains
@@ -246,8 +249,8 @@ real*8  , intent(in) :: r
 
 ! local variables ...
 integer :: N_level
-real*8  :: a, a2, a3, a4, a5, a6
-real*8  :: r2, r3, r4, r5, r6
+real*8  :: a, a2, a3, a4, a5, a6, a7, a9, a11
+real*8  :: r2, r3, r4, r5, r6, r7, r9, r11
 real*8  :: exclusion
 
 ! N quantum number of s orbital ...
@@ -267,27 +270,46 @@ select case ( N_level )
 
     case( 2 )
 
-        r3 = r2*r
-        r4 = r2*r2
+        r3 = r2*r ; r4 = r2*r2
         
-        a3 = a2*a
-        a4 = a2*a2
+        a3 = a2*a ; a4 = a2*a2
 
         exclusion = -c0_inv*a4*exp(-two*r*a) * (r4 + two*r3/a + three*r2/a2 + three*r/a3 + c0/a4) + D_one
 
     case( 3 )
 
-        r3 = r2*r
-        r4 = r2*r2
-        r5 = r4*r
-        r6 = r3*r3
+        r3 = r2*r ; r4 = r2*r2 ; r5 = r4*r ; r6 = r3*r3
 
-        a3 = a2*a
-        a4 = a2*a2
-        a5 = a4*a
-        a6 = a3*a3
+        a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3
 
         exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one
+
+    case( 4 )
+
+        r3 = r2*r ; r4 = r2*r2 ; r5 = r4*r ; r6 = r3*r3 ; r7 = r3*r4 
+
+        a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3 ; a7 = a3*a4 
+
+        exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one &
+                    -c6*r7*a7*exp(-two*r*a) * (four + a*r)
+
+    case( 5 ) 
+
+        r3 = r2*r ; r4 = r2*r2 ; r5 = r4*r ; r6 = r3*r3 ; r7 = r3*r4 ; r9 = r4*r5
+
+        a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3 ; a7 = a3*a4 ; a9 = a4*a5
+
+        exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one &
+                    -c6*r7*a7*exp(-two*r*a) * (four + a*r) - c7*r9*a9*(five + r*a) 
+
+    case( 6 ) 
+
+        r3 = r2*r ; r4 = r2*r2 ; r5 = r4*r ; r6 = r3*r3 ; r7 = r3*r4 ; r9 = r4*r5 ; r11 = r9*r2
+
+        a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3 ; a7 = a3*a4 ; a9 = a4*a5 ; a11 = a9*a2
+
+        exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one &
+                    -c6*r7*a7*exp(-two*r*a) * (four + a*r) - c7*r9*a9*(five + r*a) - c8*r11*a11*(six + r*a) 
 
 end select 
 

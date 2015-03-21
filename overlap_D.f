@@ -137,35 +137,35 @@ S_matrix = D_zero
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
 
-     ! if atoms ia and ib remaing fixed => recover S_matrix
-     If( motion_detector_ready ) then
+    ! if atoms ia and ib remaing fixed => recover S_matrix
+    If( motion_detector_ready ) then
 
-         atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
+        atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
 
-         Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
+        Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
 
-         If(Rab > cutoff_Angs) goto 10
+        If(Rab > cutoff_Angs) goto 10
 
-         If( atom_not_moved ) then
+        If( atom_not_moved ) then
 
-             do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
-             do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
+            do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
+            do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
 
-                 a = a-(a_basis(a)%copy_No)*size(b_basis)
+                a = a-(a_basis(a)%copy_No)*size(b_basis)
 
-                 If( S_matrix(a,b) /= D_zero ) cycle
+                If( S_matrix(a,b) /= D_zero ) cycle
                  
-                 do k = ija(a) , ija(a+1)-1
-                     if( ija(k) == b ) S_matrix(a,b) = S_pack(k)
-                 end do
+                do k = ija(a) , ija(a+1)-1
+                    if( ija(k) == b ) S_matrix(a,b) = S_pack(k)
+                end do
 
-             enddo
-             enddo
+            enddo
+            enddo
 
-             goto 10
+            goto 10
 
-         end if
-     end if
+        end if
+    end if
 
     ! if atoms ia and ib move => calculate rotation matrix for the highest l
     call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )

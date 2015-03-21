@@ -16,9 +16,12 @@ module MM_dynamics_m
     use Backup_MM_m         , only : Security_Copy_MM , Restart_MM
     use MM_types            , only : debug_MM
 
-    public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup
+    public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup, MoveToBoxCM
 
     private
+
+    !local variables ...
+    logical :: done = .false.
 
 contains
 !
@@ -101,7 +104,7 @@ integer :: frame , i
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 CALL Setup
-CALL move_to_box_CM
+If( .not. done ) CALL move_to_box_CM
 CALL Molecular_CM
 
 if( restart ) then
@@ -131,6 +134,26 @@ else
 endif
 
 end subroutine preprocess_MM
+!
+!
+!
+!========================
+subroutine MoveToBoxCM( )
+!========================
+implicit none
+
+!local variables ...
+integer :: i 
+
+! just pass nuclear configuration to QM routines and leave ...
+
+CALL move_to_box_CM
+
+forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
+
+done = .true.
+
+end subroutine MoveToBoxCM
 !
 !
 !

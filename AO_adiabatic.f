@@ -41,7 +41,7 @@ module AO_adiabatic_m
                                              Restart_state ,                &
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
-                                             preprocess_MM
+                                             preprocess_MM , MoveToBoxCM
 
     public :: AO_adiabatic
 
@@ -170,7 +170,7 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_field_ )           CALL DP_stuff ( t , "DP_field"   )
 
-    If( Induced_  .OR. QMMM ) CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
@@ -204,7 +204,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(in)    :: it
 
 ! local variables
-integer         :: hole_save , n
+integer         :: hole_save , n 
 logical         :: el_hl_
 type(universe)  :: Solvated_System
 
@@ -225,8 +225,9 @@ select case ( nuclear_matter )
         CALL Coords_from_Universe( Unit_Cell , trj(1) , 1 )
 
     case( "MDynamics" )
-
-        
+    
+        CALL MoveToBoxCM
+      
     case default
 
         Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -319,8 +320,7 @@ If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
 
-If( Induced_ .OR. QMMM ) CALL DP_stuff ( t_i , "Induced_DP" )
-
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t_i )
 !..........................................................................
 
 include 'formats.h'

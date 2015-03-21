@@ -20,12 +20,19 @@ module DP_main_m
     use FMO_m                   , only  : eh_tag
 
 
-    Real*8 , allocatable , public , protected :: DP_matrix_AO(:,:,:)
+    Real*8 , allocatable , public :: DP_matrix_AO(:,:,:)
 
     public :: Dipole_Matrix 
     public :: Dipole_Moment
 
     private
+
+    !module variables ...
+    logical               , save :: done = .false. , ready = .false.
+    integer , allocatable , save :: ija(:)
+    real*8  , allocatable , save :: xyz(:,:)
+    real*8  , allocatable , save :: DP_pack(:,:)
+
 
 contains
 !
@@ -48,7 +55,7 @@ If( verbose ) Print 153
 !----------------------------------------------------------
 !       initialize DIPOLE MATRIX M(i,j)[x,y,z]
 
- CALL Util_Multipoles
+CALL Util_Multipoles
 
 ! size of M matrix ...
 M_size = sum(atom(system%AtNo)%DOS)
@@ -177,7 +184,8 @@ integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb 
 integer :: na , la , ma 
 integer :: nb , lb , mb
-integer :: lmult , i , j
+integer :: lmult , i , j , k
+logical :: atom_not_moved
 
 real*8  , parameter :: tol = 1.d-10 
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
@@ -193,8 +201,33 @@ DP_matrix_AO = D_zero
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
 
-! calculate rotation matrix for the highest l
+    ! if atoms ia and ib remaing fixed => recover DP_matrix_AO ...
+    If( ready ) then
 
+        atom_not_moved = all(system%coord(ia,:)==xyz(ia,:)) .AND. all(system%coord(ib,:)==xyz(ib,:)) 
+
+        Rab = sqrt(sum( (system%coord(ia,:)-system%coord(ib,:)) * (system%coord(ia,:)-system%coord(ib,:)) ) )  
+
+        If(Rab > cutoff_Angs) goto 10
+
+        If( atom_not_moved ) then
+
+            do jb = 1 , atom( system%AtNo(ib) )% DOS  ;  b  = system%BasisPointer (ib) + jb
+            do ja = 1 , atom( system%AtNo(ia) )% DOS  ;  a  = system%BasisPointer (ia) + ja
+
+                do k = ija(a) , ija(a+1)-1
+                    if( ija(k) == b ) DP_Matrix_AO(a,b,:) = DP_pack(k,:)
+                end do
+
+            enddo
+            enddo
+
+            goto 10
+
+        end if
+    end if
+
+    ! if atoms ia and ib move => calculate rotation matrix for the highest l ...
     call RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
 
     If(Rab > cutoff_Angs) goto 10
@@ -248,6 +281,18 @@ do ia = 1 , system%atoms
     enddo
 10 end do
 end do
+
+! save DP_Matrix_AO for reuse ...
+If( (.NOT. static) .AND. (.NOT. done) ) then
+
+    allocate( xyz , source = system%coord)
+
+    CALL sprsin( DP_Matrix_AO )
+
+    done  = .true.
+    ready = .true.
+
+End If
 
 end subroutine Build_DIPOLE_Matrix
 !
@@ -398,6 +443,66 @@ forall( j=1:3 , i=1:a%atoms , mask(i) ) R_vector(i,j) = a%coord(i,j) - a%Center_
 deallocate( Qi_Ri , mask )
 
 end subroutine Center_of_Charge
+!
+!
+!
+!=================================
+ subroutine sprsin( DP_Matrix_AO )
+!=================================
+implicit none
+real*8 , intent(in) :: DP_Matrix_AO(:,:,:)
+
+!=====================================================================
+! converts a matrix a(1:n,1:n,1:3) with physical dimension np into 
+! row-indexed sparse storage mode. Only elements of a with magnitude >= 
+! thresh are retained. Output is in two linear arrays with physical 
+! dimension nmax (an input parameter): sa(1:) contains array lines, 
+! indexed by ija(1:). The logical sizes of sa and ija on output are 
+! both  ija(ija(1)-1)-1
+!=====================================================================
+
+!local variables ...
+integer               :: i , j , k , n , length, nnz
+real*8                :: thresh = mid_prec
+integer , allocatable :: tmp_ij(:)
+real*8  , allocatable :: tmp_DP(:,:)
+
+!local parameters ...
+integer  :: nmax = 100000000
+
+n = size( DP_Matrix_AO(:,1,1) )
+
+allocate( tmp_ij(nmax  ) )
+allocate( tmp_DP(nmax,3) , source=D_zero )
+
+      DO 11 j = 1 , n
+         tmp_DP(j,:) = DP_Matrix_AO(j,j,:)
+11    END DO 
+      tmp_ij(1) = n + 2
+      k = n + 1
+      DO 13 i = 1 , n
+         DO 12 j = 1 , n
+            IF( any( abs(DP_Matrix_AO(i,j,:)) >= thresh ) ) then
+              IF(i /= j) then
+                k = k + 1
+                IF(k > nmax) pause 'nmax too small in sprsin'
+                tmp_DP(k,:) = DP_Matrix_AO(i,j,:)
+                tmp_ij(k) = j
+              END IF
+            END IF
+12       END DO 
+         tmp_ij(i+1) = k + 1
+13    END DO  
+
+length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of DP_pack and ija
+nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
+
+allocate( DP_pack(length,3) , source = tmp_DP  )
+allocate( ija    (length  ) , source = tmp_ij  ) 
+
+deallocate( tmp_DP , tmp_IJ )
+
+END subroutine sprsin
 !
 !
 !
