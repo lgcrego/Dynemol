@@ -41,7 +41,7 @@ module ElHl_adiabatic_m
                                              Restart_state ,                &
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
-                                             preprocess_MM
+                                             preprocess_MM , MoveToBoxCM
 
     public :: ElHl_adiabatic
 
@@ -254,6 +254,8 @@ select case ( nuclear_matter )
 
     case( "MDynamics" )
 
+        CALL MoveToBoxCM
+
     case default
 
         Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -342,7 +344,7 @@ If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix" )
 
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment" )
 
-If( Induced_ .OR. QMMM ) CALL DP_stuff ( t_i , "Induced_DP" )
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t_i )
 
 !..........................................................................
 
