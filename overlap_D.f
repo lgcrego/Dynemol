@@ -38,7 +38,6 @@ contains
  type(STO_basis) , allocatable :: pbc_basis(:)
  integer                       :: NonZero , S_size
  real*8                        :: Sparsity
- logical                       :: GACG_flag 
 
  CALL util_overlap     
 
@@ -113,8 +112,6 @@ logical         , optional , intent(in)                  :: recycle
 ! local variables ...
 real*8  :: expa, expb, Rab , aux , anor
 real*8  :: sux(0:10)
-integer :: AtNo_a , AtNo_b
-integer :: la_max , lb_max
 integer :: a , b , ia , ib , ja , jb
 integer :: na , la , ma 
 integer :: nb , lb , mb
@@ -256,7 +253,7 @@ real*8                     , intent(out) :: Rab
 real*8  , dimension(:,:,:) , intent(out) :: rl , rl2
 
 ! local variables ...
-real*8  :: xaq, yaq, zaq, xbq, ybq, zbq, xa, ya, za, xb, yb, zb, xab, yab, zab, xy
+real*8  :: xa, ya, za, xb, yb, zb, xab, yab, zab, xy
 real*8  :: sinal, cosal, sinbet, cosbet, singa, cosga
 integer :: AtNo_a , AtNo_b
 integer :: la_max , lb_max , lmax

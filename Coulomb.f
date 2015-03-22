@@ -45,10 +45,7 @@ real*8          , allocatable   , intent(out) :: V_coul_Hl (:)
 
 ! local arrays ...
 real*8  , allocatable                                       :: coul(:,:,:,:) , coul_tmp(:,:,:,:) 
-real*8  , dimension (-mxl:mxl,-mxl:mxl,0:mxl)               :: rl , rl2
 real*8  , dimension (idmrotmx)                              :: rotmat
-real*8  , dimension (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl)   :: v
-real*8  , dimension (-mxl:mxl)                              :: vaux
 
 ! local parameters ...
 integer , parameter  :: spdf_indx(0:3) = [1,2,5,10]
@@ -58,7 +55,7 @@ real*8  , parameter  :: conversion = 14.39965173d0      ! <== e^2/Angs = 14.399 
 complex*16           :: coeff_El , coeff_Hl , coeff_El_deg , coeff_Hl_deg
 real*8               :: x1 , x2 , x3 , x4 , rn1 , rn2 , rn3 , rn4 , Rab , deg_la , deg_lb , kappa
 real*8 , allocatable :: dielectric(:)
-integer              :: i , j , k , l , ij , icaso, indx1 , indx2, indx3, indx4, basis_size
+integer              :: i , j , k , l , icaso, indx1 , indx2, indx3, indx4, basis_size
 integer              :: na_1 , na_2 , nb_1 , nb_2 , la_1 , la_2 , lb_1 , lb_2, ma_1, ma_2, mb_1, mb_2
 integer              :: ia, ja1, a1, ja2, a2
 integer              :: ib, jb1, b1, jb2, b2
@@ -278,7 +275,7 @@ real*8  , dimension (-mxl:mxl)                              :: vaux
 
 ! local variables ...
 real*8  :: soma
-integer :: i , j , k , l , ij 
+integer :: i , j , ij 
 integer :: knt, m1, m2, m3, m4, lmax
 
 
@@ -406,12 +403,12 @@ real*8          , intent(out)   :: Rab
 real*8  , dimension (-mxl:mxl,-mxl:mxl,0:mxl)   :: rl , rl2
 
 ! local variables ...
-real*8  :: xaq, yaq, zaq, xbq, ybq, zbq, xa, ya, za, xb, yb, zb, xab, yab, zab, xy 
-real*8  :: sinal, cosal, sinbet, cosbet, singa, cosga, cosalf, cosgam, sinalf, singam, den
-integer :: i, j, k, l, ma, mb
+real*8  :: xa, ya, za, xb, yb, zb, xab, yab, zab, xy 
+real*8  :: sinbet, cosbet, cosalf, cosgam, sinalf, singam, den
+integer :: l, ma, mb
 integer :: ltot, knt
 integer :: AtNo_a , AtNo_b
-integer :: la_max , lb_max , lmax
+integer :: lmax
 
 ! local parameters ...
 real*8  , parameter :: tol = 1.d-10
@@ -522,8 +519,8 @@ real*8  , intent(out)   :: rl(-ltot:ltot,-ltot:ltot,0:ltot)
 real*8  , intent(out)   :: dl(-ltot:ltot,-ltot:ltot,0:ltot)
 
 ! local variables ...
-real*8  :: cosag , sinag , sinamg , tgbet , cosamg , tgbet2
-integer :: i , j , k , l , l1 , l2 , l3 , l4
+real*8  :: cosag , sinag , sinamg , cosamg , tgbet2
+integer :: l , l1 
 
 ! local parameters ...
 real*8  , parameter :: root2 = dsqrt(2.0d0)

@@ -236,7 +236,7 @@ select case ( nuclear_matter )
 end select
 
 el_hl_ = any( Unit_Cell%Hl )
- 
+
 CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
