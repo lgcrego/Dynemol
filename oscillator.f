@@ -35,7 +35,7 @@ real*8           , allocatable :: Transition_Strength(:,:)
 ! . local variables: resonance spectrum
 type(transition)               :: Trans_DP
 real*8           , allocatable :: SPEC_peaks(:) , SPEC_func(:)
-real*8                         :: gauss_norm , sgm , two_sigma2 , step , resonance , osc_const
+real*8                         :: sgm , two_sigma2 , step , resonance , osc_const
 real*8           , parameter   :: one = 1.d0 , zero = 0.d0
 real*8           , parameter   :: osc_const_parameter = 1.65338d-4  ! <== (2/3)*(m_e/h_bar*h_bar) ; unit = 1/( eV * (a_B)^2 ) 
 

@@ -18,7 +18,7 @@ type(MM_atomic) , intent(in)    :: atom(:)
 integer         , intent(in)    :: frame
 
 ! local variables ...
-integer         :: i , j , k , file_err
+integer         :: i , j , file_err
 logical , save  :: first_time = .true. 
 
 ! check whether restart is properly set ...
