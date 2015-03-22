@@ -32,7 +32,7 @@ implicit none
 type(structure) , intent(inout) :: a
 
 ! local variables ...
-integer       :: i , j , N_of_DP_mols 
+integer       :: N_of_DP_mols 
 type(dipoles) :: solvent , solute , DP_mols
 
 ! initialize multipole routines ...
@@ -100,7 +100,7 @@ character(*)    , intent(in)    :: instance
 
 ! local variables ...
 integer                :: i , j , i1 , i2 , nr , last_nr , first_nr , nr_atoms
-real*8                 :: total_valence , norm , vector(3)
+real*8                 :: total_valence 
 real*8 , allocatable   :: Q_center(:,:) , DP_FMO(:,:) , Qi_Ri(:,:) 
 
 select case( instance )

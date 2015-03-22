@@ -32,14 +32,13 @@ contains
 !
 !
 !
-!=========================================================================
- subroutine Build_Induced_DP( basis , Dual_bra , Dual_ket , t , instance )
-!=========================================================================
+!=====================================================================
+ subroutine Build_Induced_DP( basis , Dual_bra , Dual_ket , instance )
+!=====================================================================
 implicit none
 type(STO_basis)   , optional    , intent(in)    :: basis(:)
 complex*16        , optional    , intent(in)    :: Dual_bra(:,:)
 complex*16        , optional    , intent(in)    :: Dual_ket(:,:)
-real*8            , optional    , intent(in)    :: t
 character(*)      , optional    , intent(in)    :: instance
 
 ! local variables ...
@@ -98,7 +97,7 @@ do ati = 1 , N_of_atoms
 
 end do
 
-If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP ( t )
+If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP 
 
 ! NOTICE: dipole moment is multiplied by DP_potential_factor ...
 Induced_DP_Dressed = Induced_DP * DP_potential_factor * half
@@ -211,14 +210,13 @@ end function Induced_DP_phi
 !
 !
 !
-!=====================================
- subroutine visualize_Induced_DP ( t )
-!=====================================
+!================================
+ subroutine visualize_Induced_DP 
+!================================
 implicit none
-real*8  , intent(in) :: t
 
 ! local variables ...
-integer :: ati , i , j , N_of_DP
+integer :: ati , N_of_DP
 real*8  , allocatable   :: mod_p(:) 
 
 N_of_DP = size(Induced_DP(:,1))

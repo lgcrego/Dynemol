@@ -182,7 +182,7 @@ real*8          , intent(in)  :: R_vec(:,:)
 real*8          , intent(out) :: Total_DP(3)
 
 ! local variables ...
-integer                       :: i , j , states , xyz , n_basis , Fermi_state
+integer                       :: i , states , xyz , n_basis , Fermi_state
 real*8                        :: Nuclear_DP(3) , Electronic_DP(3) , excited_DP(3) , hole_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:) , b(:,:)
@@ -343,7 +343,6 @@ type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
 real*8  :: expa, expb, Rab 
-integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb , i , j
 integer :: na , la , ma 
 integer :: nb , lb , mb

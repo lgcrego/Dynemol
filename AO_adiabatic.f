@@ -320,7 +320,7 @@ If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t_i )
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 !..........................................................................
 
 include 'formats.h'
@@ -409,7 +409,7 @@ select case( instance )
 
         If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket , t )
+        CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 end select
 

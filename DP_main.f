@@ -100,7 +100,7 @@ complex*16      , optional  , intent(in)    :: Dual_ket (:,:)
 real*8          , optional  , intent(out)   :: DP_total (3) 
 
 ! local variables ...
-integer                       :: i, j, states, xyz, n_basis, Fermi_state
+integer                       :: xyz, Fermi_state
 real*8                        :: Nuclear_DP(3), Electronic_DP(3), hole_DP(3), excited_DP(3), Total_DP(3)
 real*8          , allocatable :: R_vector(:,:)
 logical         , allocatable :: AO_mask(:)
@@ -180,7 +180,6 @@ type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
 real*8  :: expa, expb, Rab 
-integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb 
 integer :: na , la , ma 
 integer :: nb , lb , mb
@@ -374,7 +373,7 @@ complex*16      , intent(in)    :: Dual_ket(:)
 real*8                          :: wavepacket_DP(3)
 
 ! local variables ...
-integer                         :: i, j, xyz, n_basis
+integer                         :: i, xyz, n_basis
 complex*16      , allocatable   :: a(:), b(:,:)
 type(R3_vector)                 :: origin_Dependent, origin_Independent
 

@@ -45,7 +45,6 @@
  type(structure)               :: FMO_system
  type(STO_basis) , allocatable :: FMO_basis(:)
  real*8          , allocatable :: wv_FMO(:,:) 
- real*8                        :: entropy            
  integer                       :: i
  character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
@@ -76,7 +75,7 @@
 
  If ( LCMO ) CALL LCMO_Builder( wv_FMO , FMO%erg , instance )
 ! the following subroutine can be used to check the LCMO packets ... 
-! call check_casida_builder( FMO_system , FMO_basis , wv_FMO , FMO , fragment )
+! call check_casida_builder( FMO_system , FMO_basis , wv_FMO , FMO )
 
  If( present(MO) ) then
 
@@ -332,15 +331,14 @@ implicit none
 !
 !
 !
-!--------------------------------------------------------------------------
- subroutine  check_casida_builder( system, basis, wv_FMO, FMO , fragment )
-!--------------------------------------------------------------------------
+!--------------------------------------------------------------
+ subroutine  check_casida_builder( system, basis, wv_FMO, FMO )
+!--------------------------------------------------------------
  implicit none
  type(structure) , intent(in)  :: system
  type(STO_basis) , intent(in)  :: basis(:)
  real*8          , intent(in)  :: wv_FMO(:,:)
  type(R_eigen)   , intent(in)  :: FMO       
- character(*)    , intent(in)  :: fragment
 
 ! local variables ... 
  integer               :: i, j , nn

@@ -126,7 +126,7 @@ contains
  integer          , allocatable   , intent(out) :: pbc_nr_MOL(:)
 
 ! local variables ... 
-integer :: ix , iy , iz , i , j , k , n , N_of_DP_MOLs , N_of_pbc_mols
+integer :: ix , iy , iz , j , k , n , N_of_DP_MOLs , N_of_pbc_mols
 
 ! number of DPs in the original cell ...
 N_of_DP_MOLs = size( nr_MOL )
@@ -190,7 +190,6 @@ end subroutine Generate_Periodic_DPs
 
 ! local variables ... 
  integer :: ix , iy , iz , k , n , copy
- logical :: GACG_flag
 
 !----------------------------------------------------------
 ! (VIRTUAL) REPLICAS for Period Boundary Conditions

@@ -295,7 +295,6 @@ type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
 real*8  :: expa, expb, Rab 
-integer :: AtNo_a , AtNo_b
 integer :: a , b , ia , ib , ja , jb , i , j
 integer :: na , la , ma 
 integer :: nb , lb , mb

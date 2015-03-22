@@ -31,7 +31,7 @@ integer , intent(in)    :: frame
 real*8  , intent(in)    :: dt
  
 ! local variables ... 
- integer :: i, j
+ integer :: i
 
 IF( .NOT. done ) then 
     open (10, file='MM_log.out', status='unknown')
@@ -130,7 +130,7 @@ integer , intent(in)    :: frame
 real*8  , intent(in)    :: dt
 
 ! local variables ...
-integer :: i , j , l 
+integer :: i , l 
 
 ! saving latest atomic velocities for future use ... 
 open(11, file='velocity_MM.out', status='unknown')
