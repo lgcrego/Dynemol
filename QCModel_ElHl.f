@@ -48,7 +48,7 @@ integer         , optional                 , intent(in)    :: flag2
 ! local variables ...
 real*8  , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
 real*8  , ALLOCATABLE   :: h(:,:) , S_matrix(:,:) 
-integer                 :: i , j 
+integer                 :: j 
  
 PTheory = present(AO_bra) 
 
@@ -362,8 +362,7 @@ real*8      , intent(inout) :: Erg(:)
 ! local variables ...
 real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , MO_ovlp(:,:) , old_Rv(:,:)
 integer     , allocatable  :: ind(:)
-real*8                     :: val
-integer                    :: N , i , j , pos
+integer                    :: N , i 
 
 N = size( CR(:,1) )
 

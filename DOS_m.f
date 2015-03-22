@@ -111,7 +111,7 @@ real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 ! local variables ...
 real*8  , allocatable :: tmp_PDOS_peaks(:) , tmp_PDOS_func(:) 
 real*8                :: sgm , sub_occupation
-integer               :: i , i1 , i2 , j , n_of_atoms , ioerr , npoints , k , l , n
+integer               :: i , i1 , i2 , j , n_of_atoms , npoints , k , l 
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma

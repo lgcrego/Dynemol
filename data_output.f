@@ -155,7 +155,6 @@ type(f_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
 integer         :: i , nr , nf , np , N_of_residues , N_of_fragments
-real*8          :: t 
 character(12)   :: string
 
 ! save TDOS ...
@@ -250,7 +249,7 @@ implicit none
 real*8  , intent(in) :: t
 
 ! local variables ...
-integer :: ati , i , j , N_of_atoms
+integer :: ati , i , j 
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving net_charge ...

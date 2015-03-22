@@ -47,7 +47,7 @@ implicit none
 type(MM_OPT) :: me 
 
 !local variable ...
-integer :: i , j
+integer :: i 
 
 ! Cause you are my kind / You're all that I want ...
 me % ITMAX       = me % ITMAX_MM
@@ -78,7 +78,7 @@ class(MM_OPT) , intent(inout)  :: me
 real*8                         :: Energy
 
 !local variables ...
-integer :: i , j
+integer :: i 
 
 do i = 1 , 3
     atom(:) % ftotal(i) = D_zero
@@ -110,7 +110,7 @@ class(MM_OPT)   , intent(in)     :: me
 real*8          , intent(inout)  :: vector(:)
 
 ! local variables ...
-integer :: i , GeneSize
+integer :: i 
 
 do i = 1 , 3 
     where( atom % flex ) vector( (i-1)*N_of_free+1 : i*N_of_free ) = - atom(:)%ftotal(i) * mts_2_Angs

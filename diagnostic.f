@@ -41,7 +41,6 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues, MO_total
  integer         , allocatable  :: MOnum(:)
- character(3)                   :: residue
  character(6)                   :: MOstr
  real*8                         :: DP(3)
  type(R_eigen)                  :: UNI

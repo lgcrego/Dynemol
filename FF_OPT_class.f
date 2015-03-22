@@ -65,7 +65,7 @@ character(*)      , intent(in) :: kernel
 type(FF_OPT)                   :: me 
 
 !local variable ...
-integer :: i , j 
+integer :: j 
 
 method = kernel
 
@@ -347,7 +347,7 @@ real*8        , intent(in)  :: a(:,:)
 real*8        , allocatable :: b(:,:)
 
 ! local variables ...
-integer                 :: j , k , diff , diff_size
+integer                 :: j , k , diff_size
 real*8  , allocatable   ::  tmp(:,:) 
 
 allocate( tmp  (size(a(:,1)),size(a(1,:))), source=D_zero )

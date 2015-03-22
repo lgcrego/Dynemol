@@ -27,9 +27,8 @@ module GA_driver_m
 implicit none 
 
 ! local variables ...
- integer                        :: i , nr , N_of_residues
+ integer                        :: nr , N_of_residues
  real*8                         :: DP(3) , Alpha_ii(3)
- character(3)                   :: residue
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
@@ -61,7 +60,7 @@ CALL GA_eigen( Extended_Cell, ExCell_basis, UNI )
 If( DIPOLE_ ) CALL Util_multipoles
 
 ! Optimization of Huckel parameters ... 
-CALL Genetic_Algorithm( Extended_Cell, ExCell_basis, OPT_basis )
+CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
 
 ! calculations with new parameters ...
 CALL GA_eigen( Extended_Cell, OPT_basis, UNI )

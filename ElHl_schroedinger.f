@@ -45,13 +45,11 @@
 
 ! local variables ...
 integer                             :: mm 
-integer                             :: it , i , n , it_init
+integer                             :: it , n , it_init
 real*8                              :: t , t_rate 
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:,:)
 character(11)                       :: argument
-
-real*8 :: E_el , E_hl
 
 ! ------------------ preprocess stuff --------------------
 
@@ -209,7 +207,7 @@ DO it = it_init , n_t
 
     end If
 
-!    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
+    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
     If( Coulomb_ ) then
 
@@ -256,7 +254,7 @@ end subroutine ElHl_dynamics
 
 ! local variables ...
 integer                             :: mm 
-integer                             :: it , i , n 
+integer                             :: it , n 
 real*8                              :: t , t_rate 
 real*8                              :: Total_DP(3)
 complex*16      , ALLOCATABLE       :: phase(:)
@@ -397,7 +395,7 @@ type(f_time)  , intent(inout) :: QDyn
 character(*)  , intent(in)    :: flag
 
 ! local variable ...
-integer      :: i , N_of_fragments
+integer      :: N_of_fragments
 character(1) :: first_in_line
 logical      :: E_flag
 

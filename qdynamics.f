@@ -42,7 +42,6 @@ implicit none
 
 ! local variables ...
  integer                        :: nr , N_of_residues
- character(3)                   :: residue
  logical                        :: DIPOLE_ , el_hl_
  type(R_eigen)                  :: UNI
  type(R_eigen)                  :: el_FMO , hl_FMO

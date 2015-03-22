@@ -33,7 +33,7 @@ character(*)    , intent(in)  :: instance
 ! local variables ...
 real*8       , allocatable :: tmp_PDOS_peaks(:) , tmp_PDOS_func(:) 
 real*8                     :: sgm , N_of_residues
-integer                    :: i , i1 , i2 , j , n_of_atoms , ioerr , npoints , k , l , n
+integer                    :: i , i1 , i2 , j , n_of_atoms , npoints , k , l 
 character(15)              :: string
 type(f_grid) , allocatable :: PDOS(:)
 

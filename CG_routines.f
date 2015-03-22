@@ -17,11 +17,10 @@ contains
 !
 !
 !
-!=============================================================
- subroutine CG_driver( system , GA , GA_Selection , CG_basis )
-!============================================================= 	
+!====================================================
+ subroutine CG_driver( GA , GA_Selection , CG_basis )
+!==================================================== 	
 implicit none
-type(structure)                 , intent(in)    :: system
 type(GA_OPT)                    , intent(in)    :: GA
 type(STO_basis)                 , intent(inout) :: GA_Selection(:,:)
 type(STO_basis) , allocatable   , intent(out)   :: CG_basis(:)

@@ -104,7 +104,8 @@ real*8              , intent(out)   :: local_minimum
 
 ! local variables ...
 INTEGER     :: j
-real*8      :: ax,bx,fa,fb,fx,xmin,xx,p(n)
+real*8      :: ax,bx,xmin,xx,p(n)
+!real*8      :: fa,fb,fx
 
  p = this%p
 

@@ -65,7 +65,7 @@ solvation_radius = minval( trj(frame)%box ) * two / four   !2.8d0  ! <== best va
 
 allocate( distance(solvent_PBC_size) )
 
-CALL Apply_PBC( trj(frame) , system_PBC , solvent_PBC , nres , distance , solvation_radius )
+CALL Apply_PBC( trj(frame) , system_PBC , solvent_PBC , nres , distance )
 
 If( first_time ) then
 
@@ -235,16 +235,15 @@ end subroutine Correction_of_Solvent_Positions
 !
 !
 !
-!=======================================================================================
-subroutine Apply_PBC( trj , trj_PBC , solvent_PBC , nres , distance , solvation_radius )
-!=======================================================================================
+!====================================================================
+subroutine Apply_PBC( trj , trj_PBC , solvent_PBC , nres , distance )
+!====================================================================
 implicit none
 type(universe)                      , intent(in)        :: trj
 type(atomic)        , target        , intent(inout)     :: trj_PBC(:) 
 type(molecular)     , target        , intent(inout)     :: solvent_PBC(:)
 type(int_pointer)   , allocatable   , intent(out)       :: nres(:) 
 real*8                              , intent(inout)     :: distance(:)
-real*8                              , intent(in)        :: solvation_radius
 
 ! local variables ...
 integer :: i , j , k , n , atom , molecule , nresid , trj_PBC_size , solvent_PBC_size
@@ -332,7 +331,7 @@ implicit none
 type(universe)      , intent(inout) ::  sys
 
 ! local variables ...
-integer ::  i , j , k , nr 
+integer ::  i , k 
 
 !----------------------------------------------
 !     generate pdb file for GROMACS
@@ -382,7 +381,7 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-integer        :: i , j , N_of_elements , N_of_atoms ,  iptr
+integer        :: i , j , N_of_atoms ,  iptr
 type(universe) :: temp
 
 allocate( temp%atom(1) , temp%solvent(1) )

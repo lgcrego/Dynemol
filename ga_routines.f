@@ -113,19 +113,18 @@ end subroutine modify_EHT_parameters
 !
 !
 !
-!===================================================== 
-subroutine Genetic_Algorithm(system, basis, OPT_basis)
-!=====================================================	
+!============================================== 
+subroutine Genetic_Algorithm( basis, OPT_basis)
+!==============================================	
 implicit none
-type(structure)                 , intent(in)  :: system
 type(STO_basis)                 , intent(in)  :: basis(:)
 type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , a(:,:) , semente(:,:) , pot(:,:) , Custo(:) 
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
-integer                         :: i , j , l , generation , info , Pop_start
+integer                         :: i , generation , info , Pop_start
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
@@ -215,7 +214,7 @@ If( CG_ ) then
         GA_Selection(:,i) = GA_basis
     end do
 
-    CALL CG_driver( Extended_Cell , GA , GA_Selection , CG_basis )
+    CALL CG_driver( GA , GA_Selection , CG_basis )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )

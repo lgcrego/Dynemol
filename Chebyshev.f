@@ -51,7 +51,6 @@ real*8          , allocatable   :: wv_FMO(:)
 real*8          , allocatable   :: S_matrix(:,:)
 complex*16      , allocatable   :: DUAL_bra(:) , DUAL_ket(:) , Psi(:)
 type(R_eigen)                   :: FMO
-integer :: i
 
 ! prepare  DONOR  state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
@@ -105,7 +104,7 @@ complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
 real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
 real*8                      :: t_max 
-integer                     :: j , k , k_ref , N
+integer                     :: k_ref , N
 logical                     :: OK
 
 ! max time inside slice ...
@@ -249,7 +248,7 @@ real*8      , intent(in)    :: norm_ref
 logical     , intent(out)   :: OK
 
 ! local variables...
-integer                     :: j , l , k , N  
+integer                     :: k , N  
 real*8                      :: norm_tmp
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:,:) , Psi_tmp_ket(:,:)
 

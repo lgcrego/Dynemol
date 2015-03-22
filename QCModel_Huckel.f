@@ -246,8 +246,7 @@ real*8      , intent(inout) :: Erg(:)
 ! local variables ...
 real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , MO_ovlp(:,:) , old_Rv(:,:)
 integer     , allocatable  :: ind(:)
-real*8                     :: val
-integer                    :: N , i , j , pos
+integer                    :: N , i 
 
 N = size( CR(:,1) )
 

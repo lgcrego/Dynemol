@@ -122,7 +122,7 @@ complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , AO_bra(:,:) , AO_
 complex*16  , allocatable   :: V_coul(:,:) 
 real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) 
 real*8      , allocatable   :: H_prime(:,:) , h(:,:) , S_matrix(:,:) 
-integer                     :: i , j , N
+integer                     :: j , N
 
 N = size(basis)
 
@@ -184,7 +184,7 @@ allocate( H_prime(N,N) )
 CALL symm( S_inv , h , H_prime )
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
-CALL Propagation( system , basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t , it )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t , it )
 
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
@@ -207,7 +207,7 @@ deallocate(h)
 If( file_type == 'trajectory' ) deallocate( h0 , S_inv )
 
 ! proceed evolution of HOLE wapacket with best tau ...
-CALL Propagation( system , basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t , it )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t , it )
 
 !-----------------------------------------------------------------------
 
@@ -235,11 +235,10 @@ end subroutine ElHl_Chebyshev
 !
 !
 !
-!======================================================================================
- subroutine Propagation( system , basis , H_prime , Psi_t_bra , Psi_t_ket , time , it )
-!======================================================================================
+!=============================================================================
+ subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , time , it )
+!=============================================================================
 implicit none
-type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: H_prime(:,:)
 complex*16      , intent(inout) :: Psi_t_bra(:)
@@ -251,7 +250,7 @@ integer         , intent(in)    :: it
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
 real*8                      :: norm_ref , norm_test , delta_t , tau , tau_max , t
-integer                     :: i , j , N , k_ref
+integer                     :: j , N , k_ref
 logical                     :: OK
 
 N = size(basis)
@@ -423,8 +422,7 @@ real*8                  , intent(in)  :: matrix(:,:)
 ! local variables...
 real*8  , allocatable   :: work(:)
 integer , allocatable   :: ipiv(:)
-real*8                  :: n_null
-integer                 :: i , j , info , sparse , N
+integer                 :: i , j , info , N
 
 N = size( matrix(:,1) )
 
