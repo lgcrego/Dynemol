@@ -123,7 +123,7 @@ integer     , optional  , intent(in)    :: frame
 integer         :: i , j , basis_size , n_part
 logical , save  :: first_time = .true. 
 logical         :: exist
-print*, "first_time = ",first_time
+
 ! check whether restart conditions are properly set ...
 If( first_time ) then
 
