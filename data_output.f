@@ -262,7 +262,7 @@ close(112)
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPEN(unit=114 , file="tmp_data/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
-If( counter == 0 ) write(4,6) 'COMPND' , System_Characteristics
+If( counter == 0 ) write(114,6) 'COMPND' , System_Characteristics
 
 write(114,4) 'REMARK' , 'manipulated by charge-transfer'
 write(114,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t

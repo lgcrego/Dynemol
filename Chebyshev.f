@@ -104,7 +104,7 @@ complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
 complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
 real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
 real*8                      :: t_max 
-integer                     :: k_ref , N
+integer                     :: j , k_ref , N
 logical                     :: OK
 
 ! max time inside slice ...

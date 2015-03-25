@@ -120,17 +120,28 @@ integer                 , intent(in)    :: it
 integer     , optional  , intent(in)    :: frame
 
 ! local variables ...
-integer         :: i , j , basis_size , file_err , n_part
+integer         :: i , j , basis_size , n_part
 logical , save  :: first_time = .true. 
+logical         :: exist
+print*, "first_time = ",first_time
+! check whether restart conditions are properly set ...
+If( first_time ) then
 
-! check whether restart is properly set ...
-if( (.NOT. restart) .AND. first_time ) then
-    open(unit=3, file="Restart_copy.dat", status="new", iostat=file_err , err=11 )
-    11 if( file_err > 0 ) stop " <Restart_copy.dat> exists; check restart parameter "
-    close(3)
-    CALL system( "rm Restart_copy.dat" )
+    If( restart ) then
+        inquire( file="Security_copy.dat", EXIST=exist )   
+        If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
+    else
+        inquire( file="Restart_copy.dat", EXIST=exist )
+        If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
+    end If
+
+    ! get ride of Restart_copy.dat for new Security_copy.dat ...
+    inquire( file="Restart_copy.dat", EXIST=exist )
+    If( exist ) CALL system( "rm Restart_copy.dat" )
+
     first_time = .false.
-end if
+
+end If
 
 if( nuclear_matter == "MDynamics" ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
 
@@ -161,9 +172,6 @@ end do
 write(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
-
-! erase restart_copy file ...
-CALL system( "rm Restart_copy.dat 2> qdynamo.err" )
 
 end subroutine Security_Copy
 !

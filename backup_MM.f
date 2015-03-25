@@ -18,17 +18,28 @@ type(MM_atomic) , intent(in)    :: atom(:)
 integer         , intent(in)    :: frame
 
 ! local variables ...
-integer         :: i , j , file_err
+integer         :: i , j 
 logical , save  :: first_time = .true. 
+logical         :: exist
 
 ! check whether restart is properly set ...
-if( (.NOT. restart) .AND. first_time ) then
-    open(unit=3, file="Restart_copy_MM.dat", status="new", iostat=file_err , err=11 )
-    11 if( file_err > 0 ) stop " <Restart_copy_MM.dat> exists; check restart parameter "
-    close(3)
-    CALL system( "rm Restart_copy_MM.dat" )
+If( first_time ) then
+
+    If( restart ) then
+        inquire( file="Security_copy_MM.dat", EXIST=exist )   
+        If( exist ) stop " <Security_copy_MM.dat> exists; check restart parameter or move Security_copy_MM.dat to Restart_copy_MM.dat"
+    else
+        inquire( file="Restart_copy_MM.dat", EXIST=exist )
+        If( exist ) stop " <Restart_copy_MM.dat> exists; check restart parameter or delete Restart_copy_MM.dat"
+    end If
+
+    ! get ride of Restart_copy_MM.dat for new Security_copy_MM.dat ...
+    inquire( file="Restart_copy_MM.dat", EXIST=exist )
+    If( exist ) CALL system( "rm Restart_copy_MM.dat" )
+
     first_time = .false.
-end if
+
+end If
 
 open(unit=33, file="Security_copy_MM.dat", status="unknown", form="unformatted", action="write")
 
@@ -51,9 +62,6 @@ do i = 1 , size(atom)
 end do
 
 close( 33 )
-
-! erase restart_copy file ...
-CALL system( "rm Restart_copy_MM.dat 2> qdynamo.err" )
 
 end subroutine Security_Copy_MM
 !
