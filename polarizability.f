@@ -298,7 +298,7 @@ select case ( N_level )
         a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3 ; a7 = a3*a4 ; a9 = a4*a5
 
         exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one &
-                    -c6*r7*a7*exp(-two*r*a) * (four + a*r) - c7*r9*a9*(five + r*a) 
+                    -( c6*r7*a7*(four + a*r) + c7*r9*a9*(five + r*a) ) * exp(-two*r*a)
 
     case( 6 ) 
 
@@ -307,7 +307,7 @@ select case ( N_level )
         a3 = a2*a ; a4 = a2*a2 ; a5 = a4*a ; a6 = a3*a3 ; a7 = a3*a4 ; a9 = a4*a5 ; a11 = a9*a2
 
         exclusion = -c1*a6*exp(-two*r*a) * (r6 + three*r5/a + c2*r4/a2 + c3*r3/a3 + c4*r2/a4 + c4*r/a5 + c5/a6) + D_one &
-                    -c6*r7*a7*exp(-two*r*a) * (four + a*r) - c7*r9*a9*(five + r*a) - c8*r11*a11*(six + r*a) 
+                    -( c6*r7*a7*(four + a*r) + c7*r9*a9*(five + r*a) + c8*r11*a11*(six + r*a) ) * exp(-two*r*a)
 
 end select 
 
