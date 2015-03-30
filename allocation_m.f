@@ -6,6 +6,7 @@
     interface Allocate_BracKets
         module procedure Allocate_BracKets
         module procedure Allocate_BracKets_ElHl
+        module procedure Allocate_BracKets_Chebyshev
     end interface Allocate_BracKets
 
  contains
@@ -110,6 +111,20 @@
     allocate( phase    (Basis_Size,n_part)                                )
 
  end subroutine Allocate_BracKets_ElHl
+!
+!
+!
+!
+ subroutine Allocate_BracKets_Chebyshev(Basis_Size, AO_bra, AO_ket, DUAL_bra, DUAL_ket)
+    implicit none
+    integer                  , intent(in)  :: Basis_Size
+    complex*16 , ALLOCATABLE , intent(out) :: AO_bra   (:,:) , AO_ket   (:,:) 
+    complex*16 , ALLOCATABLE , intent(out) :: DUAL_ket (:,:) , DUAL_bra (:,:) 
+
+    allocate( AO_bra   (Basis_Size,n_part) , AO_ket   (Basis_Size,n_part) )
+    allocate( DUAL_bra (Basis_Size,n_part) , DUAL_ket (Basis_Size,n_part) )
+
+ end subroutine Allocate_BracKets_Chebyshev
 !
 !
 !

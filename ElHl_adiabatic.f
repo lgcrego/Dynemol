@@ -267,7 +267,7 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )    
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP ( instance = "allocate" )
+If( Induced_ .OR. QMMM ) CALL Build_Induced_DP ( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state

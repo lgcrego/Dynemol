@@ -11,7 +11,7 @@ use Sampling_m              , only : Avrg_Confgs
 use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
-use Eigen_driver_m          , only : Eigen_driver
+use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
@@ -40,11 +40,8 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" )
-        CALL Eigen_driver
-
-    case ( "slice_Cheb" )
-        CALL Chebyshev_driver
+    case ( "slice_AO" , "slice_ElHl" , "slice_MO0" , "slice_MOt" , "slice_Cheb" )
+        CALL QMDynamicSlice_driver
 
     case ( "avrg_confgs" )
         CALL Avrg_Confgs

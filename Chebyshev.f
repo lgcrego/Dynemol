@@ -7,7 +7,7 @@ module Chebyshev_m
     use ifport
     use parameters_m        , only : t_i , t_f , n_t ,              &
                                      frame_step , DP_Field_ ,       &
-                                     file_type , n_part                   
+                                     driver , n_part                   
     use Babel_m             , only : MD_dt
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag                  
@@ -35,21 +35,23 @@ contains
 !
 !
 !=================================================================================
- subroutine preprocess_Chebyshev( system , basis , Psi_bra , Psi_ket , QDyn , it )
+ subroutine preprocess_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
 !=================================================================================
 implicit none
-type(structure)                 , intent(inout) :: system
-type(STO_basis)                 , intent(inout) :: basis(:)
-complex*16      , allocatable   , intent(out)   :: Psi_bra(:)
-complex*16      , allocatable   , intent(out)   :: Psi_ket(:)
-type(g_time)                    , intent(inout) :: QDyn
-integer                         , intent(in)    :: it
+type(structure) , intent(inout) :: system
+type(STO_basis) , intent(inout) :: basis(:)
+complex*16      , intent(out)   :: Psi_bra(:)
+complex*16      , intent(out)   :: Psi_ket(:)
+complex*16      , intent(out)   :: Dual_bra(:)
+complex*16      , intent(out)   :: Dual_ket(:)
+type(g_time)    , intent(inout) :: QDyn
+integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
 real*8          , allocatable   :: wv_FMO(:) 
 real*8          , allocatable   :: S_matrix(:,:)
-complex*16      , allocatable   :: DUAL_bra(:) , DUAL_ket(:) , Psi(:)
+complex*16      , allocatable   :: Psi(:)
 type(R_eigen)                   :: FMO
 
 ! prepare  DONOR  state ...
@@ -64,14 +66,10 @@ Psi(li:li+N-1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra (size(basis)) )
-allocate( Dual_ket (size(basis)) )
 CALL Overlap_Matrix( system , basis , S_matrix )
 DUAL_bra(:) = dconjg( Psi )
 call op_x_ket( DUAL_ket, S_matrix , Psi )
 
-allocate( Psi_bra (size(basis)) )
-allocate( Psi_ket (size(basis)) )
 call bra_x_op( Psi_bra, Psi , S_matrix )
 Psi_ket = Psi
 
@@ -81,36 +79,34 @@ QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t
 CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
-deallocate( DUAL_ket , S_matrix , DUAL_bra )
+deallocate( S_matrix )
 
 end subroutine preprocess_Chebyshev
 !
 !
 !
 !==============================================================================
- subroutine Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , QDyn , t , it )
+ subroutine Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
 !==============================================================================
 implicit none
 type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 complex*16       , intent(inout) :: Psi_t_bra(:)
 complex*16       , intent(inout) :: Psi_t_ket(:)
+complex*16       , intent(inout) :: Dual_bra(:)
+complex*16       , intent(inout) :: Dual_ket(:)
 type(g_time)     , intent(inout) :: QDyn
 real*8           , intent(out)   :: t
+real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
-complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) , DUAL_bra(:) , DUAL_ket(:)
-real*8                      :: delta_t , tau , tau_max , norm_ref , norm_test
+complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) 
+real*8                      :: tau , tau_max , norm_ref , norm_test
 real*8                      :: t_max 
 integer                     :: j , k_ref , N
 logical                     :: OK
-
-! max time inside slice ...
-t_max = MD_dt*frame_step*(it-1)  
-
-call start_clock
 
 If ( necessary ) then
     
@@ -118,7 +114,7 @@ If ( necessary ) then
     CALL Build_Hprime( system , basis )
 
     ! for a rigid structure once is enough ...
-    If( file_type == 'structure' ) necessary = .false.
+    If( driver ==  "q_dynamics" ) necessary = .false.
 
 end If
 
@@ -130,16 +126,16 @@ allocate( C_k         (order     ) , source=C_zero )
 allocate( Psi_tmp_bra (N         ) )
 allocate( Psi_tmp_ket (N         ) )
 
-delta_t = merge( (t_f) / dfloat(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
-tau_max = delta_t / h_bar
+! max time inside slice ...
+t_max = delta_t*frame_step*(it-1)  
 
 ! constants of evolution ...
+tau_max = delta_t / h_bar
 
 ! trying to adapt time step for efficient propagation ...
 tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
 ! but tau should be never bigger than tau_max ...
 tau = merge( tau_max , tau , tau > tau_max )
-
 
 #ifdef USE_GPU
 call chebyshev_gpucaller( N, tau, save_tau, t_max, t, Psi_t_bra, Psi_t_ket, H_prime )
@@ -210,8 +206,6 @@ end do
 #endif
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra (N) )
-allocate( Dual_ket (N) )
 DUAL_bra = dconjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
@@ -221,14 +215,12 @@ QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t
 CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
-deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , DUAL_bra , DUAL_ket )
-If( file_type == 'trajectory' ) deallocate( H_prime )
+deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
+If( driver /= "q_dynamics" ) deallocate( H_prime )
 
 Print 186, t
 
 include 'formats.h'
-
-call stop_clock('Chebyshev')
 
 end subroutine Chebyshev
 !

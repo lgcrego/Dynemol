@@ -14,6 +14,7 @@
     
     ! module variables ...       
     integer              , save :: counter = 0
+    logical              , save :: el_hl_
     real*8 , allocatable , save :: Induced_DP(:,:) , Induced_DP_Dressed(:,:) , net_charge(:)
 
     ! module parameters ...
@@ -43,7 +44,8 @@ character(*)      , optional    , intent(in)    :: instance
 
 ! local variables ...
 integer                 :: ati , atj , N_of_atoms 
-real*8                  :: distance , decay , charge_El , charge_Hl 
+real*8                  :: distance , decay 
+real*8                  :: charge_El = D_zero , charge_Hl = D_zero
 real*8                  :: vector(3)
 real*8  , allocatable   :: local_E_field(:,:)  
 
@@ -59,6 +61,7 @@ If( instance == "allocate" ) then
     allocate( Induced_DP         (N_of_atoms,3) , source = D_zero )
     allocate( Induced_DP_Dressed (N_of_atoms,3) , source = D_zero )
     allocate( net_charge         (N_of_atoms)   , source = D_zero )
+    el_hl_ = any( basis%Hl )
     return
 end If
 
@@ -66,6 +69,7 @@ end If
 do ati = 1 , N_of_atoms
 
     charge_El = abs( sum( Dual_bra(:,1)*Dual_ket(:,1) , basis(:)%atom == ati ) )
+    If( el_hl_ ) &
     charge_Hl = abs( sum( Dual_bra(:,2)*Dual_ket(:,2) , basis(:)%atom == ati ) )
 
     net_charge(ati) = charge_HL - charge_EL
