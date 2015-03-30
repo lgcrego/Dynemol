@@ -4,11 +4,12 @@
 
 FC=ifort -xHost -ip -fpp
 FREE = -free
-#FC=gfortran
-#FREE = -ffree-form 
+
+# use this flag for debugging and coding up
+SAFE = -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align #array64byte
-FFLAGS2 = -O2 -align -openmp -parallel $(FREE) -static #array64byte 
+FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 
 
 CXX = icpc -std=c++11
 CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict 
@@ -127,8 +128,8 @@ SOURCE2 = constants_m.o \
 		  Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
-		  eigen_driver.o \
 		  Chebyshev_driver.o \
+		  eigen_driver.o \
 		  ga_driver.o \
 		  avrg_confgs.o \
  		  main.o
