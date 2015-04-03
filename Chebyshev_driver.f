@@ -4,17 +4,14 @@ module Chebyshev_driver_m
     use constants_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
-                                             DP_Field_ ,                    &
-                                             Induced_ , QMMM ,              &
+                                             DP_Field_ , Induced_ , QMMM ,  &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
-                                             hole_state , initial_state ,   &
-                                             restart 
+                                             hole_state , restart ,         &
+                                             step_security
     use Babel_m                     , only : Coords_from_Universe ,         &
-                                             trj ,                          &
-                                             MD_dt
-    use Allocation_m                , only : Allocate_UnitCell ,            &
-                                             DeAllocate_UnitCell ,          &
+                                             trj , MD_dt
+    use Allocation_m                , only : DeAllocate_UnitCell ,          &
                                              DeAllocate_Structures ,        &
                                              Allocate_Brackets 
     use Structure_Builder           , only : Unit_Cell ,                    &
@@ -23,13 +20,12 @@ module Chebyshev_driver_m
                                              Basis_Builder ,                &
                                              ExCell_basis
     use FMO_m                       , only : eh_tag
-    use DP_main_m                   , only : Dipole_Matrix ,                &
-                                             Dipole_Moment
+    use DP_main_m                   , only : Dipole_Matrix                 
+    use Solvated_M                  , only : Prepare_Solvated_System 
     use TD_Dipole_m                 , only : wavepacket_DP                                        
     use DP_potential_m              , only : Molecular_DPs                                              
-    use Polarizability_m            , only : Build_Induced_DP
-    use Solvated_M                  , only : Prepare_Solvated_System 
     use Schroedinger_m              , only : DeAllocate_QDyn
+    use Polarizability_m            , only : Build_Induced_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
     use Data_Output                 , only : Populations ,                  &
                                              Net_Charge
@@ -37,7 +33,7 @@ module Chebyshev_driver_m
                                              Restart_state ,                &
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
-                                             preprocess_MM , MoveToBoxCM
+                                             preprocess_MM , MoveToBoxCM 
     use Chebyshev_m                 , only : Chebyshev ,                    &
                                              preprocess_Chebyshev
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
@@ -70,6 +66,7 @@ type(universe)  :: Solvated_System
 
 it = 1
 t  = t_i
+nn = n_part
 
 !--------------------------------------------------------------------------------
 ! Quantum Dynamics & All that Jazz ...
@@ -84,7 +81,7 @@ else
 end If
 
 If( restart ) then
-!    CALL Restart_stuff( QDyn , t , it , frame_restart )       ############
+    CALL Restart_stuff( QDyn , t , it , frame_restart )  
 else
     CALL Preprocess( QDyn , it )
 end If
@@ -144,15 +141,15 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure ( frame )
 
-    CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )           CALL DP_stuff ( "DP_field"   )
+    If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-    If( Induced_ .OR. QMMM )  CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ .OR. QMMM ) CALL DP_stuff ( "Induced_DP" )
 
-!    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+    if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
 
-    print*, frame , t
+    print*, frame 
 
 end do
 
@@ -225,11 +222,7 @@ If( DP_field_ ) then
 
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-
 CALL Allocate_Brackets( size(ExCell_basis) , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
-
-nn = n_part
 
 If( nn == 1) then
     CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )
@@ -239,9 +232,10 @@ end If
 
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+
 !..........................................................................
 
 include 'formats.h'
@@ -310,6 +304,34 @@ end select
 
 end subroutine DP_stuff
 !
+!
+!
+!=========================================================
+ subroutine Restart_stuff( QDyn , t , it , frame_restart )
+!=========================================================
+implicit none
+type(f_time)    , intent(out) :: QDyn
+real*8          , intent(out) :: t
+integer         , intent(out) :: it
+integer         , intent(out) :: frame_restart
+
+CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
+
+CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
+
+CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
+
+If( QMMM ) then 
+
+    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+
+    CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+
+    CALL DP_stuff ( "Induced_DP" )
+
+end If
+
+end subroutine Restart_stuff
 !
 !
 !

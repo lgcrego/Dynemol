@@ -5,15 +5,12 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use parameters_m        , only : t_i , t_f , n_t , frame_step , &
-                                     DP_Field_ , Coulomb_ , n_part, &
-                                     file_type , NetCharge
-    use Babel_m             , only : MD_dt
+    use parameters_m        , only : t_i , frame_step ,         &
+                                     Coulomb_ , n_part,         &
+                                     driver , restart
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis ,                 &
-                                     eh_tag    
-    use Data_Output         , only : Populations ,                  &
-                                     Net_Charge
+    use FMO_m               , only : FMO_analysis , eh_tag    
+    use Data_Output         , only : Populations 
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev
@@ -26,9 +23,10 @@ module ElHl_Chebyshev_m
     real*8      , parameter :: norm_error   = 1.0d-12
 
 ! module variables ...
-    real*8      ,   save          :: save_tau
-    logical     ,   save          :: done = .false.
-    logical     ,   save          :: necessary = .true.
+    real*8      ,   save          :: save_tau(2)
+    logical     ,   save          :: done        = .false.
+    logical     ,   save          :: necessary_  = .true.
+    logical     ,   save          :: first_call_ = .true.
     real*8      ,   allocatable   :: h0(:,:) , S_inv(:,:)
     real*8      ,   allocatable   :: V_Coul_El(:) , V_Coul_Hl(:)
     complex*16  ,   allocatable   :: V_Coul(:,:)
@@ -37,22 +35,24 @@ contains
 !
 !
 !
-!======================================================================================
- subroutine preprocess_ElHl_Chebyshev( system , basis , Psi_bra , Psi_ket , QDyn , it )
-!======================================================================================
+!============================================================================================================
+ subroutine preprocess_ElHl_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_ket , Dual_bra , QDyn , it )
+!============================================================================================================
 implicit none
-type(structure)                 , intent(inout) :: system
-type(STO_basis)                 , intent(inout) :: basis(:)
-complex*16      , allocatable   , intent(out)   :: Psi_bra(:,:)
-complex*16      , allocatable   , intent(out)   :: Psi_ket(:,:)
-type(g_time)                    , intent(inout) :: QDyn
-integer                         , intent(in)    :: it
+type(structure) , intent(inout) :: system
+type(STO_basis) , intent(inout) :: basis(:)
+complex*16      , intent(out)   :: Psi_bra(:,:)
+complex*16      , intent(out)   :: Psi_ket(:,:)
+complex*16      , intent(out)   :: DUAL_bra(:,:) 
+complex*16      , intent(out)   :: DUAL_ket(:,:) 
+type(g_time)    , intent(inout) :: QDyn
+integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
 real*8          , allocatable   :: wv_FMO(:) 
 real*8          , allocatable   :: S_matrix(:,:)
-complex*16      , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , ElHl_Psi(:,:)
+complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 integer :: i
 
@@ -80,53 +80,61 @@ deallocate( wv_FMO )
 !========================================================================
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra ( size(basis) , n_part ), source=C_zero )
-allocate( Dual_ket ( size(basis) , n_part ), source=C_zero )
 CALL Overlap_Matrix( system , basis , S_matrix )
 DUAL_bra = conjg( ElHl_Psi )
 DUAL_ket = matmul( S_matrix , ElHl_Psi )
 
-allocate( Psi_bra ( size(basis) , n_part ), source=C_zero )
-allocate( Psi_ket ( size(basis) , n_part ), source=C_zero )
 forall( i=1:n_part ) Psi_bra(:,i) = matmul( ElHl_Psi(:,i) , S_matrix )
 Psi_ket = ElHl_Psi
 
-If( NetCharge ) allocate( Net_Charge(system%atoms) )
+If( .not. restart ) then
+    ! save populations(time=t_i) ...
+    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
-! save populations(time=t_i) ...
-QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-
-CALL dump_Qdyn( Qdyn , it )
+    CALL dump_Qdyn( Qdyn , it )
+end If
 
 ! clean and exit ...
-deallocate( DUAL_ket , S_matrix , DUAL_bra )
+deallocate( S_matrix )
 
 end subroutine preprocess_ElHl_Chebyshev
 !
 !
 !
-!===================================================================================
- subroutine ElHl_Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , QDyn , t , it )
-!===================================================================================
+!===================================================================================================================
+ subroutine ElHl_Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
+!===================================================================================================================
 implicit none
 type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 complex*16       , intent(inout) :: Psi_t_bra(:,:)
 complex*16       , intent(inout) :: Psi_t_ket(:,:)
+complex*16       , intent(inout) :: Dual_bra(:,:)
+complex*16       , intent(inout) :: Dual_ket(:,:)
 type(g_time)     , intent(inout) :: QDyn
-real*8           , intent(out)   :: t
+real*8           , intent(inout) :: t
+real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-complex*16  , allocatable   :: DUAL_bra(:,:) , DUAL_ket(:,:) , AO_bra(:,:) , AO_ket(:,:) 
-complex*16  , allocatable   :: V_coul(:,:) 
-real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) 
-real*8      , allocatable   :: H_prime(:,:) , h(:,:) , S_matrix(:,:) 
 integer                     :: j , N
+real*8                      :: t_max , tau_max , tau(2) , t_init
+real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) , H_prime(:,:) , h(:,:) , S_matrix(:,:) 
+complex*16  , allocatable   :: AO_bra(:,:) , AO_ket(:,:) , V_coul(:,:) 
 
-N = size(basis)
+t_init = t
 
-If ( necessary ) then
+! max time inside slice ...
+t_max = delta_t*frame_step*(it-1)
+! constants of evolution ...
+tau_max = delta_t / h_bar
+
+! trying to adapt time step for efficient propagation ...
+tau(:) = merge( delta_t / h_bar , save_tau(:) * 1.15d0 , first_call_ )
+! but tau should be never bigger than tau_max ...
+tau(:) = merge( tau_max , tau(:) , tau(:) > tau_max )
+
+If ( necessary_ ) then
 
     ! compute S and S_inverse ...
     CALL Overlap_Matrix     ( system , basis , S_matrix )
@@ -138,10 +146,11 @@ If ( necessary ) then
     deallocate (S_matrix)
 
     ! for a rigid structure once is enough ...
-    If( file_type == 'structure' ) necessary = .false.
+    If( driver == 'q_dynamics' ) necessary_ = .false.
 
 end If
 
+N = size(basis)
 
 If( Coulomb_ ) then
 
@@ -166,8 +175,9 @@ If( Coulomb_ ) then
 
 end If    
  
-!-----------------------------------------------------------------------
+!=======================================================================
 !           Electron Hamiltonian : upper triangle of V_coul ...
+!=======================================================================
 
 ALLOCATE( h(N,N), source = D_zero )
 
@@ -184,10 +194,11 @@ allocate( H_prime(N,N) )
 CALL symm( S_inv , h , H_prime )
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t , it )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max , tau(1) , 1 )
 
-!-----------------------------------------------------------------------
+!=======================================================================
 !            Hole Hamiltonian : lower triangle of V_coul ...
+!=======================================================================
 
 h(:,:)       = D_zero
 H_prime(:,:) = D_zero
@@ -204,18 +215,16 @@ If( Coulomb_ ) deallocate( V_coul_El , V_coul_Hl )
 CALL symm( S_inv , h , H_prime )
 
 deallocate(h)
-If( file_type == 'trajectory' ) deallocate( h0 , S_inv )
+If( driver /= 'q_dynamics' ) deallocate( h0 , S_inv )
 
 ! proceed evolution of HOLE wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t , it )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , 2 )
 
-!-----------------------------------------------------------------------
+!=======================================================================
 
-t = t + MD_dt*frame_step
+t = t_init + (delta_t * frame_step)
 
 ! prepare DUAL basis for local properties ...
-allocate( Dual_bra ( N , n_part ), source=C_zero )
-allocate( Dual_ket ( N , n_part ), source=C_zero )
 DUAL_bra = conjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
@@ -225,33 +234,36 @@ QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t
 CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
-deallocate( H_prime , DUAL_bra , DUAL_ket )
+deallocate( H_prime )
 
 Print 186, t
 
 include 'formats.h'
 
+first_call_ = .false.
+
 end subroutine ElHl_Chebyshev
 !
 !
 !
-!=============================================================================
- subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , time , it )
-!=============================================================================
+!===================================================================================
+ subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , nn )
+!===================================================================================
 implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: H_prime(:,:)
 complex*16      , intent(inout) :: Psi_t_bra(:)
 complex*16      , intent(inout) :: Psi_t_ket(:)
-real*8          , intent(in)    :: time
-integer         , intent(in)    :: it
+real*8          , intent(in)    :: t_init
+real*8          , intent(in)    :: t_max 
+real*8          , intent(inout) :: tau
+integer         , intent(in)    :: nn
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:)
-complex*16  , allocatable   :: Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
-real*8                      :: norm_ref , norm_test , delta_t , tau , tau_max , t
-integer                     :: j , N , k_ref
-logical                     :: OK
+complex*16  , allocatable       :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
+real*8                          :: norm_ref , norm_test , t
+integer                         :: j , N , k_ref
+logical                         :: OK
 
 N = size(basis)
 
@@ -264,38 +276,26 @@ allocate( C_k         (     order ) , source=C_zero )
 
 norm_ref = dot_product( Psi_t_bra , Psi_t_ket )
 
-delta_t = merge( (t_f) / float(n_t) , MD_dt * frame_step , MD_dt == epsilon(1.0) )
-tau_max = delta_t / h_bar
-
-! constants of evolution ...
-! trying to adapt time step for efficient propagation ...
-tau = merge( delta_t / h_bar , save_tau * 1.15d0 , it == 2 )
-! but tau should be never bigger than tau_max ...
-tau = merge( tau_max , tau , tau > tau_max )
-
 ! first convergence: best tau-parameter for k_ref ...
-t = time
 do
     CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
-    if( OK ) then
-        t = t + tau*h_bar
-        save_tau = tau
-        exit
-    else
-        tau = tau * 0.9d0
-    end if
-end do
 
-if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
-    tau = ( MD_dt*frame_step*(it-1) - t ) / h_bar
+    if( OK ) exit
+    tau = tau * 0.9d0
+    
+end do
+save_tau(nn) = tau
+
+t = t_init + tau*h_bar
+
+if( t_max-t < tau*h_bar ) then
+    tau = ( t_max-t ) / h_bar
     C_k = coefficient(tau,order)
 end if
 
 ! proceed evolution with best tau ...
-do
+do while( t < t_max )
 
-    if( t >= MD_dt*frame_step*(it-1) ) exit
-        
     C_Psi_bra(:,1) = Psi_t_bra                                                  ;   C_Psi_ket(:,1) = Psi_t_ket
 
     C_Psi_bra(:,2) = matmul( C_Psi_bra(:,1) , H_prime )                         ;   C_Psi_ket(:,2) = matmul( H_prime , C_Psi_ket(:,1) )
@@ -323,10 +323,8 @@ do
 
     t = t + (tau * h_bar)
 
-    if( t >= MD_dt*frame_step*(it-1) ) exit
-
-    if( MD_dt*frame_step*(it-1)-t < tau*h_bar ) then
-        tau = ( MD_dt*frame_step*(it-1)-t ) / h_bar
+    if( t_max-t < tau*h_bar ) then
+        tau = ( t_max-t ) / h_bar
         C_k = coefficient(tau,order)
     end if
 
@@ -525,8 +523,6 @@ do j = 1 , size(basis)
 end do
 
 end subroutine Huckel
-!
-!
 !
 !
 !
