@@ -15,7 +15,7 @@ module Chebyshev_m
     use Data_Output         , only : Populations
     use Matrix_Math
 
-    public  :: Chebyshev , preprocess_Chebyshev
+    public  :: Chebyshev , preprocess_Chebyshev , Convergence , coefficient
 
     private
 
@@ -128,15 +128,16 @@ If ( necessary_ ) then
 end If
 
 N = size(basis)
+
+#ifdef USE_GPU
+call chebyshev_gpucaller( N, tau, save_tau, t_max, t, Psi_t_bra, Psi_t_ket, H_prime )
+#else
+
 allocate( C_Psi_bra   (N , order ) , source=C_zero )
 allocate( C_Psi_ket   (N , order ) , source=C_zero )
 allocate( C_k         (order     ) , source=C_zero )
 allocate( Psi_tmp_bra (N         ) )
 allocate( Psi_tmp_ket (N         ) )
-
-#ifdef USE_GPU
-call chebyshev_gpucaller( N, tau, save_tau, t_max, t, Psi_t_bra, Psi_t_ket, H_prime )
-#else
 
 norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
 k_ref = 0
@@ -149,8 +150,8 @@ do
     tau = tau * 0.9d0
 end do
 
-t = t + tau * h_bar 
 save_tau = tau
+t = t + tau * h_bar 
 
 if( t_max-t < tau*h_bar ) then
     tau = ( t_max-t ) / h_bar
@@ -200,6 +201,8 @@ do while( t < t_max )
     end if
 
 end do
+
+deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
 #endif
 
 ! prepare DUAL basis for local properties ...
@@ -212,7 +215,6 @@ QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t
 CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
-deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
 If( driver /= "q_dynamics" ) deallocate( H_prime )
 
 Print 186, t
@@ -343,12 +345,12 @@ end If
 
 ! compute S_inverse...
 call GPU_Pin( S, n*n*8)
-call Matrix_syInvert( S, 'U' )
+call syInvert( S )
 
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime(n,n) )
 
-call syMultiply( 'L', 'U', S, Hamiltonian, H_prime )
+call syMultiply( S, Hamiltonian, H_prime )
 
 call GPU_Unpin(S)
 call GPU_Unpin(Hamiltonian)
@@ -424,7 +426,7 @@ function isConverged( a, b, tol )
     
     isConverged = .false.
     do i = 1, size(a)
-        if( abs(a(i) - b(i) ) >= tol ) return  ! allow earlier return if not convverged
+        if( abs(a(i)-b(i)) > tol ) return  ! allow earlier return if not converged
     end do
     isConverged = .true.
 end function isConverged

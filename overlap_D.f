@@ -131,6 +131,8 @@ motion_detector_ready = present(recycle) .AND. ready
 
 S_matrix = D_zero
 
+!$omp parallel do schedule(dynamic,100) default(shared) &
+!$omp private(ib,ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,aux,msup,solnorm,j,i,expb,expa,solvec,anor,m,sol_partial,sux,rl,rl2)
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
 
@@ -218,6 +220,7 @@ do ia = ib+1 , a_system% atoms
 
 10 end do
 end do
+!$omp end parallel do
 
 ! diagonal elements
 forall(i=1:size(b_basis)) S_matrix(i,i) = D_one

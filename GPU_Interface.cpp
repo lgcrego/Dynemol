@@ -57,7 +57,7 @@
 #ifdef GPU_DEBUG
   #define DEBUG( A ) A
 #else
-  #define DEBUG( A ) 
+  #define DEBUG( A ) /*Nothing*/
 #endif
 
 // Complex type
@@ -82,6 +82,7 @@
 
   #define xPU_dgemm     xpu_dgemm_
   #define xPU_dsymm     xpu_dsymm_
+  #define xPU_dzgemm    xpu_dzgemm_
 
   #define xPU_dsygvd    xpu_dsygvd_
   #define xPU_dsygvd2s  xpu_dsygvd2s_
@@ -101,8 +102,8 @@ extern "C"
                 const double * const alpha, double *A, const int *ldA, double *B, const int *ldB, 
                 const double * const beta, double *C, const int *ldC);
     void dzgemm_(const char *transA, const char *transB, const int * const M, const int * const N, const int * const K, 
-                 const DoubleComplex *alpha, double *A, const int *ldA, DoubleComplex *B, const int *ldB, 
-                 const DoubleComplex *beta, DoubleComplex *C, const int *ldC);
+                 const DoubleComplex * const alpha, double *A, const int *ldA, const DoubleComplex *B, const int *ldB, 
+                 const DoubleComplex * const beta, DoubleComplex *C, const int *ldC);
     void dsymm_( const char *side, const char *UpLo, const int * const M, const int * const N, 
                  const double * const alpha, double *hA, const int * const LDA,
                  double *hB, const int * const LDB, const double * const beta,
@@ -144,6 +145,9 @@ extern "C"
                     const double * const alpha, double *hA, const int * const LDA,
                     double *hB, const int * const LDB, const double * const beta,
                     double *hC, const int * const LDC );
+    void xPU_dzgemm( const char *transA, const char *transB, const int * const M, const int * const N, const int * const K, 
+                     const DoubleComplex * const alpha, double *A, const int * const LDA,
+                     const DoubleComplex * const B, const int * const LDB, const DoubleComplex * const beta, DoubleComplex *C, const int * const LDC );
 
     void xPU_dsygvd( const int *itype, const char *jobZ, const char *UpLo, const int * const N,
                      double *A, const int *ldA, double *B, const int *ldB, double *W, int *info );
@@ -365,48 +369,6 @@ static void cpu_dtranspose_naive( const int n, double * const A, const int ldA )
 
 
 /****************************************
- *     "Compute" functions - BLAS 1
- ****************************************/
-
-// //===================================================================
-// // Dot product - in CPU or GPU
-// //
-// // Alberto Torres
-// void xPU_zdotu( const int *n, const DoubleComplex *x, int *incx, const DoubleComplex *y, const int *incy )
-// {
-//     time_init();
-// #ifdef USE_GPU
-//     if(IuseGPU)
-//     {
-//         const int nstreams = 4;
-//         magma_queue_t orig_stream, stream[nstreams];
-// 
-//         magmablasGetKernelStream( &orig_stream );
-// 
-//         #pragma unroll
-//         for( int i=0; i<nstreams; i++)
-//             magma_queue_create( &stream[i] );
-//         
-//         #pragma unroll
-//         for( int i=0; i<nstreams; i++)
-//         {
-//             magmablasSetKernelStream( stream[i] );
-//             magma_zsetvector_async( n, hx_src, incx, dy_dst, incy, stream[i] );
-//             magma_zdotu( magma_int_t n,magmaDoubleComplex *dx,int incx,magmaDoubleComplex *dy,int incy );
-//         }
-//         
-//         magmablasSetKernelStream( orig_stream );
-//     }
-//     else
-// #endif
-//         //zdotu_( n, x, incx, y, incy );
-// 
-//     time_end();
-// }
-
-
-
-/****************************************
  *     "Compute" functions - BLAS 2
  ****************************************/
 
@@ -513,100 +475,7 @@ void xPU_dzgemv( const char * const transA, const int * const M, const int * con
     time_end();
 }
 
-/*
-//===================================================================
-// Matrix-vector multiplication - in CPU or GPU
-// mixed precision: A*x = y
-// double  : A
-// complex : x, y
-//
-// Alberto Torres
-void xPU_dzgemv2( const char * const transA, const int * const M, const int * const N, 
-                 const DoubleComplex * const alpha, double * const hA, const int * const LDA,
-                 DoubleComplex * const hX, const int * const incX, const DoubleComplex * const beta, 
-                 DoubleComplex * const hY, const int * const incY )
-{
-    time_init();
-    #ifdef USE_GPU
-    if(IuseGPU)
-    {
-        const int m = *M;
-        const int n = *N;
-        const int ldA = *LDA;
-        const int incx = *incX;
-        const int incy = *incY;
-        const cublasOperation_t opA = lapack_to_cublas_trans( *transA );
-        int rows, cols, ldX, ldY;
-        
-        if( opA == CUBLAS_OP_N )
-        {
-            rows = m;
-            cols = n;
-            ldX = 1+(n-1)*abs(incx);
-            ldY = 1+(m-1)*abs(incy);
-        }
-        else
-        {
-            rows = n;
-            cols = m;
-            ldX = 1+(m-1)*abs(incx);
-            ldY = 1+(n-1)*abs(incy);
-        }
-        
-        const int lddA = ( (ldA + 31)/32 )*32;
-        const int lddx = ( (ldX + 31)/32 )*32;
-        const int lddy = ( (ldY + 31)/32 )*32;
-        
-        DoubleComplex *dA, *dx, *dy;
-        
-        // Allocate matrices in the GPU
-        cudaMalloc( (void **) &dA, lddA*n*sizeof(DoubleComplex) );
-        cudaMalloc( (void **) &dx, lddx*sizeof(DoubleComplex) );
-        cudaMalloc( (void **) &dy, lddy*sizeof(DoubleComplex) );
 
-        cudaMemset( (void *) dA, 0, lddA*n*sizeof(double) );
-        
-        //         printf( "dX=(%p,%p)\n", &dX[0].x, &dX[0].y ); fflush(stdout);
-        //         printf( "dX=(%p,%p)\n", dX_Re, dX_Im ); fflush(stdout);
-        
-        // Copy from CPU to GPU
-        cublasSetMatrix( m, n, sizeof(DoubleComplex), (void *) hA, ldA, (void *) dA, lddA );
-        cublasSetVector( cols, sizeof(DoubleComplex), (void *) hX, incx, (void *) dx, incx );
-
-        // Compute
-        cublasZgemv( myHandle, opA, m, n, alpha, dA, lddA, dx, incx, beta, dy, incy );
-
-        // Copy from GPU to CPU
-        cublasGetVector( cols, sizeof(DoubleComplex), (void *) dy, incy, (void *) hY, incy );
-
-        // Deallocate
-        cudaFree(dA); cudaFree(dx); cudaFree(dy);
-    }
-    else
-#endif
-        if( *incX == 1 && *incY == 1 )  // use mixed precision dzgemm, only works if incX = incY = 1
-        {
-            const char noTrans = 'N';
-            const int n = 1;
-            int m, k;
-            
-            if( *transA == 'N' || *transA == 'n' ) { m = *M; k = *N; }
-            else                                   { m = *N; k = *M; }
-            
-            dzgemm_( transA, &noTrans, &m, &n, &k, alpha, hA, LDA, hX, &m, beta, hY, &m );
-        }
-        else
-        {
-            const int incx2 = *incX*2;
-            const int incy2 = *incY*2;
-            
-            dgemv_( transA, M, N, (double *)alpha, hA, LDA, &hX->x, &incx2, (double *)beta, &hY->x, &incy2 );  // real part
-            dgemv_( transA, M, N, (double *)alpha, hA, LDA, &hX->y, &incx2, (double *)beta, &hY->y, &incy2 );  // imag part
-        }
-        
-        time_end();
-}
- */
  
 /****************************************
  *     "Compute" functions - BLAS 3
@@ -622,6 +491,7 @@ void xPU_dgemm( const char *transA, const char *transB, const int * const M, con
                 double *hC, const int * const LDC )
 {
     time_init();
+
 #ifdef USE_GPU
     if(IuseGPU)
     {
@@ -732,6 +602,72 @@ void xPU_dsymm( const char *Side, const char *UpLo, const int * const M, const i
 }
 
 
+//===================================================================
+// Matrix-matrix multiplication - in CPU or GPU
+// mixed type D Z
+// Alberto Torres
+void xPU_dzgemm( const char *transA, const char *transB, const int * const M, const int * const N, const int * const K, 
+                 const DoubleComplex * const alpha, double * const hA, const int * const LDA,
+                 const DoubleComplex * const hB, const int * const LDB, const DoubleComplex * const beta,
+                 DoubleComplex * const hC, const int * const LDC )
+{
+    time_init();
+// #ifdef USE_GPU
+//     if(IuseGPU)
+//     {
+//         const int m = *M;
+//         const int n = *N;
+//         const int k = *K;
+//         
+//         const int ldA = *LDA;
+//         const int ldB = *LDB;
+//         const int ldC = *LDC;
+//         
+//         const int lddA = ( (ldA + 31)/32 )*32;
+//         const int lddB = ( (ldB + 31)/32 )*32;
+//         const int lddC = ( (ldC + 31)/32 )*32;
+//         
+//         const cublasOperation_t opA = lapack_to_cublas_trans( *transA );
+//         const cublasOperation_t opB = lapack_to_cublas_trans( *transB );
+//         
+//         int rA, cA;
+//         int rB, cB;
+//         
+//         if( opA == CUBLAS_OP_N ) { rA=m; cA=k; }
+//         else { rA=k; cA=m; }
+//         
+//         if( opB == CUBLAS_OP_N ) { rB=k; cB=n; }
+//         else { rB=n; cB=k; }
+//         
+//         double *dA;
+//         DoubleComplex *dB, *dC;
+//         
+//         // Allocate matrices in the GPU
+//         cudaMalloc( (void**) &dA, lddA*cA*sizeof(double) );
+//         cudaMalloc( (void**) &dB, lddB*cB*sizeof(DoubleComplex) );
+//         cudaMalloc( (void**) &dC, lddC*n*sizeof(DoubleComplex) );
+//         
+//         // Copy from CPU to GPU
+//         cublasSetMatrix( rA, cA, sizeof(DoubleComplex), (void *)hA, ldA, (void *)dA, lddA);
+//         cublasSetMatrix( rB, cB, sizeof(DoubleComplex), (void *)hB, ldB, (void *)dB, lddB);
+//         
+//         // Compute
+//         cublasDgemm( myHandle, opA, opB, m, n, k, &alpha->x, dA, lddA, dB, lddB, &beta->x, dC, lddC);
+//         
+//         // Copy from GPU to CPU
+//         cublasGetMatrix( m, n, sizeof(DoubleComplex), (void *)dC, lddC, (void *)hC, ldC);
+//         
+//         // Deallocate
+//         cudaFree(dA); cudaFree(dB); cudaFree(dC);
+//     }
+//     else
+// #endif
+        dzgemm_( transA, transB, M, N, K, alpha, hA, LDA, hB, LDB, beta, hC, LDC);
+    
+    time_end();
+}
+
+
 
 /****************************************
  *     "Compute" functions - LAPACK
@@ -836,12 +772,10 @@ static inline void gpu_dsygvd_m( const int *itype, const char *jobZ, const char 
 
     malloc_work( iwork, liwork, int );
     malloc_work( work, lwork, double );
-    cudaHostRegister( A, n*sizeof(double), cudaHostRegisterPortable );
 
     DEBUG( printf("gpu_dsygvd_m: n= %i lwork= %i liwork= %i\n", n, lwork, liwork); fflush(stdout); )
     magma_dsygvd_m( devCount, *itype, vec, uplo, n, A, *ldA, B, *ldB, W, work, lwork, iwork, liwork, info );
 
-    cudaHostUnregister(A);
     free_work(work); free_work(iwork);
 #endif
 }
@@ -932,7 +866,7 @@ static inline void gpu_syInvert( const char *UpLo, double *hA, const int * const
 
     magma_dsetmatrix( n, n, hA, n, dA, lddA );
 
-    // dsytrf/i are not impemented in magma-1.6.0
+    // dsytrf/i are not impemented in magma-1.6.1
     // Remember to remove the #ifdef in Matrix_Math.F90 -> Matrix_syInvert when changing to sy versions
     DEBUG( printf("gpu_syInvert: n= %i lwork= %i\n", n, lwork); fflush(stdout); )
     magma_dgetrf_gpu( n, n, dA, lddA, ipiv, info );
