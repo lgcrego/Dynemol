@@ -231,7 +231,7 @@ integer         , optional , intent(in) :: iter
 ! local variables ...
 integer                         :: i , at1 , at2 , at3 , at4 , funct_dih
 character(3)                    :: funct_type
-real*8                          :: factor
+real*8                          :: factor , dumb
 character(len=:) , allocatable  :: string(:)
 
  open( unit = 51 , file = "topol-OPT.top" , status = "replace", action = "write" , position = "append" )
@@ -239,7 +239,7 @@ character(len=:) , allocatable  :: string(:)
  !========================================================================================================
  ! bond parms saving ...
  write(51,"(A)") "[ bondtypes ]"               
- write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
+ write(51,"(A,I)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization, iteration = ", iter
 
  allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nbonds) )
  do i = 1 , molecule(1)%Nbonds
@@ -331,9 +331,12 @@ character(len=:) , allocatable  :: string(:)
     end if
  end  do
  deallocate(string)
- !========================================================================================================
+!========================================================================================================
 
  close(51)
+
+! to avoid compiler warnings ...
+dumb = me%p(1)
 
 end subroutine dump_parameters
 !

@@ -264,7 +264,7 @@ class(EH_OPT)               , intent(in) :: me
 integer         , optional  , intent(in) :: iter
 
 ! local variables ...
-integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol, dumb
 integer , allocatable   :: indx_EHS(:)
 
 ! local parameters ...
@@ -317,6 +317,9 @@ rewind(42)
 17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
 
 include 'formats.h'
+
+! to avoid compiler warnings ...
+dumb = iter
 
 end subroutine Dump_OPT_parameters
 !

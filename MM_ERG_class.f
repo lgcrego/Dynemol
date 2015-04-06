@@ -111,10 +111,15 @@ real*8          , intent(inout)  :: vector(:)
 
 ! local variables ...
 integer :: i 
+real*8  :: dumb
+
 
 do i = 1 , 3 
     where( atom % flex ) vector( (i-1)*N_of_free+1 : i*N_of_free ) = - atom(:)%ftotal(i) * mts_2_Angs
 end do
+
+! to avoid compiler warnings ...
+dumb = me%p(1)
 
 end subroutine Forces
 !
@@ -128,10 +133,14 @@ class(MM_OPT)              , intent(in) :: me
 integer         , optional , intent(in) :: iter
 
 ! local variables ...
+real*8 :: dumb
 
 if( iter == 0 ) call system( "rm frames-MM.pdb" )
 
 call saving_MM_frame( iter , D_zero )
+
+! to avoid compiler warnings ...
+dumb = me%p(1)
 
 end subroutine dump_geometry
 !

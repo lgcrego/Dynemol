@@ -39,11 +39,14 @@
  integer                  :: n_xyz_steps(3)
  complex*16               :: TotalPsiKet
  real*8     , allocatable :: xyz(:,:) , Psi(:,:,:)
- real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital
+ real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , dz , a , b , c , r , SlaterOrbital, dumb
  integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
  character(len=22)        :: f_name
+
+ ! bra is never used, so to avoid compiler warnings ...
+ dumb = bra(1)
 
  allocate(xyz(extended_cell%atoms,3))
 
