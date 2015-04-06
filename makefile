@@ -170,6 +170,7 @@ clean:
 
 depend:
 	@echo -en "Searching module dependencies..."
+  @chmod +x ./makedepend.bsh
 	@./makedepend.bsh > dependencies.txt
 	@echo -en " done.\n"
 
