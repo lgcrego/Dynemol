@@ -333,7 +333,7 @@ integer , allocatable :: tmp_ij(:)
 real*8  , allocatable :: tmp_S(:)
 
 !local parameters ...
-integer  :: nmax = 1000000
+integer  :: nmax = 1000000000
 
 n = size( S_matrix(:,1) )
 
