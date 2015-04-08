@@ -467,7 +467,7 @@ do ia = 1 , system%atoms
 
                 qlm = 0.d0   
 
-                call multipoles2c(na, la, expa, nb, lb, expb, Rab, lmult, rl, rl2, qlm)
+                call multipoles2c(na, la, expa, nb, lb, expb, Rab, lmult, rl, qlm)
 
             end if
 

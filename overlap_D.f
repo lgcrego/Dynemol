@@ -333,7 +333,7 @@ integer , allocatable :: tmp_ij(:)
 real*8  , allocatable :: tmp_S(:)
 
 !local parameters ...
-integer  :: nmax = 1000000000
+integer  :: nmax = 1000000
 
 n = size( S_matrix(:,1) )
 
@@ -420,10 +420,15 @@ subroutine solap(na, la, za, nb, lb, zb, R, sol)
 
       implicit real*8  (a-h,o-z)
 
-      parameter (pi4 = 12.566370614359172953850573533118012d0)
+      real*8 , parameter :: pi4 = 12.566370614359172953850573533118012d0
       common /const/ re(0:1000), reali(0:1000), fact(0:150) , facti(0:150)
-      parameter (mxn = 15, mxl = 5)
-      parameter (mxh = mxn+3*mxl)
+      integer, parameter :: mxn = 15, mxl = 5
+      integer, parameter :: mxh = mxn+3*mxl
+      integer            :: na, la, nb, lb
+      integer            :: nmin, npmin, npmax, ngmax, namax, iz, ia, imax, i, j, kint, n, np, k, m, ll, nmax, mtop
+      real*8             :: zzpr, zzpi, zzpin, zzpinp, auxk, fact, sumk, sumj, facti, smat, smataux, smatm 
+      real*8             :: Rinv, R2, R4, updltm0i, saux, sbux, f11a
+      real*8             :: za, zb, R, sol, z, zp, expzR, arg, auxa, re, reali, auxb, f11b, h1f1, aux
       common / kintcom / kint
       dimension h1f1(0:mxh+1,0:2*(mxh+1)), sol(0:mxl), smat(0:mxh,0:mxh)
       dimension smataux(0:mxh,0:mxh), smatm(0:mxh,0:mxh)
@@ -694,6 +699,10 @@ subroutine rotar(lmax,ltot,cosal,sinal,cosbet,sinbet,cosga,singa,dl,rl)
 
       implicit real*8 (a-h,o-z)
 
+      integer :: ltot, lmax, l, l1
+      real*8  :: root2, zero, one, pt5, cosal, sinal, cosbet, sinbet, cosga, singa, dl, rl
+      real*8  :: cosag, cosamg, sinag, sinamg, tgbet2
+
       dimension rl(-ltot:ltot,-ltot:ltot,0:ltot)
       dimension dl(-ltot:ltot,-ltot:ltot,0:ltot)
       data root2/1.414213562373095d0/,zero/0.0d0/,one/1.0d0/,pt5/0.5d0/
@@ -766,7 +775,11 @@ subroutine dlmn(l,ltot,sinal,cosal,cosbet,tgbet2,singa,cosga,dl,rl)
 
       implicit real*8 (a-h,o-z)
 
-      parameter (mxn = 15, mxl = 5)
+      integer , parameter :: mxn = 15, mxl = 5
+      integer :: ltot, l, iinf, isup, m, mp, laux, lbux, lauz, lbuz
+      real*8  :: root2, one, pt5, sinal, cosal, cosbet, tgbet2, singa, cosga, dl, rl
+      real*8  :: root, rooti, al, al1, tal1, ali, cosaux, amp, aux, cux, am, auz, factor, term, cuz
+      real*8  :: sign, cosmal, sinmal, cosmga, sinmga, d1, d2, cosag, cosagm, sinag, sinagm
       dimension rl(-ltot:ltot,-ltot:ltot,0:ltot)
       dimension dl(-ltot:ltot,-ltot:ltot,0:ltot)
       common /roots/ root(0:2*mxl), rooti(0:2*mxl)
@@ -895,9 +908,10 @@ subroutine util_overlap
 
 implicit real*8 (a-h,o-z)
 
-real*8  re, reali, fact, facti
+real*8  :: re, reali, fact, facti, root, rooti, rli
+integer :: i
 
-parameter (mxn = 15, mxl = 5)
+integer , parameter :: mxn = 15, mxl = 5
 
 common /const/ re(0:1000), reali(0:1000), fact(0:150), facti(0:150)
 common /roots/ root(0:2*mxl), rooti(0:2*mxl)

@@ -104,6 +104,9 @@ integer , parameter :: mxltot = mxl + mxmult , mxlsup = max(mxl,mxmult)
 integer , parameter :: mxemes = mxltot 
 integer , parameter :: mxreal = 1000 , mxfact = 150 , mxind = 200 , mxroot=50
 
+integer :: m2a, k1, k12, indk12, ms, md, msv, mdv, lm, l, m, l2, l1, m2, m1, l1l1, l2l2, m1a, i, ind 
+real*8  :: ss, sd, ssv, sdv, raiz2, aux, fact, facti, re, reali, root, rooti, ang 
+
 common/indcomn/  indk12((mxltot+1)**2,(mxltot+1)**2)
 common/const/    re(0:mxreal), reali(0:mxreal), fact(0:mxfact), facti(0:mxfact), ang((mxl+1)*(mxl+2)/2), &
                  root(0:mxroot), rooti(mxroot), ind(0:mxind)
@@ -282,13 +285,16 @@ implicit real*8 (a-h,o-z)
 integer , intent(in)    :: na, la, nb, lb, lmult
 real*8  , intent(in)    :: exa, exb
 
-parameter (mxl = 5, mxmult = 3, mxn = 5+2*mxmult)
-parameter (mxltot = mxl + mxmult, mxlsup = max(mxl,mxmult) )
-parameter ( mxemes = mxltot )
-parameter ( mxlcof = mxlsup*(mxlsup+3)/2 )
-parameter ( mxkcof = mxlcof*(mxlcof+3)/2 )
-parameter (mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50)
-parameter ( tol = 1.d-10 )
+integer , parameter :: mxl = 5, mxmult = 3, mxn = 5+2*mxmult
+integer , parameter :: mxltot = mxl + mxmult, mxlsup = max(mxl,mxmult) 
+integer , parameter :: mxemes = mxltot 
+integer , parameter :: mxlcof = mxlsup*(mxlsup+3)/2 
+integer , parameter :: mxkcof = mxlcof*(mxlcof+3)/2 
+integer , parameter :: mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50
+real*8  , parameter :: tol = 1.d-10 
+
+integer :: mdv, k12, indk12, msabs, mdabs, ind, lm, l, lma, lmb, ldf, ms, msv, md, mb, ma
+real*8  :: ss, ssv, sd, sdv, app, reali, bpp, facti, root, rooti, aux, fact, re, rnor, anor, ang 
 
 common/abpp/     app(0:mxkcof,0:2*mxl+1), bpp(0:mxkcof,0:2*mxl+1)
 common/const/    re(0:mxreal), reali(0:mxreal), fact(0:mxfact), facti(0:mxfact), ang((mxl+1)*(mxl+2)/2), &
@@ -374,17 +380,19 @@ end subroutine multipoles1c
 !
 !     Coded by Rafael Lopez (rafael.lopez@uam.es)  October 6th 2008.
 !
-subroutine multipoles2c(na, la, exa, nb, lb, exb, Rab, lmult, rl, rl2, qlm)
-
+subroutine multipoles2c(na, la, exa, nb, lb, exb, Rab, lmult, rl, qlm)
 implicit real*8 (a-h,o-z)
 
-parameter (mxl = 5, mxmult = 3, mxn = 5+2*mxmult)
-parameter (mxltot = mxl + mxmult, mxlsup = max(mxl,mxmult) )
-parameter ( mxemes = mxltot )
-parameter ( mxlcof = mxlsup*(mxlsup+3)/2 )
-parameter ( mxkcof = mxlcof*(mxlcof+3)/2 )
-parameter (mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50)
-parameter ( tol = 1.d-10 )
+integer :: na, la, nb, lb, lmult
+real*8  :: exa, exb, Rab
+
+integer , parameter :: mxl = 5, mxmult = 3, mxn = 5+2*mxmult
+integer , parameter :: mxltot = mxl + mxmult, mxlsup = max(mxl,mxmult)
+integer , parameter :: mxemes = mxltot 
+integer , parameter :: mxlcof = mxlsup*(mxlsup+3)/2 
+integer , parameter :: mxkcof = mxlcof*(mxlcof+3)/2 
+integer , parameter :: mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50
+real*8  , parameter :: tol = 1.d-10 
 
 common/abpp/     app(0:mxkcof,0:2*mxl+1), bpp(0:mxkcof,0:2*mxl+1)
 common/const/    re(0:mxreal), reali(0:mxreal), fact(0:mxfact), facti(0:mxfact), ang((mxl+1)*(mxl+2)/2), &
@@ -393,11 +401,15 @@ common/emescom/  ssv(-mxemes:mxemes,-mxemes:mxemes),sdv(-mxemes:mxemes,-mxemes:m
                  msv(-mxemes:mxemes,-mxemes:mxemes),mdv(-mxemes:mxemes,-mxemes:mxemes)
 common/indcomn/  indk12((mxltot+1)**2,(mxltot+1)**2)
 
+integer :: mp, lm0, ms, md, mdv, k12, msabs, indk12, k, lp
+integer :: mdabs, mb, ma, lm, lma, lmb, l, ldf, m, mabs, ind, msv
+real*8  :: aux, reali, re, facti, root, rooti, ss, sd, sdv, bux, app, bpp, rnor, fact, anor
+real*8  :: ang, ssv
+
 real*8 :: sol(0:mxl, 0:mxmult+mxl, 0:(mxl+mxmult)/2)
 real*8 :: qlm((mxmult+1)**2, -mxl:mxl, -mxl:mxl)
 real*8 :: auxvec(-mxl:mxl)
 real*8 :: rl(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup)
-real*8 :: rl2(-mxlsup:mxlsup,-mxlsup:mxlsup,0:mxlsup)
 
 !     computes the overlap integrals on a lined-up system
       call solap(na, la, exa, nb, lb, exb, Rab, lmult, sol)
@@ -567,17 +579,30 @@ end subroutine multipoles2c
 !
 subroutine solap(na, la, exa, nb, lb, exb, R, lmult, sol)
       implicit real * 8 (a-h,o-z)
-      parameter (pi4 = 12.56637061435917d0)
-      parameter (mxl = 5, mxmult = 3, mxn = 5+2*mxmult)
-      parameter (mxltot = mxl + mxmult )
-      parameter (mxh = mxn+2*mxltot+4*mxl)
-      parameter (mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50)
+
+      integer :: na, la, nb, lb, lmult
+      real*8  :: exa, exb, R, sol
+
+      real*8  , parameter :: pi4 = 12.56637061435917d0
+      integer , parameter :: mxl = 5, mxmult = 3, mxn = 5+2*mxmult
+      integer , parameter :: mxltot = mxl + mxmult 
+      integer , parameter :: mxh = mxn+2*mxltot+4*mxl
+      integer , parameter :: mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50
+
+
+      integer :: nmax, npmin, npmax, ngmax, namax, iz, ia, imax, lmaux, nmin, i, j, n, np, k, mtop, m, ll
+      integer :: ind
+      real*8  :: z, zp, expzR, arg, auxa, re, reali, f11a, auxb, f11b, h1f1, aux, zzpR, zzpi, zzpin, zzpinp
+      real*8  :: auxk, fact, sumk, sumj, facti, smat, smataux, smatm, Rinv, R2, R4, updltm0i, saux, sbux
+      real*8  :: ang, root, rooti
       common /const/ re(0:mxreal),reali(0:mxreal),fact(0:mxfact),facti(0:mxfact),ang((mxl+1)*(mxl+2)/2),&
                      root(0:mxroot), rooti(mxroot), ind(0:mxind)
       dimension h1f1(0:mxh+1,0:2*(mxh+1))
       dimension sol(0:mxl, 0:mxmult+mxl, 0:(mxl+mxmult)/2)
       dimension smat(0:mxh,0:mxh), smataux(0:mxh,0:mxh)
       dimension smatm(0:mxh,0:mxh)
+
+
       lmaux = min(lmult, max(la,lb))
       if (exa .ge. exb) then
          nmin = na - la
@@ -809,10 +834,17 @@ end subroutine solap
 !
 subroutine acof( lmax )
       implicit real * 8 ( a-h,o-z )
-      parameter (mxl = 5, mxmult = 3)
-      parameter (mxltot = mxl + mxmult )
-      parameter ( mxlcof = mxl*(mxl+3)/2 )
-      parameter ( mxkcof = mxlcof*(mxlcof+3)/2 )
+
+      integer :: lmax
+
+      integer , parameter :: mxl = 5, mxmult = 3
+      integer , parameter :: mxltot = mxl + mxmult 
+      integer , parameter :: mxlcof = mxl*(mxl+3)/2 
+      integer , parameter :: mxkcof = mxlcof*(mxlcof+3)/2 
+
+      integer :: j, i, k1, l, m, kk, mp, k2, k20, m1, kk0, n, lp, k200, kk00
+      real*8  :: app, aux, bpp
+
       common /abpp/ app(0:mxkcof,0:2*mxl+1), bpp(0:mxkcof,0:2*mxl+1)
 
       if ( lmax .gt. mxl ) then
@@ -891,10 +923,17 @@ end subroutine acof
 !
 subroutine bcof( lmax )
       implicit real * 8 ( a-h,o-z )
-      parameter (mxl = 5, mxmult = 3)
-      parameter (mxltot = mxl + mxmult )
-      parameter ( mxlcof = mxl*(mxl+3)/2 )
-      parameter ( mxkcof = mxlcof*(mxlcof+3)/2 )
+
+      integer :: lmax
+
+      integer , parameter :: mxl = 5, mxmult = 3
+      integer , parameter :: mxltot = mxl + mxmult 
+      integer , parameter :: mxlcof = mxl*(mxl+3)/2 
+      integer , parameter :: mxkcof = mxlcof*(mxlcof+3)/2 
+
+      integer :: j, i, k1, l, m, kk, mp, k2, k20, m1, kk0, n, lp, k200, kk00, mmp 
+      real*8  :: app, bpp, t1, t2, bux, aux
+
       common /abpp/ app(0:mxkcof,0:2*mxl+1), bpp(0:mxkcof,0:2*mxl+1)
 
       if ( lmax .gt. mxl ) then
@@ -989,7 +1028,15 @@ end subroutine bcof
 !
 subroutine emes ( m1, m2, ms, md, ss, sd )
       implicit real * 8 (a-h,o-z)
-      parameter ( pt5 = 0.5d0 )
+   
+      integer :: m1, m2, ms, md
+      real*8  :: ss, sd
+
+      real*8  :: s1, s2, s12
+      integer :: m1a, m2a 
+
+      real*8 , parameter ::  pt5 = 0.5d0 
+
       s1 = sign(1,m1)
       s2 = sign(1,m2)
       s12 = s1 * s2
@@ -1038,8 +1085,16 @@ end subroutine emes
 !***********************************************************************
 subroutine rotar(lmax,ltot,cosal,sinal,cosbet,sinbet,cosga,singa,dl,rl)
       implicit real*8(a-h,o-z)
-      parameter (mxl = 5)
-      parameter (mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50)
+
+      integer :: lmax, ltot
+      real*8  :: cosal, sinal, cosbet, sinbet, cosga, singa, dl, rl
+
+      integer , parameter :: mxl = 5
+      integer , parameter :: mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50
+
+      integer :: l, l1, ind
+      real*8  :: zero, one, rooti, cosag, cosamg, sinag, sinamg, root, tgbet2, fact, facti, re, reali, ang
+
       dimension rl(-ltot:ltot,-ltot:ltot,0:ltot)
       dimension dl(-ltot:ltot,-ltot:ltot,0:ltot)
       data zero/0.0d0/,one/1.0d0/
@@ -1110,8 +1165,17 @@ end subroutine rotar
 !***********************************************************************
 subroutine dlmn(l,ltot,sinal,cosal,cosbet,tgbet2,singa,cosga,dl,rl)
       implicit real*8 (a-h,o-z)
-      parameter (mxl = 5)
-      parameter (mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50)
+
+      integer :: l , ltot
+      real*8  :: sinal, cosal, cosbet, tgbet2, singa, cosga, dl ,rl
+
+      integer , parameter :: mxl = 5
+      integer , parameter :: mxreal = 1000, mxfact = 150, mxind = 200, mxroot=50
+
+      integer :: iinf, isup, m, mp, laux, lbux, lauz, lbuz, ind
+      real*8  :: one, root, rooti, al, al1, tal1, ali, cosaux, amp, aux, cux, am, auz, factor, term, cuz, sign
+      real*8  :: cosmal, sinmal, cosmga, sinmga, d1, d2, cosag, cosagm, sinag, sinagm, fact, facti, re, reali, ang
+
       dimension rl(-ltot:ltot,-ltot:ltot,0:ltot)
       dimension dl(-ltot:ltot,-ltot:ltot,0:ltot)
       data one/1.0d0/
@@ -1246,6 +1310,12 @@ end subroutine dlmn
 !***********************************************************************
 subroutine m2cmatprt(lmax,ltot,rl)
       implicit real*8 (a-h,o-z)
+
+      integer :: lmax, ltot
+      real*8  :: rl
+
+      integer :: l, ind, ilow, iupp, j, i
+
       dimension rl(-ltot:ltot,-ltot:ltot,0:ltot)
 !
  1000 format(12x,3(i3,15x),i3)

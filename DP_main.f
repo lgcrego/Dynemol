@@ -197,6 +197,8 @@ lmult = 1 ! <== DIPOLE MOMENT
 
 DP_matrix_AO = D_zero
 
+!$omp parallel do schedule(dynamic,100) default(shared)&
+!$omp private(ib,ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,j,i,expb,expa,rl,rl2,qlm)
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
 
@@ -261,7 +263,7 @@ do ia = 1 , system%atoms
 
                 qlm = 0.d0 
 
-                call multipoles2c(na, la, expa, nb, lb, expb, Rab, lmult, rl, rl2, qlm)
+                call multipoles2c(na, la, expa, nb, lb, expb, Rab, lmult, rl, qlm)
 
             end if
 
@@ -280,6 +282,7 @@ do ia = 1 , system%atoms
     enddo
 10 end do
 end do
+!$omp end parallel do
 
 ! save DP_Matrix_AO for reuse ...
 If( (.NOT. static) .AND. (.NOT. done) ) then
