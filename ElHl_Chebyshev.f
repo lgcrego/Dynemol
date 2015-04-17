@@ -12,7 +12,7 @@ module ElHl_Chebyshev_m
     use FMO_m               , only : FMO_analysis , eh_tag    
     use Data_Output         , only : Populations 
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
-    use Chebyshev_m         , only : Convergence, coefficient
+    use Chebyshev_m         , only : Propagation, dump_Qdyn
     use Matrix_Math
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev
@@ -44,7 +44,7 @@ contains
 !
 !
 !============================================================================================================
- subroutine preprocess_ElHl_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_ket , Dual_bra , QDyn , it )
+ subroutine preprocess_ElHl_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
 !============================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
@@ -58,13 +58,11 @@ integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
-real*8          , allocatable   :: wv_FMO(:) 
-real*8          , allocatable   :: S_matrix(:,:)
+real*8          , allocatable   :: wv_FMO(:) , S_matrix(:,:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
 
-allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
 !========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
@@ -73,6 +71,7 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
+allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
 ELHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 !========================================================================
@@ -139,7 +138,7 @@ t_max = delta_t*frame_step*(it-1)
 tau_max = delta_t / h_bar
 
 ! trying to adapt time step for efficient propagation ...
-tau(:) = merge( delta_t / h_bar , save_tau(:) * 1.15d0 , first_call_ )
+tau(:) = merge( tau_max , save_tau(:) * 1.15d0 , first_call_ )
 ! but tau should be never bigger than tau_max ...
 tau(:) = merge( tau_max , tau(:) , tau(:) > tau_max )
 
@@ -199,7 +198,7 @@ else
 end if
 
 #ifdef USE_GPU
-call Propagation_gpucaller(_electron_, Coulomb_, N, S_inv, h, Psi_t_bra(1,1), Psi_t_ket(1,1), t, first_call_, delta_t, t_max, save_tau(1))
+call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv, h, Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
 #else
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime(N,N) )
@@ -207,7 +206,7 @@ allocate( H_prime(N,N) )
 call syMultiply( S_inv , h , H_prime )
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , 1 )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
 #endif
 
 !=======================================================================
@@ -217,7 +216,7 @@ CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t
 if( Coulomb_ ) forall(j=1:N) h(j,j) = h0(j,j) + V_coul_Hl(j)
 
 #ifdef USE_GPU
-call Propagation_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t, first_call_, delta_t, t_max, save_tau(2))
+call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
 #endif
 
 if( Coulomb_ ) then
@@ -230,11 +229,12 @@ end if
 If( driver /= 'q_dynamics' ) then
     call GPU_Unpin( S_inv )
     deallocate( h0 , S_inv )
+    nullify( h )
 end if
 
 #ifndef USE_GPU
 ! proceed evolution of HOLE wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , 2 )
+CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
 #endif
 
 !=======================================================================
@@ -262,102 +262,6 @@ include 'formats.h'
 first_call_ = .false.
 
 end subroutine ElHl_Chebyshev
-!
-!
-!
-!=============================================================================================
- subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , nn )
-!=============================================================================================
-implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(in)    :: H_prime(:,:)
-complex*16      , intent(inout) :: Psi_t_bra(:)
-complex*16      , intent(inout) :: Psi_t_ket(:)
-real*8          , intent(in)    :: t_init
-real*8          , intent(in)    :: t_max
-real*8          , intent(inout) :: tau    
-integer         , intent(in)    :: nn
-
-! local variables...
-complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
-real*8                      :: norm_ref , norm_test , t
-integer                     :: j , N , k_ref
-logical                     :: OK
-
-N = size(basis)
-
-! complex variables ...
-allocate( C_Psi_bra   ( N , order ) )
-allocate( C_Psi_ket   ( N , order ) )
-allocate( Psi_tmp_bra ( N         ) )
-allocate( Psi_tmp_ket ( N         ) )
-allocate( C_k         (     order ) )
-
-norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
-
-! first convergence: best tau-parameter for k_ref ...
-do
-    CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
-
-    if( OK ) exit
-    tau = tau * 0.9d0
-end do
-save_tau(nn) = tau
-
-t = t_init + tau*h_bar
-
-if( t_max-t < tau*h_bar ) then
-    tau = ( t_max - t ) / h_bar
-    C_k = coefficient(tau,order)
-end if
-
-! proceed evolution with best tau ...
-do while( t < t_max )
-        
-    C_Psi_bra(:,1) = Psi_t_bra
-    C_Psi_ket(:,1) = Psi_t_ket
-
-    call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
-    call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
-
-    do j = 3 , k_ref
-        call bra_x_op( C_Psi_bra(:,j), C_Psi_bra(:,j-1), H_prime, C_two )
-        C_Psi_bra(:,j) = C_Psi_bra(:,j) - C_Psi_bra(:,j-2)
-        call op_x_ket( C_Psi_ket(:,j), H_prime, C_Psi_ket(:,j-1), C_two )
-        C_Psi_ket(:,j) = C_Psi_ket(:,j) - C_Psi_ket(:,j-2)
-    end do
-
-    do j = 1, N
-        Psi_tmp_bra(j) = sum( C_k(1:k_ref) * C_Psi_bra(j,1:k_ref) )
-        Psi_tmp_ket(j) = sum( C_k(1:k_ref) * C_Psi_ket(j,1:k_ref) )
-    end do
-
-!   convergence criteria ...
-    norm_test = abs(dotc( Psi_tmp_bra , Psi_tmp_ket ))
-    if( abs( norm_test - norm_ref ) < norm_error ) then
-        Psi_t_bra = Psi_tmp_bra
-        Psi_t_ket = Psi_tmp_ket
-    else
-        OK = .false.
-        do while( .not. OK )
-            tau = tau * 0.975d0
-            print*, "rescaling tau" , tau
-            CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , K_ref , tau , H_prime , norm_ref , OK )
-        end do
-    end if
-
-    t = t + (tau * h_bar)
-
-    if( t_max-t < tau*h_bar ) then
-        tau = ( t_max-t ) / h_bar
-        C_k = coefficient(tau,order)
-    end if
-
-end do
-
-deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , C_k )
-
-end subroutine Propagation
 !
 !
 !
@@ -402,39 +306,6 @@ end do
 call Matrix_Symmetrize( h0, 'U' )
 
 end subroutine Huckel
-!
-!
-!
-!
-!=================================
- subroutine dump_Qdyn( Qdyn , it )
-!=================================
-implicit none
-type(g_time)    , intent(in) :: QDyn
-integer         , intent(in) :: it 
-
-! local variables ...
-integer :: nf , n
-
-do n = 1 , n_part
-
-    If( it == 1 ) then
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
-        write(52,12) "#" , QDyn%fragments , "total"
-    else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
-    end If
-
-    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
-
-    close(52)
-
-end do
-
-12 FORMAT(10A10)
-13 FORMAT(10F10.5)
-
-end subroutine dump_Qdyn
 !
 !
 !

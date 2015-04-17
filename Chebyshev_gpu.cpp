@@ -41,10 +41,66 @@
 #define cudaZcopyAsync_H2D( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyHostToDevice, STREAM );
 #define cudaZcopyAsync_D2D( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyDeviceToDevice, STREAM );
 
+
+//-------------------------------------------------------------------
+// Useful macros to economize code and improve readability:
+
+// set proper stream
+#define setStream( S )           cublasSetStream( myHandle, stream[S ## _stream] )
+enum { bra_stream=0, ket_stream=1 };
+
+// copy bras/kets in the appropriate stream
+#define braCopy( SRC, DST )      cudaZcopyAsync_D2D( DST, SRC, n, stream[bra_stream] )
+#define ketCopy( SRC, DST )      cudaZcopyAsync_D2D( DST, SRC, n, stream[ket_stream] )
+
+// vec3 = alpha*A^op*vec1 + beta*vec2
+#define Mat_op_vec5( A, OP, ALPHA, VEC1, BETA, VEC2, VEC3, STREAM ) \
+                                 kblas_dzgemv2_oop_async( OP, n, ALPHA, A, ld, VEC1, BETA, VEC2, VEC3, STREAM )
+// vec1 = alpha*A^op*vec2 + beta*vec1
+#define Mat_op_vec4( A, OP, ALPHA, VEC2, BETA, VEC1, STREAM ) \
+                                 kblas_dzgemv2_async( OP, n, ALPHA, A, ld, VEC2, BETA, VEC1, STREAM )
+
+// bra1 = H^T*bra2
+// ket1 = H*ket2
+#define bra_H( VEC1, VEC2, H )   Mat_op_vec4( H, 't', d_one, VEC2, d_zero, VEC1, stream[bra_stream] )
+#define H_ket( VEC1, H, VEC2 )   Mat_op_vec4( H, 'n', d_one, VEC2, d_zero, VEC1, stream[ket_stream] )
+
+// bra1 = alpha*H^T*bra2 - bra3
+#define bra_H_m( VEC1, VEC2, H, ALPHA, VEC3 ) \
+                                 Mat_op_vec5( H, 't', ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[bra_stream] )
+
+// ket1 = alpha*H*ket2 - ket3
+#define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 ) \
+                                 Mat_op_vec5( H, 'n', ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[ket_stream] )
+
+// C = alpha*X + beta*Y (C,X,Y are vectors)
+#define Zaxpby( ALPHA, X, BETA, Y, C ) \
+                                 cublasZgeam( myHandle, CUBLAS_OP_N, CUBLAS_OP_N, n, 1, &ALPHA, X, n, &BETA, Y, n, C, n)
+
+// find the (complex) element with maximum real or imaginary parts in VEC
+#define findMax( VEC, MAX_PTR ) \
+{ \
+    int i_max; \
+    cublasIdamax( myHandle, 2*n, (const double *)VEC, 1, &i_max); \
+    i_max = (i_max-1)/2;     /* From Fortran-Real to C-Complex index conversion */ \
+    cudaZcopy_D2H( MAX_PTR, &VEC[i_max], 1 ) \
+}
+
+
+// structure to hold allocated memory, used in convergence_gpu()
+struct bras_kets_ptrs
+{
+    cuDoubleComplex *bras,     *kets,
+                    *tmp_bra1, *tmp_ket1,
+                    *tmp_bra2, *tmp_ket2,
+                    *diff_bra, *diff_ket;
+    cuDoubleComplex *pin_mem_chunk;
+};
+
 //-------------------
 // external variables
 extern cublasHandle_t myHandle;
-extern cudaStream_t cublas_default;
+extern cudaStream_t   cublas_default;
 
 //-------------------
 // global constants
@@ -113,23 +169,6 @@ extern "C" int kblas_dzgemv2_oop_async(
     double beta, cuDoubleComplex *dY,
     cuDoubleComplex *dZ, cudaStream_t stream);
 
-extern void magmablas_dzgemv(
-    cublasOperation_t trans, int m, int n, double alpha,
-    const double          * const __restrict__ dA, int ldda,
-    const cuDoubleComplex * const __restrict__ dx, int incx,
-    double beta,
-    cuDoubleComplex       * const __restrict__ dy, int incy,
-    cudaStream_t stream );
-
-extern void magmablas_dzgemv(
-    cublasOperation_t trans, int m, int n, double alpha,
-    const double          * const __restrict__ dA, int ldda,
-    const cuDoubleComplex * const __restrict__ dx, int incx,
-    double beta,
-    const cuDoubleComplex * const __restrict__ dy, int incy,
-    cuDoubleComplex       * const __restrict__ dz, int incz,
-    cudaStream_t stream );
-
 
 //-------------------
 // Prototypes
@@ -137,18 +176,18 @@ extern void magmablas_dzgemv(
 //...................
 // exported:
 extern "C"
-void chebyshev_gpucaller_(
+void propagation_gpucaller_(
     const int       * const __restrict__ n,
     double          * const __restrict__ tau,
     double          * const __restrict__ save_tau,
+    const double    * const __restrict__ t_init,
     const double    * const __restrict__ t_max,
-    double          * const __restrict__ t,
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
     const double    * const __restrict__ h_H);
 
 extern "C"
-void propagation_gpucaller_(
+void propagationelhl_gpucaller_(
     const int       * const __restrict__ particle,
     const void      * const __restrict__ logical_coulomb,
     const int       * const __restrict__ n,
@@ -156,10 +195,9 @@ void propagation_gpucaller_(
     const double    * const __restrict__ h_h,        // in host
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
-    const double    * const __restrict__ time,
-    const void      * const __restrict__ logical_first_call,
-    const double    * const __restrict__ delta_t,
+    const double    * const __restrict__ t_init,
     const double    * const __restrict__ t_max,
+    double          * const __restrict__ tau,
     double          * const __restrict__ save_tau );
 
 //...................
@@ -184,10 +222,10 @@ void chebyshev_gpu(
     const int n, const int ld, double tau,
     double          * const __restrict__ save_tau,
     const double t_max,
-    double          * const __restrict__ t,
-    cuDoubleComplex * const __restrict__ PSI_bra,
-    cuDoubleComplex * const __restrict__ PSI_ket,
-    const double    * const __restrict__ H);
+    const double t_init,
+    cuDoubleComplex * const __restrict__ PSI_bra,  // in device
+    cuDoubleComplex * const __restrict__ PSI_ket,  // in device
+    const double    * const __restrict__ H);       // in device
 
 
 
@@ -195,12 +233,12 @@ void chebyshev_gpu(
 // Functions:
 
 //-------------------------------------------------------------------
-void chebyshev_gpucaller_(
+void propagation_gpucaller_(
     const int       * const __restrict__ n,
     double          * const __restrict__ tau,
     double          * const __restrict__ save_tau,
+    const double    * const __restrict__ t_init,
     const double    * const __restrict__ t_max,
-    double          * const __restrict__ t,
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
     const double    * const __restrict__ h_H)        // in host
@@ -216,11 +254,11 @@ void chebyshev_gpucaller_(
     cudaMalloc((void **) &d_PSI_bra, ld*sizeof(cuDoubleComplex));
     cudaMalloc((void **) &d_PSI_ket, ld*sizeof(cuDoubleComplex));
 
-    cublasSetMatrix( m, m, sizeof(double), (void *) h_H, m, (void *) d_H, ld);
+    cublasSetMatrix( m, m, sizeof(double), (const void *) h_H, m, (void *) d_H, ld);
     cudaZcopy_H2D( d_PSI_bra, h_PSI_bra, m );
     cudaZcopy_H2D( d_PSI_ket, h_PSI_ket, m );
 
-    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, t, d_PSI_bra, d_PSI_ket, d_H );
+    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, *t_init, d_PSI_bra, d_PSI_ket, d_H );
 
     cudaZcopy_D2H( h_PSI_bra, d_PSI_bra, m );
     cudaZcopy_D2H( h_PSI_ket, d_PSI_ket, m );
@@ -233,76 +271,12 @@ void chebyshev_gpucaller_(
 }
 
 
-
-//-------------------------------------------------------------------
-// Useful macros to economize code:
-
-// set proper stream
-#define setStream( S )  cublasSetStream( myHandle, stream[S ## _stream] )
-enum { bra_stream=0, ket_stream=1 };
-
-// copy bras/kets in the appropriate stream
-#define braCopy( SRC, DST )   cudaZcopyAsync_D2D( DST, SRC, n, stream[bra_stream] )
-#define ketCopy( SRC, DST )   cudaZcopyAsync_D2D( DST, SRC, n, stream[ket_stream] )
-
-// vec3 = alpha*A^op*vec1 + beta*vec2
-#define Mat_op_vec5( A, OP, ALPHA, VEC1, BETA, VEC2, VEC3, STREAM )   kblas_dzgemv2_oop_async( OP, n, ALPHA, A, ld, VEC1, BETA, VEC2, VEC3, STREAM )
-#define Mat_op_vec3( A, OP, ALPHA, VEC1, BETA, VEC2, VEC3, STREAM )   magmablas_dzgemv( OP, n, n, ALPHA, A, ld, VEC1, 1, BETA, VEC2, 1, VEC3, 1, STREAM )
-// vec1 = alpha*A^op*vec2 + beta*vec1
-#define Mat_op_vec4( A, OP, ALPHA, VEC2, BETA, VEC1, STREAM )   kblas_dzgemv2_async( OP, n, ALPHA, A, ld, VEC2, BETA, VEC1, STREAM )
-#define Mat_op_vec2( A, OP, ALPHA, VEC2, BETA, VEC1, STREAM )   magmablas_dzgemv( OP, n, n, ALPHA, A, ld, VEC2, 1, BETA, VEC1, 1, STREAM )
-
-// bra1 = H^T*bra2
-// ket1 = H*ket2
-#define bra_H( VEC1, VEC2, H )   Mat_op_vec4( H, 't', d_one, VEC2, d_zero, VEC1, stream[bra_stream] )
-#define H_ket( VEC1, H, VEC2 )   Mat_op_vec4( H, 'n', d_one, VEC2, d_zero, VEC1, stream[ket_stream] )
-// #define bra_H( VEC1, VEC2, H )   Mat_op_vec2( H, CUBLAS_OP_T, d_one, VEC2, d_zero, VEC1, stream[bra_stream] )
-// #define H_ket( VEC1, H, VEC2 )   Mat_op_vec2( H, CUBLAS_OP_N, d_one, VEC2, d_zero, VEC1, stream[ket_stream] )
-
-// bra1 = alpha*H^T*bra2 - bra3
-#define bra_H_m( VEC1, VEC2, H, ALPHA, VEC3 )   Mat_op_vec5( H, 't', ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[bra_stream] )
-// #define bra_H_m( VEC1, VEC2, H, ALPHA, VEC3 )   braCopy( VEC3, VEC1 ); \
-//                                                 Mat_op_vec4( H, 't', ALPHA, VEC2, d_neg_one, VEC1, stream[bra_stream] )
-// #define bra_H_m( VEC1, VEC2, H, ALPHA, VEC3 )   Mat_op_vec3( H, CUBLAS_OP_T, ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[bra_stream] )
-// #define bra_H_m( VEC1, VEC2, H, ALPHA, VEC3 )   braCopy( VEC3, VEC1 ); \
-//                                                 Mat_op_vec2( H, CUBLAS_OP_T, ALPHA, VEC2, d_neg_one, VEC1, stream[bra_stream] )
-
-// ket1 = alpha*H*ket2 - ket3
-#define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 )   Mat_op_vec5( H, 'n', ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[ket_stream] )
-// #define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 )   ketCopy( VEC3, VEC1 ); \
-//                                                 Mat_op_vec4( H, 'n', ALPHA, VEC2, d_neg_one, VEC1, stream[ket_stream] )
-// #define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 )   Mat_op_vec3( H, CUBLAS_OP_N, ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[ket_stream] )
-// #define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 )   ketCopy( VEC3, VEC1 ); \
-//                                                 Mat_op_vec2( H, CUBLAS_OP_N, ALPHA, VEC2, d_neg_one, VEC1, stream[ket_stream] )
-                                                
-// C = alpha*X + beta*Y (C,X,Y are vectors)
-#define Zaxpby( ALPHA, X, BETA, Y, C )   cublasZgeam( myHandle, CUBLAS_OP_N, CUBLAS_OP_N, n, 1, &ALPHA, X, n, &BETA, Y, n, C, n)
-
-// find the (complex) element with maximum real or imaginary parts in VEC
-#define findMax( VEC, MAX_PTR ) { \
-    int i_max; \
-    cublasIdamax( myHandle, 2*n, (const double *)VEC, 1, &i_max); \
-    i_max = (i_max-1)/2;     /* From Fortran-Real to C-Complex index conversion */ \
-    cudaMemcpy( (void*) MAX_PTR, (const void*) &VEC[i_max], sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost ); \
-}
-
-// structure to hold allocated memory, used in convergence_gpu()
-struct bras_kets_ptrs
-{
-    cuDoubleComplex *bras,     *kets,
-                    *tmp_bra1, *tmp_ket1,
-                    *tmp_bra2, *tmp_ket2,
-                    *diff_bra, *diff_ket;
-    cuDoubleComplex *pin_mem_chunk;
-};
-
-
 //-------------------------------------------------------------------
 void chebyshev_gpu(
     const int n, const int ld, double tau,
     double          * const __restrict__ save_tau,
     const double t_max,
-    double          * const __restrict__ t,
+    const double t_init,
     cuDoubleComplex * const __restrict__ PSI_bra,  // in device
     cuDoubleComplex * const __restrict__ PSI_ket,  // in device
     const double    * const __restrict__ H)        // in device
@@ -350,22 +324,28 @@ void chebyshev_gpu(
     convergence_gpu_dealloc( &mem );
 
     *save_tau = tau;
-    *t += tau*h_bar;
+    double t = t_init + tau*h_bar;
 
-    if( t_max - *t < tau*h_bar )
+    if( t_max - t < tau*h_bar )
     {
-        tau = (t_max - *t)/h_bar;
+        tau = (t_max - t)/h_bar;
         coefficient( tau, max_order, coeff );
     }
     
-    cudaZcopy_H2D( d_coeff, coeff, max_order );
-    
-    while (*t < t_max)
+    bool must_copy_coeff = true;
+
+    while (t < t_max)
     {
         // <bra_0| = <PSI_bra|
         // |ket_0> = |PSI_ket>
         braCopy( PSI_bra, bra[0] );
         ketCopy( PSI_ket, ket[0] );
+        
+        if( must_copy_coeff )
+        {
+            cudaZcopyAsync_H2D( d_coeff, coeff, max_order, stream[2] );   // copy coeff to the GPU
+            must_copy_coeff = false;
+        }
         
         // <bra_1| = <bra_0|H
         // |ket_1> = H|ket_0>
@@ -380,15 +360,16 @@ void chebyshev_gpu(
             H_ket_m( ket[k], H, ket[k-1], d_two, ket[k-2] );
         }
 
-//         cudaStreamSynchronize( stream[2] );   // wait for d_coeff
+        cudaStreamSynchronize( stream[2] );   // wait for d_coeff
+        // <tmp_bra| = sum(k=0,k_ref) c_k*<bra_k|
+        // |tmp_ket> = sum(k=0,k_ref) c_k*|ket_k>
         acummulate_vec_ax_async( n, ld, k_ref, d_coeff, bras, tmp_bra, stream[bra_stream] );
         acummulate_vec_ax_async( n, ld, k_ref, d_coeff, kets, tmp_ket, stream[ket_stream] );
 
         // check charge conservation
         //  norm = |<tmp_bra|tmp_ket>|^2
-        cudaDeviceSynchronize();
-//         setStream( bra );
-//         cudaStreamSynchronize( stream[ket_stream] );   // wait for tmp_bra/ket
+        setStream( bra );
+        cudaStreamSynchronize( stream[ket_stream] );   // wait for tmp_bra/ket
         cublasZdotc( myHandle, n, tmp_bra, 1, tmp_ket, 1, &z_norm );    // implicit synchronization here
         const double norm = cuCabs(z_norm);
 
@@ -410,26 +391,25 @@ void chebyshev_gpu(
             }
             while( !ok );
             convergence_gpu_dealloc( &mem );
-
-            cudaZcopy_H2D( d_coeff, coeff, max_order );
+            must_copy_coeff = true;
         }
         
-        *t += tau*h_bar;
+        t += tau*h_bar;
         
-        if( t_max - *t < tau*h_bar )
+        if( t_max - t < tau*h_bar )
         {
-            tau = (t_max - *t)/h_bar;
+            tau = (t_max - t)/h_bar;
             coefficient( tau, max_order, coeff );
-            cudaZcopy_H2D( d_coeff, coeff, max_order );
+            must_copy_coeff = true;
         }
     } // while (*t < t_max)
-
-    cudaDeviceSynchronize();
 
     // clean up
     cublasSetStream( myHandle, cublas_default );
     for(int i=0; i<nStreams; i++)
         cudaStreamDestroy( stream[i] );
+    
+    cudaDeviceSynchronize();   // wait for all calculations to complete
 
     cudaFree( bras );
     cudaFree( kets );
@@ -527,25 +507,10 @@ void convergence_gpu(
         // |ket_k> = 2*H|ket_(k-1)> - |ket_(k-2)>
         bra_H_m( bra[k], bra[k-1], H, d_two, bra[k-2] );
         H_ket_m( ket[k], H, ket[k-1], d_two, ket[k-2] );
-/*        
-        // <tmp_bra2| = <tmp_bra1| + c_k*<bra_k|
-        setStream( bra );
-        Zaxpby( z_one, tmp_bra1, coeff[k], bra[k], tmp_bra2 );
 
-        // |tmp_ket2> = |tmp_ket1> + c_k*|ket_k>
-        setStream( ket );
-        Zaxpby( z_one, tmp_ket1, coeff[k], ket[k], tmp_ket2 );
-        
-        // check bra and ket convergence:
-        //  <diff| = <tmp_bra2| - <tmp_bra1|
-        Zvec_subtract( n, tmp_bra2, tmp_bra1, tmp_bra1, stream[bra_stream] );
-        //  |diff> = |tmp_ket2> - |tmp_ket1>
-        Zvec_subtract( n, tmp_ket2, tmp_ket1, tmp_ket1, stream[ket_stream] );
-*/    
         // <tmp_bra2| = <tmp_bra1| + c_k*<bra_k|   &&   <diff| = <tmp_bra2| - <tmp_bra1|
-        fused_Zxpby_and_subtract( n, tmp_bra1, coeff[k], bra[k], tmp_bra2, tmp_bra1, stream[bra_stream] );
-
         // |tmp_ket2> = |tmp_ket1> + c_k*|ket_k>   &&   |diff> = |tmp_ket2> - |tmp_ket1>
+        fused_Zxpby_and_subtract( n, tmp_bra1, coeff[k], bra[k], tmp_bra2, tmp_bra1, stream[bra_stream] );
         fused_Zxpby_and_subtract( n, tmp_ket1, coeff[k], ket[k], tmp_ket2, tmp_ket1, stream[ket_stream] );
 
         //  find maximum element of |diff>
@@ -582,12 +547,12 @@ void convergence_gpu(
         
     } // for( k=2; k<max_order; ++k )
 
-    cudaDeviceSynchronize();
-
     // clean up
     cublasSetStream( myHandle, cublas_default );
     for(int i=0; i<2; i++)
         cudaStreamDestroy( stream[i] );
+
+    cudaDeviceSynchronize();
 }
 
 
@@ -604,7 +569,7 @@ void coefficient( const double tau, const int k_max, cuDoubleComplex * const coe
 
 
 //-------------------------------------------------------------------
-void propagation_gpucaller_(
+void propagationelhl_gpucaller_(
     const int       * const __restrict__ particle,
     const void      * const __restrict__ logical_coulomb,
     const int       * const __restrict__ n,
@@ -612,10 +577,9 @@ void propagation_gpucaller_(
     const double    * const __restrict__ h_h,        // in host
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
-    const double    * const __restrict__ time,
-    const void      * const __restrict__ logical_first_call,
-    const double    * const __restrict__ delta_t,
+    const double    * const __restrict__ t_init,
     const double    * const __restrict__ t_max,
+    double          * const __restrict__ tau,
     double          * const __restrict__ save_tau )
 {
     time_init();
@@ -624,12 +588,9 @@ void propagation_gpucaller_(
               hole     = +1;
 
     const bool coulomb = *(reinterpret_cast<const bool*>(logical_coulomb));
-    const bool first   = *(reinterpret_cast<const bool*>(logical_first_call));
-    const int m = *n;
-    const int ld = ((m + 31)/32)*32;  // making leading dimension multiple of 32
 
-    const double tau_max = *delta_t/h_bar;
-    double tau = ( first? tau_max : (*save_tau)*1.15 );
+    const int m  = *n;
+    const int ld = ((m + 31)/32)*32;  // making leading dimension multiple of 32
 
     static double *d_H = nullptr;
     static double *d_Sinv = nullptr;
@@ -654,8 +615,8 @@ void propagation_gpucaller_(
         cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h,    m, (void *)d_h,    ld, stream[0]);
 
         // Copy bra/ket to the GPU
-        cudaMemcpyAsync( (void*) d_PSI_bra, (const void*) h_PSI_bra, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
-        cudaMemcpyAsync( (void*) d_PSI_ket, (const void*) h_PSI_ket, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
+        cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+        cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
 
         // H = Sinv*h
         cublasSetStream( myHandle, stream[0] );
@@ -664,12 +625,10 @@ void propagation_gpucaller_(
         cudaStreamSynchronize( stream[0] );
         if(!coulomb)
         {
-            cudaFree( d_h );
             cudaFree( d_Sinv );
             d_Sinv = nullptr;
         }
-        else
-            cudaFree(d_h);
+        cudaFree( d_h );
     }
     else if(*particle == hole)
     {
@@ -683,8 +642,6 @@ void propagation_gpucaller_(
             // Copy bra/ket to the GPU
             cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
             cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
-//             cudaMemcpyAsync( (void*) d_PSI_bra, (const void*) h_PSI_bra, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
-//             cudaMemcpyAsync( (void*) d_PSI_ket, (const void*) h_PSI_ket, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
 
             cublasSetStream( myHandle, stream[0] );
             cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, m, m, &d_one, d_Sinv, ld, d_h, ld, &d_zero, d_H, ld);
@@ -699,19 +656,14 @@ void propagation_gpucaller_(
             // Copy bra/ket to the GPU
             cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
             cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
-//             cudaMemcpyAsync( (void*) d_PSI_bra, (const void*) h_PSI_bra, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
-//             cudaMemcpyAsync( (void*) d_PSI_ket, (const void*) h_PSI_ket, m*sizeof(cuDoubleComplex), cudaMemcpyHostToDevice, stream[1] );
         }
     }
 
-    double t = *time;   // variable time must not have its value changed
     cudaStreamSynchronize( stream[1] );   // wait for d_PSI_bra/ket to be copied
-    chebyshev_gpu( m, ld, tau, save_tau, *t_max, &t, d_PSI_bra, d_PSI_ket, d_H );
+    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, *t_init, d_PSI_bra, d_PSI_ket, d_H );
 
     cudaZcopy_D2H( h_PSI_bra, d_PSI_bra, m );
     cudaZcopy_D2H( h_PSI_ket, d_PSI_ket, m );
-//     cudaMemcpy( (void*) h_PSI_bra, (const void*) d_PSI_bra, m*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost );
-//     cudaMemcpy( (void*) h_PSI_ket, (const void*) d_PSI_ket, m*sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost );
 
     if(*particle == hole)
     {

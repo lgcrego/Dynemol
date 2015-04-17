@@ -15,7 +15,7 @@ module Chebyshev_m
     use Data_Output         , only : Populations
     use Matrix_Math
 
-    public  :: Chebyshev , preprocess_Chebyshev , Convergence , coefficient
+    public  :: Chebyshev , preprocess_Chebyshev , Propagation , dump_Qdyn
 
     private
 
@@ -66,7 +66,7 @@ deallocate( wv_FMO )
 
 ! prepare DUAL basis for local properties ...
 CALL Overlap_Matrix( system , basis , S_matrix )
-DUAL_bra(:) = dconjg( Psi )
+DUAL_bra = dconjg( Psi )
 call op_x_ket( DUAL_ket, S_matrix , Psi )
 
 call bra_x_op( Psi_bra, Psi , S_matrix )
@@ -101,11 +101,10 @@ real*8           , intent(inout) :: t
 real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
-! local variables...
-complex*16       , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:) 
-real*8                           :: tau , tau_max , norm_ref , norm_test , t_max 
-integer                          :: j , k_ref , N
-logical                          :: OK
+! local variables... 
+real*8                           :: tau , tau_max , t_init, t_max 
+
+t_init = t
 
 ! max time inside slice ...
 t_max = delta_t*frame_step*(it-1)  
@@ -113,7 +112,7 @@ t_max = delta_t*frame_step*(it-1)
 tau_max = delta_t / h_bar
 
 ! trying to adapt time step for efficient propagation ...
-tau = merge( delta_t / h_bar , save_tau * 1.15d0 , first_call_ )
+tau = merge( tau_max , save_tau * 1.15d0 , first_call_ )
 ! but tau should be never bigger than tau_max ...
 tau = merge( tau_max , tau , tau > tau_max )
 
@@ -127,42 +126,90 @@ If ( necessary_ ) then
 
 end If
 
+#ifdef USE_GPU
+call propagation_gpucaller( size(basis), tau, save_tau, t_init, t_max, Psi_t_bra, Psi_t_ket, H_prime )
+#else
+call Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
+#endif
+
+t = t_init + (delta_t*frame_step)
+
+! prepare DUAL basis for local properties ...
+DUAL_bra = dconjg(Psi_t_ket)
+DUAL_ket = Psi_t_bra
+
+! save populations(time) ...
+QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+
+CALL dump_Qdyn( Qdyn , it )
+
+! clean and exit ...
+If( driver /= "q_dynamics" ) then
+!     call GPU_Unpin( H_prime )
+    deallocate( H_prime )
+end if
+
+Print 186, t
+
+include 'formats.h'
+
+first_call_ = .false.
+
+end subroutine Chebyshev
+!
+!
+!
+!=============================================================================================
+ subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
+!=============================================================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: H_prime(:,:)
+complex*16      , intent(inout) :: Psi_t_bra(:)
+complex*16      , intent(inout) :: Psi_t_ket(:)
+real*8          , intent(in)    :: t_init
+real*8          , intent(in)    :: t_max
+real*8          , intent(inout) :: tau    
+real*8          , intent(out)   :: save_tau
+
+! local variables...
+complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
+real*8                      :: norm_ref , norm_test , t
+integer                     :: j , N , k_ref
+logical                     :: OK
+
 N = size(basis)
 
-#ifdef USE_GPU
-call chebyshev_gpucaller( N, tau, save_tau, t_max, t, Psi_t_bra, Psi_t_ket, H_prime )
-#else
-
-allocate( C_Psi_bra   (N , order ) , source=C_zero )
-allocate( C_Psi_ket   (N , order ) , source=C_zero )
-allocate( C_k         (order     ) , source=C_zero )
-allocate( Psi_tmp_bra (N         ) )
-allocate( Psi_tmp_ket (N         ) )
+! complex variables ...
+allocate( C_Psi_bra   ( N , order ) )
+allocate( C_Psi_ket   ( N , order ) )
+allocate( Psi_tmp_bra ( N         ) )
+allocate( Psi_tmp_ket ( N         ) )
+allocate( C_k         (     order ) )
 
 norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
-k_ref = 0
 
 ! first convergence: best tau-parameter for k_ref ...
 do
     CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
 
-    if( OK ) exit       
+    if( OK ) exit
     tau = tau * 0.9d0
 end do
-
 save_tau = tau
-t = t + tau * h_bar 
+
+t = t_init + tau*h_bar
 
 if( t_max-t < tau*h_bar ) then
-    tau = ( t_max-t ) / h_bar
+    tau = ( t_max - t ) / h_bar
     C_k = coefficient(tau,order)
 end if
 
 ! proceed evolution with best tau ...
 do while( t < t_max )
-
-    C_Psi_bra(:,1) = Psi_t_bra(:)
-    C_Psi_ket(:,1) = Psi_t_ket(:)
+        
+    C_Psi_bra(:,1) = Psi_t_bra
+    C_Psi_ket(:,1) = Psi_t_ket
 
     call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
     call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
@@ -182,48 +229,29 @@ do while( t < t_max )
 !   convergence criteria ...
     norm_test = abs(dotc( Psi_tmp_bra , Psi_tmp_ket ))
     if( abs( norm_test - norm_ref ) < norm_error ) then
-        Psi_t_bra(:) = Psi_tmp_bra(:)
-        Psi_t_ket(:) = Psi_tmp_ket(:)
+        Psi_t_bra = Psi_tmp_bra
+        Psi_t_ket = Psi_tmp_ket
     else
         OK = .false.
         do while( .not. OK )
             tau = tau * 0.975d0
             print*, "rescaling tau" , tau
-            CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
+            CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , K_ref , tau , H_prime , norm_ref , OK )
         end do
     end if
 
     t = t + (tau * h_bar)
 
     if( t_max-t < tau*h_bar ) then
-        tau = (t_max - t) / h_bar
+        tau = ( t_max-t ) / h_bar
         C_k = coefficient(tau,order)
     end if
 
 end do
 
-deallocate( C_k , C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
-#endif
+deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , C_k )
 
-! prepare DUAL basis for local properties ...
-DUAL_bra = dconjg(Psi_t_ket)
-DUAL_ket = Psi_t_bra
-
-! save populations(time) ...
-QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
-
-CALL dump_Qdyn( Qdyn , it )
-
-! clean and exit ...
-If( driver /= "q_dynamics" ) deallocate( H_prime )
-
-Print 186, t
-
-include 'formats.h'
-
-first_call_ = .false.
-
-end subroutine Chebyshev
+end subroutine Propagation
 !
 !
 !
@@ -325,7 +353,7 @@ If( DP_field_ ) then
         do i = 1 , j
      
             Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
-            Hamiltonian(j,i) = Hamiltonian(i,j)
+!             Hamiltonian(j,i) = Hamiltonian(i,j)
 
         end do
     end do  
@@ -336,12 +364,14 @@ else
         do i = 1 , j
      
             Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
-            Hamiltonian(j,i) = Hamiltonian(i,j)
+!             Hamiltonian(j,i) = Hamiltonian(i,j)
 
         end do
     end do  
 
 end If
+
+call Matrix_Symmetrize( Hamiltonian, 'U' )
 
 ! compute S_inverse...
 call GPU_Pin( S, n*n*8)
@@ -349,6 +379,7 @@ call syInvert( S )
 
 ! allocate and compute H' = S_inv * H ...
 allocate( H_prime(n,n) )
+! call GPU_Pin( H_prime, n*n*8 )
 
 call syMultiply( S, Hamiltonian, H_prime )
 

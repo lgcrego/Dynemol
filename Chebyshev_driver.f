@@ -153,6 +153,8 @@ do frame = frame_init , frame_final , frame_step
 
 end do
 
+call GPU_unpin( AO_bra )
+call GPU_unpin( AO_ket )
 deallocate( AO_bra , AO_ket , DUAL_bra , DUAL_ket )
 
 include 'formats.h'

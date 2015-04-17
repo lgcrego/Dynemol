@@ -124,6 +124,9 @@
     allocate( AO_bra   (Basis_Size,n_part) , AO_ket   (Basis_Size,n_part) )
     allocate( DUAL_bra (Basis_Size,n_part) , DUAL_ket (Basis_Size,n_part) )
 
+    call GPU_Pin( AO_bra, Basis_Size*n_part*16 )
+    call GPU_Pin( AO_ket, Basis_Size*n_part*16 )
+
  end subroutine Allocate_BracKets_Chebyshev
 !
 !
