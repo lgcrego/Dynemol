@@ -109,15 +109,16 @@ SOURCE2 = constants_m.o \
 		  DOS_m.o \
 		  oscillator.o \
 		  ga_QCModel.o \
-		  cost_tuning.o \
+		  cost_tuning_EH.o \
+		  cost_tuning_MM.o \
 		  nonlinearCG.o \
 		  CG_class.o \
 		  MM_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
-		  vibes_driver.o \
 		  CG_routines.o \
 		  ga_routines.o \
+		  vibes_driver.o \
 		  solvated_M.o \
 		  DOS_tool.o \
 		  backup.o \

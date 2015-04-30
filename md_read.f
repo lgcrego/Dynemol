@@ -3,7 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                
-    use parameters_m            , only : restart
+    use parameters_m            , only : restart , ad_hoc
     use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
@@ -118,7 +118,7 @@ CALL allocate_FF( atmax )
 
 If( read_from_gmx ) then
 
-    CALL ad_hoc_MM_tuning(instance="SpecialBonds")
+    If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
 
     CALL itp2mdflex( MM , atom , species , FF)
 
@@ -462,7 +462,7 @@ do i = 1 , size(atom)
     atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
 end do
 
-CALL ad_hoc_MM_tuning( atom , instance = "General" )
+If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 end subroutine Build_MM_Environment
 !
@@ -641,7 +641,7 @@ end do
 ! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
 atom % MMSymbol = atom % EHSymbol  
 
-CALL ad_hoc_MM_tuning( atom , instance = "General" )
+If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 indx = 1
 do nr = 1 , atom( MM % N_of_atoms ) % nr

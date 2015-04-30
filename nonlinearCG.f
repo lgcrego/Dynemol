@@ -1,6 +1,6 @@
 module NonlinearCG_m
 
-        use constants_m             , only: real_large , prec => mid_prec 
+        use constants_m             , only: real_large 
         use OPT_Parent_class_m      , only: OPT_Parent
 
         implicit none
@@ -42,6 +42,7 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
         allocate( f1%xicom(NMAX) , f1%pcom(NMAX) )
 
         fp = this % cost()
+        If( fp == real_large ) then ; local_minimum = real_large ; goto 100 ; end If
         call this % cost_variation(xi)
 
         do j=1,n
@@ -66,7 +67,7 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
                goto 100
            end if
 
-           if( (2.d0*abs(local_minimum-fp)) <= prec*(abs(local_minimum)+abs(fp)+prec) )  goto 100
+           if( (2.d0*abs(local_minimum-fp)) <= this % accuracy *(abs(local_minimum)+abs(fp)+this % accuracy) )  goto 100
 
            fp=local_minimum
            call this % cost_variation(xi)
@@ -123,6 +124,7 @@ real*8      :: ax,bx,xmin,xx,p(n)
  ! call mnbrak(this,ax,xx,bx,fa,fx,fb)                  ! <== this is not stable for the present optimization case
 
  local_minimum = brent(this,ax,xx,bx,xmin)
+ If( local_minimum == real_large ) return
  
  If( this % driver == "Genetic_Alg" .AND. this % profiling ) CALL this % output
 
@@ -231,6 +233,8 @@ real*8      :: xt(NMAX)
 
         f1dim = this % cost()
 
+        If( f1dim == real_large ) return
+
 end function f1dim
 !
 !
@@ -248,6 +252,7 @@ real*8 , PARAMETER :: CGOLD=0.3819660d0
 
 ! local variables ...
 INTEGER     :: iter
+logical     :: leave_now = .false.
 real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
 
         a=min(ax,cx)                    ! a and b must be in ascending order, though the input
@@ -257,11 +262,12 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
         x=v
         e=0.0d0                         ! This will be the distance moved on the step before last.
         fx=f1dim(this,x)
+        If( fx == real_large ) then ; leave_now = .true. ; goto 4 ; end If
         fv=fx
         fw=fx
         do iter=1,this % ITMAX                          ! Main program loop.
            xm=0.5*(a+b)
-           tol1=prec*abs(x)+prec
+           tol1=this%accuracy*abs(x)+this%accuracy
            tol2=2.*tol1
            if(abs(x-xm).le.(tol2-.5*(b-a))) goto 3      ! Test for done here.
            if(abs(e).gt.tol1) then                      ! Construct a trial parabolic fit.
@@ -291,10 +297,11 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
            else
               u=x+sign(tol1,d)
            end if
-           fu=f1dim(this,u)                                                 ! This is the one function evaluation per iteration,
-           if(fu.le.fx) then                                                ! and now we have to decide what to do with our function
-              if(u.ge.x) then                                               ! evaluation. Housekeeping follows:
-                 a=x
+           fu=f1dim(this,u)  
+           If( fu == real_large ) then ; leave_now = .true. ; goto 4 ; end If
+           if(fu.le.fx) then                                                ! This is the one function evaluation per iteration, 
+              if(u.ge.x) then                                               ! and now we have to decide what to do with our function
+                 a=x                                                        ! evaluation. Housekeeping follows:
               else
                  b=x
               end if
@@ -323,6 +330,7 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
         end do
  3      xmin=x                                        ! Arrive here ready to exit with best values.
         brent=fx
+ 4      If( leave_now ) brent = real_large
  
 end function brent
 !

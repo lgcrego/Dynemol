@@ -20,7 +20,6 @@ module tuning_m
 implicit none
 type(universe) , intent(inout) :: univ
 
-
 ! edit structure  ...
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -36,11 +35,11 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-univ % atom (35:36) % residue = "CCC"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-univ % atom(35:36) % nr = 2
+
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
@@ -49,12 +48,12 @@ univ % atom(35:36) % nr = 2
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where(univ % atom % residue == "PRC") univ % atom % El = .true.
+!where(univ % atom % residue == "PRC") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
+!where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
 
 !......................................................................
 
@@ -62,6 +61,9 @@ If( ad_hoc_verbose_ ) then
     Print 46
     ad_hoc_verbose_ = F_
 end If
+
+! just touching univ ...
+univ = univ
 
 include 'formats.h'
 
@@ -149,7 +151,6 @@ implicit none
 type(MM_atomic) , optional , intent(inout) :: atom(:)
 character(*)               , intent(in)    :: instance
 
-
 select case ( instance ) 
 
 !=================================================
@@ -158,34 +159,7 @@ select case ( instance )
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
-atom(743)  % flex = .true.
-atom(770)  % flex = .true.
-atom(1087) % flex = .true.
-atom(766)  % flex = .true.
-atom(142)  % flex = .true.
-atom(332)  % flex = .true.
-atom(752)  % flex = .true.
-atom(139)  % flex = .true.
-atom(740)  % flex = .true.
-atom(328)  % flex = .true.
-atom(742)  % flex = .true.
-atom(1061) % flex = .true.
-atom(744)  % flex = .true.
-atom(1064) % flex = .true.
-atom(745)  % flex = .true.
-atom(146)  % flex = .true.
-atom(1066) % flex = .true.
-atom(910)  % flex = .true.
-atom(918)  % flex = .true.
-atom(232)  % flex = .true.
-atom(747)  % flex = .true.
-atom(143)  % flex = .true.
-atom(1068) % flex = .true.
-atom(335)  % flex = .true.
-atom(921)  % flex = .true.
-atom(924)  % flex = .true.
-atom(1497) % flex = .true.
-atom(243)  % flex = .true.
+
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -197,11 +171,11 @@ atom(243)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(35:36) % residue = "PRC"
+
 !----------------------------------
 !      define nr
 !----------------------------------
-atom(35:36) % nr = 1
+
 !----------------------------------
 !     Selective_Dynamics
 !----------------------------------
@@ -241,6 +215,9 @@ atom(35:36) % nr = 1
 !=================================================
 
 end select
+
+! just touching atom ...
+atom = atom
 
 end subroutine ad_hoc_MM_tuning
 

@@ -53,8 +53,8 @@ integer :: i
 me % ITMAX       = me % ITMAX_MM
 me % BracketSize = me % BracketSize_MM
 me % profiling   = me % profiling_MM
-
-me % driver = driver_MM
+me % accuracy    = mid_prec
+me % driver      = driver_MM
 
 If( driver_MM == "Parametrize" ) me % profiling = .false.
 

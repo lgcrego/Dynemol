@@ -7,6 +7,7 @@ module OPT_Parent_class_m
         integer                 :: N_of_Freedom 
         integer                 :: ITMAX 
         real*8                  :: BracketSize 
+        real*8                  :: accuracy
         real*8  , allocatable   :: p(:)
         character (len=11)      :: driver
         logical                 :: profiling 

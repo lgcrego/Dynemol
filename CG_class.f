@@ -2,7 +2,7 @@ module CG_class_m
 
     use type_m
     use OPT_Parent_class_m      , only : GA_OPT
-    use constants_m             , only : a_Bohr
+    use constants_m             , only : a_Bohr , mid_prec
     use Semi_Empirical_Parms    , only : atom
     use parameters_m            , only : driver, profiling, &
                                          DP_Moment ,        &
@@ -11,7 +11,7 @@ module CG_class_m
     use GA_QCModel_m            , only : GA_eigen ,         &
                                          GA_DP_Analysis ,   &
                                          AlphaPolar 
-    use cost_tuning_m           , only : evaluate_cost                              
+    use cost_EH                 , only : evaluate_cost                              
 
     private
 
@@ -53,10 +53,9 @@ type(EH_OPT) :: me
 me % ITMAX       = me % ITMAX_EH
 me % BracketSize = me % BracketSize_EH
 me % profiling   = me % profiling_EH
-
 me % driver      = driver
-
-me % DP = GA % DP
+me % accuracy    = mid_prec
+me % DP          = GA % DP
 
 allocate( me % basis    (size(GA_basis)                     ) , source=GA_basis    )
 allocate( me % erg      (size(GA%erg)                       ) , source=GA%erg      )

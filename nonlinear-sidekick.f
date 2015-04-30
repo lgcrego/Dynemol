@@ -1,6 +1,6 @@
 module NonlinearSidekick_m
 
-        use constants_m             , only: real_large , prec => mid_prec 
+        use constants_m             , only: real_large 
         use OPT_Parent_class_m      , only: OPT_Parent
 
         implicit none
@@ -67,7 +67,7 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
                goto 100
            end if
 
-           if( (2.d0*abs(local_minimum-fp)) <= prec*(abs(local_minimum)+abs(fp)+prec) )  goto 100
+           if( (2.d0*abs(local_minimum-fp)) <= this % accuracy*(abs(local_minimum)+abs(fp)+this % accuracy) )  goto 100
 
            fp=local_minimum
            call this % cost_variation(xi)
@@ -260,7 +260,7 @@ real*8      :: a,b,d,e,etemp,fu,fv,fw,fx,p,q,r,tol1,tol2,u,v,w,x,xm
         fw=fx
         do iter=1,this % ITMAX                          ! Main program loop.
            xm=0.5*(a+b)
-           tol1=prec*abs(x)+prec
+           tol1=this%accuracy*abs(x)+this%accuracy
            tol2=2.*tol1
            if(abs(x-xm).le.(tol2-.5*(b-a))) goto 3      ! Test for done here.
            if(abs(e).gt.tol1) then                      ! Construct a trial parabolic fit.

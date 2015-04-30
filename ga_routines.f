@@ -1,7 +1,6 @@
 module GA_m
 
     use type_m
-    use OPT_Parent_class_m      , only : GA_OPT
     use constants_m
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
@@ -10,15 +9,25 @@ module GA_m
                                          Alpha_Tensor
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
+    use OPT_Parent_class_m      , only : GA_OPT
+    use FF_OPT_class_m          , only : FF_OPT
+    use CG_driver_m             , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
                                          AlphaPolar ,                   &
                                          Mulliken
-    use cost_tuning_m           , only : evaluate_cost                                         
-    use CG_driver_m             , only : CG_driver
+    use cost_EH                 , only : evaluate_cost                                         
+    use cost_MM                 , only : LogicalKey ,                   &
+                                         SetKeys ,                      &
+                                         KeyHolder
 
 
-    public :: Genetic_Algorithm , Mulliken
+    public :: Genetic_Algorithm , Mulliken 
+
+    interface Genetic_Algorithm
+        module procedure Genetic_Algorithm_EH
+        module procedure Genetic_Algorithm_MM
+    end interface
 
     private 
 
@@ -28,94 +37,9 @@ contains
 !
 !
 !
-!==========================================================
- subroutine modify_EHT_parameters( basis , GA_basis , Pop )
-!==========================================================
-implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-type(STO_basis) , intent(inout) :: GA_basis(:)
-real*8          , intent(in)    :: Pop(:) 
-
-! local variables ...
-integer :: L , gene , EHS , N_of_EHSymbol 
-integer :: indx(size(basis)) , k , i
-real*8  :: zeta(2) , coef(2)
-
-! -----------------------------------------------
-!       changing basis: editting functions ...
-! -----------------------------------------------
-!                GA%key storage
-!
-!                     EHSymbol    --->
-!               | 1 - S
-!               | 2 - P
-!               V 3 - D
-!                 4 - IP
-!                 5 - zeta1
-!                 6 - zeta2
-!                 7 - k_WH
-! -----------------------------------------------
-
-indx = [ ( i , i=1,size(basis) ) ]
-
-N_of_EHSymbol = size(GA%EHSymbol)
-
-gene = 0
-
-do EHS = 1 , N_of_EHSymbol
-
-!   S , P , D  orbitals ...
-do  L = 0 , 2
-
-    If( GA%key(L+1,EHS) == 1 ) then
-
-        ! changes VSIP ...
-        gene = gene + GA%key(4,EHS)
-        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
-
-        ! single STO orbitals ...
-        gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
-        If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
-        where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = abs( Pop(gene) + basis%zeta(1) )
-
-        ! double STO orbitals ...
-        If( (GA%key(5,EHS) == 1) .AND. (Ga%key(6,EHS) ==1) ) then
-
-            ! finds the first EHT atom ...
-            k = minloc( indx , dim=1 , MASK = (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
-
-            ! calculate  coef(1)[ zeta(1) , zeta(2) , coef(2) ] ...
-            gene    = gene + 1
-            zeta(1) = abs( Pop(gene) + basis(k)%zeta(1) )
-            gene    = gene + 1
-            zeta(2) = abs( Pop(gene) + basis(k)%zeta(2) )
-            coef(2) = abs( Pop(gene) )
-            CALL normalization( basis , zeta , coef , GA_basis(k)%n , k , 1 , 2 )
-            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
-                GA_basis % zeta(1) = zeta(1) 
-                GA_basis % zeta(2) = zeta(2) 
-                GA_basis % coef(1) = coef(1)
-                GA_basis % coef(2) = coef(2)
-            end where
-
-        End If
-
-        ! changes k_WH ...
-        gene = gene + GA%key(7,EHS)
-        If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
-
-    end If
-
-end do
-end do
-
-end subroutine modify_EHT_parameters
-!
-!
-!
-!============================================== 
-subroutine Genetic_Algorithm( basis, OPT_basis)
-!==============================================	
+!================================================= 
+subroutine Genetic_Algorithm_EH( basis, OPT_basis)
+!=================================================	
 implicit none
 type(STO_basis)                 , intent(in)  :: basis(:)
 type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
@@ -124,7 +48,7 @@ type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
-integer                         :: i , generation , info , Pop_start
+integer                         :: i , generation , info , Pop_start , GeneSize
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
@@ -135,9 +59,11 @@ CALL Read_GA_key
 !        SETTING-UP initial populations
 !-----------------------------------------------
 
+GeneSize = GA%GeneSize
+
 ! Initial Populations ...
-allocate( Pop     (Pop_Size , GA%GeneSize) )
-allocate( Old_Pop (Pop_Size , GA%GeneSize) )
+allocate( Pop     (Pop_Size , GeneSize) )
+allocate( Old_Pop (Pop_Size , GeneSize) )
 allocate( indx    (Pop_Size)               )
 
 CALL random_seed
@@ -243,7 +169,7 @@ deallocate( Pop , indx , Old_Pop )
 
 include 'formats.h'
 
-end subroutine Genetic_Algorithm
+end subroutine Genetic_Algorithm_EH
 !
 !
 !
@@ -255,21 +181,23 @@ integer               , intent(in)    :: Pop_start
 real*8  , allocatable , intent(inout) :: Pop(:,:) 
 
 ! local variables ...
-integer               :: i , j
+integer               :: i , j , GeneSize
 real*8  , allocatable :: a(:,:) , seed(:,:) , pot(:,:) 
+
+GeneSize = size(Pop(1,:))
 
 !-----------------------------------------------
 !           SETTING-UP populations
 !-----------------------------------------------
 
-allocate( a    (Pop_Size , GA%GeneSize) )
-allocate( seed (Pop_Size , GA%GeneSize) )
-allocate( pot  (Pop_Size , GA%GeneSize) )
+allocate( a    (Pop_Size , GeneSize) )
+allocate( seed (Pop_Size , GeneSize) )
+allocate( pot  (Pop_Size , GeneSize) )
 
 CALL random_seed
         
 do i = Pop_start , Pop_size
-    do j = 1 , GA%GeneSize
+    do j = 1 , GeneSize
 
         CALL random_number( a   (i,j) )
         CALL random_number( seed(i,j) )
@@ -301,7 +229,9 @@ real*8  , intent(inout) :: Pop(:,:)
 real*8  , allocatable   :: mat2(:,:) , ma(:) , za(:) , sem(:) , po(:)
 real*8                  :: rn , rp
 integer , allocatable   :: p(:) , n(:)
-integer                 :: i , j , pt , pm , N_crossings , Ponto_cruzamento
+integer                 :: i , j , pt , pm , N_crossings , Ponto_cruzamento , GeneSize
+
+GeneSize = size(Pop(1,:))
 
 N_crossings      = Pop_Size - Top_Selection 
 Ponto_cruzamento = N_crossings / 2 
@@ -316,21 +246,21 @@ end do
 allocate( p(Ponto_Cruzamento) )
 do i = 1 , Ponto_cruzamento
     call random_number( rp )
-    p(i) = min( int(GA%GeneSize*rp) + 1 , GA%GeneSize-1 )
+    p(i) = min( int(GeneSize*rp) + 1 , GeneSize-1 )
 end do
 
 ! Crossing ...
-allocate( mat2(Pop_Size,GA%GeneSize) )
+allocate( mat2(Pop_Size,GeneSize) )
 mat2 = Pop
 do i = 1 , 2
     do j = 1 , Ponto_Cruzamento
         Pop( Top_Selection+i+(2*j-2) , 1      : p(j)        )  =  mat2( n(i+(2*j-2)) , 1      : p(j)        )
-        Pop( Top_Selection+i+(2*j-2) , p(j)+1 : GA%GeneSize )  =  mat2( n((2*j+1)-i) , p(j)+1 : GA%GeneSize )
+        Pop( Top_Selection+i+(2*j-2) , p(j)+1 : GeneSize )  =  mat2( n((2*j+1)-i) , p(j)+1 : GeneSize )
     end do
 end do
 
 ! Mutation ...
-pt = 2*int( N_crossings * GA%GeneSize * Mutation_rate )
+pt = 2*int( N_crossings * GeneSize * Mutation_rate )
 allocate( ma(pt) )
 
 do i = 1 , pt
@@ -346,13 +276,98 @@ do i = 1 , pm
     call random_number( sem(i) )
 
     po(i) = int( 2 * sem(i) )
-    Pop(int(N_crossings*ma(i))+Top_Selection+1,int(GA%GeneSize*ma(i+pm))+1) = ((-1)**po(i)) * za(i)
+    Pop(int(N_crossings*ma(i))+Top_Selection+1,int(GeneSize*ma(i+pm))+1) = ((-1)**po(i)) * za(i)
 end do
 
 ! deallocating ...
 deallocate( n , p , mat2 , ma , za , sem , po )
 
 end subroutine Mutation_and_Crossing
+!
+!
+!
+!==========================================================
+ subroutine modify_EHT_parameters( basis , GA_basis , Pop )
+!==========================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+type(STO_basis) , intent(inout) :: GA_basis(:)
+real*8          , intent(in)    :: Pop(:) 
+
+! local variables ...
+integer :: L , gene , EHS , N_of_EHSymbol 
+integer :: indx(size(basis)) , k , i
+real*8  :: zeta(2) , coef(2)
+
+! -----------------------------------------------
+!       changing basis: editting functions ...
+! -----------------------------------------------
+!                GA%key storage
+!
+!                     EHSymbol    --->
+!               | 1 - S
+!               | 2 - P
+!               V 3 - D
+!                 4 - IP
+!                 5 - zeta1
+!                 6 - zeta2
+!                 7 - k_WH
+! -----------------------------------------------
+
+indx = [ ( i , i=1,size(basis) ) ]
+
+N_of_EHSymbol = size(GA%EHSymbol)
+
+gene = 0
+
+do EHS = 1 , N_of_EHSymbol
+
+!   S , P , D  orbitals ...
+do  L = 0 , 2
+
+    If( GA%key(L+1,EHS) == 1 ) then
+
+        ! changes VSIP ...
+        gene = gene + GA%key(4,EHS)
+        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
+
+        ! single STO orbitals ...
+        gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
+        If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
+        where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = abs( Pop(gene) + basis%zeta(1) )
+
+        ! double STO orbitals ...
+        If( (GA%key(5,EHS) == 1) .AND. (Ga%key(6,EHS) ==1) ) then
+
+            ! finds the first EHT atom ...
+            k = minloc( indx , dim=1 , MASK = (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
+
+            ! calculate  coef(1)[ zeta(1) , zeta(2) , coef(2) ] ...
+            gene    = gene + 1
+            zeta(1) = abs( Pop(gene) + basis(k)%zeta(1) )
+            gene    = gene + 1
+            zeta(2) = abs( Pop(gene) + basis(k)%zeta(2) )
+            coef(2) = abs( Pop(gene) )
+            CALL normalization( basis , zeta , coef , GA_basis(k)%n , k , 1 , 2 )
+            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) 
+                GA_basis % zeta(1) = zeta(1) 
+                GA_basis % zeta(2) = zeta(2) 
+                GA_basis % coef(1) = coef(1)
+                GA_basis % coef(2) = coef(2)
+            end where
+
+        End If
+
+        ! changes k_WH ...
+        gene = gene + GA%key(7,EHS)
+        If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
+
+    end If
+
+end do
+end do
+
+end subroutine modify_EHT_parameters
 !
 !
 !
@@ -567,6 +582,114 @@ real*8   :: rra
       goto 10
 
 end subroutine sort2
+!
+!
+!
+!
+!=========================================================
+!
+!
+!
+!
+!==========================================================
+ subroutine Genetic_Algorithm_MM( MM_parms , GA_Selection )
+!==========================================================	
+implicit none
+type(FF_OPT)                  , intent(inout) :: MM_parms
+real*8          , allocatable , intent(out)   :: GA_Selection(:,:)
+
+! local variables ...
+real*8                          :: initial_cost
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) , p0(:)
+integer         , allocatable   :: indx(:)
+integer                         :: i , generation , Pop_start ,  GeneSize
+type(LogicalKey)                :: key
+
+!-----------------------------------------------
+!        SETTING-UP MM_parms object
+!-----------------------------------------------
+
+CALL SetKeys
+
+key = KeyHolder(1)
+
+MM_parms = FF_OPT( key , kernel = "NormalModes" )
+
+GeneSize = MM_parms % N_of_freedom 
+
+! creating reference copy of FF vector ...
+allocate( p0(GeneSize) , source = MM_parms % p )
+
+initial_cost = MM_parms % cost()
+
+!-----------------------------------------------
+!        SETTING-UP initial populations
+!-----------------------------------------------
+
+! Initial Populations ...
+allocate( Pop     (Pop_Size , GeneSize) )
+allocate( Old_Pop (Pop_Size , GeneSize) )
+allocate( indx    (Pop_Size)             )
+
+CALL random_seed
+
+Pop_start = 1
+CALL generate_RND_Pop( Pop_start , Pop )       
+
+! the input parameters comprise one of the genes of the Pop ...
+Pop(:,1) = D_zero
+
+indx = [ ( i , i=1,Pop_Size ) ]
+
+!-----------------------------------------------
+! setting normal mode data in FF_OPT_class ...
+
+allocate( custo(Pop_size) )
+
+do generation = 1 , N_generations
+
+    do i = Pop_start , Pop_Size
+
+        ! virtual displacements in the FF parameter space ...
+        MM_parms % p(:) = p0(:) * (D_one + Pop(i,:))
+
+        ! gather data and evaluate population cost ...
+        custo(i) = MM_parms % cost()
+
+    end do
+
+!   evolve populations ...    
+    CALL sort2(custo,indx)
+
+    Old_Pop = Pop
+    Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+
+    Pop_start = Top_Selection + 1
+
+!   Mutation_&_Crossing preserves the top-selections ...
+    If( Mutate_Cross) then
+        CALL Mutation_and_Crossing( Pop )
+    else
+        CALL generate_RND_Pop( Pop_start , Pop )       
+    end If
+
+    indx = [ ( i , i=1,Pop_Size ) ]
+
+    Print 160 , generation , N_generations
+
+end do
+
+allocate( GA_Selection( size(p0) , Top_Selection ) )
+
+forall( i=1:Top_Selection ) GA_Selection(:,i) = p0(:) * (D_one + Pop(i,:))
+
+MM_parms%p = p0(:) * (D_one + Pop(1,:)) 
+
+deallocate( Pop , indx , Old_Pop ) 
+
+include 'formats.h'
+
+end subroutine Genetic_Algorithm_MM
 !
 !
 !

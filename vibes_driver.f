@@ -11,10 +11,11 @@ module good_vibrations_m
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
-    use cost_tuning_m           , only : nmd_REF_erg , nmd_NOPT_erg
+    use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , LogicalKey 
     use MM_ERG_class_m          , only : MM_OPT
-    use FF_OPT_class_m          , only : FF_OPT , LogicalKey 
+    use FF_OPT_class_m          , only : FF_OPT 
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
+    use GA_m                    , only : Genetic_Algorithm
 
     public :: Optimize_Structure , Normal_Modes , Optimize_Parameters_Driver
 
@@ -36,12 +37,10 @@ contains
 implicit none
 
 ! local variables ...
-real*8                        :: local_minimum 
-type(LogicalKey)              :: key
-logical                       :: F_ = .false. , T_ = .true. , pausing
-
-! reading command line argument for pausing between optimization turns ...
-pausing = ( COMMAND_ARGUMENT_COUNT() > 0 ) 
+real*8                         :: local_minimum 
+real*8           , allocatable :: GA_Selection(:,:)
+logical                        :: F_ = .false. , T_ = .true. 
+type(LogicalKey)               :: key
 
 ! saving reference structure for future use ...
 allocate( atom0 , source = atom )
@@ -55,68 +54,92 @@ key%diheds = F_
 MM_parms = FF_OPT( key , kernel = "energy" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-If( pausing ) pause
-print*, "==> bond length optimization"
-! instantiating MM ...
-key%bonds  = [T_,F_,F_]
-key%angs   = [F_,F_]
-key%diheds = [F_,F_,F_,F_,F_,F_,F_]
 
-MM_parms = FF_OPT( key , kernel = "NormalModes" )
+! preprocess with GA method ...
+CALL Genetic_Algorithm( MM_parms , GA_Selection )
 
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-If( pausing ) pause
-print*, "==> bond angle optimization"
-! instantiating MM ...
-key%bonds  = [F_,F_,F_]
-key%angs   = [T_,F_]
-key%diheds = [F_,F_,F_,F_,F_,F_,F_]
+CALL CG_driver( GA_Selection ) 
 
-MM_parms = FF_OPT( key , kernel = "NormalModes" )
-
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-If( pausing ) pause
-print*, "==> dihedral optimization"
-! instantiating MM ...
-key%bonds  = [F_,F_,F_]
-key%angs   = [F_,F_]
-key%diheds = [F_,F_,T_,F_,F_,F_,F_]
-
-MM_parms = FF_OPT( key , kernel = "NormalModes" )
-
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-If( pausing ) pause
-print*, "==> optimize all"
-! instantiating MM ...
-key%bonds  = [T_,F_,F_]
-key%angs   = [T_,F_]
-key%diheds = [F_,F_,T_,F_,F_,F_,F_]
-
-MM_parms = FF_OPT( key , kernel = "NormalModes" )
-
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
-If( pausing ) pause
-print*, "==> done"
 atom = atom0
 call optimize_structure()
 
 print*, MM_parms%nmd_OPT_indx
-print*, RMSD()
 
 call normal_modes( )
+
 stop
 
-
-
-
-
-
-
-
-
-
-
 end subroutine Optimize_Parameters_Driver 
+!
+!
+!
+!====================================
+ subroutine CG_Driver( GA_Selection )
+!====================================
+implicit none
+real*8           , allocatable , intent(inout) :: GA_Selection(:,:)
+
+! local variables ...
+integer                          :: i , k , GlobalMinimum
+integer                          :: Top_Selection 
+real*8                           :: this_minimum
+real*8             , allocatable :: local_minimum(:) , InitialCost(:)
+type(LogicalKey)                 :: key 
+
+
+Top_Selection = size(GA_Selection(1,:)) 
+
+allocate( local_minimum(Top_Selection) , source = real_large )
+allocate( InitialCost  (Top_Selection)                       )
+
+do i = 1 , Top_Selection
+
+    atom = atom0 
+
+    do k = 1 , size(KeyHolder)
+
+        write(*,190) i , KeyHolder(k) % comment 
+
+        key = KeyHolder(k)
+
+        MM_parms = FF_OPT( key , kernel = "NormalModes" )
+
+        If( k == 1 ) then
+
+            MM_parms % p = GA_Selection(:,i)
+
+            InitialCost(i) = MM_parms%cost()
+
+        end If
+
+        CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
+
+        If( this_minimum == real_large ) goto 21
+
+        ! temporarily stores CG optimized FF parameters here ...
+        CALL save_temporary_results( GA_Selection(:,i) )
+        local_minimum(i) = this_minimum
+
+    end do
+
+21  print*, "  ==> done"
+
+end do
+
+write(*,191) ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
+
+GlobalMinimum = minloc(local_minimum,dim=1)
+key           = KeyHolder(5)
+MM_parms      = FF_OPT( key , kernel = "NormalModes" )
+MM_parms % p  = GA_Selection(:,GlobalMinimum)
+atom          = atom0
+
+Print*, GlobalMinimum
+Print*, MM_parms%cost()
+
+include 'formats.h'
+
+end subroutine CG_Driver
 !
 !
 !
@@ -300,6 +323,25 @@ do i = 1 , size(atom)
 end do
 
 end function RMSD
+!
+!
+!
+!======================================
+ subroutine save_temporary_results( a )
+!======================================
+implicit none
+real*8 , intent(inout) :: a(:)
+
+! local variables ...
+type(LogicalKey) :: key
+
+key = KeyHolder(1)
+
+MM_parms = FF_OPT( key , kernel="JustKey" )
+
+a = MM_parms % p
+
+end subroutine save_temporary_results
 !
 !
 !

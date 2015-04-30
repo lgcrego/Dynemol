@@ -12,9 +12,9 @@ module FF_OPT_class_m
     use F_intra_m               , only : ForceIntra, Pot_Intra                                     
     use OPT_Parent_class_m      , only : OPT_Parent
     use NonlinearSidekick_m     , only : Fletcher_Reeves_Polak_Ribiere_minimization
-    use cost_tuning_m           , only : evaluate_cost 
+    use cost_MM                 , only : evaluate_cost , LogicalKey
 
-    public :: FF_OPT , LogicalKey 
+    public :: FF_OPT 
 
     private
 
@@ -33,13 +33,6 @@ module FF_OPT_class_m
     interface FF_OPT
         module procedure  constructor
     end interface
-
-    ! module types ...
-    type LogicalKey
-        logical :: bonds(3)
-        logical :: angs(2)
-        logical :: diheds(7)
-    end type
 
     ! module variables ...
     integer                                     :: bonds , angs , diheds
@@ -118,16 +111,26 @@ me % p( 1 :            ) = pack( bond_target  , bonds_mask  , me%p )
 me % p( bonds+1 :      ) = pack( ang_target   , angs_mask   , me%p ) 
 me % p( bonds+angs+1 : ) = pack( dihed_target , diheds_mask , me%p ) 
 
-If( kernel == "NormalModes" ) then
-    me % itmax = 250
-!    If( maxval(abs(me%p),dim=1) > 1.d2 ) me % BracketSize = 1.d+4 * me % BracketSize_FF
-!    If( maxval(abs(me%p),dim=1) < 1.d1 ) me % BracketSize = 5.d+2 * me % BracketSize_FF
-    If( any(key%bonds)  )                me % BracketSize = 1.d+5 * me % BracketSize_FF
-    If( any(key%angs)   )                me % BracketSize = 1.d+3 * me % BracketSize_FF
-    If( any(key%diheds) )                me % BracketSize = 1.d+2 * me % BracketSize_FF
+select case ( kernel )
 
-    If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
-end If
+    case( "energy" )
+
+        me % accuracy = low_prec
+
+    case( "NormalModes" ) 
+    
+        me % accuracy = 1.d-4
+    
+        If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
+        If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+        If( any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+
+        If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+
+    case default
+
+
+end select
 
 end function constructor
 !
@@ -141,7 +144,7 @@ class(FF_OPT) , intent(inout)  :: me
 real*8                         :: cost
 
 ! local variables ...
-integer         :: i , j  
+integer         :: i , j , info
 real*8          :: energy 
     
 ! reset forces ...
@@ -168,7 +171,9 @@ select case ( method )
 
     case( "NormalModes" )
 
-        CALL normal_modes()
+        CALL normal_modes( info )
+
+        If( info /= 0 ) then ; cost = real_large ; return ; end If
 
         ! nmd_list and nmd_ref are created in the first call to normal_modes() and abide ...
         If( .not. associated(me%nmd_OPT_indx) ) me%nmd_OPT_indx => nmd_list
@@ -405,15 +410,15 @@ end function Define_Pointer
 !
 !
 !
-!=========================
- subroutine normal_modes()
-!=========================
+!===============================
+ subroutine normal_modes( info )
+!===============================
 use MM_ERG_class_m  , only    : MM_OPT
-
 implicit none
+integer , intent(out) :: info
 
 ! local variables ...
-integer                       :: i , j , k , l , column , info
+integer                       :: i , j , k , l , column 
 real*8                        :: local_energy_minimum , dull
 real*8          , allocatable :: Hessian(:,:)
 type(MM_atomic) , allocatable :: equilibrium(:) , atom_fwd(:) , atom_bwd(:)
@@ -485,7 +490,6 @@ forall( j=1:MM%N_of_atoms , k=1:3 ) Hessian( : , (j-1)*3 + k ) = Hessian( : , (j
 Hessian = Hessian / Angs_2_mts
 
 CALL SYEV( Hessian , Hesse % erg , 'V' , 'U' , info )
-If ( info /= 0 ) write(*,*) 'info = ',info,' in SYEV in vibes normal modes '
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! build up Hesse ...
@@ -511,7 +515,6 @@ end if
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine normal_modes
-!
 !
 !
 end module FF_OPT_class_m
