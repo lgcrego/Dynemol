@@ -14,12 +14,12 @@ module FF_OPT_class_m
     use NonlinearSidekick_m     , only : Fletcher_Reeves_Polak_Ribiere_minimization
     use cost_MM                 , only : evaluate_cost , LogicalKey
 
-    public :: FF_OPT 
+    public :: FF_OPT , atom0
 
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 500           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         integer  , pointer      :: nmd_OPT_indx(:) => null()
@@ -35,15 +35,16 @@ module FF_OPT_class_m
     end interface
 
     ! module variables ...
+    character(len=11)                           :: method
     integer                                     :: bonds , angs , diheds
     integer             , allocatable , target  :: nmd_list(:) , nmd_ref(:) 
-    real*8              , allocatable           :: nmd_mtx(:,:)
     real*8              , allocatable , target  :: bond_target(:,:) , ang_target(:,:) , dihed_target(:,:)
+    real*8              , allocatable           :: nmd_mtx(:,:)
     logical                                     :: done = .false.
     logical             , allocatable           :: bonds_mask(:,:) , angs_mask(:,:) , diheds_mask(:,:)
     type(real_pointer)  , allocatable           :: bond(:,:) , ang(:,:) , dihed(:,:)
+    type(MM_atomic)     , allocatable           :: atom0(:)
     type(R_eigen)                               :: Hesse
-    character(len=11)                           :: method
 
 contains
 !
@@ -71,6 +72,9 @@ me % driver      = driver_MM
 If( driver_MM == "Parametrize" ) me % profiling = .true.
 
 If( .NOT. done ) then
+
+    ! saving reference structure for future use ...
+    allocate( atom0 , source = atom )
 
     ! catch the distinct parameters and make (bond, ang, dihed) point to them ...
     where( abs(molecule(1)%kbond0) < high_prec ) molecule(1)%kbond0 = D_zero
@@ -119,7 +123,7 @@ select case ( kernel )
 
     case( "NormalModes" ) 
     
-        me % accuracy = 1.d-4
+        me % accuracy = 1.d-3 !1.d-5
     
         If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
@@ -244,7 +248,7 @@ character(len=:) , allocatable  :: string(:)
  !========================================================================================================
  ! bond parms saving ...
  write(51,"(A)") "[ bondtypes ]"               
- write(51,"(A,I)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization, iteration = ", iter
+ write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
 
  allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nbonds) )
  do i = 1 , molecule(1)%Nbonds
@@ -431,8 +435,8 @@ save :: equilibrium , atom_fwd , atom_bwd , Hessian
 real*8 , parameter :: delta         = 1.d-8             ! <== displacement in Angs.
 real*8 , parameter :: eV_2_cm_inv   = 1.d-12*8065.73    ! <== displacement in Angs.
 
-! start the normal mode calculations from an energy minimum ...
-
+! start the normal mode calculations from the energy minimum ...
+atom = atom0
 ! instantiating MM ...
 MM_erg = MM_OPT( )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_energy_minimum )

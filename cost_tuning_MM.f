@@ -2,6 +2,7 @@ module cost_MM
 
     use type_m
     use constants_m
+    use parameters_m     , only : read_nmd_indx_
 
     public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , LogicalKey 
 
@@ -33,15 +34,30 @@ character(*)     , optional               , intent(in)     :: instance
 real*8           :: evaluate_cost
 
 ! local variables ...
-real*8           :: chi(30)    = D_zero
-real*8           :: weight(30) = D_zero
+integer  :: i 
+real*8   :: chi(30)    = D_zero
+real*8   :: weight(30) = D_zero
+
 
 select case (instance)
+
     case("preprocess")
-    evaluate_cost = real_large
+
+        evaluate_cost = real_large
+
+        If( read_nmd_indx_ ) then 
+
+            OPEN( unit=14 , file='OPT_nmd_indx.inpt' )
+                read(14,*) i
+                allocate( nmd_indx(i)  )    
+                read(14,*) ( nmd_indx(i) , i=1,size(nmd_indx) )
+            close(14) 
+        else
             
-allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,15,16,17,18,23,21,22,25,30,26,27,29,28] )
-!allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,15,16,17,18,23,21,22,25,30,26,27,29,28,31] )
+            allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,15,16,17,18,23,21,22,25,30,26,27,29,28] )
+           !allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,15,16,17,18,23,21,22,25,30,26,27,29,28,31] )
+
+        end If
 
     case default
 
@@ -49,17 +65,17 @@ allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,15,16,17,18,23,21,2
 ! NMD frequencies (cm-1})
 !------------------------
 
-chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 1.0d0
+chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 2.0d0
 
-chi(2) = Hesse_erg(nmd_indx(2))  - 395.d0                             ; weight(2) = 1.0d0
+chi(2) = Hesse_erg(nmd_indx(2))  - 395.d0                             ; weight(2) = 2.0d0
 
-chi(3) = Hesse_erg(nmd_indx(3))  - 599.d0                             ; weight(3) = 2.0d0
+chi(3) = Hesse_erg(nmd_indx(3))  - 599.d0                             ; weight(3) = 4.0d0
 
-chi(4) = Hesse_erg(nmd_indx(4))  - 599.d0                             ; weight(4) = 2.0d0
+chi(4) = Hesse_erg(nmd_indx(4))  - 599.d0                             ; weight(4) = 4.0d0
 
 chi(5) = Hesse_erg(nmd_indx(5))  - 677.d0                             ; weight(5) = 1.0d0
 
-chi(6) = Hesse_erg(nmd_indx(6))  - 700.d0                             ; weight(6) = 1.0d0
+chi(6) = Hesse_erg(nmd_indx(6))  - 700.d0                             ; weight(6) = 4.0d0
 
 chi(7) = Hesse_erg(nmd_indx(7))  - 838.d0                             ; weight(7) = 1.0d0
 
@@ -71,13 +87,13 @@ chi(10)= Hesse_erg(nmd_indx(10))  - 954.d0                            ; weight(1
 
 chi(11)= Hesse_erg(nmd_indx(11))  - 981.d0                            ; weight(11)= 1.0d0
 
-chi(12)= Hesse_erg(nmd_indx(12))  - 994.d0                            ; weight(12)= 2.0d0
+chi(12)= Hesse_erg(nmd_indx(12))  - 994.d0                            ; weight(12)= 3.0d0
 
-chi(13)= Hesse_erg(nmd_indx(13))  -  1014.d0                          ; weight(13)= 2.0d0
+chi(13)= Hesse_erg(nmd_indx(13))  -  1014.d0                          ; weight(13)= 4.0d0
 
-chi(14)= Hesse_erg(nmd_indx(14))  -  1048.d0                          ; weight(14)= 2.0d0
+chi(14)= Hesse_erg(nmd_indx(14))  -  1048.d0                          ; weight(14)= 3.0d0
 
-chi(15)= Hesse_erg(nmd_indx(15))  -  1048.d0                          ; weight(15)= 2.0d0
+chi(15)= Hesse_erg(nmd_indx(15))  -  1048.d0                          ; weight(15)= 3.0d0
 
 chi(16)= Hesse_erg(nmd_indx(16))  - 1137.d0                           ; weight(16)= 1.0d0
 
@@ -123,35 +139,12 @@ implicit none
 ! local variables ...
 logical :: F_ = .false. , T_ = .true. 
 
-If( .not. allocated(KeyHolder) ) allocate( KeyHolder(5) )
+If( .not. allocated(KeyHolder) ) allocate( KeyHolder(1) )
 
     KeyHolder(1)%comment = "==> optimize all"
     KeyHolder(1)%bonds   = [T_,F_,F_]
     KeyHolder(1)%angs    = [T_,F_]
     KeyHolder(1)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
-
-    KeyHolder(2)%comment = "==> bond length optimization"
-    KeyHolder(2)%bonds   = [T_,F_,F_]
-    KeyHolder(2)%angs    = [F_,F_]
-    KeyHolder(2)%diheds  = [F_,F_,F_,F_,F_,F_,F_]
-
-
-    KeyHolder(3)%comment = "==> bond angle optimization"
-    KeyHolder(3)%bonds   = [F_,F_,F_]
-    KeyHolder(3)%angs    = [T_,F_]
-    KeyHolder(3)%diheds  = [F_,F_,F_,F_,F_,F_,F_]
-
-
-    KeyHolder(4)%comment = "==> dihedral optimization"
-    KeyHolder(4)%bonds   = [F_,F_,F_]
-    KeyHolder(4)%angs    = [F_,F_]
-    KeyHolder(4)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
-
-
-    KeyHolder(5)%comment = "==> optimize all"
-    KeyHolder(5)%bonds   = [T_,F_,F_]
-    KeyHolder(5)%angs    = [T_,F_]
-    KeyHolder(5)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
 
 end subroutine SetKeys
 !

@@ -611,7 +611,7 @@ type(LogicalKey)                :: key
 
 CALL SetKeys
 
-key = KeyHolder(1)
+key = KeyHolder( size(KeyHolder) )
 
 MM_parms = FF_OPT( key , kernel = "NormalModes" )
 
@@ -636,7 +636,7 @@ CALL random_seed
 Pop_start = 1
 CALL generate_RND_Pop( Pop_start , Pop )       
 
-! the input parameters comprise one of the genes of the Pop ...
+! the input parameters constitute one of the genes of Pop ...
 Pop(:,1) = D_zero
 
 indx = [ ( i , i=1,Pop_Size ) ]
@@ -653,7 +653,7 @@ do generation = 1 , N_generations
         ! virtual displacements in the FF parameter space ...
         MM_parms % p(:) = p0(:) * (D_one + Pop(i,:))
 
-        ! gather data and evaluate population cost ...
+        ! evaluate  Pop(i,:)'s  cost ...
         custo(i) = MM_parms % cost()
 
     end do

@@ -6,14 +6,14 @@ module good_vibrations_m
     use blas95
     use lapack95
     use parameters_m            , only : PBC
-    use MD_read_m               , only : atom , MM 
+    use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic 
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
     use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , LogicalKey 
     use MM_ERG_class_m          , only : MM_OPT
-    use FF_OPT_class_m          , only : FF_OPT 
+    use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
     use GA_m                    , only : Genetic_Algorithm
 
@@ -25,7 +25,6 @@ module good_vibrations_m
     logical      :: done = .false.
     type(MM_OPT) :: MM_erg
     type(FF_OPT) :: MM_parms
-    type(MM_atomic) , allocatable :: atom0(:)
 
 contains
 !
@@ -42,9 +41,6 @@ real*8           , allocatable :: GA_Selection(:,:)
 logical                        :: F_ = .false. , T_ = .true. 
 type(LogicalKey)               :: key
 
-! saving reference structure for future use ...
-allocate( atom0 , source = atom )
-
 print*, "==> kernel = energy"
 ! instantiating MM ...
 key%bonds  = [T_,T_,F_]
@@ -60,10 +56,9 @@ CALL Genetic_Algorithm( MM_parms , GA_Selection )
 
 CALL CG_driver( GA_Selection ) 
 
-atom = atom0
-call optimize_structure()
+CALL MM_parms % output( 0 ) 
 
-print*, MM_parms%nmd_OPT_indx
+atom = atom0
 
 call normal_modes( )
 
@@ -94,8 +89,6 @@ allocate( InitialCost  (Top_Selection)                       )
 
 do i = 1 , Top_Selection
 
-    atom = atom0 
-
     do k = 1 , size(KeyHolder)
 
         write(*,190) i , KeyHolder(k) % comment 
@@ -108,7 +101,7 @@ do i = 1 , Top_Selection
 
             MM_parms % p = GA_Selection(:,i)
 
-            InitialCost(i) = MM_parms%cost()
+            InitialCost(i) = MM_parms % cost()
 
         end If
 
@@ -128,14 +121,14 @@ end do
 
 write(*,191) ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
-GlobalMinimum = minloc(local_minimum,dim=1)
-key           = KeyHolder(5)
+GlobalMinimum = minloc( local_minimum , dim=1 )
+key           = KeyHolder( size(KeyHolder) )
 MM_parms      = FF_OPT( key , kernel = "NormalModes" )
 MM_parms % p  = GA_Selection(:,GlobalMinimum)
-atom          = atom0
 
 Print*, GlobalMinimum
 Print*, MM_parms%cost()
+print*, MM_parms%nmd_OPT_indx
 
 include 'formats.h'
 
@@ -238,10 +231,10 @@ write( 3 , '(A12,3000F8.4)' ) "coordinates "   , ( atom(i) % xyz(:)  , i = 1 , M
 
 OPEN( unit=4 , file='nmd_erg.dat' , status='unknown' )
 
-write(4,'(a86)',advance="no") "# nmd_indx | OPT nmd ergs | REF nmd ergs | NOPT nmd ergs | OPT %-ERROR  | NOPT %-ERROR "
-write(4,*) " "
-
 If( MM_parms%driver == "Parametrize" ) then
+
+    write(4,'(a86)',advance="no") "# nmd_indx | OPT nmd ergs | REF nmd ergs | NOPT nmd ergs | OPT %-ERROR  | NOPT %-ERROR "
+    write(4,*) " "
 
     list_size = size(MM_parms%nmd_OPT_indx)
 
@@ -258,6 +251,11 @@ If( MM_parms%driver == "Parametrize" ) then
                   abs( hesse%erg(MM_parms%nmd_OPT_indx(i)) - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 , &
                   abs( nmd_NOPT_erg(i)                     - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 
     end do
+
+    OPEN( unit=14 , file='OPT_nmd_indx.out' )
+        write(14,*) size(MM_parms%nmd_OPT_indx)
+        write(14,*) MM_parms % nmd_OPT_indx
+    close(14) 
 
 else
 
@@ -299,7 +297,7 @@ end If
 MM_erg = MM_OPT( )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
-
+print*, local_minimum
 end subroutine Optimize_Structure
 !
 !
@@ -335,7 +333,7 @@ real*8 , intent(inout) :: a(:)
 ! local variables ...
 type(LogicalKey) :: key
 
-key = KeyHolder(1)
+key = KeyHolder( size(KeyHolder) )
 
 MM_parms = FF_OPT( key , kernel="JustKey" )
 
