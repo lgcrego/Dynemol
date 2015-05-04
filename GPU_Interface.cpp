@@ -295,7 +295,7 @@ static inline cublasFillMode_t lapack_to_cublas_uplo( const char UpLo )
     { return( UpLo == 'U' || UpLo == 'u' ? CUBLAS_FILL_MODE_UPPER : CUBLAS_FILL_MODE_LOWER ); }
     
 static inline cublasSideMode_t lapack_to_cublas_side( const char side )
-    { return( side == 'U' || side == 'u' ? CUBLAS_SIDE_LEFT : CUBLAS_SIDE_RIGHT ); }
+    { return( side == 'L' || side == 'l' ? CUBLAS_SIDE_LEFT : CUBLAS_SIDE_RIGHT ); }
 
 static inline cublasOperation_t lapack_to_cublas_trans( const char trans )
     { return( trans == 'N' || trans == 'n' ? CUBLAS_OP_N : (trans == 'T' || trans == 't' ? CUBLAS_OP_T : CUBLAS_OP_C) ); }
