@@ -629,7 +629,7 @@ initial_cost = MM_parms % cost()
 ! Initial Populations ...
 allocate( Pop     (Pop_Size , GeneSize) )
 allocate( Old_Pop (Pop_Size , GeneSize) )
-allocate( indx    (Pop_Size)             )
+allocate( indx    (Pop_Size)            )
 
 CALL random_seed
 
@@ -637,7 +637,7 @@ Pop_start = 1
 CALL generate_RND_Pop( Pop_start , Pop )       
 
 ! the input parameters constitute one of the genes of Pop ...
-Pop(:,1) = D_zero
+Pop(1,:) = D_zero
 
 indx = [ ( i , i=1,Pop_Size ) ]
 

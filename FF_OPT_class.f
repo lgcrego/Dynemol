@@ -123,7 +123,7 @@ select case ( kernel )
 
     case( "NormalModes" ) 
     
-        me % accuracy = 1.d-3 !1.d-5
+        me % accuracy = 1.d-5
     
         If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF

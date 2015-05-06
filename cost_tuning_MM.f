@@ -65,17 +65,17 @@ select case (instance)
 ! NMD frequencies (cm-1})
 !------------------------
 
-chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 2.0d0
+chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 2.5d0
 
-chi(2) = Hesse_erg(nmd_indx(2))  - 395.d0                             ; weight(2) = 2.0d0
+chi(2) = Hesse_erg(nmd_indx(2))  - 395.d0                             ; weight(2) = 2.5d0
 
-chi(3) = Hesse_erg(nmd_indx(3))  - 599.d0                             ; weight(3) = 4.0d0
+chi(3) = Hesse_erg(nmd_indx(3))  - 599.d0                             ; weight(3) = 2.7d0
 
-chi(4) = Hesse_erg(nmd_indx(4))  - 599.d0                             ; weight(4) = 4.0d0
+chi(4) = Hesse_erg(nmd_indx(4))  - 599.d0                             ; weight(4) = 2.7d0
 
 chi(5) = Hesse_erg(nmd_indx(5))  - 677.d0                             ; weight(5) = 1.0d0
 
-chi(6) = Hesse_erg(nmd_indx(6))  - 700.d0                             ; weight(6) = 4.0d0
+chi(6) = Hesse_erg(nmd_indx(6))  - 700.d0                             ; weight(6) = 2.5d0
 
 chi(7) = Hesse_erg(nmd_indx(7))  - 838.d0                             ; weight(7) = 1.0d0
 
@@ -87,31 +87,31 @@ chi(10)= Hesse_erg(nmd_indx(10))  - 954.d0                            ; weight(1
 
 chi(11)= Hesse_erg(nmd_indx(11))  - 981.d0                            ; weight(11)= 1.0d0
 
-chi(12)= Hesse_erg(nmd_indx(12))  - 994.d0                            ; weight(12)= 3.0d0
+chi(12)= Hesse_erg(nmd_indx(12))  - 994.d0                            ; weight(12)= 2.0d0
 
-chi(13)= Hesse_erg(nmd_indx(13))  -  1014.d0                          ; weight(13)= 4.0d0
+chi(13)= Hesse_erg(nmd_indx(13))  - 1014.d0                           ; weight(13)= 2.5d0
 
-chi(14)= Hesse_erg(nmd_indx(14))  -  1048.d0                          ; weight(14)= 3.0d0
+chi(14)= Hesse_erg(nmd_indx(14))  - 1048.d0                           ; weight(14)= 2.5d0
 
-chi(15)= Hesse_erg(nmd_indx(15))  -  1048.d0                          ; weight(15)= 3.0d0
+chi(15)= Hesse_erg(nmd_indx(15))  - 1048.d0                           ; weight(15)= 2.5d0
 
-chi(16)= Hesse_erg(nmd_indx(16))  - 1137.d0                           ; weight(16)= 1.0d0
+chi(16)= Hesse_erg(nmd_indx(16))  - 1137.d0                           ; weight(16)= 3.5d0
 
-chi(17)= Hesse_erg(nmd_indx(17))  - 1162.d0                           ; weight(17)= 2.0d0
+chi(17)= Hesse_erg(nmd_indx(17))  - 1162.d0                           ; weight(17)= 2.5d0
 
-chi(18)= Hesse_erg(nmd_indx(18))  - 1162.d0                           ; weight(18)= 2.0d0
+chi(18)= Hesse_erg(nmd_indx(18))  - 1162.d0                           ; weight(18)= 2.5d0
 
-chi(19)= Hesse_erg(nmd_indx(19))  - 1332.d0                           ; weight(19)= 1.0d0
+chi(19)= Hesse_erg(nmd_indx(19))  - 1332.d0                           ; weight(19)= 1.5d0
 
-chi(20)= Hesse_erg(nmd_indx(20))  - 1376.d0                           ; weight(20)= 1.0d0
+chi(20)= Hesse_erg(nmd_indx(20))  - 1376.d0                           ; weight(20)= 0.5d0
 
 chi(21)= Hesse_erg(nmd_indx(21))  - 1477.d0                           ; weight(21)= 1.0d0
 
 chi(22)= Hesse_erg(nmd_indx(22))  - 1477.d0                           ; weight(22)= 1.0d0
 
-chi(23)= Hesse_erg(nmd_indx(23))  - 1612.d0                           ; weight(23)= 1.0d0
+chi(23)= Hesse_erg(nmd_indx(23))  - 1612.d0                           ; weight(23)= 0.5d0
 
-chi(24)= Hesse_erg(nmd_indx(24))  - 1612.d0                           ; weight(24)= 1.0d0
+chi(24)= Hesse_erg(nmd_indx(24))  - 1612.d0                           ; weight(24)= 0.5d0
 
 !chi(25)= Hesse_erg(nmd_indx(25))  - 3080.d0                           ; weight(25)= 1.0d0
 

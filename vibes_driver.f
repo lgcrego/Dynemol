@@ -89,6 +89,8 @@ allocate( InitialCost  (Top_Selection)                       )
 
 do i = 1 , Top_Selection
 
+    atom = atom0
+
     do k = 1 , size(KeyHolder)
 
         write(*,190) i , KeyHolder(k) % comment 
@@ -119,16 +121,15 @@ do i = 1 , Top_Selection
 
 end do
 
-write(*,191) ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
+Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
 MM_parms      = FF_OPT( key , kernel = "NormalModes" )
 MM_parms % p  = GA_Selection(:,GlobalMinimum)
 
-Print*, GlobalMinimum
-Print*, MM_parms%cost()
-print*, MM_parms%nmd_OPT_indx
+Print 192, GlobalMinimum , MM_parms%cost() , RMSD()
+Print 193, MM_parms%nmd_OPT_indx
 
 include 'formats.h'
 
@@ -244,13 +245,15 @@ If( MM_parms%driver == "Parametrize" ) then
 
        write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , MM_parms%nmd_REF_indx(i) , Hessian(:,MM_parms%nmd_OPT_indx(i)) 
 
-       write(4,4)               MM_parms%nmd_REF_indx(i)      , &
+       write(4,4)               MM_parms%nmd_REF_indx(i) - 6  , &
                   hesse%erg   ( MM_parms%nmd_OPT_indx(i) )    , &
                   nmd_REF_erg ( i )                           , &
                   nmd_NOPT_erg( i )                           , &
                   abs( hesse%erg(MM_parms%nmd_OPT_indx(i)) - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 , &
                   abs( nmd_NOPT_erg(i)                     - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 
     end do
+
+    CALL system( "mv OPT_nmd_indx.inpt OPT_nmd_indx.old" )
 
     OPEN( unit=14 , file='OPT_nmd_indx.out' )
         write(14,*) size(MM_parms%nmd_OPT_indx)
@@ -297,7 +300,7 @@ end If
 MM_erg = MM_OPT( )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
-print*, local_minimum
+
 end subroutine Optimize_Structure
 !
 !

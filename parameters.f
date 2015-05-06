@@ -122,10 +122,10 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  100          
-  N_generations  =  50  
-  Top_Selection  =  10                     ! <== top selection < Pop_Size
-  Pop_range      =  0.1d0                  ! <== range of variation of parameters
+  Pop_Size       =  500          
+  N_generations  =  500 
+  Top_Selection  =  50                     ! <== top selection < Pop_Size
+  Pop_range      =  0.20d0                 ! <== range of variation of parameters
   Mutation_rate  =  0.1           
   Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
@@ -164,8 +164,10 @@ verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO")
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 inquire(file="OPT_nmd_indx.inpt", EXIST=exist)
-If ( read_nmd_indx_ .AND. (.not. exist) ) stop " >>> file OPT_nmd_indx.inpt does not exist ; move OPT_nmd_indx.out to OPT_nmd_indx.inpt <<< " 
-If ( (.not. read_nmd_indx_) .AND. exist ) stop " >>> file OPT_nmd_indx.inpt found ; remove it or set read_nmd_indx_ = .true. <<< " 
+If ( read_nmd_indx_ .AND. (.not. exist) ) then ; Print 194 ; Stop ; end if
+If ( (.not. read_nmd_indx_) .AND. exist ) then ; Print 195 ; Stop ; end if
+
+include 'formats.h'
 
 end subroutine Define_Environment
 !

@@ -129,3 +129,13 @@
 190   FORMAT(/,I2,' ', a30)
 
 191   FORMAT(2F32.6/)
+
+192   FORMAT(1x,'Global Minimun = ',I2,'    /    Cost = ',F12.6,'   /    Geometry RMSD = ',F10.6)  
+
+193   FORMAT(/,1x,"OPT_nmd_indx",/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I)  
+
+194   FORMAT(1x," >>> file OPT_nmd_indx.inpt does not exist ; move OPT_nmd_indx.out to OPT_nmd_indx.inpt <<< ")
+
+195   FORMAT(1x," >>> file OPT_nmd_indx.inpt found ; remove it or set read_nmd_indx_ = .true. <<< ")
+
+
