@@ -19,8 +19,8 @@ contains
 implicit none
 
 ! local variables ...
-real*8  :: t , t_rate 
-integer :: it , frame , frame_init , frame_final
+real*8   :: t , t_rate 
+integer  :: it , frame , frame_init , frame_final
 
 it = 0
 t  = t_i

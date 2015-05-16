@@ -2,7 +2,7 @@ module MM_dynamics_m
 
     use constants_m
     use parameters_m        , only : driver , restart , step_security , QMMM 
-    use MM_input            , only : MM_log_step , MM_frame_step , Units_MM
+    use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
@@ -10,34 +10,69 @@ module MM_dynamics_m
     use f_intra_m           , only : FORCEINTRA
     use QMMM_m              , only : QMMM_FORCE
     use for_force           , only : pot_total
-    use verlet_m            , only : VV1 , VV2 , Summat , PRESS_Boundary
     use Babel_m             , only : QMMM_key
     use Structure_Builder   , only : Unit_Cell
     use Backup_MM_m         , only : Security_Copy_MM , Restart_MM
     use MM_types            , only : debug_MM
+    use VV_Parent           , only : VV
+    use Berendsen_m         , only : Berendsen
+    use NVE_m               , only : NVE 
 
     public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup, MoveToBoxCM
 
     private
 
     !local variables ...
-    logical :: done = .false.
+    logical         :: done = .false.
+    type(Berendsen) :: VV_Berendsen
+    type(NVE)       :: VV_NVE
 
 contains
 !
 !
 !
-!===========================================================
-subroutine MolecularMechanics( t_rate , frame , Net_Charge )
-!===========================================================
+!============================================================
+ subroutine MolecularMechanics( t_rate , frame , Net_Charge )
+!============================================================
 implicit none
 real*8             , intent(in) :: t_rate
 integer            , intent(in) :: frame
 real*8  , optional , intent(in) :: Net_Charge(:)
 
+! selectc thermostat ...
+select case( thermostat )
+
+    case( "Berendsen" )
+         CALL VelocityVerlet( VV_Berendsen , t_rate , frame , Net_Charge )
+
+    case( "Nose_Hoover" )
+
+
+    case( "Microcanonical" )
+         CALL VelocityVerlet( VV_NVE , t_rate , frame , Net_Charge )
+
+end select
+
+
+
+
+
+
+end subroutine MolecularMechanics
+!
+!
+!
+!==============================================================
+subroutine VelocityVerlet( this , t_rate , frame , Net_Charge )
+!==============================================================
+implicit none
+class(VV)          , intent(inout) :: this
+real*8             , intent(in)    :: t_rate
+integer            , intent(in)    :: frame
+real*8  , optional , intent(in)    :: Net_Charge(:)
+
 ! local variables ...
-real*8  :: dt , Ttrans , pressure , density
-real*8  :: kinetic
+real*8  :: dt , Temperature , pressure , density , Kinetic
 integer :: i
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosencond to second ...
@@ -46,7 +81,7 @@ dt = t_rate * pico_2_sec
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 ! Molecuar dynamic ...
-CALL VV1( dt )
+CALL this % VV1( dt )
 
 CALL Molecular_CM
 
@@ -57,25 +92,26 @@ CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 
-CALL VV2 ( Ttrans , kinetic , dt )
-
-CALL Summat( density ) 
-
-CALL Press_Boundary( pressure , dt )
+CALL this % VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
 if( mod(frame,MM_log_step) == 0   ) then 
 
-    CALL output( Ttrans , frame , dt )
+    Temperature = this % Temperature
+    Kinetic     = this % Kinetic 
+    Pressure    = this % pressure 
+    Density     = this % density
+
+    CALL output( Temperature , frame , dt )
 
     select case (Units_MM)
 
         case( "eV" )    
-        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic*kJmol_2_eV , pot_total*kJmol_2_eV , (kinetic+pot_total)*kJmol_2_eV
+        write(*,'(I7,6F15.5)') frame , Temperature , density , pressure , Kinetic*kJmol_2_eV , pot_total*kJmol_2_eV , (Kinetic+pot_total)*kJmol_2_eV
 
         case default
-        write(*,'(I7,6F15.5)') frame , Ttrans , density , pressure , kinetic , pot_total , kinetic + pot_total
+        write(*,'(I7,6F15.5)') frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
 
@@ -87,7 +123,7 @@ forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 ! saving backup stuff ...
 if( driver == "MM_Dynamics" ) CALL Saving_MM_Backup( frame , instance = "from_MM" )
 
-end subroutine MolecularMechanics
+end subroutine VelocityVerlet
 !
 !
 !
@@ -99,8 +135,23 @@ integer , optional , intent(inout) :: frame_init
 real*8  , optional , intent(in)    :: Net_Charge(:)
 
 !local variables ...
-integer :: frame , i 
+integer         :: frame , i 
 
+! selectc thermostat ...
+select case( thermostat )
+
+    case( "Berendsen" )
+         VV_Berendsen = Berendsen()
+
+    case( "Nose_Hoover" )
+
+
+    case( "Microcanonical" )
+         VV_NVE = NVE()
+
+end select
+
+! setting up ...
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 CALL Setup

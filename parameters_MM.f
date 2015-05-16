@@ -10,7 +10,8 @@ type(MM_molecular) , allocatable :: species(:)
 real*8              :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
 integer             :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step
 character (5)       :: Units_MM
-character (len=11)  :: driver_MM
+character (len=11)  :: driver_MM 
+character (len=14)  :: thermostat
 
 logical , parameter :: T_ = .true. , F_ = .false. 
 
@@ -40,10 +41,13 @@ implicit none
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
 !
+
+  thermostat                = "Berendsen"       ! <== Berendsen, Nose_Hoover, Microcanonical
+
   temperature               = 300.d0            ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
 
-  thermal_relaxation_time   = infty             ! <== Temperature coupling term with the bath
+  thermal_relaxation_time   = 1.d-1             ! <== Temperature coupling term with the bath
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   pressure_relaxation_time  = infty             ! <== Pressure coupling term 
@@ -56,14 +60,15 @@ implicit none
 ! GENERAL INFO ...
 !
 
-  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+!  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 !  driver_MM              = "NormalModes"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  MM_log_step            =  1                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  10                ! <== step for saving MM results & parameters
+  MM_log_step            =  100               ! <== step for saving MM results & parameters
+  MM_frame_step          =  100               ! <== step for saving MM results & parameters
 
 !------------------------------------------------------------------------------
 ! UNITS ...

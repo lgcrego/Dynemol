@@ -43,7 +43,6 @@ contains
  function constructor() result( me )
 !===================================
 implicit none
-
 type(MM_OPT) :: me 
 
 !local variable ...

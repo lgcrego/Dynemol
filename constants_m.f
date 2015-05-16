@@ -51,12 +51,14 @@ MODULE constants_m
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
     real*8  , parameter :: coulomb     = 230.7113d0                 ! ee^2/(4.pi.boltz) x1E-30 N.m^2
     real*8  , parameter :: kJmol_2_eV  = 0.0103641d0                ! converts kJ/mol to eV units 
+    real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
     real*8  , parameter :: micro       = 1.0d-6                     ! micro unit
     real*8  , parameter :: pico_2_sec  = 1.0d-12                    ! converts picosecond units to second units
     real*8  , parameter :: nano_2_angs = 1.0d1                      ! converts nanometer units to angstron units
     real*8  , parameter :: mts_2_nano  = 1.0d9                      ! converts meter units to nanometer units
     real*8  , parameter :: Angs_2_mts  = 1.0d-10                    ! converts Angs units to meter units
     real*8  , parameter :: mts_2_Angs  = 1.0d+10                    ! converts meter units to Angs units
+    real*8  , parameter :: cm_2_Angs   = 1.0d+8                     ! converts centimeter units to Angs units
     real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors

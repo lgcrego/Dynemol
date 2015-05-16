@@ -1,3 +1,33 @@
+module VV_Parent
+
+    type, public  :: VV
+        integer   :: thermostat_type
+        real*8    :: Kinetic
+        real*8    :: Temperature
+        real*8    :: Pressure
+        real*8    :: Density
+    contains
+        procedure :: VV1
+        procedure :: VV2
+    end type  
+
+contains
+
+    subroutine VV1( me , dt )
+        class(VV) , intent(in) :: me
+        real*8    , intent(in) :: dt
+    end subroutine
+
+    subroutine VV2( me , dt )
+        class(VV) , intent(inout) :: me
+        real*8    , intent(in)    :: dt
+    end subroutine
+
+end module VV_Parent
+!
+!
+!
+!
 module setup_m
 
     use constants_m

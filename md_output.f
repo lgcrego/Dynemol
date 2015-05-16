@@ -4,7 +4,7 @@ module MD_dump_m
     use MM_types        , only: MM_atomic
     use MM_input        , only: MM_frame_step
     use parameters_m    , only: n_t, restart
-    use syst            , only: bath_T, Initial_density, Ekin, DensTot, TempTot, PressTot
+    use syst            , only: bath_T, Initial_density
     use MD_read_m       , only: MM , atom , molecule , species
 
     public :: output , cleanup , saving_MM_frame 
@@ -22,7 +22,7 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,          &
+use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harmpot, Morspot
 implicit none
@@ -109,11 +109,7 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Total Coulomb              :'',F15.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
     write(10,'(''Potential (INTER) Energy   :'',F12.4)') pot_INTER*mol*1.d-6 / MM % N_of_molecules
     write(10,'(''Potential Energy(gmx-like) :'',ES16.7E3)') pot_total*mol*1.d-3 / MM % N_of_molecules  
-    write(10,'(''Kinetic Energy             :'',F12.4)') Ekin*mol*1.d-6 / MM % N_of_molecules 
     write(10,*)
-    write(10,'(''Density     :'',F10.4,'' g/cm³'')' ) DensTot / n_t
-    write(10,'(''Temperature :'',F10.2,'' Kelvin'')') TempTot / n_t
-    write(10,'(''Pressure    :'',F10.2,'' atm'')'   ) PressTot / n_t
 
 close (10)
 10 format(A2,3F10.4,2X,F10.4)
