@@ -616,14 +616,22 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 read( 33 , * ) (dummy_char, k=1,4) , dummy_int , (InputReals(i,k) , k=1,3)
 
-                ! conversion 
+                ! V = k[1 + cos(n.phi - theta)]
                 ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
-                ! kdihed0(:,1) = C0 (kJ/mol) * factor1 * imol
-                ! kdihed0(:,2) = C1 (kJ/mol) * factor1 * imol
-                ! kdihed0(:,3) = C2 (kJ/mol) * factor1 * imol
-                ! kdihed0(:,4) = C3 (kJ/mol) * factor1 * imol
-                ! kdihed0(:,5) = C4 (kJ/mol) * factor1 * imol
-                ! kdihed0(:,6) = C5 (kJ/mol) * factor1 * imol
+                ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
+                ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
+                ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
+                InputReals(i,1) = InputReals(i,1) * deg_2_rad
+                InputReals(i,2) = InputReals(i,2) * factor1 * imol
+
+            case( 2 )
+
+                read( 33 , * ) (dummy_char, k=1,4) , dummy_int , (InputReals(i,k) , k=1,2)
+
+                ! V = 1/2.k[cos(phi) - cos(phi0)]²
+                ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+                ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
+                ! kdihed0(:,2) = K_(xi) ==> force constant (kJ.mol⁻¹.rad⁻²) * factor1 * imol
                 InputReals(i,1) = InputReals(i,1) * deg_2_rad
                 InputReals(i,2) = InputReals(i,2) * factor1 * imol
 
@@ -631,7 +639,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 read( 33 , * ) (dummy_char, k=1,4) , dummy_int , (InputReals(i,k) , k=1,6)
 
-                ! conversion 
+                ! V = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
                 ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
                 ! kdihed0(:,1) = C0 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,2) = C1 (kJ/mol) * factor1 * imol
@@ -733,7 +741,8 @@ do a = 1 , MM % N_of_species
         do k = 1 , NdihedTypes 
 
             ! if funct = 1 (cos)
-            ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61 (GMX manual 4.0)
+            ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        
+            ! Eq. 4.60 (GMX manual 5.0.5)
 
             if( species(a) % funct_dihed(n) == 1 ) then
 
@@ -773,9 +782,48 @@ do a = 1 , MM % N_of_species
 
             end if
 
+            ! if funct = 2 (harm)
+            ! V = 1/2.k ( xi - xi_0 )²
+            ! Eq. 4.59 (GMX manual 5.0.5)
+
+            if( species(a) % funct_dihed(n) == 2 ) then
+
+                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( Dihed_Type(k) == 2 ) 
+
+                flag4 = ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+                    ! kdihed0(:,1) = xi_0 (deg)
+                    ! kdihed0(:,2) = k_xi [ kJ/(mol.rad²) ]
+                    species(a) % kdihed0(n,1:2) = DihedParameters(k,1:2)
+                    cycle read_loop0
+                end if
+
+            end if
+
             ! if funct = 3 (cos3)
             ! V = C0 + C1 * cos( phi - 180 ) + C2 * cos^2( phi - 180 ) + C3 * cos^3( phi - 180 ) + C4 * cos^4( phi - 180 ) + C5 * cos^5( phi - 180 ) 
-            ! Eq. 4.62 (GMX manual 4.6.3)
+            ! Eq. 4.61 (GMX manual 5.0.5)
             
             if( species(a) % funct_dihed(n) == 3 ) then
 
@@ -804,8 +852,8 @@ do a = 1 , MM % N_of_species
                         ( Dihed_Type(k) == 3 )
    
                 if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
-                     species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6) 
-                     cycle read_loop0
+                    species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6) 
+                    cycle read_loop0
                 end if
 
             end if
@@ -847,15 +895,15 @@ do i = 1 , N
 
     select case( a % funct_dihed(i) )
 
-        case( 1 )
+        case( 1 ) ! V = k[1 + cos(n.phi - theta)]
 
-            a % dihedral_type(i) = "cos"
+            a % dihedral_type(i) = "cos" 
 
-        case( 2 )
+        case( 2 ) ! V = 1/2.k( xi - xi_0 )²
 
             a % dihedral_type(i) = "harm"
 
-        case( 3 )
+        case( 3 ) ! v = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
             
             a % dihedral_type(i) = "cos3"
 

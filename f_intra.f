@@ -411,7 +411,7 @@ do k = 1 , MM % N_of_atoms - 1
             rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
             rklq    = rkl(1)*rkl(1) + rkl(2)*rkl(2) + rkl(3)*rkl(3)
             rklsq   = SQRT(rklq)
-            ! morse potential ...
+            ! Morse potential ...
             qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
             qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
             coephi = TWO * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) * qterm0 * ( 1.d0 - qterm0 ) / rklsq
@@ -455,17 +455,30 @@ end subroutine FORCEINTRA
 implicit none
 
 ! local variables ...
-real*8  :: psi , cos_Psi
+real*8  :: psi , cos_Psi , dtheta
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
-    case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]        <== Eq. 4.61
+    case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] 
+                    ! Eq. 4.60 (GMX 5.0.5 manual)
         
-        term  =   molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
-        pterm =   molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
+        term  = molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
+        pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
         proper_dih =   proper_dih + pterm
         gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
 
-    case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)      <== Eq. 4.62
+    case ('harm')   ! V = 1/2.k( xi - xi_0 )²
+                    ! Eq. 4.59 (GMX 5.0.5 manual)
+
+           dtheta = ( phi - molecule(i) % kdihed0(j,1) )
+           dtheta = dtheta - Nint( dtheta * 1.d0/TWOPI ) * TWOPI
+
+           term  = molecule(i) % kdihed0(j,2) * dtheta 
+           pterm = 0.5d0 * term * dtheta 
+           gamma = term * rsinphi * rijkj * rjkkl
+
+    case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi i- 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)  
+                    ! Eq. 4.61 (GMX 5.0.5 manual)
+
         psi     = phi - PI
         cos_Psi = cos(psi)
 
@@ -516,7 +529,7 @@ select case( adjustl(Dihedral_Potential_Type) )
         pterm = 0.5d0 * term * dphi
         gamma = term * rijkj * rjkkl          
 
-    case('cos3') ! v = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
+    case('cos3') ! V = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
         pterm = 0.5d0 * ( molecule(i) % kdihed0(j,1) * ( 1.d0 + cos(phi)      ) + &
                           molecule(i) % kdihed0(j,2) * ( 1.d0 - cos(2.d0*phi) ) + &
                           molecule(i) % kdihed0(j,3) * ( 1.d0 + cos(3.d0*phi) ) )
