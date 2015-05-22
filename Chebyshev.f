@@ -21,14 +21,14 @@ module Chebyshev_m
 
 ! module parameters ...
     integer     , parameter :: order        = 25
-    real*8      , parameter :: error        = 1.0d-12
-    real*8      , parameter :: norm_error   = 1.0d-12
+    real*8      , parameter :: error        = 1.0d-8
+    real*8      , parameter :: norm_error   = 1.0d-8
 
 ! module variables ...
     real*8  , save :: save_tau 
     logical , save :: necessary_  = .true.
     logical , save :: first_call_ = .true.
-    real*8  , allocatable , save :: H_prime(:,:)
+    real*8  , allocatable , save :: H(:,:) , H_prime(:,:) , S_matrix(:,:)
 
 contains
 !
@@ -49,7 +49,7 @@ integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
-real*8          , allocatable   :: wv_FMO(:) , S_matrix(:,:)
+real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: Psi(:)
 type(R_eigen)                   :: FMO
 
@@ -64,6 +64,11 @@ allocate( Psi(size(basis)) , source=C_zero )
 Psi(li:li+N-1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
+#ifdef USE_GPU
+allocate( S_matrix(size(basis),size(basis)) )
+call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
+#endif
+
 ! prepare DUAL basis for local properties ...
 CALL Overlap_Matrix( system , basis , S_matrix )
 DUAL_bra = dconjg( Psi )
@@ -77,10 +82,9 @@ If( .not. restart ) then
     QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
     CALL dump_Qdyn( Qdyn , it )
-end If    
+end If
 
-! clean and exit ...
-deallocate( S_matrix )
+! leaving S_matrix allocated
 
 end subroutine preprocess_Chebyshev
 !
@@ -102,6 +106,7 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables... 
+integer                          :: N
 real*8                           :: tau , tau_max , t_init, t_max 
 
 t_init = t
@@ -116,10 +121,28 @@ tau = merge( tau_max , save_tau * 1.15d0 , first_call_ )
 ! but tau should be never bigger than tau_max ...
 tau = merge( tau_max , tau , tau > tau_max )
 
+N = size(basis)
+
+if(first_call_) then           ! allocate matrices
+#ifdef USE_GPU
+    allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
+    call GPU_Pin( H, N*N*8 )
+#else
+    allocate( H(N,N) , H_prime(N,N) )
+#endif
+end if
+
 If ( necessary_ ) then
     
     ! building  S_matrix  and  H'= S_inv * H ...
-    CALL Build_Hprime( system , basis )
+!     CALL Build_Hprime( system , basis )
+
+    call Overlap_Matrix( system , basis , S_matrix )
+    call Huckelx( basis , S_matrix , H )
+#ifndef USE_GPU
+    call syInvert( S_matrix )
+    call syMultiply( S_matrix , H , H_prime )
+#endif
 
     ! for a rigid structure once is enough ...
     If( driver ==  "q_dynamics" ) necessary_ = .false.
@@ -127,9 +150,9 @@ If ( necessary_ ) then
 end If
 
 #ifdef USE_GPU
-call propagation_gpucaller( size(basis), tau, save_tau, t_init, t_max, Psi_t_bra, Psi_t_ket, H_prime )
+call PropagationElHl_gpucaller( 0, .false., N, S_matrix, H, Psi_t_bra, Psi_t_ket, t_init, t_max, tau, save_tau)
 #else
-call Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
+call Propagation( N , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
 #endif
 
 t = t_init + (delta_t*frame_step)
@@ -143,12 +166,6 @@ QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t
 
 CALL dump_Qdyn( Qdyn , it )
 
-! clean and exit ...
-If( driver /= "q_dynamics" ) then
-!     call GPU_Unpin( H_prime )
-    deallocate( H_prime )
-end if
-
 Print 186, t
 
 include 'formats.h'
@@ -160,10 +177,10 @@ end subroutine Chebyshev
 !
 !
 !=============================================================================================
- subroutine Propagation( basis , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
+ subroutine Propagation( N , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
 !=============================================================================================
 implicit none
-type(STO_basis) , intent(in)    :: basis(:)
+integer         , intent(in)    :: N
 real*8          , intent(in)    :: H_prime(:,:)
 complex*16      , intent(inout) :: Psi_t_bra(:)
 complex*16      , intent(inout) :: Psi_t_ket(:)
@@ -175,10 +192,9 @@ real*8          , intent(out)   :: save_tau
 ! local variables...
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
 real*8                      :: norm_ref , norm_test , t
-integer                     :: j , N , k_ref
+integer                     :: j , k_ref
 logical                     :: OK
 
-N = size(basis)
 
 ! complex variables ...
 allocate( C_Psi_bra   ( N , order ) )
@@ -269,9 +285,12 @@ real*8      , intent(in)    :: norm_ref
 logical     , intent(out)   :: OK
 
 ! local variables...
-integer                     :: k , N  
+integer                     :: k , k_max, N  
 real*8                      :: norm_tmp
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:,:) , Psi_tmp_ket(:,:)
+
+! external function...
+real*8      , external      :: nakedBessel
 
 N = size(Psi_bra)
 
@@ -283,19 +302,27 @@ allocate( Psi_tmp_ket  ( N , 2     ) )
 OK = .false.
 
 ! get C_k coefficients ...
- C_k = coefficient(tau, order)
+C_k = coefficient(tau, order)
 
- C_Psi_bra(:,1) = Psi_bra(:)
- C_Psi_ket(:,1) = Psi_ket(:)
+k_max = order
+do k = 6, order
+    if( abs(C_k(k)*nakedBessel(k,tau)) < 1.0d-20 ) then
+        k_max = k
+        exit
+    end if
+end do
+
+k_ref = k_max
+
+C_Psi_bra(:,1) = Psi_bra(:)
+C_Psi_ket(:,1) = Psi_ket(:)
 call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
 call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
 
 Psi_tmp_bra(:,1) = C_k(1)*C_Psi_bra(:,1) + C_k(2)*C_Psi_bra(:,2)
 Psi_tmp_ket(:,1) = C_k(1)*C_Psi_ket(:,1) + C_k(2)*C_Psi_ket(:,2)
 
-do k = 3, order
-
-    k_ref = k
+do k = 3, k_max
 
     call bra_x_op( C_Psi_bra(:,k), C_Psi_bra(:,k-1), H_prime, C_two )
     C_Psi_bra(:,k) = C_Psi_bra(:,k) - C_Psi_bra(:,k-2)
@@ -333,59 +360,44 @@ end subroutine Convergence
  subroutine Build_Hprime( system , basis )
 !=========================================
 implicit none
-type(structure)                 , intent(in)  :: system
-type(STO_basis)                 , intent(in)  :: basis(:)
+type(structure) , intent(in)  :: system
+type(STO_basis) , intent(in)  :: basis(:)
 
 ! local variables...
-real*8  , allocatable   :: Hamiltonian(:,:)
-real*8  , allocatable   :: S(:,:)
 integer                 :: i, j, n
 
 n = size(basis)
-CALL Overlap_Matrix( system , basis , S )
+CALL Overlap_Matrix( system , basis , S_matrix )
 
-allocate( Hamiltonian(n,n) )
-call GPU_Pin( Hamiltonian, n*n*8)
+! call Huckelx( basis , S , Hamiltonian )
 
 If( DP_field_ ) then
  
     do j = 1 , n
-        do i = 1 , j
-     
-            Hamiltonian(i,j) = huckel_with_FIELDS(i,j,S(i,j),basis)
-!             Hamiltonian(j,i) = Hamiltonian(i,j)
-
-        end do
+    do i = 1 , j
+        H(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
+    end do
     end do  
 
 else
 
     do j = 1 , n
-        do i = 1 , j
-     
-            Hamiltonian(i,j) = huckel(i,j,S(i,j),basis)
-!             Hamiltonian(j,i) = Hamiltonian(i,j)
-
-        end do
+    do i = 1 , j
+        H(i,j) = huckel(i,j,S_matrix(i,j),basis)
+    end do
     end do  
 
 end If
 
 call Matrix_Symmetrize( Hamiltonian, 'U' )
 
+#ifndef USE_GPU
 ! compute S_inverse...
-call GPU_Pin( S, n*n*8)
 call syInvert( S )
 
-! allocate and compute H' = S_inv * H ...
-allocate( H_prime(n,n) )
-! call GPU_Pin( H_prime, n*n*8 )
-
-call syMultiply( S, Hamiltonian, H_prime )
-
-call GPU_Unpin(S)
-call GPU_Unpin(Hamiltonian)
-deallocate( S , Hamiltonian )
+! compute H' = S_inv * H ...
+call syMultiply( S_matrix, Hamiltonian, H_prime )
+#endif
 
 end subroutine Build_Hprime
 !
@@ -461,5 +473,51 @@ function isConverged( a, b, tol )
     end do
     isConverged = .true.
 end function isConverged
+!
+!
+!
+!=========================================
+subroutine Huckelx( basis , S_matrix , H )
+!=========================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
+real*8          , intent(out)   :: H(:,:)
+
+! local variables ... 
+real*8  :: k_eff , k_WH , c1 , c2 , c3
+integer :: i , j
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+
+do j = 1 , size(basis)
+
+    do i = 1 , j - 1
+
+        c1 = basis(i)%IP - basis(j)%IP
+        c2 = basis(i)%IP + basis(j)%IP
+
+        c3 = (c1/c2)*(c1/c2)
+
+        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+
+        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+
+        H(i,j) = k_eff * S_matrix(i,j) * c2 / two
+
+    end do
+
+    H(j,j) = basis(j)%IP
+
+end do
+
+call Matrix_Symmetrize( H, 'U' )
+
+end subroutine Huckelx
+
 
 end module Chebyshev_m
+
+
+
