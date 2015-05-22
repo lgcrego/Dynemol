@@ -153,7 +153,7 @@ If ( necessary_ ) then
     CALL Huckel( basis , S_matrix , h0 )
 
     call GPU_Pin( S_matrix, N*N*8 )
-    call syInvert( S_matrix, return_full )   ! S_matrix is destroyed and S_inv is returned
+    call syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
 #undef S_matrix
 
     ! for a rigid structure once is enough ...
@@ -197,16 +197,17 @@ else
     h => h0
 end if
 
+#ifndef USE_GPU
+! allocate and compute H' = S_inv * H ...
+allocate( H_prime(N,N) )
+call syMultiply( S_inv , h , H_prime )
+#endif
+
+! proceed evolution of ELECTRON wapacket with best tau ...
 #ifdef USE_GPU
 call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv, h, Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
 #else
-! allocate and compute H' = S_inv * H ...
-allocate( H_prime(N,N) )
-
-call syMultiply( S_inv , h , H_prime )
-
-! proceed evolution of ELECTRON wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
+CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
 #endif
 
 !=======================================================================
@@ -234,7 +235,7 @@ end if
 
 #ifndef USE_GPU
 ! proceed evolution of HOLE wapacket with best tau ...
-CALL Propagation( basis , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
+CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
 #endif
 
 !=======================================================================
@@ -280,7 +281,7 @@ integer :: i , j
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
 
-ALLOCATE( h0(size(basis),size(basis)) , source = D_zero )
+ALLOCATE( h0(size(basis),size(basis)) )
 
 do j = 1 , size(basis)
 

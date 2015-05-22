@@ -96,44 +96,44 @@ template <class T1, class T2, int nb, int tcol, int ept, int width, int ept_>
 __global__ void
 gemvn(int n, T1 alpha, T1 *A, int lda, T2 *x, T1  beta, T2 *y, int mod_r, int mod_c, int threshold)
 {
-    const int   tx   = threadIdx.x ;
-    const int   ty   = threadIdx.y ;
-    const int   blkc = blockIdx.x ;
-    const int   by  =   blockIdx.y; 
-    
+    const int   tx   = threadIdx.x;
+    const int   ty   = threadIdx.y;
+    const int   blkc = blockIdx.x;
+    const int   by   = blockIdx.y; 
+
     T2 res_1_   = MAGMA_Z_ZERO; //make_zero<T2>();
     T1 areg[ept];
     T1 breg[ept];
-    
+
     __shared__ T2 la[nb * tcol];
-    
+
     if(blkc == gridDim.x-1)
     {
         if(mod_r > 0) {if(tx >= mod_r) return;}
     }
-    
+
     // number of full blocks to process
     int count = (n/width)/gridDim.y + (by < (n/width)%gridDim.y);
     
     {
         int start = by * ((n/width)/gridDim.y) + min(by, (n/width)%gridDim.y);
-        
+
         // Advance 'A'
         A += nb * blkc;
         A += start * width * lda;
-        
+
         // Advance 'x'
         x += start * width; 
-        
+
         // Advance 'y'
         y += (blkc * nb);
     }
     
     if(by != gridDim.y-1){if(count == 0) return;}
     else {if(count == 0 && mod_c == 0) return;}
-    
+
     const int j = ty * ept * lda + tx;
-    
+
     if(count >= 2)
     {
         // read 1st block

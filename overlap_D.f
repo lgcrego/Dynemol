@@ -9,7 +9,7 @@ module Overlap_Builder
     use Semi_Empirical_Parms    , only  : atom
     use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: Overlap_Matrix 
+    public :: Overlap_Matrix
 
     private
 
@@ -28,10 +28,10 @@ contains
  subroutine Overlap_Matrix( system , basis , S_matrix , purpose )
 !================================================================
  implicit none
- type(structure)                , intent(in)  :: system
- type(STO_basis)                , intent(in)  :: basis(:)
- real*8           , allocatable , intent(out) :: S_matrix(:,:)
- character(len=*) , optional    , intent(in)  :: purpose             
+ type(structure)                , intent(in)    :: system
+ type(STO_basis)                , intent(in)    :: basis(:)
+ real*8           , allocatable , intent(inout) :: S_matrix(:,:)
+ character(len=*) , optional    , intent(in)    :: purpose             
 
 ! local variables ... 
  type(structure)               :: pbc_system
@@ -41,7 +41,10 @@ contains
 
  CALL util_overlap     
 
- S_size = sum(atom(system%AtNo)%DOS)    ;   Allocate(S_matrix(S_size,S_size))
+ S_size = sum(atom(system%AtNo)%DOS)
+ 
+ if(.not. allocated(S_matrix))  allocate(S_matrix(S_size,S_size))
+
 
  select case (purpose)
 
@@ -102,12 +105,12 @@ contains
 !===========================================================================================
 use util_m , factorial => fact
 implicit none
-type(structure)            , intent(in)                  :: b_system
-type(STO_basis)            , intent(in)                  :: b_basis(:)
-type(structure) , optional , intent(in)                  :: a_system
-type(STO_basis) , optional , intent(in)                  :: a_basis(:)
-real*8                     , intent(inout) , allocatable :: S_matrix(:,:)
-logical         , optional , intent(in)                  :: recycle
+type(structure)            , intent(in)     :: b_system
+type(STO_basis)            , intent(in)     :: b_basis(:)
+type(structure) , optional , intent(in)     :: a_system
+type(STO_basis) , optional , intent(in)     :: a_basis(:)
+real*8                     , intent(inout)  :: S_matrix(:,:)
+logical         , optional , intent(in)     :: recycle
 
 ! local variables ...
 real*8  :: expa, expb, Rab , aux , anor

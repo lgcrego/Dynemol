@@ -31,18 +31,13 @@
 
 // Timing macros
 #ifdef GPU_TIMING
-
-  #ifndef USE_GPU
-    #include <time.h>
-    static inline double get_wtime()
-    {
-        struct timespec t;
-        clock_gettime(CLOCK_MONOTONIC, &t);
-        return( t.tv_sec +  t.tv_nsec/1.0e9 );
-    };
-  #else
-    #define get_wtime magma_wtime
-  #endif
+  #include <time.h>
+  static inline double get_wtime()
+  {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return( t.tv_sec +  t.tv_nsec/1.0e9 );
+  };
 
   #warning "Timing enabled"
   #define time_init()  double __my_time = get_wtime()
@@ -59,6 +54,8 @@
 #else
   #define DEBUG( A ) /*Nothing*/
 #endif
+
+#define CHECK_INFO(info)  if(info!= 0) { printf("error: info = %i in %s\n", info, __func__); exit(EXIT_FAILURE); }
 
 // Complex type
 #ifdef USE_GPU
@@ -130,7 +127,7 @@ extern "C"
     void GPU_Init( const int *dev, const int *procs_per_dev );
     void GPU_Finalize( void );
     
-    void GPU_Pin( void * ptr, size_t size );
+    void GPU_Pin( void * ptr, int * size );
     void GPU_Unpin( void * ptr );
 
     void xPU_dzgemv( const char *transA, const int * const M, const int * const N, 
@@ -155,6 +152,10 @@ extern "C"
                        double *A, const int *ldA, double *B, const int *ldB, double *W, int *info );
     void xPU_syInvert( double *A, const char *UpLo, const int * const N, int *info);
 }
+#ifdef USE_GPU
+void gpu_dgeInvert( double *dA, const int n, const int lddA, cudaStream_t stream );
+#endif
+
 
 // 2. Internal:
 //  - Helper
@@ -196,12 +197,15 @@ int VirtualDevCount = 0;
 int IuseGPU = 0; // false
 int myGPU = -1;  // none
 
-// CUBLAS handle
 #ifdef USE_GPU
+// CUBLAS handle
 cublasHandle_t myHandle;
 cudaStream_t cublas_default;
-#endif
 
+// streams
+const int nStreams = 3;
+cudaStream_t stream[nStreams];
+#endif
 
 
 /******************************
@@ -224,18 +228,20 @@ void GPU_Init(const int *pid, const int *procs_per_dev)
 
         if(*pid==0)
         {
-            printf("\n");
-            printf("Using: (%i processes per GPU)\n",*procs_per_dev);
+            printf("\nUsing: (%i processes per GPU)\n",*procs_per_dev);
             magma_print_environment();
             printf("\n");
             fflush(stdout);
         }
-        
+ 
         myGPU = (*pid / *procs_per_dev) % devCount;
         cudaSetDevice( myGPU );                          // Bind to GPUs in a round-robin way according to pid
         cublasCreate( &myHandle );
         cublasSetAtomicsMode( myHandle, CUBLAS_ATOMICS_ALLOWED );   // Enables faster *symm (see cublas manual)
         cublasGetStream( myHandle, &cublas_default );
+
+        for(int i=0; i<nStreams; ++i)
+            cudaStreamCreate( &stream[i] );
 
         printf("Process nr. %i using GPU device nr. %i of %i(%i)\n", *pid, myGPU, devCount, VirtualDevCount);
         fflush(stdout);
@@ -255,6 +261,8 @@ void GPU_Finalize(void)
 #ifdef USE_GPU
     if(IuseGPU)
     {
+        for(int i=0; i<nStreams; ++i)
+            cudaStreamDestroy( stream[i] );
         cublasDestroy( myHandle );
         magma_finalize();
     }
@@ -264,10 +272,12 @@ void GPU_Finalize(void)
 //-----------------------------------------
 // Memory
 //
-void GPU_Pin( void * ptr, size_t size )
+void GPU_Pin( void * ptr, int * size )
 {
 #ifdef USE_GPU
-    cudaHostRegister( &ptr, size, cudaHostRegisterPortable ); 
+    time_init();
+    cudaHostRegister( ptr, *size, cudaHostRegisterDefault );
+    time_end();
 #endif
 }
 
@@ -308,11 +318,11 @@ static inline cublasOperation_t lapack_to_cublas_trans( const char trans )
 static void cpu_dtranspose_sq_inplace( const int n, double * const A, const int ldA )
 {
     const int bl = 16; // For 32 KB L1 cache
-    
+
     #pragma omp parallel default(none) shared(bl,n,ldA,A)
     {
         double * const buffer = (double *) alloca( bl*bl*sizeof(double) );
-        
+
         #pragma omp for schedule(dynamic)
         for(int jj=0; jj<n; jj+=bl)
         {
@@ -321,24 +331,24 @@ static void cpu_dtranspose_sq_inplace( const int n, double * const A, const int 
             for(int ii=0; ii<jj; ii+=bl)  // Cycles trhough upper triangle
             {
                 const int i_max = min( n, ii+bl );
-                
+
                 // buffer lower block: buffer = A_jj,ii
                 for(int i=ii; i<i_max; i++)
                     memcpy( &buffer[ IDX(0,i-ii,bl) ], &A[ IDX(jj,i,ldA) ], (j_max - jj)*sizeof(double) );
-                
+
                 // copy/transpose: block A_jj,ii = A_ii,jj^T
                 for(int j=jj; j<j_max; j++)
                     #pragma ivdep
                     for(int i=ii; i<i_max; i++)
                         A[ IDX(j,i,ldA) ] = A[ IDX(i,j,ldA) ];
-                    
+
                     // copy/transpose: block A_ii,jj = buffer^T
                     for(int j=jj; j<j_max; j++)
                         #pragma ivdep
                         for(int i=ii; i<i_max; i++)
                             A[ IDX(i,j,ldA) ] = buffer[ IDX(j-jj,i-ii,bl) ];
             }
-            
+
             // transpose diagonal block
             for( int j=jj+1; j<min( jj+bl, n ); j++ )
                 #pragma ivdep
@@ -349,7 +359,7 @@ static void cpu_dtranspose_sq_inplace( const int n, double * const A, const int 
                     A[ IDX(i,j,ldA) ] = tmp;
                 }
         }
-        
+
         // free( buffer );
     }
 }
@@ -397,7 +407,7 @@ void xPU_dzgemv( const char * const transA, const int * const M, const int * con
         const int incy2 = 2*incy;
         const cublasOperation_t opA = lapack_to_cublas_trans( *transA );
         int rows, cols, ldX, ldY;
-        
+
         if( opA == CUBLAS_OP_N )
         {
             rows = m;
@@ -429,9 +439,6 @@ void xPU_dzgemv( const char * const transA, const int * const M, const int * con
         double * const dx_Im = &dx[lddx];
         double * const dy_Re = dy;
         double * const dy_Im = &dy[lddy];
-
-//         printf( "dX=(%p,%p)\n", &dX[0].x, &dX[0].y ); fflush(stdout);
-//         printf( "dX=(%p,%p)\n", dX_Re, dX_Im ); fflush(stdout);
         
         cudaStream_t stream1, stream2;
         cudaStreamCreate( &stream1 );
@@ -498,51 +505,51 @@ void xPU_dgemm( const char *transA, const char *transB, const int * const M, con
         const int m = *M;
         const int n = *N;
         const int k = *K;
-        
+
         const int ldA = *LDA;
         const int ldB = *LDB;
         const int ldC = *LDC;
-        
+
         const int lddA = ( (ldA + 31)/32 )*32;
         const int lddB = ( (ldB + 31)/32 )*32;
         const int lddC = ( (ldC + 31)/32 )*32;
-        
+
         const cublasOperation_t opA = lapack_to_cublas_trans( *transA );
         const cublasOperation_t opB = lapack_to_cublas_trans( *transB );
-        
+
         int rA, cA;
         int rB, cB;
-        
+
         if( opA == CUBLAS_OP_N ) { rA=m; cA=k; }
         else { rA=k; cA=m; }
-        
+
         if( opB == CUBLAS_OP_N ) { rB=k; cB=n; }
         else { rB=n; cB=k; }
-        
+
         double *dA, *dB, *dC;
-        
+
         // Allocate matrices in the GPU
         cudaMalloc( (void**) &dA, lddA*cA*sizeof(double) );
         cudaMalloc( (void**) &dB, lddB*cB*sizeof(double) );
         cudaMalloc( (void**) &dC, lddC*n*sizeof(double) );
-        
+
         // Copy from CPU to GPU
         cublasSetMatrix( rA, cA, sizeof(double), (void *)hA, ldA, (void *)dA, lddA);
         cublasSetMatrix( rB, cB, sizeof(double), (void *)hB, ldB, (void *)dB, lddB);
-        
+
         // Compute
         cublasDgemm( myHandle, opA, opB, m, n, k, alpha, dA, lddA, dB, lddB, beta, dC, lddC);
-        
+
         // Copy from GPU to CPU
         cublasGetMatrix( m, n, sizeof(double), (void *)dC, lddC, (void *)hC, ldC);
-        
+
         // Deallocate
         cudaFree(dA); cudaFree(dB); cudaFree(dC);
     }
     else
 #endif
         dgemm_( transA, transB, M, N, K, alpha, hA, LDA, hB, LDB, beta, hC, LDC);
-    
+
     time_end();
 }
 
@@ -551,7 +558,7 @@ void xPU_dgemm( const char *transA, const char *transB, const int * const M, con
 // Matrix-matrix multiplication - in CPU or GPU
 //
 // Alberto Torres
-void xPU_dsymm( const char *Side, const char *UpLo, const int * const M, const int * const N, 
+void xPU_dsymm( const char * const Side, const char * const UpLo, const int * const M, const int * const N, 
                 const double * const alpha, double *hA, const int * const LDA,
                 double *hB, const int * const LDB, const double * const beta,
                 double *hC, const int * const LDC )
@@ -574,15 +581,20 @@ void xPU_dsymm( const char *Side, const char *UpLo, const int * const M, const i
         const cublasSideMode_t side = lapack_to_cublas_side( *Side );
         const cublasFillMode_t uplo = lapack_to_cublas_uplo( *UpLo );
 
+        int rA, cA;
+
+        if( side == CUBLAS_SIDE_LEFT )  { rA = n; cA = m; }
+        else                            { rA = m; cA = n; }
+
         double *dA, *dB, *dC;
 
         // Allocate matrices in the GPU
-        cudaMalloc( (void**) &dA, lddA*n*sizeof(double) );
+        cudaMalloc( (void**) &dA, lddA*cA*sizeof(double) );
         cudaMalloc( (void**) &dB, lddB*n*sizeof(double) );
         cudaMalloc( (void**) &dC, lddC*n*sizeof(double) );
 
         // Copy from CPU to GPU
-        cublasSetMatrix( m, n, sizeof(double), (void *)hA, ldA, (void *)dA, lddA);
+        cublasSetMatrix( rA, cA, sizeof(double), (void *)hA, ldA, (void *)dA, lddA);
         cublasSetMatrix( m, n, sizeof(double), (void *)hB, ldB, (void *)dB, lddB);
 
         // Compute
@@ -795,7 +807,7 @@ static inline void gpu_dsygvd( const int *itype, const char *jobZ, const char *U
     const magma_uplo_t uplo = lapack_to_magma_uplo( *UpLo );
     int *iwork;
     double *work;
-    
+
     malloc_work( iwork, liwork, int );
     malloc_work( work, lwork, double );
 
@@ -859,7 +871,7 @@ static inline void gpu_syInvert( const char *UpLo, double *hA, const int * const
     int *ipiv = (int*) malloc( n*sizeof(int) );
     double *dA, *dwork;
 
-    magmablasSetKernelStream( NULL );
+    magmablasSetKernelStream( cublas_default );
 
     magma_dmalloc( &dA, n*lddA );
     magma_dmalloc( &dwork, lwork );
@@ -869,14 +881,38 @@ static inline void gpu_syInvert( const char *UpLo, double *hA, const int * const
     // dsytrf/i are not impemented in magma-1.6.1
     // Remember to remove the #ifdef in Matrix_Math.F90 -> Matrix_syInvert when changing to sy versions
     DEBUG( printf("gpu_syInvert: n= %i lwork= %i\n", n, lwork); fflush(stdout); )
-    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, info );
-    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, info );
+    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, info );              CHECK_INFO(info);
+    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, info );   CHECK_INFO(info);
 
     magma_dgetmatrix( n, n, dA, lddA, hA, n );
 
-    magma_free(dA); magma_free(dwork);
+    magma_free(dA); magma_free(dwork); free(ipiv);
 #endif
 }
+
+
+#ifdef USE_GPU
+void gpu_dgeInvert( double *dA, const int n, const int lddA, cudaStream_t stream )
+{
+    time_init();
+
+    const int lwork = magma_get_dgetri_nb(n)*n;
+    int info;
+    int *ipiv = (int*) malloc( n*sizeof(int) );
+    double *dwork;
+
+    magmablasSetKernelStream( cublas_default );  // doesn't work in non-default stream!
+
+    magma_dmalloc( &dwork, lwork );
+
+    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, &info );              CHECK_INFO(info);
+    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, &info );   CHECK_INFO(info);
+
+    magma_free(dwork); free(ipiv);
+
+    time_end();
+}
+#endif
 
 //-------------------------------------------------------------------
 // Symmetric Matrix inversion - on CPU
@@ -893,6 +929,6 @@ static inline void cpu_syInvert( const char *UpLo, double *A, const int * const 
     DEBUG( printf("cpu_syInvert: n= %i lwork= %i\n", n, lwork); fflush(stdout); )
     dsytrf_( UpLo, N, A, N, ipiv, work, &lwork, info );
     dsytri_( UpLo, N, A, N, ipiv, work, info);
-    
+
     free(work); free(ipiv);
 }

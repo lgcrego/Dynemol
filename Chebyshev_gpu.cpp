@@ -7,10 +7,17 @@
 #include "cublas_v2.h"
 #include "magma_operators.h"
 
+#endif
+
 #ifdef __INTEL_COMPILER
  #define __restrict__ restrict
  #include <mathimf.h>
 #endif
+
+#ifdef USE_GPU
+
+#define SAFE(S)  if(cudaSuccess != S) \
+                    printf("ERROR(%i): %s\n%s\n\n", __LINE__, cudaGetErrorName(S), cudaGetErrorString(S));
 
 #ifdef GPU_DEBUG
  #define DEBUG(A) A
@@ -27,7 +34,7 @@
  #define time_end(S)  /* No timing */
 #endif
 
-// Array element correspondig to matrix element (i,j)
+// Array element correspondig to matrix element (i,j) in column major order
 #define IDX( i, j, LD ) ((i) + (j)*(LD))
 
 // Short names to copy functions
@@ -73,17 +80,12 @@ enum { bra_stream=0, ket_stream=1 };
 #define H_ket_m( VEC1, H, VEC2, ALPHA, VEC3 ) \
                                  Mat_op_vec5( H, 'n', ALPHA, VEC2, d_neg_one, VEC3, VEC1, stream[ket_stream] )
 
-// C = alpha*X + beta*Y (C,X,Y are vectors)
-#define Zaxpby( ALPHA, X, BETA, Y, C ) \
-                                 cublasZgeam( myHandle, CUBLAS_OP_N, CUBLAS_OP_N, n, 1, &ALPHA, X, n, &BETA, Y, n, C, n)
-
 // find the (complex) element with maximum real or imaginary parts in VEC
 #define findMax( VEC, MAX_PTR ) \
 { \
-    int i_max; \
-    cublasIdamax( myHandle, 2*n, (const double *)VEC, 1, &i_max); \
-    i_max = (i_max-1)/2;     /* From Fortran-Real to C-Complex index conversion */ \
-    cudaZcopy_D2H( MAX_PTR, &VEC[i_max], 1 ) \
+    cublasIdamax( myHandle, 2*n, (const double *)VEC, 1, i_max); \
+    *i_max = (*i_max-1)/2;     /* From Fortran-Real to C-Complex index conversion */ \
+    cudaZcopy_D2H( MAX_PTR, &VEC[*i_max], 1 ) \
 }
 
 
@@ -100,7 +102,8 @@ struct bras_kets_ptrs
 //-------------------
 // external variables
 extern cublasHandle_t myHandle;
-extern cudaStream_t   cublas_default;
+extern cudaStream_t   cublas_default, stream[];
+extern const int      nStreams;
 
 //-------------------
 // global constants
@@ -108,8 +111,8 @@ const int max_order = 25;    // note: update zi_pow if changing max_order's valu
 const int i_zero = 0;
 //...................
 const double h_bar     = 6.58264e-4;    // eV.ps
-const double tolerance = 1.0e-12;
-const double norm_tolerance = 1.0e-12;
+const double tolerance = 1.0e-8;
+const double norm_tolerance = 1.0e-8;
 const double d_neg_one = -1.0;
 const double d_zero    =  0.0;
 const double d_one     =  1.0;
@@ -154,6 +157,21 @@ extern void fused_Zxpby_and_subtract(
     cuDoubleComplex       * __restrict__ z,
     cuDoubleComplex       * d,
     const cudaStream_t stream );
+
+extern void Zaxpby_async(
+    const int n,
+    const cuDoubleComplex &              a,
+    const cuDoubleComplex * __restrict__ x,
+    const cuDoubleComplex &              b,
+    const cuDoubleComplex * __restrict__ y,
+    cuDoubleComplex       * __restrict__ z,
+    const cudaStream_t stream );
+
+extern void gpu_dgeInvert(
+    double *dA, 
+    const int n, 
+    const int lddA, 
+    cudaStream_t stream);
 
 extern "C" int kblas_dzgemv2_async(
     char trans, int n,
@@ -232,6 +250,17 @@ void chebyshev_gpu(
 //-------------------
 // Functions:
 
+//-------------------
+// utilities:
+template <typename T>
+void swap( T & __restrict__ a, T & __restrict__ b )
+{
+    volatile T tmp = a;
+    a = b;
+    b = tmp;
+};
+
+
 //-------------------------------------------------------------------
 void propagation_gpucaller_(
     const int       * const __restrict__ n,
@@ -270,7 +299,7 @@ void propagation_gpucaller_(
     time_end("chebyshev_gpucaller");
 }
 
-
+                 
 //-------------------------------------------------------------------
 void chebyshev_gpu(
     const int n, const int ld, double tau,
@@ -283,13 +312,15 @@ void chebyshev_gpu(
 {
     time_init();
 
+    cudaError_t stat;
+
     cuDoubleComplex *bras, *kets, *tmp_bra, *tmp_ket, *coeff, *d_coeff;
-    cudaMalloc( (void **) &bras,   max_order*ld*sizeof(cuDoubleComplex) );
-    cudaMalloc( (void **) &kets,   max_order*ld*sizeof(cuDoubleComplex) );
-    cudaMalloc( (void **) &tmp_bra,          ld*sizeof(cuDoubleComplex) );
-    cudaMalloc( (void **) &tmp_ket,          ld*sizeof(cuDoubleComplex) );
-    cudaMalloc( (void **) &d_coeff,   max_order*sizeof(cuDoubleComplex) );
-    cudaMallocHost( (void **) &coeff, max_order*sizeof(cuDoubleComplex) );
+    stat = cudaMalloc( (void **) &bras,   max_order*ld*sizeof(cuDoubleComplex) );  SAFE(stat);
+    stat = cudaMalloc( (void **) &kets,   max_order*ld*sizeof(cuDoubleComplex) );  SAFE(stat);
+    stat = cudaMalloc( (void **) &tmp_bra,          ld*sizeof(cuDoubleComplex) );  SAFE(stat);
+    stat = cudaMalloc( (void **) &tmp_ket,          ld*sizeof(cuDoubleComplex) );  SAFE(stat);
+    stat = cudaMalloc( (void **) &d_coeff,   max_order*sizeof(cuDoubleComplex) );  SAFE(stat);
+    stat = cudaMallocHost( (void **) &coeff, max_order*sizeof(cuDoubleComplex) );  SAFE(stat);
     
     cuDoubleComplex *bra[max_order], *ket[max_order];
     for(int i=0; i<max_order; ++i)
@@ -297,12 +328,6 @@ void chebyshev_gpu(
         bra[i] = &bras[i*ld];
         ket[i] = &kets[i*ld];
     }
-    
-    // streams for bra and ket calculations plus one
-    const int nStreams = 3;
-    cudaStream_t stream[nStreams];
-    for(int i=0; i<nStreams; ++i)
-        cudaStreamCreate( &stream[i] );
 
     // reference norm
     cuDoubleComplex z_norm;
@@ -331,36 +356,30 @@ void chebyshev_gpu(
         tau = (t_max - t)/h_bar;
         coefficient( tau, max_order, coeff );
     }
-    
+
     bool must_copy_coeff = true;
 
     while (t < t_max)
     {
-        // <bra_0| = <PSI_bra|
-        // |ket_0> = |PSI_ket>
-        braCopy( PSI_bra, bra[0] );
-        ketCopy( PSI_ket, ket[0] );
-        
+        braCopy( PSI_bra, bra[0] );        // <bra_0| = <PSI_bra|
+        ketCopy( PSI_ket, ket[0] );        // |ket_0> = |PSI_ket>
+
         if( must_copy_coeff )
         {
             cudaZcopyAsync_H2D( d_coeff, coeff, max_order, stream[2] );   // copy coeff to the GPU
             must_copy_coeff = false;
         }
-        
-        // <bra_1| = <bra_0|H
-        // |ket_1> = H|ket_0>
-        bra_H( bra[1] ,bra[0], H );
-        H_ket( ket[1], H, ket[0] );
-        
+
+        bra_H( bra[1] ,bra[0], H );        // <bra_1| = <bra_0|H
+        H_ket( ket[1], H, ket[0] );        // |ket_1> = H|ket_0>
+
         for( int k=2; k<k_ref; ++k )
         {
-            // <bra_k| = 2*<bra_(k-1)|H - <bra_(k-2)|
-            // |ket_k> = 2*H|ket_(k-1)> - |ket_(k-2)>
-            bra_H_m( bra[k], bra[k-1], H, d_two, bra[k-2] );
-            H_ket_m( ket[k], H, ket[k-1], d_two, ket[k-2] );
+            bra_H_m( bra[k], bra[k-1], H, d_two, bra[k-2] );    // <bra_k| = 2*<bra_(k-1)|H - <bra_(k-2)|
+            H_ket_m( ket[k], H, ket[k-1], d_two, ket[k-2] );    // |ket_k> = 2*H|ket_(k-1)> - |ket_(k-2)>
         }
 
-        cudaStreamSynchronize( stream[2] );   // wait for d_coeff
+        cudaStreamSynchronize( stream[2] );   // wait for d_coeff to be copied
         // <tmp_bra| = sum(k=0,k_ref) c_k*<bra_k|
         // |tmp_ket> = sum(k=0,k_ref) c_k*|ket_k>
         acummulate_vec_ax_async( n, ld, k_ref, d_coeff, bras, tmp_bra, stream[bra_stream] );
@@ -368,17 +387,15 @@ void chebyshev_gpu(
 
         // check charge conservation
         //  norm = |<tmp_bra|tmp_ket>|^2
-        setStream( bra );
-        cudaStreamSynchronize( stream[ket_stream] );   // wait for tmp_bra/ket
+        setStream( bra );                              // queue after tmp_bra
+        cudaStreamSynchronize( stream[ket_stream] );   // wait for tmp_ket
         cublasZdotc( myHandle, n, tmp_bra, 1, tmp_ket, 1, &z_norm );    // implicit synchronization here
         const double norm = cuCabs(z_norm);
 
         if( fabs(norm - norm_ref) < norm_tolerance )
         {
-            // <PSI_bra| = <tmp_bra|
-            // |PSI_ket> = |tmp_ket>
-            braCopy( tmp_bra, PSI_bra );
-            ketCopy( tmp_ket, PSI_ket );
+            braCopy( tmp_bra, PSI_bra );            // <PSI_bra| = <tmp_bra|
+            ketCopy( tmp_ket, PSI_ket );            // |PSI_ket> = |tmp_ket>
         }
         else
         {
@@ -386,16 +403,16 @@ void chebyshev_gpu(
             do
             {
                 tau *= 0.975;
-                printf("rescaling tau to %g\n", tau);
+                printf("rescaling tau to %g\n", tau);  fflush(stdout);
                 convergence_gpu( n, ld, &mem, PSI_bra, PSI_ket, coeff, &k_ref, tau, H, norm_ref, &ok );
             }
             while( !ok );
             convergence_gpu_dealloc( &mem );
             must_copy_coeff = true;
         }
-        
+
         t += tau*h_bar;
-        
+
         if( t_max - t < tau*h_bar )
         {
             tau = (t_max - t)/h_bar;
@@ -406,16 +423,15 @@ void chebyshev_gpu(
 
     // clean up
     cublasSetStream( myHandle, cublas_default );
-    for(int i=0; i<nStreams; i++)
-        cudaStreamDestroy( stream[i] );
-    
     cudaDeviceSynchronize();   // wait for all calculations to complete
 
     cudaFree( bras );
     cudaFree( kets );
     cudaFree( tmp_bra );
     cudaFree( tmp_ket );
-    
+    cudaFree( d_coeff );
+    cudaFreeHost( coeff );
+
     time_end("chebyshev_gpu");
 }
 
@@ -434,7 +450,7 @@ void convergence_gpu_alloc( const int ld, struct bras_kets_ptrs * const mem )
     mem->tmp_bra2 = &dev_mem_chunk[offset]; offset += ld;
     mem->tmp_ket2 = &dev_mem_chunk[offset];
 
-    cudaMallocHost((void**) &mem->pin_mem_chunk, sizeof(cuDoubleComplex));
+    cudaMallocHost((void**) &mem->pin_mem_chunk, sizeof(cuDoubleComplex) + sizeof(int));
 }
 
 
@@ -444,8 +460,17 @@ void convergence_gpu_dealloc( struct bras_kets_ptrs * const mem )
     cudaFree( mem->bras );
     cudaFreeHost( mem->pin_mem_chunk );
 }
+#endif
 
 
+//-------------------------------------------------------------------
+// contribution of 'x' the Bessel's functions without the order's part (it's inverse, actually)
+static inline double nakedBessel( const int n, const double x ) { return( (1 << (n - 2)) * (x*x + 4) / pow(x,n) ); };
+// for fortran:
+extern "C" double nakedbessel_( const int * const n, const double * const x) { return(nakedBessel(*n,*x)); }
+
+
+#ifdef USE_GPU
 //-------------------------------------------------------------------
 void convergence_gpu(
     const int n, const int ld,
@@ -466,6 +491,8 @@ void convergence_gpu(
     tmp_bra2 = mem->tmp_bra2;    tmp_ket2 = mem->tmp_ket2;
     max = mem->pin_mem_chunk;
 
+    int * const i_max = reinterpret_cast<int*>(mem->pin_mem_chunk + 1);
+
     cuDoubleComplex *bra[max_order], *ket[max_order];
     for(int i=0; i<max_order; ++i)
     {
@@ -473,40 +500,42 @@ void convergence_gpu(
         ket[i] = &kets[i*ld];
     }
 
-    // streams for bra and ket calculations
-    cudaStream_t stream[2];
-    for(int i=0; i<2; ++i) cudaStreamCreate( &stream[i] );
+    braCopy( PSI_bra, bra[0] );    // <bra_0| = <PSI_bra|
+    ketCopy( PSI_ket, ket[0] );    // |ket_0> = |PSI_ket>
 
-    // <bra_0| = <PSI_bra|
-    // |ket_0> = |PSI_ket>
-    braCopy( PSI_bra, bra[0] );
-    ketCopy( PSI_ket, ket[0] );
+    bra_H( bra[1] ,bra[0], H );    // <bra_1| = <bra_0|H
+    H_ket( ket[1], H, ket[0] );    // |ket_1> = H|ket_0>
 
-    // <bra_1| = <bra_0|H
-    // |ket_1> = H|ket_0>
-    bra_H( bra[1] ,bra[0], H );
-    H_ket( ket[1], H, ket[0] );
-    
     // get coefficients (in host, potentially overlaping with previous kernel launches)
     coefficient( tau, max_order, coeff );
 
     // <tmp_bra1| = c_0*<bra_0| + c_1*<bra_1|
-    setStream( bra );
-    Zaxpby( coeff[0], bra[0], coeff[1], bra[1], tmp_bra1 );
+    Zaxpby_async( n, coeff[0], bra[0], coeff[1], bra[1], tmp_bra1, stream[bra_stream] );
 
     // |tmp_ket1> = c_0*|ket_0> + c_1*|ket_1>
-    setStream( ket );
-    Zaxpby( coeff[0], ket[0], coeff[1], ket[1], tmp_ket1 );
+    Zaxpby_async( n, coeff[0], ket[0], coeff[1], ket[1], tmp_ket1, stream[ket_stream] );
+    
+    // new criteria for the number of terms in expansion: coeff[k] lesser than a suitable small value
+    int k_max = max_order;
+    for(int k=6; k<max_order; ++k)  // minimum of six terms
+    {
+        if( cuCabs(coeff[k]*nakedBessel(k,tau)) < 1.0e-20 )
+        {
+            k_max = k;
+            break;
+        }
+    }
+    *k_ref = k_max;
 
     *ok = false;
-    for( int k=2; k<max_order; ++k )
+    for( int k=2; k<k_max; ++k )
     {
-        *k_ref = k + 1;   // number of terms in the expansion
-
         // <bra_k| = 2*<bra_(k-1)|H - <bra_(k-2)|
         // |ket_k> = 2*H|ket_(k-1)> - |ket_(k-2)>
         bra_H_m( bra[k], bra[k-1], H, d_two, bra[k-2] );
         H_ket_m( ket[k], H, ket[k-1], d_two, ket[k-2] );
+
+//      *k_ref = k + 1;   // old criteria for the number of terms in expansion: until full convergence
 
         // <tmp_bra2| = <tmp_bra1| + c_k*<bra_k|   &&   <diff| = <tmp_bra2| - <tmp_bra1|
         // |tmp_ket2> = |tmp_ket1> + c_k*|ket_k>   &&   |diff> = |tmp_ket2> - |tmp_ket1>
@@ -534,24 +563,22 @@ void convergence_gpu(
                 if( fabs(norm - norm_ref) < norm_tolerance ) // if charge is conserved
                 {
                     // copy answer back and exit
-                    braCopy( tmp_bra2, PSI_bra );
-                    ketCopy( tmp_ket2, PSI_ket );
+                    braCopy( tmp_bra2, PSI_bra );    // <PSI_bra| = <tmp_bra2|
+                    ketCopy( tmp_ket2, PSI_ket );    // |PSI_ket> = |tmp_ket2>
                     *ok = true;
                     break;
                 }
             } // ket conv.
         } // bra conv.
 
-        braCopy( tmp_bra2, tmp_bra1 ); // <tmp_bra1| = <tmp_bra2|
-        ketCopy( tmp_ket2, tmp_ket1 ); // |tmp_ket1> = |tmp_ket2>
+        // No need to copy, just swap pointers!
+        swap<cuDoubleComplex*>( tmp_bra1, tmp_bra2 );    // <tmp_bra1| = <tmp_bra2|
+        swap<cuDoubleComplex*>( tmp_ket1, tmp_ket2 );    // |tmp_ket1> = |tmp_ket2>
         
     } // for( k=2; k<max_order; ++k )
 
     // clean up
     cublasSetStream( myHandle, cublas_default );
-    for(int i=0; i<2; i++)
-        cudaStreamDestroy( stream[i] );
-
     cudaDeviceSynchronize();
 }
 
@@ -584,8 +611,11 @@ void propagationelhl_gpucaller_(
 {
     time_init();
 
-    const int electron = -1,
-              hole     = +1;
+    cudaError_t stat;
+
+    const int electron      = -1,
+              hole          = +1,
+              electron_only =  0;
 
     const bool coulomb = *(reinterpret_cast<const bool*>(logical_coulomb));
 
@@ -596,19 +626,45 @@ void propagationelhl_gpucaller_(
     static double *d_Sinv = nullptr;
 
     cuDoubleComplex *d_PSI_bra, *d_PSI_ket;
-    cudaMalloc((void **) &d_PSI_bra, ld*sizeof(cuDoubleComplex));
-    cudaMalloc((void **) &d_PSI_ket, ld*sizeof(cuDoubleComplex));
+    stat = cudaMalloc((void **) &d_PSI_bra, ld*sizeof(cuDoubleComplex));  SAFE(stat);
+    stat = cudaMalloc((void **) &d_PSI_ket, ld*sizeof(cuDoubleComplex));  SAFE(stat);
 
-    const int nStreams = 2;
-    cudaStream_t stream[nStreams];
-    for(int i=0; i<nStreams; ++i)  cudaStreamCreate( &stream[i] );
-
-    if(*particle == electron)
+    if(*particle == electron_only)
     {
         double *d_h;
-        cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));
-        cudaMalloc((void **) &d_h,    ld*m*sizeof(double));
-        cudaMalloc((void **) &d_H,    ld*m*sizeof(double));
+
+        stat = cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_h,    ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_H,    ld*m*sizeof(double));  SAFE(stat);
+
+        // Copy S and h to the GPU
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_Sinv, m, (void *)d_Sinv, ld, stream[0]);
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h,    m, (void *)d_h,    ld, stream[2]);
+
+        // Invert S
+        cudaStreamSynchronize( stream[0] );         // wait S to be copied
+        gpu_dgeInvert( d_Sinv, m, ld, stream[0] );  // implicit synchronization here
+        
+        // H = Sinv*h
+        cublasSetStream( myHandle, stream[2] );     // queue after h copy
+        cudaStreamSynchronize( stream[0] );         // wait Sinv to be done
+        cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, m, m, &d_one, d_Sinv, ld, d_h, ld, &d_zero, d_H, ld);
+
+        // Copy bra/ket to the GPU (potentially overlaping with cublasDsymm)
+        cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+        cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
+
+        cudaStreamSynchronize( stream[2] );  // wait H to be done
+        cudaFree( d_h );
+        cudaFree( d_Sinv );
+        d_Sinv = nullptr;
+    }
+    else if(*particle == electron)
+    {
+        double *d_h;
+        stat = cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_h,    ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_H,    ld*m*sizeof(double));  SAFE(stat);
 
         // Copy Sinv and h to the GPU
         cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_Sinv, m, (void *)d_Sinv, ld, stream[0]);
@@ -635,7 +691,7 @@ void propagationelhl_gpucaller_(
         if(coulomb)
         {    
             double *d_h;
-            cudaMalloc((void **) &d_h, ld*m*sizeof(double));
+            stat = cudaMalloc((void **) &d_h, ld*m*sizeof(double));  SAFE(stat);
 
             cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h, m, (void *)d_h, ld, stream[0]);
 
@@ -660,19 +716,22 @@ void propagationelhl_gpucaller_(
     }
 
     cudaStreamSynchronize( stream[1] );   // wait for d_PSI_bra/ket to be copied
-    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, *t_init, d_PSI_bra, d_PSI_ket, d_H );
+
+    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, *t_init, d_PSI_bra, d_PSI_ket, d_H );    SAFE(cudaGetLastError());
 
     cudaZcopy_D2H( h_PSI_bra, d_PSI_bra, m );
     cudaZcopy_D2H( h_PSI_ket, d_PSI_ket, m );
 
-    if(*particle == hole)
+    if(*particle == hole || *particle == electron_only)
     {
         cudaFree( d_H );
         d_H = nullptr;
     }
     cudaFree( d_PSI_bra );
     cudaFree( d_PSI_ket );
-    
+
+    cublasSetStream( myHandle, cublas_default );
+
     time_end("Propagation");
 }
 

@@ -60,6 +60,25 @@ fused_Zxpby_and_subtract_kernel(
     cuDoubleComplex       * __restrict__ z,
     cuDoubleComplex       * d );
 
+__host__ void
+Zaxpby_async(
+    const int n,
+    const cuDoubleComplex & a,
+    const cuDoubleComplex * __restrict__ x,
+    const cuDoubleComplex & b,
+    const cuDoubleComplex * __restrict__ y,
+    cuDoubleComplex       * __restrict__ z,
+    const cudaStream_t stream );
+
+__global__ void
+Zaxpby_async_kernel(
+    const int n,
+    const cuDoubleComplex a,
+    const cuDoubleComplex * __restrict__ x,
+    const cuDoubleComplex b,
+    const cuDoubleComplex * __restrict__ y,
+    cuDoubleComplex       * __restrict__ z);
+
 
 //----------------------------------------------
 // Functions / kernels:
@@ -75,7 +94,7 @@ acummulate_vec_ax_async(
 {  
     const int Threads = 128;                         // Threads per block ## opt. for SM >= 3.0
     const int Blocks = (n + Threads-1) / Threads;    // We need enough blocks to span all the elements
-    
+
     acummulate_vec_ax_kernel <<< Blocks, Threads, 0, stream >>> (n, ld, k, vecA, vecsX, vecY);
 }
 
@@ -114,7 +133,7 @@ Zvec_subtract(
 {
     const int Threads = 128;                         // Threads per block ## opt. for SM >= 3.0
     const int Blocks = (n + Threads-1) / Threads;    // We need enough blocks to span all the elements
-    
+
     if( z == y )
         Zvec_sub_yinplace_kernel <<< Blocks, Threads, 0, stream >>> (n, x, z);
 //     else if( z == x )
@@ -131,7 +150,7 @@ Zvec_sub_yinplace_kernel(
     cuDoubleComplex       * __restrict__ y )
 {
     const int i = blockIdx.x*blockDim.x + threadIdx.x;
-    
+
     if( i < n )
         y[i] = x[i] - y[i];
 }
@@ -145,7 +164,7 @@ Zvec_sub_kernel(
     cuDoubleComplex       * __restrict__ z )
 {
     const int i = blockIdx.x*blockDim.x + threadIdx.x;
-    
+
     if( i < n )
         z[i] = x[i] - y[i];
 }
@@ -185,9 +204,44 @@ fused_Zxpby_and_subtract_kernel(
     if( i < n )
     {
         const cuDoubleComplex xx = x[i];     // just in case that d == x
-        z[i] = xx + a*y[i];
+        z[i] = cuCfma( a, y[i], xx );
+//         z[i] = xx + a*y[i];
         d[i] = z[i] - xx;
     }
+}
+
+
+//----------------------------------------------
+// z = a*x + b*y
+__host__ void
+Zaxpby_async(
+    const int n,
+    const cuDoubleComplex &              a,
+    const cuDoubleComplex * __restrict__ x,
+    const cuDoubleComplex &              b,
+    const cuDoubleComplex * __restrict__ y,
+    cuDoubleComplex       * __restrict__ z,
+    const cudaStream_t stream )
+{
+    const int Threads = 128;                                // Threads per block ## opt. for SM >= 3.0
+    const int Blocks = (n + Threads-1) / Threads;           // We need enough blocks to span all the elements
+
+    Zaxpby_async_kernel <<< Blocks, Threads, 0, stream >>> ( n, a, x, b, y, z );
+}
+
+//- - - - - - - - - - - - - - - - - - - - - - - -
+__global__ void
+Zaxpby_async_kernel(
+    const int n,
+    const cuDoubleComplex                a,
+    const cuDoubleComplex * __restrict__ x,
+    const cuDoubleComplex                b,
+    const cuDoubleComplex * __restrict__ y,
+    cuDoubleComplex       * __restrict__ z)
+{
+    const int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if( i < n )  z[i] = a*x[i] + b*y[i];
 }
 
 #endif

@@ -4,7 +4,8 @@ use constants_m
 
 logical, parameter, public :: return_full = .true.
 
-public Multiply,          &
+public Matrix_Symmetrize, &
+       Multiply,          &
        syMultiply,        &
        syInvert
 
@@ -40,9 +41,9 @@ subroutine Matrix_Multiply_0( A, B, C )
     implicit none
     real*8, intent(in)    :: A(:,:), B(:,:)
     real*8, intent(inout) :: C(:,:)
-    
+
     call Matrix_Multiply_1( A, B, C, 'N', 'N', d_one, d_zero )
-    
+
 end subroutine Matrix_Multiply_0
 
 !------------------------------------------------------------------
@@ -79,9 +80,9 @@ subroutine Matrix_syMultiply_0( A, B, C )
     implicit none
     real*8,    intent(in)  :: A(:,:), B(:,:)
     real*8,    intent(out) :: C(:,:)
-    
-    call  Matrix_syMultiply_2( 'L', 'U', A, B, C, d_one, d_zero )
-    
+
+    call Matrix_syMultiply_2( 'L', 'U', A, B, C, d_one, d_zero )
+
 end subroutine Matrix_syMultiply_0
 
 
@@ -92,9 +93,9 @@ subroutine Matrix_syMultiply_1( side, uplo, A, B, C )
     character, intent(in)  :: side, uplo
     real*8,    intent(in)  :: A(:,:), B(:,:)
     real*8,    intent(out) :: C(:,:)
-    
-    call  Matrix_syMultiply_2( side, uplo, A, B, C, d_one, d_zero )
-    
+
+    call Matrix_syMultiply_2( side, uplo, A, B, C, d_one, d_zero )
+
 end subroutine Matrix_syMultiply_1
 
 
@@ -111,11 +112,12 @@ subroutine Matrix_syMultiply_2( side, uplo, A, B, C, alpha, beta )
     ldA = size(A,1)
     ldB = size(B,1)
     ldC = size(C,1)
-    
-    m = ldA
+
+    m = ldC
     n = size(C,2)
 
     call xPU_dsymm( side, uplo, m, n, alpha, A, ldA, B, ldB, beta, C, ldC )
+
 end subroutine Matrix_syMultiply_2
 
 
@@ -182,7 +184,7 @@ subroutine Matrix_syInvert_0( A, full )
     implicit none
     real*8,    intent(inout)        :: A(:,:)
     logical,   intent(in), optional :: full
-    
+
     integer :: info
     logical :: to_symmetrize
     to_symmetrize = .false.
@@ -190,6 +192,7 @@ subroutine Matrix_syInvert_0( A, full )
     if( present(full) ) to_symmetrize = full
     call xPU_syInvert( A, 'U', size(A,1), info )
 #ifndef USE_GPU
+! For now, only dgetrf/i exist for the GPU, so we only need to symmetrize for cpu
     if( to_symmetrize ) call Matrix_Symmetrize( A, 'U' )
 #endif
 end subroutine Matrix_syInvert_0
@@ -201,7 +204,7 @@ subroutine Matrix_syInvert_1( A, UpLo, full )
     real*8,    intent(inout)        :: A(:,:)
     character, intent(in)           :: UpLo
     logical,   intent(in), optional :: full
-    
+
     integer :: info
     logical :: to_symmetrize
     to_symmetrize = .false.
@@ -214,8 +217,8 @@ subroutine Matrix_syInvert_1( A, UpLo, full )
 end subroutine Matrix_syInvert_1
 
 
-! Don't use gpu cublas for blas2 operations (memory bounded, slower than cpu due to transfer overhead)
-#define xPU_  
+! Don't use gpu cublas for single blas2 operations (memory bounded, slower than cpu due to transfer overhead)
+#define xPU_dzgemv  dzgemv
 
 !------------------------------------------------------------------
 ! Performs <res| = <bra|Op, where bra is a *vector* and Op a matrix
@@ -226,7 +229,7 @@ subroutine vec_bra_x_Op_( res, bra, Op )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: n
-    
+
     n = size(Op, 1)
     call xPU_dzgemv( 'T', n, n, c_one, Op, n, bra, i_one, c_zero, res, i_one )
 end subroutine vec_bra_x_Op_
@@ -239,7 +242,7 @@ subroutine vec_bra_x_Op_alpha( res, bra, Op, alpha )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: n
-    
+
     n = size(Op, 1)
     call xPU_dzgemv( 'T', n, n, alpha, Op, n, bra, i_one, c_zero, res, i_one )
 end subroutine vec_bra_x_Op_alpha
@@ -262,7 +265,7 @@ subroutine mat_bra_x_Op_alpha( res, bra, Op, alpha )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: m, n
-    
+
     m = size(bra, 1)  ! nr. of elements (orbitals)
     n = size(bra, 2)  ! nr. of wavefunctions (particles, n_part)
     call xPU_dzgemm( 'T', 'N', m, n, m, alpha, Op, m, bra, m, c_zero, res, m )
@@ -279,7 +282,7 @@ subroutine vec_Op_x_ket_( res, Op, ket )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: n
-    
+
     n = size(Op, 1)
     call xPU_dzgemv( 'N', n, n, c_one, Op, n, ket, i_one, c_zero, res, i_one )
 end subroutine vec_Op_x_ket_
@@ -292,7 +295,7 @@ subroutine vec_Op_x_ket_alpha( res, Op, ket, alpha )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: n
-    
+
     n = size(Op, 1)
     call xPU_dzgemv( 'N', n, n, alpha, Op, n, ket, i_one, c_zero, res, i_one )
 end subroutine vec_Op_x_ket_alpha
@@ -303,7 +306,7 @@ subroutine mat_Op_x_ket_( res, Op, ket )
     complex*16, intent(out) :: res(:,:)
     complex*16, intent(in)  :: ket(:,:)
     real*8,     intent(in)  :: Op(:,:)
-    
+
     call mat_Op_x_ket_alpha( res, Op, ket, c_one )
 
 end subroutine mat_Op_x_ket_
@@ -316,7 +319,7 @@ subroutine mat_Op_x_ket_alpha( res, Op, ket, alpha )
     real*8,     intent(in)  :: Op(:,:)
 
     integer :: m, n
-    
+
     m = size(ket, 1)  ! nr. of elements (orbitals)
     n = size(ket, 2)  ! nr. of wavefunctions (particles, n_part)
     call xPU_dzgemm( 'N', 'N', m, n, m, alpha, Op, m, ket, m, c_zero, res, m )
