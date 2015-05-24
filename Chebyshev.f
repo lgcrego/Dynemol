@@ -369,7 +369,7 @@ integer                 :: i, j, n
 n = size(basis)
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-! call Huckelx( basis , S , Hamiltonian )
+! call Huckelx( basis , S_matrix , H )
 
 If( DP_field_ ) then
  
@@ -389,14 +389,14 @@ else
 
 end If
 
-call Matrix_Symmetrize( Hamiltonian, 'U' )
+call Matrix_Symmetrize( H, 'U' )
 
 #ifndef USE_GPU
 ! compute S_inverse...
-call syInvert( S )
+call syInvert( S_matrix )
 
 ! compute H' = S_inv * H ...
-call syMultiply( S_matrix, Hamiltonian, H_prime )
+call syMultiply( S_matrix, H, H_prime )
 #endif
 
 end subroutine Build_Hprime
