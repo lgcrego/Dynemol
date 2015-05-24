@@ -14,7 +14,9 @@ backup.o: types_EHT.o parameters.o solvated_M.o babel.o structure.o FMO.o QCMode
 
 backup_MM.o: parameters.o types_MM.o 
 
-CG_class.o: types_EHT.o OPT_parent.o constants_m.o EHT_input.o parameters.o structure.o ga_QCModel.o cost_tuning.o 
+Berendsen.o: constants_m.o tuning.o parameters.o md_read.o tuning.o f_inter.o md_setup.o 
+
+CG_class.o: types_EHT.o OPT_parent.o constants_m.o EHT_input.o parameters.o structure.o ga_QCModel.o cost_tuning_EH.o 
 
 CG_routines.o: types_EHT.o constants_m.o parameters.o OPT_parent.o CG_class.o nonlinearCG.o 
 
@@ -22,7 +24,11 @@ Chebyshev_driver.o: types_EHT.o constants_m.o parameters.o babel.o allocation_m.
 
 Chebyshev.o: types_EHT.o constants_m.o parameters.o overlap_D.o FMO.o QCModel_ElHl.o QCModel_Huckel.o data_output.o Matrix_math.o 
 
+cost_tuning_EH.o: types_EHT.o constants_m.o ga_QCModel.o 
+
 cost_tuning.o: types_EHT.o constants_m.o ga_QCModel.o 
+
+cost_tuning_MM.o: types_EHT.o constants_m.o parameters.o 
 
 CoulInt_QMMM.o: constants_m.o md_read.o polarizability.o 
 
@@ -54,7 +60,7 @@ ElHl_Chebyshev.o: types_EHT.o constants_m.o parameters.o overlap_D.o FMO.o data_
 
 ElHl_schroedinger.o: types_EHT.o constants_m.o parameters.o allocation_m.o babel.o structure.o QCModel_ElHl.o FMO.o DP_main.o data_output.o film_STO.o DOS_tool.o backup.o backup_MM.o 
 
-FF_OPT_class.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o parameters_MM.o f_intra.o OPT_parent.o nonlinear-sidekick.o cost_tuning.o MM_ERG_class.o 
+FF_OPT_class.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o parameters_MM.o f_intra.o OPT_parent.o nonlinear-sidekick.o cost_tuning_MM.o MM_ERG_class.o 
 
 film_STO.o: types_EHT.o constants_m.o parameters.o babel.o EHT_input.o structure.o STO.o 
 
@@ -68,7 +74,7 @@ ga_driver.o: types_EHT.o constants_m.o parameters.o solvated_M.o ga_routines.o g
 
 ga_QCModel.o: types_EHT.o constants_m.o parameters.o EHT_input.o structure.o overlap_D.o multip_routines.o 
 
-ga_routines.o: types_EHT.o OPT_parent.o constants_m.o parameters.o EHT_input.o structure.o ga_QCModel.o cost_tuning.o CG_routines.o 
+ga_routines.o: types_EHT.o constants_m.o parameters.o EHT_input.o structure.o OPT_parent.o FF_OPT_class.o CG_routines.o ga_QCModel.o cost_tuning_EH.o cost_tuning_MM.o 
 
 gmx2mdflex.o: constants_m.o tuning.o types_MM.o tuning.o IdentifyNonBonded.o 
 
@@ -90,7 +96,7 @@ md_setup.o: constants_m.o tuning.o parameters.o md_read.o gmx2mdflex.o tuning.o
 
 MM_driver.o: types_EHT.o constants_m.o parameters.o MM_dynamics.o 
 
-MM_dynamics.o: constants_m.o parameters.o parameters_MM.o md_read.o md_setup.o md_output.o f_inter.o f_intra.o CoulInt_QMMM.o tuning.o verlet.o babel.o structure.o backup_MM.o types_MM.o 
+MM_dynamics.o: constants_m.o parameters.o parameters_MM.o md_read.o md_setup.o md_output.o f_inter.o f_intra.o CoulInt_QMMM.o tuning.o babel.o structure.o backup_MM.o types_MM.o md_setup.o Berendsen.o NVE.o 
 
 MM_ERG_class.o: types_EHT.o constants_m.o md_read.o types_MM.o parameters_MM.o md_output.o f_intra.o f_inter.o tuning.o OPT_parent.o 
 
@@ -99,6 +105,8 @@ multip_routines.o: types_EHT.o constants_m.o EHT_input.o
 nonlinearCG.o: constants_m.o OPT_parent.o 
 
 nonlinear-sidekick.o: constants_m.o OPT_parent.o 
+
+NVE.o: constants_m.o tuning.o md_read.o md_setup.o 
 
 oscillator.o: types_EHT.o constants_m.o DP_main.o parameters.o 
 
@@ -138,5 +146,5 @@ util.o: constants_m.o
 
 verlet.o: constants_m.o tuning.o parameters.o md_read.o tuning.o f_inter.o 
 
-vibes_driver.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o md_setup.o babel.o f_intra.o cost_tuning.o MM_ERG_class.o FF_OPT_class.o nonlinearCG.o 
+vibes_driver.o: types_EHT.o constants_m.o parameters.o md_read.o types_MM.o md_setup.o babel.o f_intra.o cost_tuning_MM.o MM_ERG_class.o FF_OPT_class.o nonlinearCG.o ga_routines.o 
 
