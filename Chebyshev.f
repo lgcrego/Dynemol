@@ -140,7 +140,7 @@ If ( necessary_ ) then
     call Overlap_Matrix( system , basis , S_matrix )
     call Huckelx( basis , S_matrix , H )
 #ifndef USE_GPU
-    call syInvert( S_matrix )
+    call syInvert( S_matrix )   ! S_matrix content is destroyed and S_inv is returned
     call syMultiply( S_matrix , H , H_prime )
 #endif
 

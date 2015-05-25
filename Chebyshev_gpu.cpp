@@ -631,6 +631,8 @@ void propagationelhl_gpucaller_(
 
     if(*particle == electron_only)
     {
+        // In this case, S_inv holds S and the inversion is done in the GPU.
+
         double *d_h;
 
         stat = cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));  SAFE(stat);

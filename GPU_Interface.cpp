@@ -55,7 +55,11 @@
   #define DEBUG( A ) /*Nothing*/
 #endif
 
-#define CHECK_INFO(info)  if(info!= 0) { printf("error: info = %i in %s\n", info, __func__); exit(EXIT_FAILURE); }
+#define CHECK_INFO(info, F)  if(info!= 0) { printf("error: info = %i in %s: %s\n", info, __func__, F); exit(EXIT_FAILURE); }
+
+#ifdef USE_GPU
+  #define SAFE(S) if(S!=cudaSuccess) printf("ERROR(%i): %s\n%s\n\n", __LINE__, cudaGetErrorName(S), cudaGetErrorString(S));
+#endif
 
 // Complex type
 #ifdef USE_GPU
@@ -276,7 +280,7 @@ void GPU_Pin( void * ptr, int * size )
 {
 #ifdef USE_GPU
     time_init();
-    cudaHostRegister( ptr, *size, cudaHostRegisterDefault );
+    cudaError_t stat = cudaHostRegister( ptr, *size, cudaHostRegisterDefault );     SAFE(stat);
     time_end();
 #endif
 }
@@ -284,7 +288,7 @@ void GPU_Pin( void * ptr, int * size )
 void GPU_Unpin( void * ptr )
 {
 #ifdef USE_GPU   
-    cudaHostUnregister( ptr );
+    cudaError_t stat = cudaHostUnregister( ptr );     SAFE(stat);
 #endif
 }
 
@@ -858,6 +862,7 @@ void xPU_syInvert( double *A, const char *UpLo, const int * const N, int *info )
     time_end();
 }
 
+
 //-------------------------------------------------------------------
 // Symmetric Matrix inversion - on GPU
 //
@@ -881,8 +886,8 @@ static inline void gpu_syInvert( const char *UpLo, double *hA, const int * const
     // dsytrf/i are not impemented in magma-1.6.1
     // Remember to remove the #ifdef in Matrix_Math.F90 -> Matrix_syInvert when changing to sy versions
     DEBUG( printf("gpu_syInvert: n= %i lwork= %i\n", n, lwork); fflush(stdout); )
-    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, info );              CHECK_INFO(info);
-    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, info );   CHECK_INFO(info);
+    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, info );              CHECK_INFO(*info, "magma_dgetrf_gpu");
+    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, info );   CHECK_INFO(*info, "magma_dgetri_gpu");
 
     magma_dgetmatrix( n, n, dA, lddA, hA, n );
 
@@ -905,8 +910,8 @@ void gpu_dgeInvert( double *dA, const int n, const int lddA, cudaStream_t stream
 
     magma_dmalloc( &dwork, lwork );
 
-    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, &info );              CHECK_INFO(info);
-    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, &info );   CHECK_INFO(info);
+    magma_dgetrf_gpu( n, n, dA, lddA, ipiv, &info );              CHECK_INFO(info, "magma_dgetrf_gpu");
+    magma_dgetri_gpu( n, dA, lddA, ipiv, dwork, lwork, &info );   CHECK_INFO(info, "magma_dgetri_gpu");
 
     magma_free(dwork); free(ipiv);
 

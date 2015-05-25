@@ -30,7 +30,7 @@ module ElHl_Chebyshev_m
     logical     ,   save          :: necessary_  = .true.
     logical     ,   save          :: first_call_ = .true.
     real*8, target, allocatable   :: h0(:,:)
-    real*8      ,   allocatable   :: S_inv(:,:) 
+    real*8      ,   allocatable   :: S_matrix(:,:)
     real*8      ,   allocatable   :: V_Coul_El(:) , V_Coul_Hl(:)
     complex*16  ,   allocatable   :: V_Coul(:,:)
     
@@ -58,7 +58,7 @@ integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: li , N 
-real*8          , allocatable   :: wv_FMO(:) , S_matrix(:,:)
+real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
@@ -86,6 +86,11 @@ ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 !========================================================================
 
+#ifdef USE_GPU
+allocate( S_matrix(size(basis),size(basis)) )
+call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
+#endif
+
 ! prepare DUAL basis for local properties ...
 CALL Overlap_Matrix( system , basis , S_matrix )
 DUAL_bra = dconjg( ElHl_Psi )
@@ -102,7 +107,8 @@ If( .not. restart ) then
 end If    
 
 ! clean and exit ...
-deallocate( S_matrix )
+! leaving S_matrix allocated
+!deallocate( S_matrix )
 
 end subroutine preprocess_ElHl_Chebyshev
 !
@@ -127,7 +133,7 @@ integer          , intent(in)    :: it
 integer                     :: i, j , N
 real*8                      :: t_max , tau_max , tau(2) , t_init
 real*8      , pointer       :: h(:,:)
-real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) , H_prime(:,:) , S_matrix(:,:) 
+real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) , H_prime(:,:)
 complex*16  , allocatable   :: AO_bra(:,:) , AO_ket(:,:) , V_coul(:,:) 
 
 t_init = t
@@ -144,17 +150,24 @@ tau(:) = merge( tau_max , tau(:) , tau(:) > tau_max )
 
 N = size(basis)
 
+if(first_call_) then           ! allocate matrices
+#ifdef USE_GPU
+    allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
+    call GPU_Pin( H, N*N*8 )
+#else
+    allocate( H(N,N) , H_prime(N,N) )
+#endif
+end if
+
 If ( necessary_ ) then
 
     ! compute S and S_inverse ...
-#define S_matrix S_inv
     CALL Overlap_Matrix( system , basis , S_matrix )
 
     CALL Huckel( basis , S_matrix , h0 )
 
-    call GPU_Pin( S_matrix, N*N*8 )
     call syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
-#undef S_matrix
+#define S_inv S_matrix
 
     ! for a rigid structure once is enough ...
     If( driver == 'q_dynamics' ) necessary_ = .false.
@@ -205,7 +218,7 @@ call syMultiply( S_inv , h , H_prime )
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
 #ifdef USE_GPU
-call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv, h, Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
+call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv(1,1), h(1,1), Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
 #else
 CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
 #endif
@@ -228,8 +241,7 @@ if( Coulomb_ ) then
 end if
 
 If( driver /= 'q_dynamics' ) then
-    call GPU_Unpin( S_inv )
-    deallocate( h0 , S_inv )
+    deallocate( h0 )
     nullify( h )
 end if
 
@@ -261,7 +273,7 @@ Print 186, t
 include 'formats.h'
 
 first_call_ = .false.
-
+#undef S_inv
 end subroutine ElHl_Chebyshev
 !
 !
