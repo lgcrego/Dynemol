@@ -19,7 +19,7 @@ module FF_OPT_class_m
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 500           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         integer  , pointer      :: nmd_OPT_indx(:) => null()
@@ -123,7 +123,7 @@ select case ( kernel )
 
     case( "NormalModes" ) 
     
-        me % accuracy = 1.d-5
+        me % accuracy = 1.d-4
     
         If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
@@ -507,7 +507,7 @@ if( .NOT. allocated(Hesse%L) ) then
      allocate( Hesse%L , source = Hessian )    
      allocate( Hesse%R , source = Hessian )    
 
-     dull = evaluate_cost( nmd_indx = nmd_ref , instance = "preprocess" )
+     dull = evaluate_cost( hesse%erg , nmd_indx = nmd_ref , instance = "preprocess" )
      allocate( nmd_list , source = nmd_ref )
      allocate( nmd_mtx(size(Hesse%erg),size(nmd_list)) )
 

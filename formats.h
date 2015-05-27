@@ -134,8 +134,3 @@
 
 193   FORMAT(/,1x,"OPT_nmd_indx",/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I)  
 
-194   FORMAT(1x," >>> file OPT_nmd_indx.inpt does not exist ; move OPT_nmd_indx.out to OPT_nmd_indx.inpt <<< ")
-
-195   FORMAT(1x," >>> file OPT_nmd_indx.inpt found ; remove it or set read_nmd_indx_ = .true. <<< ")
-
-

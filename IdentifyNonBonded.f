@@ -30,6 +30,7 @@ logical         , allocatable   :: InputRef(:,:)
 
 !==============================================================================================
 
+ If( species(a) % N_of_atoms <= 3 ) return
 
  allocate( InputRef      ( 5*species(a) % N_of_Atoms , 5*species(a) % N_of_Atoms ) , source = .true. )
  allocate( InputIntegers ( 5*species(a) % N_of_Atoms , 5*species(a) % N_of_Atoms ) , source = I_zero )

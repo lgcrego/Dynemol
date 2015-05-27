@@ -143,9 +143,10 @@ end subroutine CG_Driver
 implicit none
 
 ! local variables ...
-integer                       :: i , j , k , l , column , size_Hessian , info , list_size
+integer                       :: i , j , k , l , column , size_Hessian , info , list_size , N_of_free
 type(MM_atomic) , allocatable :: equilibrium(:) , atom_fwd(:) , atom_bwd(:)
 real*8          , allocatable :: Hessian(:,:)
+real*8                        :: symmetric 
 type(R_eigen)                 :: Hesse
 
 !local parameters ...
@@ -157,8 +158,9 @@ CALL Optimize_Structure ( )
 
 allocate( equilibrium ( MM % N_of_atoms ) )
 
+N_of_free = MM_erg % N_of_freedom / 3
 do i = 1 , 3
-    equilibrium % xyz(i) = MM_erg % p( (i-1) * MM%N_of_atoms + 1 : i * MM%N_of_atoms ) 
+    equilibrium % xyz(i) = MM_erg % p( (i-1) * N_of_free + 1 : i * N_of_free ) 
 end do
 
 ! reset the atomic forces ...
@@ -205,7 +207,17 @@ forall( j=1:MM%N_of_atoms , k=1:3 ) Hessian( : , (j-1)*3 + k ) = Hessian( : , (j
 ! fixing correct units ...
 Hessian = Hessian / Angs_2_mts
 
+! just to guarantee that the Hessian is symmetric ...
 size_Hessian = 3 * MM % N_of_atoms
+do j = 1 , size_Hessian
+    do i = j+1 , size_Hessian
+
+         symmetric = ( Hessian(i,j) + Hessian(j,i) ) * HALF
+         Hessian(i,j) = symmetric
+         Hessian(j,i) = symmetric
+
+    end do
+end do
 
 allocate( Hesse%erg(size_Hessian) , source=D_zero )
 
@@ -302,6 +314,44 @@ MM_erg = MM_OPT( )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 
 end subroutine Optimize_Structure
+!
+!
+!
+!=================================
+ subroutine Moment_of_Inertia( R )
+!=================================
+implicit none
+type(MM_atomic) , intent(inout) :: R(:) 
+
+! local variables ...
+integer              :: i , j , info
+real*8               :: MoI(3,3) , eigenvalues(3), delta, R0(3)
+real*8 , allocatable :: d2(:) 
+
+R%mass = atom%mass
+
+! translate molecule to CM...
+forall(i=1:3) R%xyz(i) =  R%xyz(i) - sum(R%mass*R%xyz(i))/sum(R%mass)
+
+allocate( d2(MM%N_of_atoms) )
+
+forall( i=1:MM%N_of_atoms ) d2(i) = sqrt( sum( R(i)%xyz * R(i)%xyz ) )
+
+do i = 1 , 3
+    do j = 1 , 3
+
+         delta = merge( D_one , D_zero , i == j )
+
+         MoI(i,j) = sum( R(:)%mass*( delta*d2(:) - R(:)%xyz(i)*R(:)%xyz(j) ) )
+
+    end do
+end do
+
+CALL SYEV( MoI , eigenvalues , 'V' , 'U' , info )
+If ( info /= 0 ) write(*,*) 'info = ',info,' in Moment of Inertia in vibes normal modes '
+
+end subroutine Moment_of_Inertia
+!
 !
 !
 !===============
