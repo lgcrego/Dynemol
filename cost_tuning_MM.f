@@ -69,7 +69,7 @@ If( preprocess ) then
 
     evaluate_cost = real_large
 
-    ! reading command line arguments for plotting MO cube files ...
+    ! reading command line arguments for initiating parameterization ...
     If( COMMAND_ARGUMENT_COUNT() == 0 ) pause "Quit and choose option: newOPT , repeat , resume." 
 
     CALL GET_COMMAND_ARGUMENT( 1 , prepare_environment )
