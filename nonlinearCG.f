@@ -1,6 +1,6 @@
 module NonlinearCG_m
 
-        use constants_m             , only: real_large 
+        use constants_m             
         use OPT_Parent_class_m      , only: OPT_Parent
 
         implicit none
@@ -31,8 +31,11 @@ real*8              , intent(out)   :: local_minimum
 
 !local variables ...
 INTEGER :: its,j,iter
+INTEGER :: steps_up = 0
 real*8  :: dgg,fp,gam,gg
+real*8  :: relative_difference
 real*8  :: g(N),h(N),xi(N)
+
 
 ! saving first geometry ...
 if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
@@ -56,18 +59,27 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
 
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
-           If( this % profiling ) then
-               if ( this % profiling ) Print*, its , local_minimum
+           If( this% profiling ) then
+               if ( this% profiling ) Print*, its , local_minimum
                write(32,*) its , local_minimum 
-               if ( any(this % driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this%output( iter )
+               if ( any(this% driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
            end If
 
+           ! define relative difference between iterations ...
+           relative_difference = abs( local_minimum - fp ) / ( (abs(local_minimum) + abs(fp) + high_prec) / TWO ) 
+
+           ! accept cost increase within tolerance ...
            if( local_minimum > fp ) then
-               local_minimum = real_large
-               goto 100
+               steps_up = steps_up + 1
+               if(local_minimum - fp > D_one) then
+                    local_minimum = real_large
+                    goto 100
+                end if
+           else
+                steps_up = 0
            end if
 
-           if( (2.d0*abs(local_minimum-fp)) <= this % accuracy *(abs(local_minimum)+abs(fp)+this % accuracy) )  goto 100
+           if( relative_difference <= this% accuracy )  goto 100
 
            fp=local_minimum
            call this % cost_variation(xi)
