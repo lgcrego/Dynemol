@@ -13,7 +13,7 @@ module cost_MM
         logical       :: bonds(3)  = F_
         logical       :: angs(2)   = F_
         logical       :: diheds(7) = F_
-        character(30) :: comment
+        character(20) :: comment
     end type
 
     ! module variables ...
@@ -60,7 +60,7 @@ real*8       :: weight(100) = D_zero
 logical      :: preprocess
 character(6) :: prepare_environment
 
-preprocess = present(instance)
+preprocess = present(instance) .AND. instance == "preprocess"
 
 If( preprocess ) then
 
@@ -77,6 +77,7 @@ If( preprocess ) then
     end select
 
     select case( prepare_environment )
+
          case( "repeat" , "resume" ) 
               OPEN( unit=14 , file='OPT_nmd_indx.inpt' )
                    read(14,*) i
@@ -90,6 +91,7 @@ If( preprocess ) then
                                         50,49,52,58,55] )
          case default 
          pause "Quit and choose option: newOPT , repeat , resume." 
+
     end select
 
 end If
@@ -99,7 +101,7 @@ end If
 ! ascending energy order
 !------------------------
 
-chi(1)  = Hesse_erg(nmd_indx(1))  - 26.9d0                             ; weight(1)  = 3.0d0
+chi(1)  = Hesse_erg(nmd_indx(1))  - 26.9d0                             ; weight(1)  = 4.0d0
 
 chi(2)  = Hesse_erg(nmd_indx(2))  - 94.2d0                             ; weight(2)  = 1.0d0
 
@@ -109,7 +111,7 @@ chi(4)  = Hesse_erg(nmd_indx(4))  - 176.8d0                            ; weight(
 
 chi(5)  = Hesse_erg(nmd_indx(5))  - 203.1d0                            ; weight(5)  = 1.0d0
 
-chi(6)  = Hesse_erg(nmd_indx(6))  - 231.2d0                            ; weight(6)  = 3.0d0
+chi(6)  = Hesse_erg(nmd_indx(6))  - 231.2d0                            ; weight(6)  = 4.0d0
 
 chi(7)  = Hesse_erg(nmd_indx(7))  - 254.2d0                            ; weight(7)  = 2.0d0
 
@@ -125,7 +127,7 @@ chi(12) = Hesse_erg(nmd_indx(12)) - 429.3d0                            ; weight(
 
 chi(13) = Hesse_erg(nmd_indx(13)) - 448.0d0                            ; weight(13) = 1.0d0
 
-chi(14) = Hesse_erg(nmd_indx(14)) - 461.9d0                            ; weight(14) = 2.0d0
+chi(14) = Hesse_erg(nmd_indx(14)) - 461.9d0                            ; weight(14) = 4.0d0
 
 chi(15) = Hesse_erg(nmd_indx(15)) - 466.6d0                            ; weight(15) = 1.0d0
 
@@ -137,13 +139,13 @@ chi(18) = Hesse_erg(nmd_indx(18)) - 537.2d0                            ; weight(
 
 chi(19) = Hesse_erg(nmd_indx(19)) - 545.4d0                            ; weight(19) = 1.0d0
 
-chi(20) = Hesse_erg(nmd_indx(20)) - 547.3d0                            ; weight(20) = 2.0d0
+chi(20) = Hesse_erg(nmd_indx(20)) - 547.3d0                            ; weight(20) = 3.0d0
 
 chi(21) = Hesse_erg(nmd_indx(21)) - 580.3d0                            ; weight(21) = 1.0d0
 
 chi(22) = Hesse_erg(nmd_indx(22)) - 618.3d0                            ; weight(22) = 1.0d0
 
-chi(23) = Hesse_erg(nmd_indx(23))  - 625.3d0                           ; weight(23)= 1.0d0
+chi(23) = Hesse_erg(nmd_indx(23))  - 625.3d0                           ; weight(23)= 3.0d0
 
 chi(24) = Hesse_erg(nmd_indx(24))  - 639.5d0                           ; weight(24)= 1.0d0
 
@@ -175,19 +177,19 @@ chi(37) = Hesse_erg(nmd_indx(37))  - 885.9d0                           ; weight(
 
 chi(38) = Hesse_erg(nmd_indx(38))  - 890.8d0                           ; weight(38)= 1.0d0
 
-chi(39) = Hesse_erg(nmd_indx(39))  - 904.4d0                           ; weight(39)= 1.0d0
+chi(39) = Hesse_erg(nmd_indx(39))  - 904.4d0                           ; weight(39)= 3.0d0
 
 chi(40) = Hesse_erg(nmd_indx(40))  - 932.6d0                           ; weight(40)= 1.0d0
 
 chi(41) = Hesse_erg(nmd_indx(41))  - 950.6d0                           ; weight(41)= 1.0d0
 
-chi(42) = Hesse_erg(nmd_indx(42))  - 955.3d0                           ; weight(42)= 1.0d0
+chi(42) = Hesse_erg(nmd_indx(42))  - 955.3d0                           ; weight(42)= 1.5d0
 
-chi(43) = Hesse_erg(nmd_indx(43))  - 960.7d0                           ; weight(43)= 1.0d0
+chi(43) = Hesse_erg(nmd_indx(43))  - 960.7d0                           ; weight(43)= 1.5d0
 
-chi(44) = Hesse_erg(nmd_indx(44))  - 964.8d0                           ; weight(44)= 1.0d0
+chi(44) = Hesse_erg(nmd_indx(44))  - 964.8d0                           ; weight(44)= 1.5d0
 
-chi(45) = Hesse_erg(nmd_indx(45))  -  985.5d0                          ; weight(45)= 3.0d0
+chi(45) = Hesse_erg(nmd_indx(45))  -  985.5d0                          ; weight(45)= 4.0d0
 
 chi(46) = Hesse_erg(nmd_indx(46))  - 1037.9d0                          ; weight(46)= 1.0d0
 
@@ -214,7 +216,8 @@ If( preprocess ) then
 end If
 
 ! finally apply weight on chi and evaluate cost ...
-!weight = 1.d0 ; weight(1) = 6.d0; weight(45) = 6.d0
+If( present(instance) .AND. instance == "use_no_weights") weight = D_one
+
 chi = chi * weight
 evaluate_cost = sqrt( dot_product(chi,chi) ) + sum(abs(chi(nmd_deg_indx(:,1))-chi(nmd_deg_indx(:,2))))
 

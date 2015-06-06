@@ -50,13 +50,14 @@ contains
 !
 !
 !
-!=================================================
- function constructor( key , kernel ) result( me )
-!=================================================
+!===========================================================
+ function constructor( key , kernel , weights ) result( me )
+!===========================================================
 implicit none
-type(LogicalKey)  , intent(in) :: key
-character(*)      , intent(in) :: kernel
-type(FF_OPT)                   :: me 
+type(LogicalKey)             , intent(in) :: key
+character(*)                 , intent(in) :: kernel
+character(*)      , optional , intent(in) :: weights
+type(FF_OPT) :: me 
 
 !local variable ...
 integer :: j 
@@ -123,13 +124,15 @@ select case ( kernel )
 
     case( "NormalModes" ) 
     
-        me % accuracy = 1.d-4
+        me % accuracy = 1.d-5
     
         If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
         If( any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
 
         If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+
+        me % weights = weights
 
     case default
 
@@ -189,7 +192,7 @@ select case ( method )
 
         nmd_list = maxloc( abs(nmd_mtx) , dim=1 ) 
 
-        cost = evaluate_cost( Hesse%erg , nmd_list )
+        cost = evaluate_cost( Hesse%erg , nmd_list , instance = me%weights )
 
     case default 
 

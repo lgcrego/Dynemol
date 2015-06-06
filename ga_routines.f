@@ -613,7 +613,7 @@ CALL SetKeys
 
 key = KeyHolder( size(KeyHolder) )
 
-MM_parms = FF_OPT( key , kernel = "NormalModes" )
+MM_parms = FF_OPT( key , kernel = "NormalModes" , weights = "use_weights" )
 
 GeneSize = MM_parms % N_of_freedom 
 

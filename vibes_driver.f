@@ -93,11 +93,11 @@ do i = 1 , Top_Selection
 
     do k = 1 , size(KeyHolder)
 
-        write(*,190) i , KeyHolder(k) % comment 
-
         key = KeyHolder(k)
 
-        MM_parms = FF_OPT( key , kernel = "NormalModes" )
+        MM_parms = FF_OPT( key , kernel = "NormalModes" , weights = "use_no_weights" )
+
+        write(*,190) i , KeyHolder(k) % comment , MM_parms% weights
 
         If( k == 1 ) then
 
@@ -125,7 +125,7 @@ Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
-MM_parms      = FF_OPT( key , kernel = "NormalModes" )
+MM_parms      = FF_OPT( key , kernel = "NormalModes" , weights = "use_no_weights" )
 MM_parms % p  = GA_Selection(:,GlobalMinimum)
 
 Print 192, GlobalMinimum , MM_parms%cost() , RMSD()
