@@ -5,23 +5,23 @@ module FF_OPT_class_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : PBC
     use MD_read_m               , only : atom , molecule , MM 
-    use MM_types                , only : MM_system , MM_atomic , MM_molecular , debug_MM
+    use MM_types                , only : MM_atomic , LogicalKey , MMOPT_Control
     use MM_input                , only : driver_MM
     use F_intra_m               , only : ForceIntra, Pot_Intra                                     
     use OPT_Parent_class_m      , only : OPT_Parent
     use NonlinearSidekick_m     , only : Fletcher_Reeves_Polak_Ribiere_minimization
-    use cost_MM                 , only : evaluate_cost , LogicalKey
+    use cost_MM                 , only : evaluate_cost 
 
     public :: FF_OPT , atom0
 
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 300           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
+        character(len=30)       :: directives
         integer  , pointer      :: nmd_OPT_indx(:) => null()
         integer  , pointer      :: nmd_REF_indx(:) => null()
     contains
@@ -44,23 +44,28 @@ module FF_OPT_class_m
     logical             , allocatable           :: bonds_mask(:,:) , angs_mask(:,:) , diheds_mask(:,:)
     type(real_pointer)  , allocatable           :: bond(:,:) , ang(:,:) , dihed(:,:)
     type(MM_atomic)     , allocatable           :: atom0(:)
+    type(MMOPT_Control)                         :: control
     type(R_eigen)                               :: Hesse
+
+    ! module parameters ...
+    logical , parameter :: F_ = .false. , T_ = .true.
 
 contains
 !
 !
 !
-!===========================================================
- function constructor( key , kernel , weights ) result( me )
-!===========================================================
+!==============================================================
+ function constructor( key , kernel , directives ) result( me )
+!==============================================================
 implicit none
 type(LogicalKey)             , intent(in) :: key
 character(*)                 , intent(in) :: kernel
-character(*)      , optional , intent(in) :: weights
+character(*)      , optional , intent(in) :: directives
 type(FF_OPT) :: me 
 
 !local variable ...
 integer :: j 
+real*8  :: Just_do_it
 
 method = kernel
 
@@ -69,6 +74,7 @@ me % ITMAX       = me % ITMAX_FF
 me % BracketSize = me % BracketSize_FF
 me % profiling   = me % profiling_FF
 me % driver      = driver_MM
+me % directives  = directives
 
 If( driver_MM == "Parametrize" ) me % profiling = .true.
 
@@ -130,9 +136,10 @@ select case ( kernel )
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
         If( any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
 
-        If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
+        If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+3 * me % BracketSize_FF
 
-        me % weights = weights
+        control = set_to( directives )
+        if( control% new_adiabat ) Just_do_it = evaluate_cost( control = control ) 
 
     case default
 
@@ -192,7 +199,7 @@ select case ( method )
 
         nmd_list = maxloc( abs(nmd_mtx) , dim=1 ) 
 
-        cost = evaluate_cost( Hesse%erg , nmd_list , instance = me%weights )
+        cost = evaluate_cost( Hesse%erg , nmd_list , control )
 
     case default 
 
@@ -510,9 +517,11 @@ if( .NOT. allocated(Hesse%L) ) then
      allocate( Hesse%L , source = Hessian )    
      allocate( Hesse%R , source = Hessian )    
 
-     dull = evaluate_cost( hesse%erg , nmd_indx = nmd_ref , instance = "preprocess" )
+     control% preprocess = T_ 
+     dull = evaluate_cost( hesse%erg , nmd_ref , control )
      allocate( nmd_list , source = nmd_ref )
      allocate( nmd_mtx(size(Hesse%erg),size(nmd_list)) )
+     control% preprocess = F_
 
 else
 
@@ -522,6 +531,24 @@ end if
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 end subroutine normal_modes
+!
+!
+!
+!===========================================
+ function set_to( directives ) result(control)
+!===========================================
+implicit none
+character(*) , intent(in) :: directives
+type(MMOPT_Control)       :: control
+
+control% preprocess     = merge( T_ , F_ , verify("initial_preprocess"   ,directives) == 0 ) 
+control% adiabatic_OPT  = merge( T_ , F_ , verify("adiabatic_OPT"        ,directives) == 0 ) 
+control% use_no_weights = merge( T_ , F_ , verify("no_weight"            ,directives) == 0 ) 
+control% new_adiabat    = merge( T_ , F_ , verify("preprocess_adiabatic" ,directives) == 0 ) 
+control% LineUpCost     = merge( T_ , F_ , verify("LineUp"               ,directives) == 0 )
+
+end function set_to
+!
 !
 !
 end module FF_OPT_class_m

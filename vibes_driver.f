@@ -5,13 +5,13 @@ module good_vibrations_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : PBC
+    use parameters_m            , only : PBC , CG_Ad_ , N_of_AdSteps
     use MD_read_m               , only : atom , MM , molecule
-    use MM_types                , only : MM_atomic 
+    use MM_types                , only : MM_atomic , LogicalKey
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
-    use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , LogicalKey 
+    use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder 
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
@@ -52,7 +52,7 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
 ! preprocess with GA method ...
-CALL Genetic_Algorithm( MM_parms , GA_Selection )
+CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_weights_LineUp" )
 
 CALL CG_driver( GA_Selection ) 
 
@@ -81,51 +81,74 @@ real*8                           :: this_minimum
 real*8             , allocatable :: local_minimum(:) , InitialCost(:)
 type(LogicalKey)                 :: key 
 
-
-Top_Selection = size(GA_Selection(1,:)) 
+Top_Selection = merge( 1 , size(GA_Selection(1,:)) , CG_Ad_ )
 
 allocate( local_minimum(Top_Selection) , source = real_large )
 allocate( InitialCost  (Top_Selection)                       )
 
-do i = 1 , Top_Selection
+If( CG_Ad_ ) then
 
-    atom = atom0
+    key  = KeyHolder(1)
+    do k = 1 , N_of_AdSteps
 
-    do k = 1 , size(KeyHolder)
+         atom     =  atom0
+         MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "proprocess_adiabatic"         )
+         MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights_adiabatic_OPT" )
 
-        key = KeyHolder(k)
+         write(*,190) k , KeyHolder(1)% comment , MM_parms% directives
 
-        MM_parms = FF_OPT( key , kernel = "NormalModes" , weights = "use_no_weights" )
+         CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
 
-        write(*,190) i , KeyHolder(k) % comment , MM_parms% weights
+         CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_no_weigths_LineUp" )
 
-        If( k == 1 ) then
+         this_minimum = MM_parms% cost()
+         If( this_minimum == real_large ) exit
 
-            MM_parms % p = GA_Selection(:,i)
-
-            InitialCost(i) = MM_parms % cost()
-
-        end If
-
-        CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
-
-        If( this_minimum == real_large ) goto 21
-
-        ! temporarily stores CG optimized FF parameters here ...
-        CALL save_temporary_results( GA_Selection(:,i) )
-        local_minimum(i) = this_minimum
+         ! temporarily stores CG optimized FF parameters here ...
+         CALL save_temporary_results( GA_Selection(:,1) )
+         local_minimum(1) = this_minimum
 
     end do
+    print*, "  ==> done"
 
-21  print*, "  ==> done"
+else
 
-end do
+    do i = 1 , Top_Selection
 
-Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
+         atom = atom0
+         do k = 1 , size(KeyHolder)
+
+              key      =  KeyHolder(k)
+              MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights" )
+
+              write(*,190) i , KeyHolder(k)% comment , MM_parms% directives
+
+              If( k == 1 ) then
+
+                   MM_parms% p    =  GA_Selection(:,i)
+                   InitialCost(i) =  MM_parms% cost()
+
+              end If
+
+              CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
+
+              If( this_minimum == real_large ) exit
+
+              ! temporarily stores CG optimized FF parameters here ...
+              CALL save_temporary_results( GA_Selection(:,i) )
+              local_minimum(i) = this_minimum
+
+         end do
+         print*, "  ==> done"
+
+    end do
+    Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
+
+end If
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
-MM_parms      = FF_OPT( key , kernel = "NormalModes" , weights = "use_no_weights" )
+MM_parms      = FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights" )
 MM_parms % p  = GA_Selection(:,GlobalMinimum)
 
 Print 192, GlobalMinimum , MM_parms%cost() , RMSD()
@@ -325,7 +348,7 @@ type(MM_atomic) , intent(inout) :: R(:)
 
 ! local variables ...
 integer              :: i , j , info
-real*8               :: MoI(3,3) , eigenvalues(3), delta, R0(3)
+real*8               :: MoI(3,3) , eigenvalues(3), delta
 real*8 , allocatable :: d2(:) 
 
 R%mass = atom%mass
@@ -405,9 +428,9 @@ integer , intent(inout) :: a(:)
 ! local variables ...
 integer  :: ra, l, n, ir, i, j
 
-!-----------------------------------------------------------
-!  SORT IRA(I) , SO THAT THE ELEMENTS IRB(I) FOLLOW TOGETHER
-!-----------------------------------------------------------
+!---------------------
+!      SORT A(I) 
+!---------------------
       n = size(a)
       l = n/2+1
       ir = n

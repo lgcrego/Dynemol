@@ -2,7 +2,8 @@ module MM_types
 
 use constants_m
 
-    public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , DefineMorse, debug_MM
+public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , DefineMorse, debug_MM
+public :: MMOPT_Control, Logicalkey
 
     type MM_atomic
         integer                             :: AtNo
@@ -101,6 +102,22 @@ use constants_m
         character(3)                        :: MMSymbols(2)
         real*8                              :: Parms(3)
     end type DefineMorse
+
+    type LogicalKey
+        logical       :: bonds(3)    = .false.
+        logical       :: angs(2)     = .false.
+        logical       :: diheds(7)   = .false.
+        logical       :: adiabatic   = .false.
+        character(20) :: comment
+    end type LogicalKey
+
+    type MMOPT_Control
+        logical       :: adiabatic_OPT  = .false.
+        logical       :: preprocess     = .true.
+        logical       :: use_no_weights = .false.
+        logical       :: new_adiabat    = .false.
+        logical       :: LineUpCost     = .false.
+    end type MMOPT_Control
 
     interface debug_MM
         module procedure debug_MM_atomic 

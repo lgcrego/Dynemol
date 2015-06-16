@@ -2,6 +2,7 @@ module GA_m
 
     use type_m
     use constants_m
+    use MM_types                , only : LogicalKey
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
@@ -17,8 +18,7 @@ module GA_m
                                          AlphaPolar ,                   &
                                          Mulliken
     use cost_EH                 , only : evaluate_cost                                         
-    use cost_MM                 , only : LogicalKey ,                   &
-                                         SetKeys ,                      &
+    use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
 
 
@@ -591,15 +591,15 @@ end subroutine sort2
 !
 !
 !
-!==========================================================
- subroutine Genetic_Algorithm_MM( MM_parms , GA_Selection )
-!==========================================================	
+!=======================================================================
+ subroutine Genetic_Algorithm_MM( MM_parms , GA_Selection , directives )
+!=======================================================================	
 implicit none
 type(FF_OPT)                  , intent(inout) :: MM_parms
 real*8          , allocatable , intent(out)   :: GA_Selection(:,:)
+character(*)                  , intent(in)    :: directives
 
 ! local variables ...
-real*8                          :: initial_cost
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) , p0(:)
 integer         , allocatable   :: indx(:)
 integer                         :: i , generation , Pop_start ,  GeneSize
@@ -613,14 +613,12 @@ CALL SetKeys
 
 key = KeyHolder( size(KeyHolder) )
 
-MM_parms = FF_OPT( key , kernel = "NormalModes" , weights = "use_weights" )
+MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = directives )
 
 GeneSize = MM_parms % N_of_freedom 
 
 ! creating reference copy of FF vector ...
 allocate( p0(GeneSize) , source = MM_parms % p )
-
-initial_cost = MM_parms % cost()
 
 !-----------------------------------------------
 !        SETTING-UP initial populations
@@ -675,7 +673,7 @@ do generation = 1 , N_generations
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    Print 160 , generation , N_generations
+    Print 161 , generation , N_generations , directives
 
 end do
 

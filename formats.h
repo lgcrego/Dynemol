@@ -100,7 +100,9 @@
 
 158   FORMAT(/,1x,'N_of_Solute_Molecules in DP_field = ',I4/)
 
-160   FORMAT(/,1x,'Custo : ',I4,' /',I4)
+160   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4)
+
+161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , a25)
 
 165   FORMAT(1x,'========= ',A20,' =========')
 
@@ -126,7 +128,7 @@
 
 189   FORMAT(1x,'Polarizability Tensor diagonal elements = (',3F10.3,') a_Bohr^3  ==>  Average = ',F10.3,' a_Bohr^3')
 
-190   FORMAT(/,I2,' ', a20 , a20)
+190   FORMAT(/,I2,' ', a20 , a30)
 
 191   FORMAT(2F32.6/)
 
