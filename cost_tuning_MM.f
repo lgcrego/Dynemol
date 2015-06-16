@@ -27,10 +27,10 @@ implicit none
 If( .not. allocated(KeyHolder) ) allocate( KeyHolder(1) )
 
 
-    KeyHolder(1)%comment = "==> optimize angs"
-!    KeyHolder(1)%bonds   = [T_,F_,F_]
+    KeyHolder(1)%comment = "==> optimize all"
+    KeyHolder(1)%bonds   = [T_,F_,F_]
     KeyHolder(1)%angs    = [T_,F_]
-!    KeyHolder(1)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
+    KeyHolder(1)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
 
 
 
