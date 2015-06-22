@@ -18,7 +18,7 @@ module FF_OPT_class_m
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 300           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         character(len=30)       :: directives
@@ -130,13 +130,13 @@ select case ( kernel )
 
     case( "NormalModes" ) 
     
-        me % accuracy = 1.d-5
+        me % accuracy = 1.d-4
     
         If( any(key%bonds)  ) me % BracketSize = 1.d+4 * me % BracketSize_FF
         If( any(key%angs)   ) me % BracketSize = 1.d+2 * me % BracketSize_FF
         If( any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
 
-        If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+3 * me % BracketSize_FF
+        If( any(key%bonds) .AND. any(key%angs) .AND. any(key%diheds) ) me % BracketSize = 1.d+2 * me % BracketSize_FF
 
         control = set_to( directives )
         if( control% new_adiabat ) Just_do_it = evaluate_cost( control = control ) 
@@ -320,7 +320,7 @@ character(len=:) , allocatable  :: string(:)
  write(51,"(A)") "[ dihedraltypes ]"
  write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
 
- allocate( character(len=4*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Ndiheds) )
+ allocate( character(len=4*len(atom(at1)%MMSymbol)+len(molecule(1)%Dihedral_Type)) :: string(molecule(1)%Ndiheds) )
  do i = 1 , molecule(1)%Ndiheds
 
     at1 = molecule(1)%diheds(i,1)
@@ -328,7 +328,7 @@ character(len=:) , allocatable  :: string(:)
     at3 = molecule(1)%diheds(i,3)
     at4 = molecule(1)%diheds(i,4)
 
-    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol
+    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol//molecule(1)%Dihedral_Type(i)
 
     if( .NOT. any(string(1:i-1) == string(i)) ) then 
 
@@ -336,17 +336,34 @@ character(len=:) , allocatable  :: string(:)
 
         factor = factor1 * imol
 
-        write(51,'(4A4,I5,6F12.5)') atom(at1)%MMSymbol                  , &
-                                    atom(at2)%MMSymbol                  , &
-                                    atom(at3)%MMSymbol                  , &
-                                    atom(at4)%MMSymbol                  , &
-                                    funct_dih                           , &
-                                    molecule(1)%kdihed0(i,1) / factor   , &
-                                    molecule(1)%kdihed0(i,2) / factor   , &  
-                                    molecule(1)%kdihed0(i,3) / factor   , &
-                                    molecule(1)%kdihed0(i,4) / factor   , & 
-                                    molecule(1)%kdihed0(i,5) / factor   , &
-                                    molecule(1)%kdihed0(i,6) / factor   
+        write(51,'(4A4,I5)',advance="no") atom(at1)%MMSymbol                  , &
+                                          atom(at2)%MMSymbol                  , &
+                                          atom(at3)%MMSymbol                  , &
+                                          atom(at4)%MMSymbol                  , &
+                                          funct_dih      
+
+        select case( adjustl(molecule(1) % Dihedral_Type(i)) )
+
+            case ('cos')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
+
+                write(51,'(2F12.5,I8)') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
+                                        molecule(1)%kdihed0(i,2) / factor     , &  
+                                        molecule(1)%harm(i)
+
+            case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
+                          ! Eq. 4.61 (GMX 5.0.5 manual)
+
+                write(51,'(6F12.5)') molecule(1)%kdihed0(i,1) / factor        , &
+                                     molecule(1)%kdihed0(i,2) / factor        , &  
+                                     molecule(1)%kdihed0(i,3) / factor        , &
+                                     molecule(1)%kdihed0(i,4) / factor        , & 
+                                     molecule(1)%kdihed0(i,5) / factor        , &
+                                     molecule(1)%kdihed0(i,6) / factor  
+            case default
+
+                Print*, "dihedral FF not supported in FF_OPT_class%output"
+
+        end select
     end if
  end  do
  deallocate(string)
