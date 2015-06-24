@@ -6,7 +6,7 @@ FC=ifort -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = #-check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align #array64byte
 FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 
@@ -103,7 +103,9 @@ SOURCE2 = constants_m.o \
 		  data_output.o \
           backup_MM.o \
 		  Berendsen.o \
-                  NVE.o \
+		  NoseHoover.o \
+		  NoseHoover_Reversible.o \
+          NVE.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \
