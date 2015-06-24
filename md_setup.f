@@ -14,8 +14,8 @@ module VV_Parent
 contains
 
     subroutine VV1( me , dt )
-        class(VV) , intent(in) :: me
-        real*8    , intent(in) :: dt
+        class(VV) , intent(inout) :: me
+        real*8    , intent(in)    :: dt
     end subroutine
 
     subroutine VV2( me , dt )

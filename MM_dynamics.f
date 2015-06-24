@@ -16,6 +16,8 @@ module MM_dynamics_m
     use MM_types            , only : debug_MM
     use VV_Parent           , only : VV
     use Berendsen_m         , only : Berendsen
+    use Nose_Hoover_m       , only : Nose_Hoover
+    use NH_Reversible_m     , only : NH_Reversible
     use NVE_m               , only : NVE 
 
     public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup, MoveToBoxCM
@@ -23,9 +25,11 @@ module MM_dynamics_m
     private
 
     !local variables ...
-    logical         :: done = .false.
-    type(Berendsen) :: VV_Berendsen
-    type(NVE)       :: VV_NVE
+    logical             :: done = .false.
+    type(Berendsen)     :: VV_Berendsen
+    type(Nose_Hoover)   :: VV_Nose_Hoover
+    type(NH_Reversible) :: VV_NH_Reversible
+    type(NVE)           :: VV_NVE
 
 contains
 !
@@ -46,17 +50,19 @@ select case( thermostat )
          CALL VelocityVerlet( VV_Berendsen , t_rate , frame , Net_Charge )
 
     case( "Nose_Hoover" )
+         CALL VelocityVerlet( VV_Nose_Hoover , t_rate , frame , Net_Charge )
 
+    case( "NH_Reversible" )
+         CALL VelocityVerlet( VV_NH_Reversible , t_rate , frame , Net_Charge )
 
     case( "Microcanonical" )
          CALL VelocityVerlet( VV_NVE , t_rate , frame , Net_Charge )
 
+    case default
+        Print*, " >>> Check your thermostat options <<< :" , thermostat
+        stop
+
 end select
-
-
-
-
-
 
 end subroutine MolecularMechanics
 !
@@ -144,7 +150,10 @@ select case( thermostat )
          VV_Berendsen = Berendsen()
 
     case( "Nose_Hoover" )
+         VV_Nose_Hoover = Nose_Hoover()
 
+    case( "NH_Reversible" )
+         VV_NH_Reversible = NH_Reversible()
 
     case( "Microcanonical" )
          VV_NVE = NVE()

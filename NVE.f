@@ -43,8 +43,8 @@ end function constructor
 subroutine VV1( me , dt )
 !========================
 implicit none
-class(NVE) , intent(in) :: me
-real*8     , intent(in) :: dt
+class(NVE) , intent(inout) :: me
+real*8     , intent(in)    :: dt
 
 ! local variables ...
 real*8  :: ai(3)
