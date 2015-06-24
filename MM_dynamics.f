@@ -89,6 +89,8 @@ atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 ! Molecuar dynamic ...
 CALL this % VV1( dt )
 
+CALL move_to_box_CM
+
 CALL Molecular_CM
 
 CALL ForceInter
