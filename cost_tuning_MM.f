@@ -5,7 +5,7 @@ module cost_MM
     use parameters_m  , only: T_ , F_ , N_of_CGSteps 
     use MM_types      , only: MMOPT_Control, LogicalKey
 
-    public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , overweight , weight , chi
+    public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , overweight , chi
 
     private 
 
@@ -13,10 +13,10 @@ module cost_MM
     integer                        :: AStep = 0
     integer          , allocatable :: nmd_sorted_indx(:) , nmd_deg_indx(:,:)
     real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , AdiabaticStep(:) , overweight(:)
+    real*8                         :: chi(100) = D_zero 
     type(LogicalKey) , allocatable :: KeyHolder(:)
 
-real*8       :: chi(100)    = D_zero 
-real*8       :: weight(100) = D_zero
+
 contains
 !
 !
@@ -51,7 +51,7 @@ real*8              :: evaluate_cost
 
 ! local variables ...
 integer      :: i 
-!real*8       :: weight(100) = D_zero
+real*8       :: weight(100) = D_zero
 real*8       :: order_cost, split_cost
 character(6) :: prepare_environment
 
