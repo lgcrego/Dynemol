@@ -18,7 +18,7 @@ module FF_OPT_class_m
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 150           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         character(len=30)       :: directives
@@ -563,6 +563,7 @@ control% adiabatic_OPT  = merge( T_ , F_ , verify("adiabatic_OPT"        ,direct
 control% use_no_weights = merge( T_ , F_ , verify("no_weight"            ,directives) == 0 ) 
 control% new_adiabat    = merge( T_ , F_ , verify("preprocess_adiabatic" ,directives) == 0 ) 
 control% LineUpCost     = merge( T_ , F_ , verify("LineUp"               ,directives) == 0 )
+control% use_overweight = merge( T_ , F_ , verify("overweight"           ,directives) == 0 )
 
 end function set_to
 !

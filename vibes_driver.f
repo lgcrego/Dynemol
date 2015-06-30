@@ -5,13 +5,13 @@ module good_vibrations_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : PBC , CG_Ad_ , N_of_AdSteps
+    use parameters_m            , only : PBC , CG_Ad_ , N_of_CGSteps
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
-    use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder 
+    use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , overweight , weight , chi
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
@@ -52,7 +52,7 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
 ! preprocess with GA method ...
-CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_weights_LineUp" )
+CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight_LineUp" )
 
 CALL CG_driver( GA_Selection ) 
 
@@ -86,10 +86,53 @@ Top_Selection = merge( 1 , size(GA_Selection(1,:)) , CG_Ad_ )
 allocate( local_minimum(Top_Selection) , source = real_large )
 allocate( InitialCost  (Top_Selection)                       )
 
-If( CG_Ad_ ) then
+
+MM_parms% p    =  GA_Selection(:,1)
+InitialCost(1) =  MM_parms% cost()
+
+key  = KeyHolder(1)
+
+do k = 1 , N_of_CGSteps
+
+    atom =  atom0
+
+    MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = "use_overweight" )
+
+    write(*,190) k , KeyHolder(1)% comment , MM_parms% directives
+
+    CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
+
+    forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + abs(chi(i)/nmd_REF_erg(i))
+
+    overweight = merge(overweight , 5.d0 , overweight < 5.d0)
+
+    CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweigth_LineUp" )
+    this_minimum = MM_parms% cost()
+
+    If( this_minimum == real_large ) Then ; Print*, ">>> Recursive Optimization failed " ; stop ; EndIf
+
+    ! temporarily stores CG optimized FF parameters here ...
+    CALL save_temporary_results( GA_Selection(:,Top_Selection) )
+
+end do
+Print 194  ! ==> done with Recursive steps
+
+
+
+
+
+
+
+
+
+
+
+
+
+If( .false. ) then
 
     key  = KeyHolder(1)
-    do k = 1 , N_of_AdSteps
+    do k = 1 , N_of_CGSteps
 
          atom     =  atom0
          MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "proprocess_adiabatic"         )
@@ -111,7 +154,7 @@ If( CG_Ad_ ) then
     end do
     print*, "  ==> done"
 
-else
+end If
 
     do i = 1 , Top_Selection
 
@@ -119,7 +162,7 @@ else
          do k = 1 , size(KeyHolder)
 
               key      =  KeyHolder(k)
-              MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights" )
+              MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_overweights" )
 
               write(*,190) i , KeyHolder(k)% comment , MM_parms% directives
 
@@ -144,7 +187,7 @@ else
     end do
     Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
-end If
+!end If
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )

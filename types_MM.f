@@ -117,6 +117,7 @@ public :: MMOPT_Control, Logicalkey
         logical       :: use_no_weights = .false.
         logical       :: new_adiabat    = .false.
         logical       :: LineUpCost     = .false.
+        logical       :: use_overweight = .false.
     end type MMOPT_Control
 
     interface debug_MM

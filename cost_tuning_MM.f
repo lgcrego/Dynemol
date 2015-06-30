@@ -2,19 +2,21 @@ module cost_MM
 
     use type_m
     use constants_m
-    use parameters_m  , only: T_ , F_ , N_of_AdSteps 
+    use parameters_m  , only: T_ , F_ , N_of_CGSteps 
     use MM_types      , only: MMOPT_Control, LogicalKey
 
-    public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder 
+    public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , overweight , weight , chi
 
     private 
 
     ! module variables ...
     integer                        :: AStep = 0
     integer          , allocatable :: nmd_sorted_indx(:) , nmd_deg_indx(:,:)
-    real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , AdiabaticStep(:)
+    real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , AdiabaticStep(:) , overweight(:)
     type(LogicalKey) , allocatable :: KeyHolder(:)
 
+real*8       :: chi(100)    = D_zero 
+real*8       :: weight(100) = D_zero
 contains
 !
 !
@@ -49,9 +51,8 @@ real*8              :: evaluate_cost
 
 ! local variables ...
 integer      :: i 
+!real*8       :: weight(100) = D_zero
 real*8       :: order_cost, split_cost
-real*8       :: chi(100)    = D_zero 
-real*8       :: weight(100) = D_zero
 character(6) :: prepare_environment
 
 If( control% new_adiabat ) then
@@ -85,9 +86,9 @@ If( control% preprocess ) then
 
          case( "newOPT" )
 
-         allocate( nmd_indx , source = [7,8,10,9,11,13,12,15,14,16,17,19,21,20,18,22,23,28,25,24,26,27,30,29, &
-                                        31,37,34,36,32,38,35,33,39,40,41,43,42,48,46,44,54,53,59,57,51,45,47, &
-                                        50,49,52,58,55] )
+         allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,16,15,17,18,23,21,22,25,30,26,27,28,29, &
+                                        36,34,35,31,32,33] )
+
          case default 
               pause "Quit and choose option: newOPT , repeat , resume." 
 
@@ -100,109 +101,65 @@ end If
 ! ascending energy order
 !------------------------
 
-chi(1)  = Hesse_erg(nmd_indx(1))  - 26.9d0                             ; weight(1)  = 1.0d0
+chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 1.0d0
 
-chi(2)  = Hesse_erg(nmd_indx(2))  - 94.2d0                             ; weight(2)  = 1.0d0
+chi(2) = Hesse_erg(nmd_indx(2))  - 395.d0                             ; weight(2) = 1.0d0
 
-chi(3)  = Hesse_erg(nmd_indx(3))  - 125.5d0                            ; weight(3)  = 1.0d0
+chi(3) = Hesse_erg(nmd_indx(3))  - 599.d0                             ; weight(3) = 1.0d0
 
-chi(4)  = Hesse_erg(nmd_indx(4))  - 176.8d0                            ; weight(4)  = 1.0d0
+chi(4) = Hesse_erg(nmd_indx(4))  - 599.d0                             ; weight(4) = 1.0d0
 
-chi(5)  = Hesse_erg(nmd_indx(5))  - 203.1d0                            ; weight(5)  = 1.0d0
+chi(5) = Hesse_erg(nmd_indx(5))  - 677.d0                             ; weight(5) = 1.0d0
 
-chi(6)  = Hesse_erg(nmd_indx(6))  - 231.2d0                            ; weight(6)  = 5.0d0
+chi(6) = Hesse_erg(nmd_indx(6))  - 700.d0                             ; weight(6) = 1.0d0
 
-chi(7)  = Hesse_erg(nmd_indx(7))  - 254.2d0                            ; weight(7)  = 1.0d0
+chi(7) = Hesse_erg(nmd_indx(7))  - 838.d0                             ; weight(7) = 1.0d0
 
-chi(8)  = Hesse_erg(nmd_indx(8))  - 293.3d0                            ; weight(8)  = 1.0d0
+chi(8) = Hesse_erg(nmd_indx(8))  - 838.d0                             ; weight(8) = 1.0d0
 
-chi(9)  = Hesse_erg(nmd_indx(9))  - 352.4d0                            ; weight(9)  = 1.0d0
+chi(9) = Hesse_erg(nmd_indx(9))  - 954.d0                             ; weight(9) = 1.0d0
 
-chi(10) = Hesse_erg(nmd_indx(10)) - 360.7d0                            ; weight(10) = 1.0d0
+chi(10)= Hesse_erg(nmd_indx(10))  - 954.d0                            ; weight(10)= 1.0d0
 
-chi(11) = Hesse_erg(nmd_indx(11)) - 416.8d0                            ; weight(11) = 1.0d0
+chi(11)= Hesse_erg(nmd_indx(11))  - 981.d0                            ; weight(11)= 1.0d0
 
-chi(12) = Hesse_erg(nmd_indx(12)) - 429.3d0                            ; weight(12) = 1.0d0
+chi(12)= Hesse_erg(nmd_indx(12))  - 994.d0                            ; weight(12)= 1.0d0
 
-chi(13) = Hesse_erg(nmd_indx(13)) - 448.0d0                            ; weight(13) = 1.0d0
+chi(13)= Hesse_erg(nmd_indx(13))  - 1014.d0                           ; weight(13)= 1.0d0
 
-chi(14) = Hesse_erg(nmd_indx(14)) - 461.9d0                            ; weight(14) = 5.0d0
+chi(14)= Hesse_erg(nmd_indx(14))  - 1048.d0                           ; weight(14)= 1.0d0
 
-chi(15) = Hesse_erg(nmd_indx(15)) - 466.6d0                            ; weight(15) = 1.0d0
+chi(15)= Hesse_erg(nmd_indx(15))  - 1048.d0                           ; weight(15)= 1.0d0
 
-chi(16) = Hesse_erg(nmd_indx(16)) - 520.4d0                            ; weight(16) = 1.0d0
+chi(16)= Hesse_erg(nmd_indx(16))  - 1137.d0                           ; weight(16)= 1.0d0
 
-chi(17) = Hesse_erg(nmd_indx(17)) - 534.1d0                            ; weight(17) = 1.0d0
+chi(17)= Hesse_erg(nmd_indx(17))  - 1162.d0                           ; weight(17)= 1.0d0
 
-chi(18) = Hesse_erg(nmd_indx(18)) - 537.2d0                            ; weight(18) = 1.0d0
+chi(18)= Hesse_erg(nmd_indx(18))  - 1162.d0                           ; weight(18)= 1.0d0
 
-chi(19) = Hesse_erg(nmd_indx(19)) - 545.4d0                            ; weight(19) = 1.0d0
+chi(19)= Hesse_erg(nmd_indx(19))  - 1332.d0                           ; weight(19)= 1.0d0
 
-chi(20) = Hesse_erg(nmd_indx(20)) - 547.3d0                            ; weight(20) = 5.0d0
+chi(20)= Hesse_erg(nmd_indx(20))  - 1376.d0                           ; weight(20)= 1.0d0
 
-chi(21) = Hesse_erg(nmd_indx(21)) - 580.3d0                            ; weight(21) = 1.0d0
+chi(21)= Hesse_erg(nmd_indx(21))  - 1477.d0                           ; weight(21)= 1.0d0
 
-chi(22) = Hesse_erg(nmd_indx(22)) - 618.3d0                            ; weight(22) = 1.0d0
+chi(22)= Hesse_erg(nmd_indx(22))  - 1477.d0                           ; weight(22)= 1.0d0
 
-chi(23) = Hesse_erg(nmd_indx(23))  - 625.3d0                           ; weight(23)= 1.0d0
+chi(23)= Hesse_erg(nmd_indx(23))  - 1612.d0                           ; weight(23)= 1.0d0
 
-chi(24) = Hesse_erg(nmd_indx(24))  - 639.5d0                           ; weight(24)= 1.0d0
+chi(24)= Hesse_erg(nmd_indx(24))  - 1612.d0                           ; weight(24)= 1.0d0
 
-chi(25) = Hesse_erg(nmd_indx(25))  - 643.2d0                           ; weight(25)= 1.0d0
+chi(25)= Hesse_erg(nmd_indx(25))  - 3080.d0                           ; weight(25)= 1.0d0
 
-chi(26) = Hesse_erg(nmd_indx(26))  - 743.0d0                           ; weight(26)= 1.0d0
+chi(26)= Hesse_erg(nmd_indx(26))  - 3092.d0                           ; weight(26)= 1.0d0
 
-chi(27) = Hesse_erg(nmd_indx(27))  - 745.0d0                           ; weight(27)= 1.0d0
+chi(27)= Hesse_erg(nmd_indx(27))  - 3092.d0                           ; weight(27)= 1.0d0
 
-chi(28) = Hesse_erg(nmd_indx(28))  - 757.8d0                           ; weight(28)= 1.0d0
+chi(28)= Hesse_erg(nmd_indx(28))  - 3110.d0                           ; weight(28)= 1.0d0
 
-chi(29) = Hesse_erg(nmd_indx(29))  - 773.3d0                           ; weight(29)= 1.0d0
+chi(29)= Hesse_erg(nmd_indx(29))  - 3110.d0                           ; weight(29)= 1.0d0
 
-chi(30) = Hesse_erg(nmd_indx(30))  - 777.6d0                           ; weight(30)= 1.0d0
-
-chi(31) = Hesse_erg(nmd_indx(31))  - 791.4d0                           ; weight(31)= 1.0d0
-
-chi(32) = Hesse_erg(nmd_indx(32))  - 796.9d0                           ; weight(32)= 1.0d0
-
-chi(33) = Hesse_erg(nmd_indx(33))  - 819.1d0                           ; weight(33)= 1.0d0
-
-chi(34) = Hesse_erg(nmd_indx(34))  - 819.8d0                           ; weight(34)= 1.0d0
-
-chi(35) = Hesse_erg(nmd_indx(35))  - 848.9d0                           ; weight(35)= 1.0d0
-
-chi(36) = Hesse_erg(nmd_indx(36))  - 869.1d0                           ; weight(36)= 1.0d0
-
-chi(37) = Hesse_erg(nmd_indx(37))  - 885.9d0                           ; weight(37)= 1.0d0
-
-chi(38) = Hesse_erg(nmd_indx(38))  - 890.8d0                           ; weight(38)= 1.0d0
-
-chi(39) = Hesse_erg(nmd_indx(39))  - 904.4d0                           ; weight(39)= 1.0d0
-
-chi(40) = Hesse_erg(nmd_indx(40))  - 932.6d0                           ; weight(40)= 1.0d0
-
-chi(41) = Hesse_erg(nmd_indx(41))  - 950.6d0                           ; weight(41)= 1.0d0
-
-chi(42) = Hesse_erg(nmd_indx(42))  - 955.3d0                           ; weight(42)= 1.0d0
-
-chi(43) = Hesse_erg(nmd_indx(43))  - 960.7d0                           ; weight(43)= 1.0d0
-
-chi(44) = Hesse_erg(nmd_indx(44))  - 964.8d0                           ; weight(44)= 1.0d0
-
-chi(45) = Hesse_erg(nmd_indx(45))  -  985.5d0                          ; weight(45)= 5.0d0
-
-chi(46) = Hesse_erg(nmd_indx(46))  - 1037.9d0                          ; weight(46)= 1.0d0
-
-chi(47) = Hesse_erg(nmd_indx(47))  - 1053.0d0                          ; weight(47)= 1.0d0
-
-chi(48) = Hesse_erg(nmd_indx(48))  - 1089.0d0                          ; weight(48)= 1.0d0
-
-chi(49) = Hesse_erg(nmd_indx(49))  - 1103.5d0                          ; weight(49)= 1.0d0
-
-chi(50) = Hesse_erg(nmd_indx(50))  - 1127.4d0                          ; weight(50)= 1.0d0
-
-chi(51) = Hesse_erg(nmd_indx(51))  - 1142.8d0                          ; weight(51)= 1.0d0
-
-chi(52) = Hesse_erg(nmd_indx(52))  - 1144.2d0                          ; weight(52)= 1.0d0
+chi(30)= Hesse_erg(nmd_indx(30))  - 3121.d0                           ; weight(30)= 1.0d0
 
 !--------------------------------------------------------------------
 
@@ -211,19 +168,23 @@ If( control% preprocess ) then
     allocate( nmd_NOPT_erg    , source = Hesse_erg(nmd_indx)                               )
     allocate( nmd_deg_indx    , source = IdentifyDegenerates( Hesse_erg , chi , nmd_indx ) )
     allocate( nmd_sorted_indx , source = sort( nmd_indx )                                  )
-    allocate( AdiabaticStep   , source = chi/float(N_of_AdSteps)                           )
+    allocate( AdiabaticStep   , source = chi/float(N_of_CGSteps)                           )
+
+    allocate( overweight(size(nmd_REF_erg)) )
+    forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + abs(chi(i)/nmd_REF_erg(i))
 end If
 
 ! include out of order cost ...
 order_cost = D_zero
-If( control% LineUpCost ) order_cost = sum([( abs(nmd_indx(i)-nmd_sorted_indx(i)) , i=1,size(nmd_indx) )]) 
+If( control% LineUpCost ) order_cost = sum([( FOUR*abs(nmd_indx(i)-nmd_sorted_indx(i)) , i=1,size(nmd_indx) )]) 
 
 ! include degenerate splitting cost ...
-split_cost = sum(abs(chi(nmd_deg_indx(:,1))-chi(nmd_deg_indx(:,2))))
+split_cost = TWO*sum(abs(chi(nmd_deg_indx(:,1))-chi(nmd_deg_indx(:,2))))
 
 ! finally apply weight on chi and evaluate cost ...
 If( control% use_no_weights) weight = D_one
-If( control% adiabatic_OPT ) chi    = chi - AdiabaticStep*(N_of_AdSteps - AStep)
+If( control% use_overweight) forall(i=1:size(overweight)) weight(i) = weight(i) + overweight(i)
+If( control% adiabatic_OPT ) chi = chi - AdiabaticStep*(N_of_CGSteps - AStep)
 
 chi = chi * weight
 evaluate_cost = sqrt(dot_product(chi,chi)) + order_cost + split_cost  
