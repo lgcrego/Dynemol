@@ -88,7 +88,6 @@ select case (me % thermostat_type)
 
 end select
 qmass = TWO*sigma*(talt*pico_2_sec)**2
-Csi   = D_zero
 Csi   = Csi + dt*( me%kinetic - sigma )/qmass
 
 ! VV1 ...
