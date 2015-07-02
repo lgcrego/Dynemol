@@ -4,7 +4,7 @@ use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size , N_of_CGSteps
+integer                 :: Pop_Size , N_generations , Top_Selection , file_size 
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
@@ -14,7 +14,7 @@ character (len=11)      :: DRIVER , file_type
 character (len=12)      :: nuclear_matter
 logical                 :: Mutate_Cross , QMMM , LCMO , exist
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , CG_Ad_ , profiling , Induced_ , NetCharge 
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge 
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -123,17 +123,13 @@ logical :: dynamic
 !
 
   Pop_Size       =  500  
-  N_generations  =  5    
-  Top_Selection  =  10                     ! <== top selection < Pop_Size
+  N_generations  =  10    
+  Top_Selection  =  20                     ! <== top selection < Pop_Size
   Pop_range      =  0.35d0                 ! <== range of variation of parameters
-  Mutation_rate  =  0.4           
+  Mutation_rate  =  0.5           
   Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
-  CG_Ad_         =  F_                     ! <== use adiabatic conjugate gradient optimization
-  
-  N_of_CGSteps   =  10   
-
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------

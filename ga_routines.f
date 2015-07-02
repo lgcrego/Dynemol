@@ -12,7 +12,7 @@ module GA_m
     use Structure_Builder       , only : Extended_Cell 
     use OPT_Parent_class_m      , only : GA_OPT
     use FF_OPT_class_m          , only : FF_OPT
-    use CG_driver_m             , only : CG_driver
+    use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
                                          AlphaPolar ,                   &
@@ -673,7 +673,7 @@ do generation = 1 , N_generations
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    Print 161 , generation , N_generations , directives
+    Print 161 , generation , N_generations , custo(1) , directives 
 
 end do
 

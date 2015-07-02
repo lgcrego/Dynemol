@@ -5,7 +5,8 @@ module good_vibrations_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : PBC , CG_Ad_ , N_of_CGSteps
+    use parameters_m            , only : PBC 
+    use MM_input                , only : OPT_driver
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
     use setup_m                 , only : Setup
@@ -16,6 +17,7 @@ module good_vibrations_m
     use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
     use GA_m                    , only : Genetic_Algorithm
+    use MM_CG_driver_m          , only : justCG , CGAd , CGRc
 
     public :: Optimize_Structure , Normal_Modes , Optimize_Parameters_Driver
 
@@ -52,7 +54,8 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
 ! preprocess with GA method ...
-CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight_LineUp" )
+!CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight_LineUp" )
+CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight" )
 
 CALL CG_driver( GA_Selection ) 
 
@@ -75,119 +78,37 @@ implicit none
 real*8           , allocatable , intent(inout) :: GA_Selection(:,:)
 
 ! local variables ...
-integer                          :: i , k , GlobalMinimum
+integer                          :: GlobalMinimum
 integer                          :: Top_Selection 
-real*8                           :: this_minimum
 real*8             , allocatable :: local_minimum(:) , InitialCost(:)
 type(LogicalKey)                 :: key 
 
-Top_Selection = merge( 1 , size(GA_Selection(1,:)) , CG_Ad_ )
+Top_Selection = size(GA_Selection(1,:))
 
 allocate( local_minimum(Top_Selection) , source = real_large )
 allocate( InitialCost  (Top_Selection)                       )
 
+select case( OPT_driver )
 
-MM_parms% p    =  GA_Selection(:,1)
-InitialCost(1) =  MM_parms% cost()
+    case( "justCG" , "GACG" )
 
-key  = KeyHolder(1)
+        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
 
-do k = 1 , N_of_CGSteps
+    case( "GACGRc" )
 
-    atom =  atom0
+        CALL CGRc  ( MM_parms , GA_Selection )
 
-    MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = "use_overweight" )
+        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
+        
+    case( "GACGAd" ) 
+        
+        CALL CGAd  ( MM_parms , GA_Selection )
 
-    write(*,190) k , KeyHolder(1)% comment , MM_parms% directives
+        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
 
-    CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
-
-    forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + abs(chi(i)/nmd_REF_erg(i))
-
-    overweight = merge(overweight , 5.d0 , overweight < 5.d0)
-
-    CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweigth_LineUp" )
-    this_minimum = MM_parms% cost()
-
-    If( this_minimum == real_large ) Then ; Print*, ">>> Recursive Optimization failed " ; stop ; EndIf
-
-    ! temporarily stores CG optimized FF parameters here ...
-    CALL save_temporary_results( GA_Selection(:,Top_Selection) )
-
-end do
-Print 194  ! ==> done with Recursive steps
-
-
-
-
-
-
-
-
-
-
-
-
-
-If( .false. ) then
-
-    key  = KeyHolder(1)
-    do k = 1 , N_of_CGSteps
-
-         atom     =  atom0
-         MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "proprocess_adiabatic"         )
-         MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights_adiabatic_OPT" )
-
-         write(*,190) k , KeyHolder(1)% comment , MM_parms% directives
-
-         CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
-
-         CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_no_weigths_LineUp" )
-
-         this_minimum = MM_parms% cost()
-         If( this_minimum == real_large ) exit
-
-         ! temporarily stores CG optimized FF parameters here ...
-         CALL save_temporary_results( GA_Selection(:,1) )
-         local_minimum(1) = this_minimum
-
-    end do
-    print*, "  ==> done"
-
-end If
-
-    do i = 1 , Top_Selection
-
-         atom = atom0
-         do k = 1 , size(KeyHolder)
-
-              key      =  KeyHolder(k)
-              MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_overweights" )
-
-              write(*,190) i , KeyHolder(k)% comment , MM_parms% directives
-
-              If( k == 1 ) then
-
-                   MM_parms% p    =  GA_Selection(:,i)
-                   InitialCost(i) =  MM_parms% cost()
-
-              end If
-
-              CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
-
-              If( this_minimum == real_large ) exit
-
-              ! temporarily stores CG optimized FF parameters here ...
-              CALL save_temporary_results( GA_Selection(:,i) )
-              local_minimum(i) = this_minimum
-
-         end do
-         print*, "  ==> done"
-
-    end do
-    Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
-
-!end If
+    case default    
+        
+end select
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
@@ -440,25 +361,6 @@ do i = 1 , size(atom)
 end do
 
 end function RMSD
-!
-!
-!
-!======================================
- subroutine save_temporary_results( a )
-!======================================
-implicit none
-real*8 , intent(inout) :: a(:)
-
-! local variables ...
-type(LogicalKey) :: key
-
-key = KeyHolder( size(KeyHolder) )
-
-MM_parms = FF_OPT( key , kernel="JustKey" )
-
-a = MM_parms % p
-
-end subroutine save_temporary_results
 !
 !
 !

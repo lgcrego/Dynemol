@@ -2,7 +2,8 @@ module cost_MM
 
     use type_m
     use constants_m
-    use parameters_m  , only: T_ , F_ , N_of_CGSteps 
+    use parameters_m  , only: T_ , F_
+    use MM_input      , only: nmd_cutoff , N_of_CGSteps 
     use MM_types      , only: MMOPT_Control, LogicalKey
 
     public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , overweight , chi
@@ -86,8 +87,7 @@ If( control% preprocess ) then
 
          case( "newOPT" )
 
-         allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,16,15,17,18,23,21,22,25,30,26,27,28,29, &
-                                        36,34,35,31,32,33] )
+         allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,16,15,17,18,23,21,22,25,30,26,27,28,29,36,34,35,31,32,33] )
 
          case default 
               pause "Quit and choose option: newOPT , repeat , resume." 
@@ -164,14 +164,17 @@ chi(30)= Hesse_erg(nmd_indx(30))  - 3121.d0                           ; weight(3
 !--------------------------------------------------------------------
 
 If( control% preprocess ) then
+
     allocate( nmd_REF_erg     , source = Hesse_erg(nmd_indx)-chi(1:size(nmd_indx))         )
     allocate( nmd_NOPT_erg    , source = Hesse_erg(nmd_indx)                               )
     allocate( nmd_deg_indx    , source = IdentifyDegenerates( Hesse_erg , chi , nmd_indx ) )
     allocate( nmd_sorted_indx , source = sort( nmd_indx )                                  )
     allocate( AdiabaticStep   , source = chi/float(N_of_CGSteps)                           )
 
-    allocate( overweight(size(nmd_REF_erg)) )
+    allocate( overweight(size(nmd_REF_erg)) , source = D_zero )
+    If( any(prepare_environment == ["repeat","resume"]) ) &
     forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + abs(chi(i)/nmd_REF_erg(i))
+
 end If
 
 ! include out of order cost ...
@@ -185,6 +188,7 @@ split_cost = TWO*sum(abs(chi(nmd_deg_indx(:,1))-chi(nmd_deg_indx(:,2))))
 If( control% use_no_weights) weight = D_one
 If( control% use_overweight) forall(i=1:size(overweight)) weight(i) = weight(i) + overweight(i)
 If( control% adiabatic_OPT ) chi = chi - AdiabaticStep*(N_of_CGSteps - AStep)
+If( nmd_cutoff > 0         ) weight(nmd_cutoff+1:) = D_zero
 
 chi = chi * weight
 evaluate_cost = sqrt(dot_product(chi,chi)) + order_cost + split_cost  

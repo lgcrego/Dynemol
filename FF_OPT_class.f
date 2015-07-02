@@ -18,7 +18,7 @@ module FF_OPT_class_m
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 150           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 45!0           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         character(len=30)       :: directives

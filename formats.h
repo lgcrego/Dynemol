@@ -102,7 +102,7 @@
 
 160   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4)
 
-161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , a25)
+161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
 
 165   FORMAT(1x,'========= ',A20,' =========')
 

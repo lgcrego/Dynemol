@@ -1,15 +1,16 @@
 module MM_input
 
 use constants_m
-use parameters_m    , only : driver
+use parameters_m    , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 use MM_types        , only : MM_molecular , MM_system 
 
 type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
 real*8              :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
-integer             :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step
+integer             :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step , N_of_CGSteps , nmd_cutoff
 character (5)       :: Units_MM
+character (len=6)   :: OPT_driver
 character (len=11)  :: driver_MM 
 character (len=14)  :: thermostat
 
@@ -60,8 +61,8 @@ implicit none
 ! GENERAL INFO ...
 !
 
-  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-!  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+!  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 !  driver_MM              = "NormalModes"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
@@ -70,14 +71,27 @@ implicit none
   MM_log_step            =  100               ! <== step for saving MM results & parameters
   MM_frame_step          =  100               ! <== step for saving MM results & parameters
 
-!------------------------------------------------------------------------------
-! UNITS ...
-!
   Units_MM               = "eV"               ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
+!--------------------------------------------------------------------
+!           Genetic_Alg and CG OPTIMIZATION parameters
+!
+
+  OPT_driver     = "GACGRc"                 ! <== justCG , GACG , GACGAd , GACGRc
+
+  Pop_Size       =  300  
+  N_generations  =  5    
+  Top_Selection  =  10                      ! <== top selection < Pop_Size
+  Pop_range      =  0.40d0                  ! <== range of variation of parameters
+  Mutation_rate  =  0.8           
+  Mutate_Cross   =  F_                      ! <== false -> pure Genetic Algorithm 
+
+  N_of_CGSteps   =  8                       ! <== number of CG steps for OPT_drivers: GACGAd or GACGRc
+  nmd_cutoff     =  19                      ! <== 0 means no cutoff ; normal modes > nmd_cutoff do not enter cost evaluation 
 
 ! =====================================================================================
 
 end subroutine Define_MM_Environment
+
 !
 !
 !
