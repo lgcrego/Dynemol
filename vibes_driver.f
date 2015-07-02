@@ -54,7 +54,6 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
 ! preprocess with GA method ...
-!CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight_LineUp" )
 CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight" )
 
 CALL CG_driver( GA_Selection ) 
