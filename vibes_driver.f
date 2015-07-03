@@ -77,8 +77,7 @@ implicit none
 real*8           , allocatable , intent(inout) :: GA_Selection(:,:)
 
 ! local variables ...
-integer                          :: GlobalMinimum
-integer                          :: Top_Selection 
+integer                          :: i , GlobalMinimum , Top_Selection 
 real*8             , allocatable :: local_minimum(:) , InitialCost(:)
 type(LogicalKey)                 :: key 
 
@@ -108,6 +107,8 @@ select case( OPT_driver )
     case default    
         
 end select
+
+Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
