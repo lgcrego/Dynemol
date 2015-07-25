@@ -60,10 +60,12 @@ if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0
            call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
 
            If( this% profiling ) then
-               if ( this% profiling ) Print*, its , local_minimum
-               write(32,*) its , local_minimum 
-               if ( any(this% driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
-           end If
+               Print*, its , local_minimum
+               If (local_minimum /= real_large) then
+                    write(32,*) its , local_minimum 
+                    if ( any(this% driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
+                EndIf
+           EndIf
 
            ! define relative difference between iterations ...
            relative_difference = abs( local_minimum - fp ) / ( (abs(local_minimum) + abs(fp) + high_prec) / TWO ) 

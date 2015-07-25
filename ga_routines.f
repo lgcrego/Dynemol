@@ -666,9 +666,15 @@ do generation = 1 , N_generations
 
 !   Mutation_&_Crossing preserves the top-selections ...
     If( Mutate_Cross) then
+
         CALL Mutation_and_Crossing( Pop )
+
     else
+
         CALL generate_RND_Pop( Pop_start , Pop )       
+
+        If( generation < N_generations) forall(i = Pop_Start:Pop_Size) Pop(i,:) = Pop(1,:) - Pop(i,:)
+
     end If
 
     indx = [ ( i , i=1,Pop_Size ) ]

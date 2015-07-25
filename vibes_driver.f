@@ -6,7 +6,7 @@ module good_vibrations_m
     use blas95
     use lapack95
     use parameters_m            , only : PBC 
-    use MM_input                , only : OPT_driver
+    use MM_input                , only : OPT_driver , nmd_window
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
     use setup_m                 , only : Setup
@@ -54,7 +54,7 @@ MM_parms = FF_OPT( key , kernel = "energy" )
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
 ! preprocess with GA method ...
-CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweight" )
+CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_no_weights" )
 
 CALL CG_driver( GA_Selection ) 
 
@@ -96,6 +96,8 @@ select case( OPT_driver )
 
         CALL CGRc  ( MM_parms , GA_Selection )
 
+!        nmd_window = integer_interval(0,0)
+
         CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
         
     case( "GACGAd" ) 
@@ -109,6 +111,8 @@ select case( OPT_driver )
 end select
 
 Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
+
+nmd_window = integer_interval(0,0)
 
 GlobalMinimum = minloc( local_minimum , dim=1 )
 key           = KeyHolder( size(KeyHolder) )
@@ -248,8 +252,8 @@ If( MM_parms%driver == "Parametrize" ) then
                   hesse%erg   ( MM_parms%nmd_OPT_indx(i) )    , &
                   nmd_REF_erg ( i )                           , &
                   nmd_NOPT_erg( i )                           , &
-                  abs( hesse%erg(MM_parms%nmd_OPT_indx(i)) - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 , &
-                  abs( nmd_NOPT_erg(i)                     - nmd_REF_erg ( i ) ) / nmd_REF_erg(i) * 100.0 
+                  (hesse%erg(MM_parms%nmd_OPT_indx(i)) - nmd_REF_erg ( i )) / nmd_REF_erg(i) * 100.0 , &
+                  (nmd_NOPT_erg(i)                     - nmd_REF_erg ( i )) / nmd_REF_erg(i) * 100.0 
     end do
 
     CALL system( "mv OPT_nmd_indx.inpt OPT_nmd_indx.old" )

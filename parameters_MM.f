@@ -1,5 +1,6 @@
 module MM_input
 
+use type_m         
 use constants_m
 use parameters_m    , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 use MM_types        , only : MM_molecular , MM_system 
@@ -7,12 +8,13 @@ use MM_types        , only : MM_molecular , MM_system
 type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
-real*8              :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
-integer             :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step , N_of_CGSteps , nmd_cutoff
-character (5)       :: Units_MM
-character (len=6)   :: OPT_driver
-character (len=11)  :: driver_MM 
-character (len=14)  :: thermostat
+real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
+integer                :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step , N_of_CGSteps , nmd_cutoff
+character (5)          :: Units_MM
+character (len=6)      :: OPT_driver
+character (len=11)     :: driver_MM 
+character (len=14)     :: thermostat
+type(integer_interval) :: nmd_window
 
 logical , parameter :: T_ = .true. , F_ = .false. 
 
@@ -34,9 +36,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "BZN"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "PRC"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 12         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 32         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
 !------------------------------------------------------------------------------
@@ -61,32 +63,32 @@ implicit none
 ! GENERAL INFO ...
 !
 
-!  driver_MM              = "MM_Dynamics"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-  driver_MM              = "Parametrize"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-!  driver_MM              = "NormalModes"      ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+!  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "Parametrize"        ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+!  driver_MM              = "NormalModes"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
-  read_velocities        = F_                 ! <== reads the initial velocities : T_ , F_
-  gmx_input_format       = T_                 ! <== reads FF parameters from gmx input files : T_ , F_  
+  read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
+  gmx_input_format       = T_                   ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  MM_log_step            =  100               ! <== step for saving MM results & parameters
-  MM_frame_step          =  100               ! <== step for saving MM results & parameters
+  MM_log_step            =  100                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
 
-  Units_MM               = "eV"               ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
+  Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  OPT_driver     = "GACGRc"                 ! <== justCG , GACG , GACGAd , GACGRc
+  OPT_driver     = "GACGRc"                     ! <== justCG , GACG , GACGAd , GACGRc
 
-  Pop_Size       =  300  
-  N_generations  =  5    
-  Top_Selection  =  10                      ! <== top selection < Pop_Size
-  Pop_range      =  0.40d0                  ! <== range of variation of parameters
-  Mutation_rate  =  0.8           
-  Mutate_Cross   =  F_                      ! <== false -> pure Genetic Algorithm 
+  Pop_Size       =  100    
+  N_generations  =  15    
+  Top_Selection  =  10                          ! <== top selection < Pop_Size
+  Pop_range      =  0.15d0                      ! <== range of variation of parameters
+  Mutation_rate  =  0.4           
+  Mutate_Cross   =  F_                          ! <== false -> pure Genetic Algorithm 
 
-  N_of_CGSteps   =  8                       ! <== number of CG steps for OPT_drivers: GACGAd or GACGRc
-  nmd_cutoff     =  19                      ! <== 0 means no cutoff ; normal modes > nmd_cutoff do not enter cost evaluation 
+  N_of_CGSteps   =  4                           ! <== number of CG steps for OPT_drivers: GACGAd or GACGRc
+  nmd_window     = integer_interval( 0 , 00 )   ! <== only modes within the window entre cost evaluation ; 0 means no cutoff 
 
 ! =====================================================================================
 

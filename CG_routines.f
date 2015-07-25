@@ -45,7 +45,7 @@ do i = 1 , Top_Selection
     do k = 1 , size(KeyHolder)
 
         key      =  KeyHolder(k)
-        MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_overweights" )
+        MM_parms =  FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights" )
 
         write(*,190) i , KeyHolder(k)% comment , MM_parms% directives
 
@@ -90,7 +90,7 @@ real*8  , allocatable :: previous_p(:)
 type(LogicalKey)      :: key 
 
 ! local parameters ...
-real*8 :: MaxOverweight = 1.5d1
+real*8 :: MaxOverweight = FIVE
 
 Top_Selection = size(GA_Selection(1,:))
 
@@ -118,6 +118,7 @@ do k = 1 , N_of_CGSteps
 
     forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + signal*sqrt(abs(chi(i)/nmd_REF_erg(i)))
 
+    overweight = merge(D_zero     , overweight    , overweight < D_zero       )
     overweight = merge(overweight , MaxOverweight , overweight < MaxOverweight)
 
     CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweigth" )
@@ -160,13 +161,13 @@ do k = 1 , N_of_CGSteps
 
     MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = "proprocess_adiabatic"         )
 
-    MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights_adiabatic_OPT" )
+    MM_parms = FF_OPT( key , kernel = "NormalModes" , directives = "use_overweights_adiabatic_OPT" )
 
     write(*,190) k , KeyHolder(1)% comment , MM_parms% directives
 
     CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , this_minimum )
 
-    CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_no_weigths_LineUp" )
+    CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_overweigths" )
 
     this_minimum = MM_parms% cost()
     If( this_minimum == real_large ) exit

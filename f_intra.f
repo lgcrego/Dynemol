@@ -476,7 +476,7 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
            pterm = 0.5d0 * term * dtheta 
            gamma = term * rsinphi * rijkj * rjkkl
 
-    case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi i- 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)  
+    case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)  
                     ! Eq. 4.61 (GMX 5.0.5 manual)
 
         psi     = phi - PI
