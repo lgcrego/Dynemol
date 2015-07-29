@@ -174,6 +174,21 @@ forall( i=1:molecule(1)%nangs   , j=1:size(molecule(1)%kang0  (1,:)) ) molecule(
 
 forall( i=1:molecule(1)%ndiheds , j=1:size(molecule(1)%kdihed0(1,:)) ) molecule(1)%kdihed0(i,j) =  dihed(i,j)%PTR
 
+! tracking the correct normal mode order ...
+CALL normal_modes( info )
+
+If( info /= 0 ) then ; cost = real_large ; return ; end If
+
+! nmd_list and nmd_ref are created in the first call to normal_modes() and abide ...
+If( .not. associated(me%nmd_OPT_indx) ) me%nmd_OPT_indx => nmd_list
+If( .not. associated(me%nmd_REF_indx) ) me%nmd_REF_indx => nmd_ref
+
+do j = 1 , size( nmd_list )
+    nmd_mtx(:,j) = [ (dot_product(hesse%L(:,nmd_ref(j)),hesse%R(:,i)) , i = 1,size(Hesse%erg)) ]
+end do
+nmd_list = maxloc( abs(nmd_mtx) , dim=1 ) 
+
+! choosing the cost kernel ...
 select case ( method )
 
     case( "energy" )
@@ -185,23 +200,11 @@ select case ( method )
 
     case( "NormalModes" )
 
-        CALL normal_modes( info )
-
-        If( info /= 0 ) then ; cost = real_large ; return ; end If
-
-        ! nmd_list and nmd_ref are created in the first call to normal_modes() and abide ...
-        If( .not. associated(me%nmd_OPT_indx) ) me%nmd_OPT_indx => nmd_list
-        If( .not. associated(me%nmd_REF_indx) ) me%nmd_REF_indx => nmd_ref
-
-        do j = 1 , size( nmd_list )
-            nmd_mtx(:,j) = [ (dot_product(hesse%L(:,nmd_ref(j)),hesse%R(:,i)) , i = 1,size(Hesse%erg)) ]
-        end do
-
-        nmd_list = maxloc( abs(nmd_mtx) , dim=1 ) 
-
         cost = evaluate_cost( Hesse%erg , nmd_list , control )
 
     case default 
+
+        Print*, ">> kernel not identified" ; stop
 
 end select
 
