@@ -6,7 +6,7 @@ FC=ifort -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = #-check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align #array64byte
 FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 
@@ -119,8 +119,9 @@ SOURCE2 = constants_m.o \
 		  MM_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
+		  CG_EH_driver.o \
 		  ga_routines.o \
-		  CG_routines.o \
+		  CG_MM_driver.o \
 		  vibes_driver.o \
 		  solvated_M.o \
 		  DOS_tool.o \
