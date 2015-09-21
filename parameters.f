@@ -31,17 +31,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   SPECTRUM       = F_                          
   DP_Moment      = F_                       
-  QMMM           = F_
+  QMMM           = T_
   Alpha_Tensor   = F_                        ! <== Embeded Finite Field Polarizability 
   OPT_parms      = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -71,7 +71,7 @@ logical :: dynamic
 !
   DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
 
   Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
@@ -82,16 +82,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d0                              ! <== final time in PICOseconds
-  n_t  =  100000                             ! <== number of time steps
+  t_f  =  1.0d-1                             ! <== final time in PICOseconds
+  n_t  =  10000                              ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 39                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 1                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 40                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 1                           ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -102,7 +102,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -133,6 +133,7 @@ logical :: dynamic
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
+!  WARNINGS !!!
 
 select case( DRIVER )
 
@@ -161,6 +162,11 @@ static = .not. dynamic
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
+
+If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
+    Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
+    stop
+End If    
 
 include 'formats.h'
 

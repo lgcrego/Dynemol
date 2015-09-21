@@ -48,12 +48,12 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-!where(univ % atom % residue == "PRC") univ % atom % El = .true.
+where(univ % atom % residue == "H1L") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-!where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
+where(univ % atom % residue == "H2C") univ % atom % Hl = .true.
 
 !......................................................................
 
@@ -118,6 +118,12 @@ DO i = 1 , size(a%atom)
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
 
+        case( 'H2C') 
+            a%atom(i)%fragment = 'C' 
+
+        case( 'H3R') 
+            a%atom(i)%fragment = 'R' 
+
     end select
 
  end if
@@ -159,6 +165,8 @@ select case ( instance )
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
+
+!atom(2) % flex = .true.
 
 !----------------------------------
 !      define MM atom types 
@@ -215,9 +223,6 @@ select case ( instance )
 !=================================================
 
 end select
-
-! just touching atom ...
-atom = atom
 
 end subroutine ad_hoc_MM_tuning
 

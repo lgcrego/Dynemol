@@ -94,8 +94,8 @@ allocate( Coul_tmp (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 do ia = 1       , system % atoms
 do ib = ia + 1  , system % atoms 
 
-    begin_a = system%BasisPointer(ia)       ;       end_a = begin_a + atom( system%AtNo(ia) )%DOS
-    begin_b = system%BasisPointer(ib)       ;       end_b = begin_b + atom( system%AtNo(ib) )%DOS
+    begin_a = system%BasisPointer(ia)+1       ;       end_a = system%BasisPointer(ia) + atom( system%AtNo(ia) )%DOS
+    begin_b = system%BasisPointer(ib)+1       ;       end_b = system%BasisPointer(ib) + atom( system%AtNo(ib) )%DOS
 
     flag1 = sum( abs(AO_ket( begin_a : end_a , 1 ))**2 ) * sum( abs(AO_ket( begin_b : end_b , 2 ))**2 ) < high_prec
     flag2 = sum( abs(AO_ket( begin_b : end_b , 1 ))**2 ) * sum( abs(AO_ket( begin_a : end_a , 2 ))**2 ) < high_prec
