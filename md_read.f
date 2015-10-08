@@ -96,6 +96,9 @@ CALL Symbol_2_AtNo( atom )
 
 ! Define atomic mass ...
 atom % mass = Atomic_mass( atom % AtNo )
+
+If( Selective_Dynamics ) CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+
 do i = 1 , MM % N_of_species
     species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
     where( molecule % my_species == i ) molecule % mass = species(i) % mass
@@ -130,11 +133,6 @@ If( read_from_gmx ) then
 
     CALL MMSymbol_2_Symbol ( FF )
     CALL Symbol_2_AtNo     ( FF )
-
-    do i = 1 , size( Atomic_Mass )
-        where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
-        where( FF % AtNo == i ) FF % mass = Atomic_Mass(i)
-    end do
 
     do i = 1 , MM % N_of_species
         do j = 1 , species(i) % N_of_atoms
@@ -184,11 +182,6 @@ else
     CALL MMSymbol_2_Symbol( FF )
 
     CALL Symbol_2_AtNo( FF )
-
-    do i = 1 , size( Atomic_Mass )
-        where( atom % AtNo == i ) atom % mass = Atomic_Mass(i)
-        where( FF % AtNo == i ) FF % mass = Atomic_Mass(i)
-    end do
 
     do i = 1 , MM % N_of_species
 

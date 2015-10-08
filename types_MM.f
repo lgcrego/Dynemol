@@ -160,6 +160,7 @@ do
     write(*,*) ' (12) eps        '
     write(*,*) ' (13) sig        '
     write(*,*) ' (14) flex       '
+    write(*,*) ' (15) mass       '
 
     read (*,*) option
 
@@ -210,6 +211,9 @@ do
         case(14)
             write(*,70) a(:) % flex
 
+        case(15)
+            write(*,80) a(:) % mass
+
         case default
             exit
 
@@ -224,6 +228,7 @@ end do
 50 Format(37i4)
 60 Format(18F8.4)
 70 Format(50L3)
+80 Format(14F12.3)
 
 end subroutine debug_MM_atomic
 !
@@ -237,6 +242,9 @@ type(MM_molecular) , intent(in) :: mol(:)
 
 ! local variables ...
 integer :: option
+
+!local parameters ...
+real*8  , parameter :: kmol = 6.02214129d26  ! mol X 1000
 
 do
 
@@ -254,6 +262,7 @@ do
     write(*,*) ' (9)  Ndiheds        '
     write(*,*) ' (10) Nharm          '
     write(*,*) ' (11) Nbonds14       '
+    write(*,*) ' (12) mass (in u.a.)   '
 
     read (*,*) option
 
@@ -295,6 +304,9 @@ do
         case(11)
             write(*,20) mol(:) % Nbonds14
 
+        case(12)
+            write(*,50) mol(:) % mass * kmol
+
         case default
             exit
 
@@ -306,6 +318,7 @@ end do
 20 Format(33i5)
 30 Format(37a4)
 40 Format(50L3)
+50 Format(14F12.3)
 
 end subroutine debug_MM_molecular
 !

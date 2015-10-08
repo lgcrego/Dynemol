@@ -9,7 +9,8 @@ type(MM_system)                  :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
 real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
-integer                :: read_velocities, gmx_input_format, MM_log_step, MM_frame_step , N_of_CGSteps , nmd_cutoff
+integer                :: MM_log_step, MM_frame_step , N_of_CGSteps 
+logical                :: read_velocities, gmx_input_format , Selective_Dynamics
 character (5)          :: Units_MM
 character (len=6)      :: OPT_driver
 character (len=11)     :: driver_MM 
@@ -36,16 +37,16 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "PRC"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "H2X"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 32         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 3          ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
 !
 
-  thermostat                = "Berendsen"       ! <== Berendsen, Nose_Hoover, Microcanonical
+  thermostat                = "Microcanonical"  ! <== Berendsen, Nose_Hoover, Microcanonical
 
   temperature               = 300.d0            ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
@@ -63,15 +64,15 @@ implicit none
 ! GENERAL INFO ...
 !
 
-!  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-  driver_MM              = "Parametrize"        ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-!  driver_MM              = "NormalModes"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                   ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  MM_log_step            =  100                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
+  Selective_Dynamics     = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
+
+  MM_log_step            =  1                   ! <== step for saving MM results & parameters
+  MM_frame_step          =  1                   ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

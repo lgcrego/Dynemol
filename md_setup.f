@@ -31,7 +31,6 @@ end module VV_Parent
 module setup_m
 
     use constants_m
-    use atomicmass
     use parameters_m    , only : PBC
     use MD_read_m       , only : MM , atom , molecule , species , FF
     use gmx2mdflex      , only : SpecialPairs
@@ -144,7 +143,7 @@ end subroutine offset
  do i = 1 , MM % N_of_molecules
 
       t0(1:3) = atom(l) % xyz(1:3) 
-      t(1:3)  = atom(l) % xyz(1:3) * Atomic_mass( atom(l) % AtNo ) ! massa do primeiro átomo da molécula i
+      t(1:3)  = atom(l) % xyz(1:3) * atom(l) % mass ! massa do primeiro átomo da molécula i
 
       SmallMolecule = NINT(float(molecule(i)%N_of_atoms) / float(MM%N_of_atoms)) == 0
 
@@ -157,7 +156,7 @@ end subroutine offset
                      t1(xyz) = t1(xyz) - sign( MM % box(xyz) , dr(xyz) ) 
                   endif
            end do
-           massa = Atomic_mass( atom(l+k) % AtNo ) ! massa do átomo k da molécula i
+           massa = atom(l+k) % mass ! massa do átomo k da molécula i
            t(1:3) = t(1:3) + massa * t1(1:3)
       end do  
 
@@ -188,7 +187,7 @@ masstot = 0.d0
 l = 1
 do i = 1 , MM % N_of_molecules 
     do j = l , l + molecule(i) % N_of_atoms - 1
-       massa = Atomic_mass( atom(j) % AtNo )
+       massa = atom(j) % mass
        p(:) = p(:) + massa * atom(j) % xyz(:)
        t(:) = t(:) + massa * atom(j) % vel(:)
        masstot = masstot + massa

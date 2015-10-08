@@ -136,19 +136,23 @@ end module tuning_m
 !
 !
 !
+!
+!
 module MM_tuning_routines
 
-use MM_types , only : MM_atomic, DefineBonds, DefineAngles
+    use constants_m     , only: large
+    use parameters_m    , only: T_ , F_ , static
+    use MM_types        , only: MM_atomic, DefineBonds, DefineAngles
 
-private
+    private
 
-public :: ad_hoc_MM_tuning , SpecialBonds, SpecialAngs
+    public :: ad_hoc_MM_tuning , SpecialBonds, SpecialAngs
 
-! module variables ...
-type(DefineBonds) , allocatable :: SpecialBonds(:)
-type(DefineAngles), allocatable :: SpecialAngs(:)
+    ! module variables ...
+    type(DefineBonds) , allocatable :: SpecialBonds(:)
+    type(DefineAngles), allocatable :: SpecialAngs(:)
 
-contains
+    contains
 
 !================================================
  subroutine ad_hoc_MM_tuning( atom , instance )
@@ -159,14 +163,12 @@ character(*)               , intent(in)    :: instance
 
 select case ( instance ) 
 
-!=================================================
+!==================================
     case ("General")
 
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
-
-!atom(2) % flex = .true.
 
 !----------------------------------
 !      define MM atom types 
@@ -185,15 +187,18 @@ select case ( instance )
 !----------------------------------
 
 !----------------------------------
-!     Selective_Dynamics
-!----------------------------------
-
-!----------------------------------
 !       charge of the atoms 
 !----------------------------------
 
 
-!=================================================
+    case ("MegaMass")
+
+!----------------------------------
+!     Selective_Dynamics 
+!----------------------------------
+
+where( atom % MMSymbol == "HM" ) atom % mass = large
+
 
     case( 'SpecialBonds' )
 
@@ -220,7 +225,7 @@ select case ( instance )
 ! SpecialAngs(2) % kang0(1) = 527.184
 ! SpecialAngs(2) % kang0(2) = 120.000
 
-!=================================================
+!=====================================
 
 end select
 
