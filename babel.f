@@ -82,9 +82,18 @@ unit_cell%N_of_Solvent_Molecules = System%N_of_Solvent_Molecules
 ! get list of residues ...
 select case( file_type )
     case( "structure" )
+        If( size(unit_cell%list_of_fragments) /= size(system%list_of_fragments) ) then
+            deallocate(unit_cell%list_of_fragments)
+            allocate  (unit_cell%list_of_fragments(size(system%list_of_fragments)))
+        end If
         unit_cell%list_of_residues  = System%list_of_residues
         unit_cell%list_of_fragments = System%list_of_fragments
+
     case( "trajectory" )
+        If( size(unit_cell%list_of_fragments) /= size(trj(1)%list_of_fragments) ) then
+            deallocate(unit_cell%list_of_fragments)
+            allocate  (unit_cell%list_of_fragments(size(trj(1)%list_of_fragments)))
+        end If
         unit_cell%list_of_residues  = trj(1)%list_of_residues
         unit_cell%list_of_fragments = trj(1)%list_of_fragments
 end select
