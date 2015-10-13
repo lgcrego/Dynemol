@@ -36,14 +36,14 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64
 #
 # CUDA and MAGMA paths:
 #CUDADIR   = /usr/local/cuda
-#MAGMADIR  = /opt/magma-1.6.1
+#MAGMADIR  = /opt/magma
 #
 # CUDA and MAGMA libs:
 #LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
 #LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
 #
 #LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
-#INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include -I./include/control -I./include/magmablas
+#INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
 
 LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCS = $(INCS_MKL)
@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
+		  Auto_Correlation.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
