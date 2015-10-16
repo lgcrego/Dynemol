@@ -106,6 +106,7 @@ SOURCE2 = constants_m.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
           NVE.o \
+		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
 		  film_STO.o \
