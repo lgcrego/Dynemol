@@ -136,7 +136,6 @@ SOURCE2 = constants_m.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
-		  Auto_Correlation.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \

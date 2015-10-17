@@ -364,7 +364,6 @@ CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zer
 
 !do n = 1 , n_part
 
-!    CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra(:,1) , conjg(AO_bra(:,1)) )
     CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) )
 
     Unit_Cell% QM_erg = real(sum(MO_bra(:,1)*MO_ket(:,1)*Uni%erg(:))) 
