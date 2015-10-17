@@ -51,7 +51,8 @@ MODULE constants_m
     real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
     real*8  , parameter :: coulomb     = 230.7113d0                 ! ee^2/(4.pi.boltz) x1E-30 N.m^2
-    real*8  , parameter :: kJmol_2_eV  = 0.0103641d0                ! converts kJ/mol to eV units 
+    real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
+    real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
     real*8  , parameter :: micro       = 1.0d-6                     ! micro unit
     real*8  , parameter :: pico_2_sec  = 1.0d-12                    ! converts picosecond units to second units

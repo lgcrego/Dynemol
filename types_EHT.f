@@ -28,6 +28,7 @@ module type_m
         real*8                     :: Center_of_Mass(3)
         real*8                     :: Center_of_Charge(3)
         real*8                     :: T_xyz(3)
+        real*8                     :: QM_erg
         logical     , allocatable  :: solute(:)
         logical     , allocatable  :: DPF(:)
         logical     , allocatable  :: El(:)

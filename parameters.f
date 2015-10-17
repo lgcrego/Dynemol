@@ -12,7 +12,7 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
-logical                 :: Mutate_Cross , QMMM , LCMO , exist
+logical                 :: DensityMatrix , AutoCorrelation , Mutate_Cross , QMMM , LCMO , exist
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge 
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -31,7 +31,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -53,7 +53,7 @@ logical :: dynamic
   file_type    =  "structure"                 ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
-!           VISUALIZATION flags
+!           DATA-ANALYSIS & VISUALIZATION flags
 !
   GaussianCube      = F_                       
   GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
@@ -61,6 +61,9 @@ logical :: dynamic
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
   CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
+
+  DensityMatrix     = F_                      ! <== data for postprocessing 
+  AutoCorrelation   = F_             
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
@@ -71,7 +74,7 @@ logical :: dynamic
 !
   DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
   Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
@@ -82,10 +85,10 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d-1                             ! <== final time in PICOseconds
-  n_t  =  10000                              ! <== number of time steps
+  t_f  =  8.0d-1                             ! <== final time in PICOseconds
+  n_t  =  80000                              ! <== number of time steps
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
   hole_state    = 1                           ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
@@ -102,14 +105,14 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
 !
   sigma     =  0.080d0                                     !
 
-  DOS_range = real_interval( -20.d0 , 20.d0 )            
+  DOS_range = real_interval( -16.d0 , -6.d0 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

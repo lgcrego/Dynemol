@@ -85,6 +85,7 @@ SOURCE2 = constants_m.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
+		  Ehrenfest.o \
 		  STO.o \
 		  multip_routines.o \
 		  electron_hole_DP.o \
@@ -127,6 +128,7 @@ SOURCE2 = constants_m.o \
 		  solvated_M.o \
 		  DOS_tool.o \
 		  backup.o \
+		  auto_correlation.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \

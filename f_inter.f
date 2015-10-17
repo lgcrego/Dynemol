@@ -271,12 +271,13 @@ stressr(2,1) = stressr(1,2); stressr(3,1) = stressr(1,3)
 stressr(3,2) = stressr(2,3); stresre(2,1) = stresre(1,2)
 stresre(3,1) = stresre(1,3); stresre(3,2) = stresre(2,3)
 
+! force units = J/mts = Newtons ...
 do i = 1, MM % N_of_atoms
     do k = 1 , numthr
         atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
         atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
-    atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * 1.d-10 
+    atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
 deallocate ( tmp_fsr , tmp_fch , erfkr )

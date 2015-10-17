@@ -1,3 +1,5 @@
+#include "GPU.h"
+
 ! Subroutine for computing time evolution adiabatic on the AO
 module AO_adiabatic_m
 
@@ -7,11 +9,11 @@ module AO_adiabatic_m
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
-                                             Induced_ , QMMM ,              &
+                                             Induced_ , QMMM , restart ,    &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart 
+                                             DensityMatrix , AutoCorrelation
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -42,6 +44,8 @@ module AO_adiabatic_m
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
+    use Ehrenfest_Builder           , only : EhrenfestForce
+    use Auto_Correlation_m
 
     public :: AO_adiabatic
 
@@ -89,6 +93,8 @@ If( restart ) then
     CALL Restart_stuff( QDyn , t , it , frame_restart )
 else
     CALL Preprocess( QDyn , it )
+    If( AutoCorrelation ) call Auto_Correlation_init( Extended_Cell, ExCell_basis, MO_bra )
+    If( DensityMatrix )   call MO_Occupation( t, MO_bra, MO_ket, UNI )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -111,8 +117,8 @@ do frame = frame_init , frame_final , frame_step
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
     ! save for use in MM ...
     If( QMMM ) Net_Charge_MM = Net_Charge
@@ -129,6 +135,8 @@ do frame = frame_init , frame_final , frame_step
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
+
+    If( QMMM ) CALL Ehrenfest
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -177,16 +185,22 @@ do frame = frame_init , frame_final , frame_step
     CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI , flag2=it )
 
     ! project back to MO_basis with UNI(t + t_rate)
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-    CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-    !============================================================================
+!============================================================================
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+
+    If( DensityMatrix )   call MO_Occupation( t, MO_bra, MO_ket, UNI )
 
     print*, frame 
 
 end do
+
+!-----------
+! call Auto_Correlation_end
+!-----------
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -321,11 +335,44 @@ If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+
+If( QMMM ) CALL Ehrenfest
+
 !..........................................................................
 
 include 'formats.h'
 
 end subroutine Preprocess
+!
+!
+!
+
+!=====================
+ subroutine Ehrenfest
+!=====================
+
+! local variables ...
+integer :: n
+
+! LOCAL representation for film STO production ...
+
+! coefs of <k(t)| in AO basis 
+AO_bra = DUAL_bra
+
+! coefs of |k(t)> in AO basis 
+CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+
+!do n = 1 , n_part
+
+!    CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra(:,1) , conjg(AO_bra(:,1)) )
+    CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) )
+
+    Unit_Cell% QM_erg = real(sum(MO_bra(:,1)*MO_ket(:,1)*Uni%erg(:))) 
+
+!end do
+
+end subroutine Ehrenfest
+! 
 !
 !
 ! 

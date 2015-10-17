@@ -430,8 +430,7 @@ pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + C
 pot_total = pot_INTER + pot_INTRA
 pot_total = pot_total * mol * micro / MM % N_of_molecules
 
-! Get total force ...
-
+! Get total force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
     
     atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
@@ -442,7 +441,11 @@ do i = 1 , MM % N_of_atoms
                                                   atom(i) % fnonbd(:)   +  & 
                                                   atom(i) % fMorse(:)   +  & 
                                                   atom(i) % fnonch(:)      &
-                                                  ) * 1.d-10
+                                                  ) * Angs_2_mts
+
+    ! Append total forces with Excited State Ehrenfest terms; nonzero only if QMMM = T_ ...
+    atom(i)% ftotal(:) = atom(i)% ftotal(:) + atom(i)% Ehrenfest(:)
+
 end do
 
 end subroutine FORCEINTRA
