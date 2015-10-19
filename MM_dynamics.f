@@ -116,10 +116,13 @@ if( mod(frame,MM_log_step) == 0   ) then
     select case (Units_MM)
 
         case( "eV" )    
-        write(*,'(I7,6F15.5)') frame , Temperature , density , pressure , Kinetic*kJmol_2_eV , pot_total*kJmol_2_eV , (Kinetic+pot_total)*kJmol_2_eV
+        write(*,10) frame, Temperature, density, pressure, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
+
+        write(13,'(I7,3F15.5)') frame, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
+        write(16,'(I7,2F15.5)') frame , Unit_Cell% QM_erg , (pot_total)*kJmol_2_eV + Unit_Cell% QM_erg 
 
         case default
-        write(*,'(I7,6F15.5)') frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
+        write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
 
@@ -130,6 +133,8 @@ forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
 ! saving backup stuff ...
 if( driver == "MM_Dynamics" ) CALL Saving_MM_Backup( frame , instance = "from_MM" )
+
+10 format(I7,6F15.5)
 
 end subroutine VelocityVerlet
 !

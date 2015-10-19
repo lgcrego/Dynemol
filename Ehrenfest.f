@@ -39,7 +39,7 @@ contains
 
 ! local variables ... 
  integer                       :: i
- real*8                        :: ImagF(3,3)
+ real*8                        :: ImagF(3,system%atoms)
  complex*16                    :: CplxF(3)
  type(structure)               :: pbc_system
  type(STO_basis) , allocatable :: pbc_basis(:)
