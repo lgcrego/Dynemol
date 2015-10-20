@@ -9,7 +9,8 @@
 ! input module: use and set in parameters_MM.f
 module VDOS_input
 
-    integer :: VDOS_Nsteps_per_sample = 10000        ! Sample length: Nr. of steps in each VACF sample: Nr. of v(0)'s
+!   Sample length: Nr. of steps in each VACF sample: Nr. of v(0)'s
+    integer :: VDOS_Nsteps_per_sample = 10000    ! 0 -> turn off
 
 end module VDOS_input
 
@@ -19,7 +20,7 @@ module VDOS_m
     use MD_read_m    , only : MM, atom
     use MM_input     , only : species
     use constants_m  , only : twopi, h_bar, pico_2_sec
-    use parameters_m , only : n_t, t_i, t_f, restart
+    use parameters_m , only : n_t, t_i, t_f, restart, DRIVER
 
     use VDOS_input   , Lsample => VDOS_Nsteps_per_sample
     
@@ -96,6 +97,11 @@ implicit none
 ! local variables
 integer :: i
 
+if (DRIVER == "q_dynamics"  .or. & 
+    DRIVER == "avrg_confgs" .or. &
+    DRIVER == "Genetic_Alg" .or. &
+    DRIVER == "diagnostic") Lsample = 0   ! turn off
+
 ! check Lsample's values
 if (Lsample == 0) then
 
@@ -121,17 +127,17 @@ Nsamples = n_t / Lsample             ! VACF will be averaged over "Nsamples" sam
 
 write(*,*)
 write(*,'(a)')    " Velocity Autocorrelation: VDOS_init:"
-write(*,'(a,i6)') "   Total nr. of steps        =", n_t
-write(*,'(a,i6)') "   Sample lenth (time steps) =", Lsample
-write(*,'(a,i3)') "   Nr. samples               =", Nsamples
-write(*,'(a,i3)') "   Nr. residues              =", Nres
+write(*,'(a,i6)') "   Total nr. of steps         =", n_t
+write(*,'(a,i6)') "   Sample length (time steps) =", Lsample
+write(*,'(a,i3)') "   Nr. samples                =", Nsamples
+write(*,'(a,i3)') "   Nr. residues               =", Nres
 write(*,*)
 
 allocate(    v0(Natoms), v0_norm   (0:Nres) )
 allocate( mw_v0(Natoms), v0_norm_mw(0:Nres) )
 
-allocate(    VACF(Lsample,0:Nres), source = 0.d0 )
-allocate( VACF_mw(Lsample,0:Nres), source = 0.d0 )
+allocate(    VACF( Lsample, 0:Nres ), source = 0.d0 )
+allocate( VACF_mw( Lsample, 0:Nres ), source = 0.d0 )
 
 if (restart) then
     call VDOS_restart
@@ -191,6 +197,7 @@ integer, intent(in) :: frame          ! global time step index
 integer :: i, j
 real*8, allocatable :: auto_corr(:), auto_corr_mw(:)    ! mw -> mass-weighted
 
+
 if (Lsample == 0) return
 
 allocate( auto_corr   (0:Nres), source = 0.d0)
@@ -205,10 +212,10 @@ do i = 1, Natoms
 end do
 !$omp end parallel do
 
-auto_corr(0)    = sum( auto_corr   (1:Nres) )
+auto_corr   (0) = sum( auto_corr   (1:Nres) )
 auto_corr_mw(0) = sum( auto_corr_mw(1:Nres) )
 
-VACF(frame_in_s,:)    = VACF(frame_in_s,:)    + auto_corr(:)    / v0_norm(:)        ! accumulate normalized VACF
+VACF   (frame_in_s,:) = VACF   (frame_in_s,:) + auto_corr   (:) / v0_norm   (:)     ! accumulate normalized VACF
 VACF_mw(frame_in_s,:) = VACF_mw(frame_in_s,:) + auto_corr_mw(:) / v0_norm_mw(:)     ! accumulate normalized MW-VACF
 
 write(out,'(i7)',advance='no') frame_in_s
@@ -251,17 +258,19 @@ real*8, allocatable :: Fvacf(:,:)         ! Fourier transform of the Auto Correl
 real*8, allocatable :: VDOS(:,:)          ! Vibrational DOS
 real*8, allocatable :: N_flex_atoms(:)
 
+
 if (Lsample == 0) return
 
 ! release resources not needed anymore
-deallocate(v0)
+deallocate(v0, mw_v0)
 close(out)  ! close VACF.dat
 
 ! count number of flexible atoms in each residue (for proprer normalization)
 allocate( N_flex_atoms(0:Nres), source = 0.d0 )
 
 do i = 1, Natoms
-    if (atom(i)%flex)  N_flex_atoms( atom(i)%nr ) = N_flex_atoms( atom(i)%nr ) + 1
+    j = atom(i)%nr
+    if (atom(i)%flex)  N_flex_atoms(j) = N_flex_atoms(j) + 1
 end do
 
 N_flex_atoms(0) = sum(N_flex_atoms(1:Nres))  ! total
@@ -280,8 +289,6 @@ do i = 0, Nres
     call dfftw_execute_r2r( plan, VACF(:,i), Fvacf(:,i) )
 end do
 
-! keep using the same plan
-! call dfftw_destroy_plan( plan )
 
 allocate( VDOS(Lsample,0:Nres) )  ! here, this is really the VSD (spectral density)
 
@@ -304,7 +311,7 @@ do j = 0, Nres
     if (j==0) then
         open(out, file='VSD-total.dat', status='unknown')
     else
-        open(out, file='VSD-'//trim(adjustl(species(j)%residue))//'.dat', status='unknown')
+        open(out, file='VSD-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   spectral density   "
     do i = 1, Lsample
@@ -338,7 +345,7 @@ do j = 0, Nres
     if (j==0) then
         open(out, file='VDOS-total.dat', status='unknown')
     else
-        open(out, file='VDOS-'//trim(adjustl(species(j)%residue))//'.dat', status='unknown')
+        open(out, file='VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   VDOS"
     do i = 1, Lsample

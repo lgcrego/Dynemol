@@ -4,7 +4,6 @@ module MMechanics_m
     use constants_m
     use parameters_m            , only : t_i , n_t , t_f , frame_step
     use MM_dynamics_m           , only : MolecularMechanics , preprocess_MM
-    use VDOS_m                  , only : VDOS_init , VDOS_Correlation , VDOS_end
 
     public :: MMechanics
 
@@ -28,8 +27,6 @@ t  = t_i
 
 CALL preprocess_MM( frame_init )
 
-call VDOS_init
-
 !-------------------------------------------------------
 
 ! time is PICOseconds in EHT & seconds in MM ... 
@@ -37,8 +34,6 @@ t_rate      = t_f / float(n_t)
 frame_final = n_t
 
 do frame = frame_init , frame_final , frame_step
-
-    call VDOS_Correlation( frame )
 
     t = t + t_rate 
 
@@ -49,9 +44,6 @@ do frame = frame_init , frame_final , frame_step
     CALL MolecularMechanics( t_rate , frame )
 
 end do
-
-call VDOS_Correlation( frame )
-call VDOS_end
 
 end subroutine MMechanics
 !

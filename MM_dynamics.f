@@ -1,7 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
-    use parameters_m        , only : driver , restart , step_security , QMMM 
+    use parameters_m        , only : driver , restart , step_security , QMMM , n_t
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
@@ -18,7 +18,8 @@ module MM_dynamics_m
     use Berendsen_m         , only : Berendsen
     use Nose_Hoover_m       , only : Nose_Hoover
     use NH_Reversible_m     , only : NH_Reversible
-    use NVE_m               , only : NVE 
+    use NVE_m               , only : NVE
+    use VDOS_m              , only : VDOS_init , VDOS_Correlation , VDOS_end
 
     public :: MolecularMechanics , preprocess_MM , Saving_MM_Backup, MoveToBoxCM
 
@@ -43,6 +44,9 @@ real*8             , intent(in) :: t_rate
 integer            , intent(in) :: frame
 real*8  , optional , intent(in) :: Net_Charge(:)
 
+
+call VDOS_Correlation( frame )
+
 ! selectc thermostat ...
 select case( thermostat )
 
@@ -63,6 +67,17 @@ select case( thermostat )
         stop
 
 end select
+
+
+if ( DRIVER == "MM_Dynamics" ) then
+    if (frame == n_t)  call VDOS_end
+else
+    if (frame == n_t - 1) then  ! in this case, the dyn. loop ends at n_t - 1
+        call VDOS_Correlation( n_t )
+        call VDOS_end
+    end if
+end if
+
 
 end subroutine MolecularMechanics
 !
@@ -199,6 +214,8 @@ else
     if( present(frame_init) ) frame_init = 1
 
 endif
+
+call VDOS_init
 
 end subroutine preprocess_MM
 !
