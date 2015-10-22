@@ -134,7 +134,7 @@ motion_detector_ready = present(recycle) .AND. ready
 
 S_matrix = D_zero
 
-!$omp parallel do schedule(dynamic,100) default(shared) &
+!$omp parallel do schedule(dynamic,1) default(shared) &
 !$omp private(ib,ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,aux,msup,solnorm,j,i,expb,expa,solvec,anor,m,sol_partial,sux,rl,rl2)
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
@@ -336,31 +336,33 @@ integer , allocatable :: tmp_ij(:)
 real*8  , allocatable :: tmp_S(:)
 
 !local parameters ...
-integer  :: nmax = 1000000000
+integer  :: nmax
 
 n = size( S_matrix(:,1) )
+
+nmax = (n*(n + 1))/2 + 1
 
 allocate( tmp_ij(nmax) )
 allocate( tmp_S (nmax) , source=D_zero )
 
-      DO 11 j = 1 , n
-         tmp_S(j) = S_matrix(j,j)
-11    END DO 
-      tmp_ij(1) = n + 2
-      k = n + 1
-      DO 13 i = 1 , n
-         DO 12 j = 1 , n
-            IF(abs(S_matrix(i,j)) >= thresh) then
-              IF(i .NE. j) then
-                k = k + 1
-                IF(k > nmax) pause 'nmax too small in sprsin'
-                tmp_S(k) = S_matrix(i,j)
-                tmp_ij(k) = j
-              END IF
-            END IF
-12       END DO 
-         tmp_ij(i+1) = k + 1
-13    END DO  
+do j = 1 , n
+    tmp_S(j) = S_matrix(j,j)
+end do 
+tmp_ij(1) = n + 2
+k = n + 1
+do i = 1 , n
+    do j = 1 , n
+        IF(abs(S_matrix(i,j)) >= thresh) then
+        IF(i .NE. j) then
+            k = k + 1
+            IF(k > nmax) pause 'nmax too small in sprsin'
+            tmp_S(k) = S_matrix(i,j)
+            tmp_ij(k) = j
+        END IF
+        END IF
+    end do
+    tmp_ij(i+1) = k + 1
+end do
 
 length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of S_pack and ija
 nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
