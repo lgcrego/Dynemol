@@ -30,12 +30,14 @@ contains
 !
 !
 !=============================================================
- subroutine EhrenfestForce( system , basis , AO_bra , AO_ket )
+ subroutine EhrenfestForce( system , basis , AO_bra , AO_ket , wp_erg )
 !=============================================================
  implicit none
  type(structure) , intent(in)  :: system
  type(STO_basis) , intent(in)  :: basis(:)
- complex*16      , intent(in)  :: AO_bra(:), AO_ket(:)
+ complex*16      , intent(in)  :: AO_bra(:,:)
+ complex*16      , intent(in)  :: AO_ket(:,:)
+ real*8          , intent(in)  :: wp_erg(:)
 
 ! local variables ... 
  integer                       :: i
@@ -54,7 +56,7 @@ contains
 
  do i = 1 , system%atoms
 
-    CplxF  = Ehrenfest( system, basis, pbc_system, pbc_basis, AO_bra , AO_ket , i )
+    CplxF  = Ehrenfest( system, basis, pbc_system, pbc_basis, AO_bra , AO_ket , wp_erg , i )
 
     atom(i)% Ehrenfest = real(CplxF) * eVAngs_2_Newton 
 
@@ -77,7 +79,7 @@ end subroutine EhrenfestForce
 !
 !
 !================================================================================================
- function Ehrenfest( system, basis, pbc_system, pbc_basis, AO_bra , AO_ket , site ) result(CplxF)
+ function Ehrenfest( system, basis, pbc_system, pbc_basis, AO_bra , AO_ket , wp_erg , site ) result(CplxF)
 !================================================================================================
 use util_m , factorial => fact
 implicit none
@@ -85,8 +87,9 @@ type(structure)  , intent(in) :: system
 type(STO_basis)  , intent(in) :: basis(:)
 type(structure)  , intent(in) :: pbc_system
 type(STO_basis)  , intent(in) :: pbc_basis(:)
-complex*16       , intent(in) :: AO_bra(:)
-complex*16       , intent(in) :: AO_ket(:)
+complex*16       , intent(in) :: AO_bra(:,:)
+complex*16       , intent(in) :: AO_ket(:,:)
+real*8           , intent(in) :: wp_erg(:)
 integer          , intent(in) :: site 
 
 ! local variables ...
@@ -95,6 +98,7 @@ real*8  :: sux(0:10) , delta_a(3) , delta_b(3)
 integer :: a , b , ia , ib , ja , jb , aa ,xyz
 integer :: na , la , ma , nb , lb , mb
 integer :: msup , i , j , k , m , n
+complex*16 :: bracket
 
 ! local parameters ....
 integer , parameter :: mxn = 15 , mxl = 5
@@ -113,6 +117,7 @@ CplxF = C_zero
 ib = site 
 do ia = 1 , pbc_system% atoms  
 
+    ! no self-interaction
     If( ia == ib ) cycle
 
     do xyz = 1 , 3
@@ -171,8 +176,11 @@ do ia = 1 , pbc_system% atoms
             aa = ia - (pbc_basis(a)%copy_No) * system%atoms
             a  = a  - (pbc_basis(a)%copy_No) * size(basis)
 
+            bracket = AO_bra(a,1)*AO_ket(b,1)*(Huckel_stuff(a,b,basis)-wp_erg(1))  &
+                    - AO_bra(a,2)*AO_ket(b,2)*(Huckel_stuff(a,b,basis)-wp_erg(2))  
+
             ! Force on atom ia due to atom ib = - sum_{a,b} C*(a).C(b) (dH(ia,ib)_{ab}/dR_ia) ...
-            CplxF(xyz) = CplxF(xyz) - n * AO_bra(a)*AO_ket(b) * Overlap_stuff * Huckel_stuff(a,b,basis) / (TWO*delta)
+            CplxF(xyz) = CplxF(xyz) - n * bracket * Overlap_stuff 
 
         enddo 
         enddo 
@@ -187,6 +195,7 @@ end do
 ia = site 
 do ib = 1 , system% atoms  
 
+    ! no self_interaction
     If( ia == ib ) cycle
 
     do xyz = 1 , 3
@@ -245,8 +254,11 @@ do ib = 1 , system% atoms
             aa = ia - (pbc_basis(a)%copy_No) * system%atoms
             a  = a  - (pbc_basis(a)%copy_No) * size(basis)
 
+            bracket = AO_bra(a,1)*AO_ket(b,1)*(Huckel_stuff(a,b,basis)-wp_erg(1))  &
+                    - AO_bra(a,2)*AO_ket(b,2)*(Huckel_stuff(a,b,basis)-wp_erg(2))  
+
             ! Force on atom ia due to atom ib = - sum_{a,b} C*(a).C(b) (dH(ia,ib)_{ab}/dR_ia) ...
-            CplxF(xyz) = CplxF(xyz) - n * AO_bra(a)*AO_ket(b) * Overlap_stuff * Huckel_stuff(a,b,basis) / (TWO*delta)
+            CplxF(xyz) = CplxF(xyz) - n * bracket * Overlap_stuff 
 
         enddo 
         enddo 
@@ -255,6 +267,8 @@ do ib = 1 , system% atoms
     end do 
 
 end do
+
+CplxF = CplxF / (TWO*delta)
 
 end function Ehrenfest
 !

@@ -352,9 +352,15 @@ end subroutine Preprocess
 !=====================
 
 ! local variables ...
-integer :: n
+integer     :: n
+real*8      :: wp_erg(nn)
+complex*16  :: bra(mm),ket(mm)
 
-! LOCAL representation for film STO production ...
+! Huckel energy of the wavepackets ...
+do n = 1 , n_part
+    wp_erg(n) = real(sum(MO_bra(:,n)*MO_ket(:,n)*Uni%erg(:))) 
+end do
+Unit_Cell% QM_erg = sum( wp_erg )
 
 ! coefs of <k(t)| in AO basis 
 AO_bra = DUAL_bra
@@ -362,13 +368,7 @@ AO_bra = DUAL_bra
 ! coefs of |k(t)> in AO basis 
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
-!do n = 1 , n_part
-
-    CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) )
-
-    Unit_Cell% QM_erg = real(sum(MO_bra(:,1)*MO_ket(:,1)*Uni%erg(:))) 
-
-!end do
+CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket , wp_erg )
 
 end subroutine Ehrenfest
 ! 

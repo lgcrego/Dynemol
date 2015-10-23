@@ -59,8 +59,8 @@ do i = 1 , size(atom)
         rijq = sum( rij(:) * rij(:) )
         rijsq = sqrt( rijq )
 
-        NetChrg_i = NetCharge(i) !* exclusion( i , rijsq*HALF )
-        NetChrg_j = NetCharge(j) !* exclusion( j , rijsq*HALF )
+        NetChrg_i = NetCharge(i) * exclusion( i , rijsq*HALF )
+        NetChrg_j = NetCharge(j) * exclusion( j , rijsq*HALF )
 
         ChargeProduct_ij = NetChrg_i * NetChrg_j 
         ChargeProduct_ij = ChargeProduct_ij + atom(i)%charge*NetChrg_j + atom(j)%charge*NetChrg_i
@@ -134,7 +134,7 @@ N_level = chemical_element( atom(i)%AtNo ) % NQuant(0)
 
 ! zeta parameter of s orbital ...
 a = chemical_element( atom(i)%AtNo ) % zeta(0,1)
-print*, a
+
 r2 = r*r
 a2 = a*a
 
