@@ -14,7 +14,7 @@ character (len=11)      :: DRIVER , file_type
 character (len=12)      :: nuclear_matter
 logical                 :: DensityMatrix , AutoCorrelation , Mutate_Cross , QMMM , LCMO , exist
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge 
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , EHM_Forces
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -31,15 +31,13 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
-  Survival       = T_                       
-  SPECTRUM       = F_                          
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = T_
-  Alpha_Tensor   = F_                        ! <== Embeded Finite Field Polarizability 
   OPT_parms      = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
@@ -53,8 +51,13 @@ logical :: dynamic
   file_type    =  "structure"                 ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
-!           DATA-ANALYSIS & VISUALIZATION flags
+!           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
+  
+  SPECTRUM          = F_                          
+  Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
+  EHM_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
+
   GaussianCube      = F_                       
   GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
 
@@ -62,7 +65,7 @@ logical :: dynamic
   CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
-  DensityMatrix     = F_                      ! <== data for postprocessing 
+  DensityMatrix     = F_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -85,16 +88,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  8.0d-1                             ! <== final time in PICOseconds
-  n_t  =  80000                              ! <== number of time steps
+  t_f  =  4.0d-1                             ! <== final time in PICOseconds
+  n_t  =  40000                              ! <== number of time steps
 
-  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 1                           ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 15                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 1                           ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 16                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)

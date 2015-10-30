@@ -1,5 +1,4 @@
 ! Program for computing Ehrenfest forces from Huckel Hamiltonian
-
 module Ehrenfest_Builder
 
     use type_m
@@ -10,7 +9,7 @@ module Ehrenfest_Builder
     use Semi_Empirical_Parms    , only  : ChemAtom => atom
     use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: EhrenfestForce
+    public :: EhrenfestForce, RotationOverlap, solap, rotar, util_overlap, dlmn
 
     private
 

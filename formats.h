@@ -138,3 +138,5 @@
 
 194   FORMAT(/,1x,"  ==> done with Recursive steps")
 
+200   FORMAT(1x,'Center of Mass Force (MO = ',I3,') = ',F10.7,'   eV/Angs')     
+

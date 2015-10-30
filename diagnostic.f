@@ -6,7 +6,8 @@ module diagnostic_m
  use parameters_m               , only : spectrum , DP_Moment , &
                                          survival , DP_Field_ , &
                                          Alpha_Tensor ,         &
-                                         GaussianCube
+                                         GaussianCube ,         &
+                                         EHM_Forces
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
@@ -24,6 +25,7 @@ module diagnostic_m
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff
  use Embedded_FF_Alpha          , only : AlphaPolar
+ use HuckelForces_m             , only : HuckelForces
 
  public :: diagnostic
 
@@ -89,6 +91,8 @@ end do
  If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
+
+ If( EHM_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
  If( GaussianCube ) then
      do i = 1 , MO_total
