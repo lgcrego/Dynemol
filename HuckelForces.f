@@ -1,9 +1,13 @@
 ! Program for computing Hellman-Feynman-Pulay forces form Huckel Hamiltonian ...
 module HuckelForces_m
 
+    use f95_precision
+    use blas95
+    use lapack95
     use type_m
     use constants_m
-    use parameters_m            , only  : PBC 
+    use parameters_m            , only  : PBC , verbose
+    use Overlap_Builder         , only  : Overlap_Matrix
     use PBC_m                   , only  : Generate_Periodic_Structure
     use Semi_Empirical_Parms    , only  : ChemAtom => atom
     use Allocation_m            , only  : DeAllocate_Structures    
@@ -15,6 +19,7 @@ module HuckelForces_m
 
     !module variables ...
     real*8  :: delta = 1.d-8
+    logical :: done  = .false. 
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -27,25 +32,36 @@ contains
  subroutine HuckelForces( system , basis , QM )
 !==============================================
  implicit none
- type(structure) , intent(in)  :: system
- type(STO_basis) , intent(in)  :: basis(:)
- type(R_eigen)   , intent(in)  :: QM
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
+ type(R_eigen)   , intent(in)    :: QM
 
 ! local variables ... 
- integer                       :: i , i1 , i2 , n , n_MO , Fermi_level
- real*8          , allocatable :: bra(:), ket(:), Force(:,:)
- type(structure)               :: pbc_system
- type(STO_basis) , allocatable :: pbc_basis(:)
+ integer                         :: i , i1 , i2 , n , n_MO , Fermi_level , method
+ real*8          , allocatable   :: bra(:), ket(:), Force(:,:), force_atom(:,:)
+ type(structure)                 :: pbc_system
+ type(STO_basis) , allocatable   :: pbc_basis(:)
 
  CALL util_overlap     
 
  n_MO = size(QM%erg)
  allocate( bra  ( size(basis)              ) )
  allocate( ket  ( size(basis)              ) )
- allocate( Force( 3*system% atoms , 0:n_MO ) )
+ allocate( Force( 3*system% atoms , 0:n_MO ) , source = D_zero )
 
  ! if no PBC: pbc_system = system ...
  CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
+
+ write(*,'(/a)') ' Choose the method : '
+ write(*,'(/a)') ' (1) = Hellman-Feynman-Pulay '
+ write(*,'(/a)') ' (2) = Numerical derivative of PES '
+ read (*,'(I)') method
+
+ select case( method )
+
+ case( 1 )
+ !=========================================================================
+ ! Hellman-Feynman-Pulay ...
 
  do n = 1 , n_MO
     bra = QM%L(n,:)
@@ -55,16 +71,44 @@ contains
         i1 = (i-1)*3 + 1
         i2 = (i-1)*3 + 3
 
-        Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, pbc_system, pbc_basis, bra, ket, QM%erg(n), i )
+        Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, bra, ket, QM%erg(n), i )
 
     end do
-    ! center of mass force ...
-    Print 200, n , sum( Force(:,n) )
  end do
 
-! Force(:,0) = total force at ground state ...
+ case( 2 )
+ !=========================================================================
+ ! numerical derivative of the PES ...
+
+ verbose = .false.
+ allocate( force_atom( n_MO , 3 ) )
+
+ do i = 1 , system% atoms
+
+        force_atom = grad_E( system, basis, i )
+
+        i1 = (i-1)*3 + 1
+        i2 = (i-1)*3 + 3
+
+        forall( n=1:n_MO ) Force( i1:i2 , n ) = force_atom( n , : )
+
+ end do
+ !=========================================================================
+
+ end select
+
+! center of mass force ...
+ do n = 1 , n_MO
+    Print 200, n , sum( Force(:,n) )
+ end do
+ 
+ ! Force(:,0) = total force at ground state ...
  Fermi_level = system% N_of_electrons / 2
  forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
+
+ do i = 1 , 3*system%atoms
+    write(36,*) i , Force(i,0)
+ end do
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 OPEN( unit=3 , file='EHM_forces.nmd' , status='unknown' )
@@ -94,193 +138,173 @@ end subroutine HuckelForces
 !
 !
 !
-!========================================================================================================
-function Hellman_Feynman_Pulay( system, basis, pbc_system, pbc_basis, bra, ket, erg, site ) result(Force)
-!========================================================================================================
+!=================================================================================
+function Hellman_Feynman_Pulay( system, basis, bra, ket, erg, site ) result(Force)
+!=================================================================================
 use util_m , factorial => fact
 implicit none
-type(structure)  , intent(in) :: system
+type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in) :: basis(:)
-type(structure)  , intent(in) :: pbc_system
-type(STO_basis)  , intent(in) :: pbc_basis(:)
 real*8           , intent(in) :: bra(:)
 real*8           , intent(in) :: ket(:)
 real*8           , intent(in) :: erg
 integer          , intent(in) :: site 
 
 ! local variables ...
-real*8  :: expa , expb , Rab , aux , anor , Overlap_stuff
-real*8  :: sux(0:10) , delta_a(3) , delta_b(3) 
-integer :: a , b , ia , ib , ja , jb , aa ,xyz
-integer :: na , la , ma , nb , lb , mb
-integer :: msup , i , j , k , m , n
-
-! local parameters ....
-integer , parameter :: mxn = 15 , mxl = 5
-real*8  , parameter :: cutoff_Angs = 12.d0
+real*8  :: xb , yb , zb 
+real*8  :: delta_b(3) 
+integer :: ib , xyz
+integer :: i , j 
 
 ! local arrays ...
-real*8  , dimension(0:mxl)                   :: solvec 
-real*8  , dimension(0:mxl)                   :: solnorm , sol_partial
-real*8  , dimension(-mxl:mxl,-mxl:mxl,0:mxl) :: rl , rl2
-real*8                                       :: Force(3)
+real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) , grad_S(:,:)
+real*8                :: Force(3)
+
+verbose = .false.
+If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
+
+!force on atom site ...
+ib = site 
+
+! save coordinate ...
+xb = system% coord (ib,1) 
+yb = system% coord (ib,2) 
+zb = system% coord (ib,3) 
+
+do xyz = 1 , 3
+
+       delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
+
+       system% coord (ib,1) = xb + delta_b(1)
+       system% coord (ib,2) = yb + delta_b(2)
+       system% coord (ib,3) = zb + delta_b(3)
+
+       CALL Overlap_Matrix( system , basis , S_fwd )
+
+       system% coord (ib,1) = xb - delta_b(1)
+       system% coord (ib,2) = yb - delta_b(2)
+       system% coord (ib,3) = zb - delta_b(3)
+
+       CALL Overlap_Matrix( system , basis , S_bck )
+
+       grad_S = S_fwd - S_bck 
+
+       Force(xyz) = D_zero
+       do i = 1 , size(basis)
+       do j = 1 , size(basis)
+
+           Force(xyz) = Force(xyz) - ( Huckel_stuff(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
+
+       end do
+       end do
+
+end do 
+
+! recover original system ...
+system% coord (ib,1) = xb 
+system% coord (ib,2) = yb 
+system% coord (ib,3) = zb 
+
+Force = Force / (TWO*delta)
+
+end function Hellman_Feynman_Pulay
+!
+!
+!
+!
+!====================================================
+ function grad_E( system, basis, site ) result(Force)
+!====================================================
+implicit none
+type(structure)  , intent(inout) :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+integer          , intent(in)    :: site 
+
+! local variables ...
+integer :: ib , xyz 
+real*8  :: xb , yb , zb
+real*8  :: delta_b(3) 
+real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force(size(basis),3)
+
+! local parameters ....
+real*8  , parameter   :: cutoff_Angs = 12.d0
 
 !force on atom site ...
 Force = D_zero
 !############################################################################################################
 
 ib = site 
-do ia = 1 , pbc_system% atoms  
 
-    ! no self-interaction ...
-    If( ia == ib ) cycle
-
-    do xyz = 1 , 3
-
-        do n = 1 , -1 , -2 
-
-        delta_a = D_zero
-        delta_b = n * delta * merge(D_one , D_zero , xyz_key == xyz )
-
-        ! calculate rotation matrix for the highest l ...
-        call RotationOverlap( system, pbc_system, ia, ib, delta_a, delta_b, Rab, rl, rl2 )
-
-        If(Rab > cutoff_Angs) cycle
-
-        do jb = 1 , ChemAtom(     system%AtNo(ib) )% DOS  ;  b  =      system%BasisPointer (ib) + jb
-        do ja = 1 , ChemAtom( pbc_system%AtNo(ia) )% DOS  ;  a  =  pbc_system%BasisPointer (ia) + ja
-
-            nb =     basis(b)% n  ;  lb =     basis(b)% l  ;  mb =     basis(b)% m
-            na = pbc_basis(a)% n  ;  la = pbc_basis(a)% l  ;  ma = pbc_basis(a)% m
-   
-            aux = 1.d0 / ( factorial(na+na) * factorial(nb+nb) )
-            msup = min(la,lb)
-
-            solnorm(0:msup) = 0.d0
-
-            do j = 1 ,     basis(b)% Nzeta
-            do i = 1 , pbc_basis(a)% Nzeta
-  
-                expb =     basis(b)% zeta(j)
-                expa = pbc_basis(a)% zeta(i)
-
-                ! OVERLAP SUBROUTINE: lined-up frame
-                call solap(na, la, expa, nb, lb, expb, Rab, solvec)
-
-                anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI
-
-                ! Introduces normalization of the STO in the integrals 
-                do m = 0, msup-1
-                    sol_partial(m) = solvec(m) * anor
-                    anor = anor / dsqrt((la+m+1.d0)*(la-m)*(lb+m+1.d0)*(lb-m))
-                    if (m == 0) anor = anor + anor
-                enddo
-                sol_partial(msup) = solvec(msup) * anor
-                forall(k=0:msup) solnorm(k) = solnorm(k) + pbc_basis(a)%coef(i)*basis(b)%coef(j)*sol_partial(k)
-  
-            end do
-            end do
-
-            ! Rotation of overlap integrals to the molecular frame
-            sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
-            forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
-
-            Overlap_stuff = sum(sux(0:msup))
-           
-            ! reduce PBC to real system ...
-            aa = ia - (pbc_basis(a)%copy_No) * system%atoms
-            a  = a  - (pbc_basis(a)%copy_No) * size(basis)
-
-            ! Force on atom ia due to atom ib ...
-            Force(xyz) = Force(xyz) - n * ( Huckel_stuff(a,b,basis) - erg ) * bra(a)*ket(b) * Overlap_stuff 
-
-        enddo 
-        enddo 
-        enddo 
-
-    end do 
-
-end do
-
-!############################################################################################################
-
-ia = site 
-do ib = 1 , system% atoms  
-
-    ! no self_interaction ...
-    If( ia == ib ) cycle
+! save coordinate ...
+xb = system% coord (ib,1) 
+yb = system% coord (ib,2) 
+zb = system% coord (ib,3) 
 
     do xyz = 1 , 3
 
-        do n = 1 , -1 , -2 
+            delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
 
-        delta_a = n * delta * merge(D_one , D_zero , xyz_key == xyz )
-        delta_b = D_zero
+            system% coord (ib,1) = xb + delta_b(1)
+            system% coord (ib,2) = yb + delta_b(2)
+            system% coord (ib,3) = zb + delta_b(3)
 
-        ! calculate rotation matrix for the highest l ...
-        call RotationOverlap( system, pbc_system, ia, ib, delta_a, delta_b, Rab, rl, rl2 )
+            CALL LocalEigenSystem( system , basis , erg_fwd )
 
-        If(Rab > cutoff_Angs) cycle
 
-        do jb = 1 , ChemAtom(     system%AtNo(ib) )% DOS  ;  b  =      system%BasisPointer (ib) + jb
-        do ja = 1 , ChemAtom( pbc_system%AtNo(ia) )% DOS  ;  a  =  pbc_system%BasisPointer (ia) + ja
+            system% coord (ib,1) = xb - delta_b(1)
+            system% coord (ib,2) = yb - delta_b(2)
+            system% coord (ib,3) = zb - delta_b(3)
 
-            nb =     basis(b)% n  ;  lb =     basis(b)% l  ;  mb =     basis(b)% m
-            na = pbc_basis(a)% n  ;  la = pbc_basis(a)% l  ;  ma = pbc_basis(a)% m
-   
-            aux = 1.d0 / ( factorial(na+na) * factorial(nb+nb) )
-            msup = min(la,lb)
+            CALL LocalEigenSystem( system , basis , erg_bck )
 
-            solnorm(0:msup) = 0.d0
-
-            do j = 1 ,     basis(b)% Nzeta
-            do i = 1 , pbc_basis(a)% Nzeta
-  
-                expb =     basis(b)% zeta(j)
-                expa = pbc_basis(a)% zeta(i)
-
-                ! OVERLAP SUBROUTINE: lined-up frame
-                call solap(na, la, expa, nb, lb, expb, Rab, solvec)
-
-                anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI
-
-                ! Introduces normalization of the STO in the integrals 
-                do m = 0, msup-1
-                    sol_partial(m) = solvec(m) * anor
-                    anor = anor / dsqrt((la+m+1.d0)*(la-m)*(lb+m+1.d0)*(lb-m))
-                    if (m == 0) anor = anor + anor
-                enddo
-                sol_partial(msup) = solvec(msup) * anor
-                forall(k=0:msup) solnorm(k) = solnorm(k) + pbc_basis(a)%coef(i)*basis(b)%coef(j)*sol_partial(k)
-  
-            end do
-            end do
-
-            ! Rotation of overlap integrals to the molecular frame
-            sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
-            forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
-
-            Overlap_stuff = sum(sux(0:msup))
-           
-            ! reduce PBC to real system ...
-            aa = ia - (pbc_basis(a)%copy_No) * system%atoms
-            a  = a  - (pbc_basis(a)%copy_No) * size(basis)
-
-            ! Force on atom ia due to atom ib 
-            Force(xyz) = Force(xyz) - n * ( Huckel_stuff(a,b,basis) - erg ) * bra(a)*ket(b) * Overlap_stuff 
-
-        enddo 
-        enddo 
-        enddo 
+            Force(:,xyz) = erg_fwd(:) - erg_bck(:) 
 
     end do 
 
-end do
+! recover original system ...
+system% coord (ib,1) = xb 
+system% coord (ib,2) = yb 
+system% coord (ib,3) = zb 
 
-Force = Force / (TWO*delta)
+Force = - Force / (TWO*delta)
 
-end function Hellman_Feynman_Pulay
+end function grad_E
 !
+!
+!
+!
+!===================================================
+ subroutine LocalEigenSystem( system , basis , erg )
+!===================================================
+implicit none
+type(structure)  , intent(in)  :: system
+type(STO_basis)  , intent(in)  :: basis(:)
+real*8           , intent(out) :: erg(:)
+
+! local variables ...
+real*8  , ALLOCATABLE :: h(:,:) 
+real*8  , ALLOCATABLE :: S_matrix(:,:)
+integer               :: i , j , info
+
+CALL Overlap_Matrix( system , basis , S_matrix )
+
+allocate( h(size(basis),size(basis)) )
+
+do j = 1 , size(basis)
+    do i = j, size(basis)
+
+        h(i,j) = Huckel_stuff( i , j , basis ) * S_matrix(i,j)
+
+    end do
+end do    
+
+CALL SYGVD( h , S_matrix , erg , 1 , 'V' , 'L' , info )
+
+If ( info /= 0 ) write(*,*) 'info = ',info,' in LocalEigenSystem '
+
+deallocate( h )
+
+end subroutine LocalEigenSystem
 !
 !
 !
@@ -298,16 +322,20 @@ real*8 :: k_eff , k_WH , c1 , c2 , c3
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-c1 = basis(i)%IP - basis(j)%IP
-c2 = basis(i)%IP + basis(j)%IP
+if (i == j) then
+    huckel_stuff = basis(i)%IP
+else
+    c1 = basis(i)%IP - basis(j)%IP
+    c2 = basis(i)%IP + basis(j)%IP
 
-c3 = (c1/c2)*(c1/c2)
+    c3 = (c1/c2)*(c1/c2)
 
-k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
-k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-Huckel_stuff = k_eff * c2 * HALF 
+    Huckel_stuff = k_eff * c2 * HALF
+end if 
 
 end function Huckel_stuff
 !
