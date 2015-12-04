@@ -3,7 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                
-    use parameters_m            , only : restart , ad_hoc
+    use parameters_m            , only : restart , ad_hoc , EHM_Forces
     use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
@@ -36,7 +36,7 @@ integer         :: i , j , k , l , a , b , atmax , Total_N_of_atoms_of_species_i
 logical         :: read_vel
 character(10)   :: string
 
-
+if (EHM_Forces) return
 !=======================  setting up system  ============================= 
 
 CALL Define_MM_Environment
