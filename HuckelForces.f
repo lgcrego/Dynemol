@@ -19,7 +19,6 @@ module HuckelForces_m
 
     !module variables ...
     real*8  :: delta = 1.d-8
-    logical :: done  = .false. 
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -64,8 +63,10 @@ contains
  ! Hellman-Feynman-Pulay ...
 
  do n = 1 , n_MO
+
+    ! bra = ket ...
     bra = QM%L(n,:)
-    ket = QM%R(:,n)
+    ket = bra 
     do i = 1 , system% atoms
 
         i1 = (i-1)*3 + 1
@@ -107,7 +108,7 @@ contains
  forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
 
  do i = 1 , 3*system%atoms
-    write(36,*) i , Force(i,0)
+    write(30,*) i , Force(i,0)
  end do
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -187,7 +188,7 @@ do xyz = 1 , 3
 
        CALL Overlap_Matrix( system , basis , S_bck )
 
-       grad_S = S_fwd - S_bck 
+       grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
        Force(xyz) = D_zero
        do i = 1 , size(basis)
@@ -204,8 +205,6 @@ end do
 system% coord (ib,1) = xb 
 system% coord (ib,2) = yb 
 system% coord (ib,3) = zb 
-
-Force = Force / (TWO*delta)
 
 end function Hellman_Feynman_Pulay
 !
@@ -226,13 +225,9 @@ real*8  :: xb , yb , zb
 real*8  :: delta_b(3) 
 real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force(size(basis),3)
 
-! local parameters ....
-real*8  , parameter   :: cutoff_Angs = 12.d0
+Force = D_zero
 
 !force on atom site ...
-Force = D_zero
-!############################################################################################################
-
 ib = site 
 
 ! save coordinate ...
@@ -250,14 +245,13 @@ zb = system% coord (ib,3)
 
             CALL LocalEigenSystem( system , basis , erg_fwd )
 
-
             system% coord (ib,1) = xb - delta_b(1)
             system% coord (ib,2) = yb - delta_b(2)
             system% coord (ib,3) = zb - delta_b(3)
 
             CALL LocalEigenSystem( system , basis , erg_bck )
 
-            Force(:,xyz) = erg_fwd(:) - erg_bck(:) 
+            Force(:,xyz) = - (erg_fwd(:) - erg_bck(:)) / (TWO*delta) 
 
     end do 
 
@@ -265,8 +259,6 @@ zb = system% coord (ib,3)
 system% coord (ib,1) = xb 
 system% coord (ib,2) = yb 
 system% coord (ib,3) = zb 
-
-Force = - Force / (TWO*delta)
 
 end function grad_E
 !
@@ -323,8 +315,11 @@ real*8 :: k_eff , k_WH , c1 , c2 , c3
 !    constants for the Huckel Hamiltonian
 
 if (i == j) then
+
     huckel_stuff = basis(i)%IP
+
 else
+
     c1 = basis(i)%IP - basis(j)%IP
     c2 = basis(i)%IP + basis(j)%IP
 
@@ -335,6 +330,7 @@ else
     k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
     Huckel_stuff = k_eff * c2 * HALF
+
 end if 
 
 end function Huckel_stuff
