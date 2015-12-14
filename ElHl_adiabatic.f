@@ -40,8 +40,11 @@ module ElHl_adiabatic_m
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
+    use MD_read_m                   , only : atom                                             
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
+    use Ehrenfest_Builder           , only : EhrenfestForce
+
 
     public :: ElHl_adiabatic
 
@@ -148,6 +151,8 @@ do frame = frame_init , frame_final , frame_step
     If( GaussianCube .AND. mod(frame,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
+
+    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI_el , UNI_hl )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )

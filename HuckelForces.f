@@ -6,12 +6,9 @@ module HuckelForces_m
     use lapack95
     use type_m
     use constants_m
-    use parameters_m            , only  : PBC , verbose
+    use parameters_m            , only  : verbose
     use Overlap_Builder         , only  : Overlap_Matrix
-    use PBC_m                   , only  : Generate_Periodic_Structure
-    use Semi_Empirical_Parms    , only  : ChemAtom => atom
     use Allocation_m            , only  : DeAllocate_Structures    
-    use Ehrenfest_Builder       , only  : RotationOverlap, solap, rotar, util_overlap, dlmn
 
     public :: HuckelForces
 
@@ -38,18 +35,11 @@ contains
 ! local variables ... 
  integer                         :: i , i1 , i2 , n , n_MO , Fermi_level , method
  real*8          , allocatable   :: bra(:), ket(:), Force(:,:), force_atom(:,:)
- type(structure)                 :: pbc_system
- type(STO_basis) , allocatable   :: pbc_basis(:)
-
- CALL util_overlap     
 
  n_MO = size(QM%erg)
  allocate( bra  ( size(basis)              ) )
  allocate( ket  ( size(basis)              ) )
  allocate( Force( 3*system% atoms , 0:n_MO ) , source = D_zero )
-
- ! if no PBC: pbc_system = system ...
- CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
 
  write(*,'(/a)') ' Choose the method : '
  write(*,'(/a)') ' (1) = Hellman-Feynman-Pulay '
@@ -107,7 +97,7 @@ contains
  Fermi_level = system% N_of_electrons / 2
  forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
 
- do i = 1 , 3*system%atoms
+ do i = 1 , 3*system% atoms
     write(30,*) i , Force(i,0)
  end do
 
@@ -130,10 +120,7 @@ end do
 close(3)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
- CALL Deallocate_Structures(pbc_system)
- deallocate(pbc_basis)
-
- include 'formats.h'
+include 'formats.h'
 
 end subroutine HuckelForces
 !
@@ -142,7 +129,6 @@ end subroutine HuckelForces
 !=================================================================================
 function Hellman_Feynman_Pulay( system, basis, bra, ket, erg, site ) result(Force)
 !=================================================================================
-use util_m , factorial => fact
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in) :: basis(:)

@@ -136,7 +136,7 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-    If( QMMM ) CALL Ehrenfest
+!    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -336,41 +336,11 @@ If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
-If( QMMM ) CALL Ehrenfest
-
 !..........................................................................
 
 include 'formats.h'
 
 end subroutine Preprocess
-!
-!
-!
-
-!=====================
- subroutine Ehrenfest
-!=====================
-
-! local variables ...
-integer     :: n
-real*8      :: wp_erg(nn)
-complex*16  :: bra(mm),ket(mm)
-
-! Huckel energy of the wavepackets ...
-do n = 1 , n_part
-    wp_erg(n) = real(sum(MO_bra(:,n)*MO_ket(:,n)*Uni%erg(:))) 
-end do
-Unit_Cell% QM_erg = sum( wp_erg )
-
-! coefs of <k(t)| in AO basis 
-AO_bra = DUAL_bra
-
-! coefs of |k(t)> in AO basis 
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
-
-CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket , wp_erg )
-
-end subroutine Ehrenfest
 ! 
 !
 !
