@@ -3,7 +3,7 @@ module Ehrenfest_Builder
 
     use type_m
     use constants_m
-    use parameters_m            , only  : verbose , n_part
+    use parameters_m            , only  : driver , verbose , n_part
     use MD_read_m               , only  : atom
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
@@ -43,28 +43,36 @@ contains
 
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 
-do i = 1 , system% atoms
+select case( driver )
 
-    ! electron contribution ...
-    wp_occ(:) = MO_bra(:,1) * MO_ket(:,1)
+    case( "slice_AO" )
 
-    atom(i)% Ehrenfest = real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
+        do i = 1 , system% atoms
 
-    ! hole conntribution ...
-    If( n_part > 1 ) then
+            wp_occ(:) = MO_bra(:,1)*MO_ket(:,1) 
+            If( n_part == 2 ) wp_occ = wp_occ - MO_bra(:,2)*MO_ket(:,2)
+
+            atom(i)% Ehrenfest = real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
+
+        end do
+
+    case( "slice_ElHl" )
+
+        do i = 1 , system% atoms
+
+            ! electron contribution ...
+            wp_occ(:) = MO_bra(:,1) * MO_ket(:,1)
+
+            atom(i)% Ehrenfest = real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
+
+            ! hole conntribution ...
+            wp_occ(:) = MO_bra(:,2) * MO_ket(:,2)
         
-        wp_occ(:) = MO_bra(:,2) * MO_ket(:,2)
-        
-        ! single or separate QM's ...
-        If( present(QM_hl) ) then
             atom(i)% Ehrenfest = atom(i)% Ehrenfest - real(Ehrenfest( system, basis, wp_occ , QM_hl , i )) * eVAngs_2_Newton 
-        else
-            atom(i)% Ehrenfest = atom(i)% Ehrenfest - real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
-        end If
-      
-    end If    
        
-end do
+        end do
+
+end select
 
 deallocate( grad_S )
 

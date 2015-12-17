@@ -136,7 +136,7 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
 
-!    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )

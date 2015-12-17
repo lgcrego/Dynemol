@@ -11,7 +11,8 @@ module ElHl_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , initial_state ,   &
-                                             restart , Coulomb_ 
+                                             restart , Coulomb_ ,           &
+                                             DensityMatrix
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -44,6 +45,8 @@ module ElHl_adiabatic_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
+    use Auto_Correlation_m          , only : MO_Occupation
+
 
 
     public :: ElHl_adiabatic
@@ -218,6 +221,8 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
+    If( DensityMatrix ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI_el, UNI_hl ) 
+
     print*, frame 
 
 end do
@@ -348,6 +353,8 @@ If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix" )
 
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment" )
+
+If( DensityMatrix      ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI_el, UNI_hl ) 
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
