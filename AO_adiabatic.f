@@ -45,7 +45,7 @@ module AO_adiabatic_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
-    use Auto_Correlation_m
+    use Auto_Correlation_m          , only : MO_Occupation
 
     public :: AO_adiabatic
 
@@ -93,8 +93,6 @@ If( restart ) then
     CALL Restart_stuff( QDyn , t , it , frame_restart )
 else
     CALL Preprocess( QDyn , it )
-    If( AutoCorrelation ) call Auto_Correlation_init( Extended_Cell, ExCell_basis, MO_bra )
-    If( DensityMatrix )   call MO_Occupation( t, MO_bra, MO_ket, UNI )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -192,15 +190,14 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
-    If( DensityMatrix )   call MO_Occupation( t, MO_bra, MO_ket, UNI )
+    If( DensityMatrix ) then
+        If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
+        If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
+    End If
 
     print*, frame 
 
 end do
-
-!-----------
-! call Auto_Correlation_end
-!-----------
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -333,6 +330,11 @@ If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
 If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
+
+If( DensityMatrix ) then
+    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
+    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
+End If
 
 If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 

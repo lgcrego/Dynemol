@@ -10,13 +10,14 @@
 module VDOS_input
 
 !   Sample length: Nr. of steps in each VACF sample: Nr. of v(0)'s
-    integer :: VDOS_Nsteps_per_sample = 10000    ! 0 -> turn off
+    integer :: VDOS_Nsteps_per_sample = 10000   ! 0 -> turn off
 
 end module VDOS_input
 
 
 module VDOS_m
-    
+
+    use constants_m  , only : low_prec
     use MD_read_m    , only : MM, atom
     use MM_input     , only : species
     use constants_m  , only : twopi, h_bar, pico_2_sec
@@ -28,12 +29,15 @@ module VDOS_m
     
     private
 
+    ! module types ... 
     type velocity
         real*8 :: vel(3)
     end type velocity
-    
+   
+    ! module parameters ... 
     integer, parameter          :: in = 80, out = 81, out2 = 82
-    
+   
+    ! module variables ... 
     integer                     :: Nres,      &    ! Number of residues (:= MM % N_of_species)
                                    Natoms,    &
                                    Nsamples,  &
@@ -73,10 +77,10 @@ do i = 1, Natoms
 
     nr = atom(i) % nr
 
-    v0(i) % vel = atom(i) % vel
+    v0(i) % vel = atom(i) % vel + low_prec
     v0_norm(nr) = v0_norm(nr) + VEC3_DOT_PROD( v0(i)%vel, v0(i)%vel )
     
-    mw_v0(i) % vel = ( atom(i) % vel )*( atom(i) % mass )
+    mw_v0(i) % vel = ( v0(i) % vel )*( atom(i) % mass )
     v0_norm_mw(nr) = v0_norm_mw(nr) + VEC3_DOT_PROD( mw_v0(i)%vel, v0(i)%vel )
 
 end do
@@ -155,7 +159,7 @@ open(out, file='VDOS.restart', status='unknown', form='unformatted')
 write(out) v0_norm, v0_norm_mw, v0
 close(out)
 
-open(out, file='VACF.dat', status='unknown')
+open(out, file='DOS_trunk/VACF.dat', status='unknown')
 write(out,'(a)',advance='no') "# frame   VACF: total    "
 do i = 1, Nres
     write(out,'(a)',advance='no') species(i)%residue // '            '
@@ -179,7 +183,7 @@ open(in, file='VDOS.restart', status='old', form='unformatted', access='sequenti
 read(in) v0_norm, v0_norm_mw, v0
 close(in)
 
-open(out, file='VACF.dat', status='old', access='append')
+open(out, file='DOS_trunk/VACF.dat', status='old', access='append')
 
 end subroutine VDOS_restart
 !
@@ -309,9 +313,9 @@ T = 2*(t_f - t_i)*pico_2_sec/Nsamples  ! in seconds (factor 2 is to account for 
 ! write to VSD-*.dat
 do j = 0, Nres
     if (j==0) then
-        open(out, file='VSD-total.dat', status='unknown')
+        open(out, file='DOS_trunk/VSD-total.dat', status='unknown')
     else
-        open(out, file='VSD-'//trim(species(j)%residue)//'.dat', status='unknown')
+        open(out, file='DOS_trunk/VSD-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   spectral density   "
     do i = 1, Lsample
@@ -343,9 +347,9 @@ end do
 ! write to VDOS-*.dat
 do j = 0, Nres
     if (j==0) then
-        open(out, file='VDOS-total.dat', status='unknown')
+        open(out, file='DOS_trunk/VDOS-total.dat', status='unknown')
     else
-        open(out, file='VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
+        open(out, file='DOS_trunk/VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   VDOS"
     do i = 1, Lsample
