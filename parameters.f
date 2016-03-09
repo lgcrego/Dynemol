@@ -31,11 +31,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
-  Survival       = F_                       
+!			
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = T_
   OPT_parms      = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
@@ -56,7 +57,7 @@ logical :: dynamic
   
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
-  EHM_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
+  EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
   GaussianCube      = F_                       
   GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
@@ -65,7 +66,7 @@ logical :: dynamic
   CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
-  DensityMatrix     = F_                      ! <== generates data for postprocessing 
+  DensityMatrix     = T_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
 !--------------------------------------------------------------------
 !           SECURITY COPY
@@ -88,8 +89,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  4.0d-1                             ! <== final time in PICOseconds
-  n_t  =  40000                              ! <== number of time steps
+  t_f  =  0.4d0                               ! <== final time in PICOseconds
+  n_t  =  80000                               ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -115,7 +116,7 @@ logical :: dynamic
 !
   sigma     =  0.080d0                                     !
 
-  DOS_range = real_interval( -16.d0 , -6.d0 )            
+  DOS_range = real_interval( -16.d0 , -4.d0 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

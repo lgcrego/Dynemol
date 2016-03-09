@@ -48,12 +48,14 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-where(univ % atom % residue == "H1L") univ % atom % El = .true.
+!where(univ % atom % residue == "BZN") univ % atom % El = .true.
+univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "H2C") univ % atom % Hl = .true.
+!where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
+univ % atom % Hl = .true.
 
 !......................................................................
 

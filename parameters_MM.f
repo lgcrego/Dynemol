@@ -37,9 +37,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "H2X"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "BZN"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 3          ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 12         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
 !------------------------------------------------------------------------------
@@ -71,8 +71,8 @@ implicit none
 
   Selective_Dynamics     = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
 
-  MM_log_step            =  1                   ! <== step for saving MM results & parameters
-  MM_frame_step          =  1                   ! <== step for saving MM results & parameters
+  MM_log_step            =  100                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  20                  ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

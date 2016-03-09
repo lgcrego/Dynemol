@@ -379,7 +379,7 @@ do n = 1 , n_part
 end do
 
 12 FORMAT(15A10)
-13 FORMAT(15F10.5)
+13 FORMAT(F11.6,14F10.5)
 14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
