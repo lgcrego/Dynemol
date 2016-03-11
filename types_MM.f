@@ -61,6 +61,7 @@ public :: MMOPT_Control, Logicalkey
         integer             , allocatable   :: funct_dihed(:)
         real*8              , allocatable   :: kdihed0(:,:)
         character(4)        , allocatable   :: bond_type(:)
+        character(4)        , allocatable   :: angle_type(:)
         character(4)        , allocatable   :: dihedral_type(:)
         integer                             :: Nharm
         integer             , allocatable   :: harm(:)

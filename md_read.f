@@ -43,11 +43,12 @@ if ( driver == "diagnostic" ) return
 CALL Define_MM_Environment
 
 bath_T        = temperature                     !  Temperature (K)
-press         = pressure                        !  Pressure
+press         = pressure                        !  Pressure (atm)
 rcut          = cutoff_radius                   !  Cutoff radius (Angs.)
 talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
-KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
+                                                !  Ref: J. Chem. Phys. 1999; 110(17):8254
 read_vel      = read_velocities                 ! .T. , .F.
 read_from_gmx = gmx_input_format                ! .T. , .F.
 
@@ -105,7 +106,7 @@ do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % mass = species(i) % mass
 end do
 
-! mass of molecule species in Kg ...
+! mass of molecule species in kg ...
 species % mass = species % mass * imol
 molecule % mass = molecule % mass * imol
 
@@ -392,7 +393,8 @@ do i = 1 , MM % N_of_molecules
 
     If( molecule(i)%Nangs > 0 ) then
     allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
-    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 2 ) )
+    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 4 ) )
+    allocate( molecule(i) % angle_type    ( molecule(i) % Nangs        ) )
     allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
     End If
 
@@ -425,6 +427,7 @@ do i = 1 , MM % N_of_molecules
     If( molecule(i)%Nangs > 0 ) then
     molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
     molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
+    molecule(i) % angle_type    = species(molecule(i) % my_species) % angle_type
     molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
     End If
 
@@ -457,6 +460,7 @@ do i = 1 , size(atom)
 end do
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
+
 
 end subroutine Build_MM_Environment
 !

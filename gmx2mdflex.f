@@ -195,10 +195,20 @@ do a = 1 , MM % N_of_species
 
         allocate( species(a) % angs        ( Nangs , 3 ) )
         allocate( species(a) % funct_angle ( Nangs     ) )
+        allocate( species(a) % angle_type  ( Nangs     ) )
 
         forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
 
         species(a) % funct_angle(:Nangs) = InputChars(:Nangs,1)
+
+        do i = 1 , Nangs
+           select case ( species(a) % funct_angle(i) )
+            case( "1" )
+                species(a) % angle_type(i) = "harm"
+            case( "5" )
+                species(a) % angle_type(i) = "urba"
+           end select
+        end do
 
 !==============================================================================================
         ! Dihedral parameters :: reading ...
@@ -296,9 +306,9 @@ do a = 1 , MM % N_of_species
 
             end do
             species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
-        
+             
         end if
-
+ 
 !==============================================================================================
 
     close(33)
@@ -342,10 +352,10 @@ type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
  
 ! local variables ...
 character(3)    , allocatable   :: InputChars(:,:) , Input2Chars(:,:)
-character(4)    , allocatable   :: funct_bond(:)
+character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
-integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:)
+integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 real*8                          :: fudgeLJ , fudgeQQ
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NMorseParms
@@ -522,7 +532,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
   
                 read(33,*) (dummy_char, k=1,2) , dummy_int , (InputReals(i,j) , j=1,3)
 
-            end select 
+        end select 
 
         i = i + 1
     end do read_loop2
@@ -570,7 +580,14 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop3
         read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,3) , InputIntegers(i,1), (InputReals(i,j) , j=1,2 )
+        backspace(33) 
 
+        select case( InputIntegers(i,1) )
+            case( 1 ) 
+                read(33,*) (dummy_char,k=1,3), dummy_int, (InputReals(i,j), j=1,2)
+            case( 5 )
+                read(33,*) (dummy_char,k=1,3), dummy_int, (InputReals(i,j), j=1,4)
+        end select
 
         i = i + 1
     end do read_loop3
@@ -580,13 +597,30 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     NangsTypes = i - 1
 
     allocate( AngleSymbols    ( NangsTypes , 3 ) )
-    allocate( AngleParameters ( NangsTypes , 2 ) )
+    allocate( AngleParameters ( NangsTypes , 4 ) , source = D_zero ) 
+    allocate( Angle_Type      ( NangsTypes     ) )
+    allocate( funct_angle     ( NangsTypes     ) )
+    
     forall(i=1:3) AngleSymbols(:NangsTypes,i)  = InputChars(:NangsTypes,i)
     
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
-    AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * factor1 * imol
-    AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * deg_2_rad
+    Angle_Type( :NangsTypes ) = InputIntegers(:NangsTypes,1)  
+
+    do i = 1 , NangsTypes
+        select case( Angle_Type(i) )
+        ! conversion 
+        ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+            case( 1 ) ! Harmonic potential ...
+                AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * factor1 * imol
+                AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * deg_2_rad
+                funct_angle(i) = "harm"
+            case( 5 ) ! Urey-Bradley potential ...
+                AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * factor1 * imol
+                AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * deg_2_rad
+                AngleParameters(:NangsTypes,3) = InputReals(:NangsTypes,4) * factor2 * imol
+                AngleParameters(:NangsTypes,4) = InputReals(:NangsTypes,3) * nano_2_angs
+                funct_angle(i) = "urba"
+        end select
+    end do
 
 !=====================================================================================
 !  reads [ dihedraltypes ] ...
@@ -675,7 +709,8 @@ deallocate( Input2Chars , Input2Reals )
 do a = 1 , MM % N_of_species
 
 !   Assigning to each specie the corresponding parameter ...
-!   Bond parameters ...
+
+    ! Bond parameters ...
     allocate( species(a) % kbond0( species(a) % Nbonds , 3 ) , source = D_zero )
 
     do k = 1 , NbondsTypes
@@ -702,8 +737,9 @@ do a = 1 , MM % N_of_species
         end do
     end if
 
-!   Angle parameters ...
-    allocate( species(a) % kang0(species(a) % Nangs , 2 ) )
+    !=============================================================================
+    ! Angle parameters ...
+    allocate( species(a) % kang0(species(a) % Nangs , 4 ) , source = D_zero )
 
     do k = 1 , NangsTypes
         do n = 1 , species(a) % Nangs
@@ -715,10 +751,13 @@ do a = 1 , MM % N_of_species
             flag2 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,3)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,1)) )
+            flag3 = ( adjustl(species(a) % angle_type(n)) == adjustl(funct_angle(k)) )
 
-            if( flag1 .OR. flag2 ) then
+            if ( ( flag1 .OR. flag2 ) .AND. flag3 ) then 
                 species(a) % kang0(n,1) = AngleParameters(k,1)
                 species(a) % kang0(n,2) = AngleParameters(k,2)
+                species(a) % kang0(n,3) = AngleParameters(k,3)
+                species(a) % kang0(n,4) = AngleParameters(k,4)
             end if
 
         end do
@@ -733,6 +772,7 @@ do a = 1 , MM % N_of_species
         end do
     end if
 
+    !=============================================================================
     ! Dihedral parameters ...
     allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 6 ) , source = D_zero )
     allocate( species(a) % harm    ( species(a) % Ndiheds     ) , source = I_zero )
@@ -859,18 +899,21 @@ do a = 1 , MM % N_of_species
             end if
         end do
     end do read_loop0
+    !=============================================================================
 
 end do
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )
 if( allocated(SpecialBonds)        ) deallocate( SpecialBonds        )
+if( allocated(Bond_Type)           ) deallocate( Bond_Type           )
 if( allocated(AngleParameters)     ) deallocate( AngleParameters     )
 if( allocated(AngleSymbols)        ) deallocate( AngleSymbols        )
-if( allocated(specialAngs)         ) deallocate( specialAngs         )
+if( allocated(SpecialAngs)         ) deallocate( SpecialAngs         )
+if( allocated(Angle_Type)          ) deallocate( Angle_Type          )
 if( allocated(DihedParameters)     ) deallocate( DihedParameters     )
-if( allocated(Dihed_Type)          ) deallocate( Dihed_Type          )
 if( allocated(DihedSymbols)        ) deallocate( DihedSymbols        )
+if( allocated(Dihed_Type)          ) deallocate( Dihed_Type          )
 
 100 format(a18)
 120  format(4a5,t22,I2,t26,6f14.4)
@@ -914,25 +957,6 @@ do i = 1 , N
 end do
 
 end subroutine define_DihedralType
-!
-!
-!
-!=========================================
-subroutine skip_lines( file_unit , lines )
-!=========================================
-implicit none
-integer , intent(in) :: file_unit
-integer , intent(in) :: lines
-
-!local variables ...
-integer :: i , ioerr
-
-do i = 1 , lines
-    read(file_unit,*,iostat=ioerr) 
-    if(ioerr < 0) exit
-end do
-
-end subroutine skip_lines
 !
 !
 !

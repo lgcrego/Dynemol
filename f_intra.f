@@ -14,12 +14,12 @@ module F_intra_m
     public :: FORCEINTRA, pot_INTRA
 
     ! module variables ...
-    real*8  , dimension (3) :: rij , rjk , rkl , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
+    real*8  , dimension (3) :: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
     real*8                  :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
                                rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
                                sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
                                term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm ,&
-                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5
+                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq
     integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop
     logical                 :: flag1, flag2
     real*8                  :: pot_INTRA
@@ -61,7 +61,7 @@ LJ_intra   = D_zero
 Coul_14    = D_zero
 Coul_intra = D_zero
 
-! Stretch ...
+! Bonding - stretching potential ...
 do i = 1 , MM % N_of_molecules
     do j = 1 ,  molecule(i) % Nbonds
         ati = molecule(i) % bonds(j,1)
@@ -97,7 +97,8 @@ do i = 1 , MM % N_of_molecules
     end do
 end do 
 
-! Bend ...
+!====================================================================
+! Angle - bending potential ...
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Nangs
         atj = molecule(i) % angs(j,1)
@@ -115,37 +116,59 @@ do i = 1 , MM % N_of_molecules
 
             phi = ACOS( (rij(1)*rjk(1) + rij(2)*rjk(2) + rij(3)*rjk(3) ) / ( rijsq * rjksq ) )
 
-            coephi = 0.d0
-            if (phi < 1.d-12 .OR. abs(pi - phi) < 1.d-12) then
+            select case ( molecule(i) % angle_type(j) )
+           
+                case( "harm" , "urba" )
+                ! Harmonic and Urey-Bradley potentials ...
+ 
                 coephi = 0.d0
-                rterm  = 0.0d0 
-            else 
-                coephi = ( phi - molecule(i) % kang0(j,2) ) / SIN(phi)
-                rterm  = 0.5d0 * molecule(i) % kang0(j,1) * ( phi - molecule(i) % kang0(j,2) )**2
-            end if
-            angpot = rterm + angpot
+                if (phi < 1.d-12 .OR. abs(pi - phi) < 1.d-12) then
+                    coephi = 0.d0
+                    rterm  = 0.0d0 
+                else 
+                    coephi = ( phi - molecule(i) % kang0(j,2) ) / SIN(phi)
+                    rterm  = 0.5d0 * molecule(i) % kang0(j,1) * ( phi - molecule(i) % kang0(j,2) )**2
+                end if
+                angpot = rterm + angpot
          
-            do l = 1, 3
-                if (l == 1) atl = atj
-                if (l == 2) atl = ati
-                if (l == 3) atl = atk
-                do loop = 1, 3                    !eixos X,Y,Z (n = 1, 2 ou 3)
-                    fxyz = 0.d0
-                    riju = rij(loop)
-                    riku = rjk(loop)
-                    fxyz = ( molecule(i) % kang0(j,1) * coephi ) *                     &
-                           ( (DEL(atl,atj)-DEL(atl,ati))*riku/(rijsq*rjksq) +          &
-                           (DEL(atl,atk)-DEL(atl,ati))*riju/(rijsq*rjksq) -            &
-                           COS(phi)*( (DEL(atl,atj)-DEL(atl,ati))*riju/(rijsq*rijsq) + &
-                           (DEL(atl,atk)-DEL(atl,ati))*riku/(rjksq*rjksq)) )
-                    atom(atl) % fang(loop) = atom(atl) % fang(loop) + fxyz
+                do l = 1, 3
+                    if (l == 1) atl = atj
+                    if (l == 2) atl = ati
+                    if (l == 3) atl = atk
+                    do loop = 1, 3                    ! X,Y,Z axis (n = 1, 2 or 3)
+                       fxyz = 0.d0
+                       riju = rij(loop)
+                       riku = rjk(loop)
+                       fxyz = ( molecule(i) % kang0(j,1) * coephi ) *                     &
+                              ( (DEL(atl,atj)-DEL(atl,ati))*riku/(rijsq*rjksq) +          &
+                              (DEL(atl,atk)-DEL(atl,ati))*riju/(rijsq*rjksq) -            &
+                              COS(phi)*( (DEL(atl,atj)-DEL(atl,ati))*riju/(rijsq*rijsq) + &
+                              (DEL(atl,atk)-DEL(atl,ati))*riku/(rjksq*rjksq)) )
+                       atom(atl) % fang(loop) = atom(atl) % fang(loop) + fxyz
+                    end do
                 end do
-            end do
+
+                ! Urey-Bradley bonding term ...
+                if( molecule(i) % angle_type(j) == "urba" ) then
+                    rik(:) = atom(atk) % xyz(:) - atom(atj) % xyz(:)
+                    rik(:) = rik(:) - MM % box(:) * DNINT( rik(:) * MM % ibox(:) ) * PBC(:)
+                    rikq   = rik(1)*rik(1) + rik(2)*rik(2) + rik(3)*rik(3)
+                    riksq  = SQRT(rikq)
+
+                    coephi0 = molecule(i) % kang0(j,3) * ( riksq - molecule(i) % kang0(j,4) )/riksq
+                    rterm0  = HALF * molecule(i) % kang0(j,3) * & 
+                       ( riksq - molecule(i) % kang0(j,4) ) * ( riksq - molecule(i) % kang0(j,4) ) 
+                    atom(atk) % fang(:) = atom(atk) % fang(:) - coephi0*rik(:)
+                    atom(ati) % fang(:) = atom(ati) % fang(:) + coephi0*rik(:)  
+                    angpot = rterm0 + angpot
+                end if
+              
+            end select 
         end if
     end do
 end do
 
-! ################################################################
+!====================================================================
 ! Dihedral Potential Angle ... 
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Ndiheds
@@ -240,7 +263,7 @@ do i = 1 , MM % N_of_molecules
     end do
 end do
  
-! ####################################################################
+!====================================================================
 ! Non-bonded 1,4 intramolecular interactions ...
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % Nbonds14
@@ -316,7 +339,7 @@ do i = 1 , MM % N_of_molecules
     end do
 end do
 
-! ####################################################################
+!====================================================================
 ! Lennard-Jones intramolecular interactions ...
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % NintraLJ
@@ -396,6 +419,7 @@ do i = 1 , MM % N_of_molecules
     end do
 end do
 
+!====================================================================
 ! Morse Intra/Inter potential for H transfer ...
 do k = 1 , MM % N_of_atoms - 1
     do l = k , MM % N_of_atoms
@@ -411,6 +435,7 @@ do k = 1 , MM % N_of_atoms - 1
             rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
             rklq    = rkl(1)*rkl(1) + rkl(2)*rkl(2) + rkl(3)*rkl(3)
             rklsq   = SQRT(rklq)
+
             ! Morse potential ...
             qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
             qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
@@ -423,7 +448,8 @@ do k = 1 , MM % N_of_atoms - 1
     end do
 end do
 
-
+!
+!====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
 pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
