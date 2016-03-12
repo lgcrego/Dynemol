@@ -45,6 +45,7 @@ contains
 integer         :: j , n_residues
 
 Unit_Cell%atoms = System%N_of_Atoms
+
 select case( file_type )
     case( "structure" )
         n_residues = size( System%list_of_residues )

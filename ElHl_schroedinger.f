@@ -6,7 +6,7 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
                                          GaussianCube_step ,  DP_Moment , initial_state ,   &
-                                         Coulomb_ , restart
+                                         Coulomb_ , restart , DensityMatrix
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -17,6 +17,7 @@
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
  use PDOS_tool_m                , only : Partial_DOS
  use Backup_m                   , only : Security_Copy , Restart_state
+ use Auto_Correlation_m         , only : MO_Occupation
 
 
     public :: ElHl_dynamics , Huckel_dynamics , DeAllocate_QDyn 
@@ -126,6 +127,8 @@ else
     QDyn%dyn(1,:,:) = Pops(1,:,:)
     CALL dump_QDyn( QDyn , 1 )
 
+    If( DensityMatrix ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI_el, UNI_hl )
+
 !   save the initial GaussianCube file ...
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
@@ -225,6 +228,8 @@ DO it = it_init , n_t
         CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , Dual_ket(:,2) , mm , C_zero , MO_ket(:,2) , mm )
 
         CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it )
+
+        If( DensityMatrix ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI_el, UNI_hl ) 
 
     end If
 

@@ -78,7 +78,7 @@ logical :: dynamic
 !
   DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
 
   Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
@@ -90,7 +90,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                              
   t_f  =  0.4d0                               ! <== final time in PICOseconds
-  n_t  =  80000                               ! <== number of time steps
+  n_t  =  20000                               ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -167,6 +167,13 @@ static = .not. dynamic
 
 ! verbose is T_ only if ...
 verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
+
+If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
+    Print*," >>> halting: " 
+    Print*,"     for fixed nuclei use DRIVER = q_dynamics; " 
+    Print*,"     for slice use either file_type=trajectory or nuclear_matter=MDynamics <<<" 
+    stop
+End If    
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
