@@ -46,7 +46,7 @@ type(LogicalKey)               :: key
 print*, "==> kernel = energy"
 ! instantiating MM ...
 key%bonds  = [T_,T_,F_]
-key%angs   = [T_,T_]
+key%angs   = [F_,T_,F_,T_]
 key%diheds = F_
 
 MM_parms = FF_OPT( key , kernel = "energy" )

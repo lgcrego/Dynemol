@@ -107,7 +107,7 @@ public :: MMOPT_Control, Logicalkey
 
     type LogicalKey
         logical       :: bonds(3)    = .false.
-        logical       :: angs(2)     = .false.
+        logical       :: angs(4)     = .false.
         logical       :: diheds(7)   = .false.
         logical       :: adiabatic   = .false.
         character(20) :: comment

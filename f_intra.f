@@ -159,7 +159,7 @@ do i = 1 , MM % N_of_molecules
                     rterm0  = HALF * molecule(i) % kang0(j,3) * & 
                        ( riksq - molecule(i) % kang0(j,4) ) * ( riksq - molecule(i) % kang0(j,4) ) 
                     atom(atk) % fang(:) = atom(atk) % fang(:) - coephi0*rik(:)
-                    atom(ati) % fang(:) = atom(ati) % fang(:) + coephi0*rik(:)  
+                    atom(atj) % fang(:) = atom(atj) % fang(:) + coephi0*rik(:)  
                     angpot = rterm0 + angpot
                 end if
               

@@ -583,9 +583,9 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         backspace(33) 
 
         select case( InputIntegers(i,1) )
-            case( 1 ) 
+            case( 1 ) ! Harmonic potential ...
                 read(33,*) (dummy_char,k=1,3), dummy_int, (InputReals(i,j), j=1,2)
-            case( 5 )
+            case( 5 ) ! Urey-Bradley potential ...
                 read(33,*) (dummy_char,k=1,3), dummy_int, (InputReals(i,j), j=1,4)
         end select
 
