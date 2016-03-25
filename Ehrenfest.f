@@ -50,13 +50,13 @@ select case( driver )
 
     case( "slice_AO" )
 
+        wp_occ(:) = MO_bra(:,1)*MO_ket(:,1) 
+        If( n_part == 2 ) wp_occ = wp_occ - MO_bra(:,2)*MO_ket(:,2)
+
         do i = 1 , system% atoms
 
-            wp_occ(:) = MO_bra(:,1)*MO_ket(:,1) 
-            If( n_part == 2 ) wp_occ = wp_occ - MO_bra(:,2)*MO_ket(:,2)
-
-            atom(i)% Ehrenfest = real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
-
+            atom(i)% Ehrenfest = Ehrenfest( system, basis, wp_occ, MO_bra, MO_ket, QM_el, i ) * eVAngs_2_Newton 
+        
         end do
 
     case( "slice_ElHl" )
@@ -66,12 +66,12 @@ select case( driver )
             ! electron contribution ...
             wp_occ(:) = MO_bra(:,1) * MO_ket(:,1)
 
-            atom(i)% Ehrenfest = real(Ehrenfest( system, basis, wp_occ , QM_el , i )) * eVAngs_2_Newton 
+!            atom(i)% Ehrenfest = Ehrenfest( system, basis, wp_occ , QM_el , i ) * eVAngs_2_Newton 
 
             ! hole conntribution ...
             wp_occ(:) = MO_bra(:,2) * MO_ket(:,2)
         
-            atom(i)% Ehrenfest = atom(i)% Ehrenfest - real(Ehrenfest( system, basis, wp_occ , QM_hl , i )) * eVAngs_2_Newton 
+!            atom(i)% Ehrenfest = atom(i)% Ehrenfest - Ehrenfest( system, basis, wp_occ , QM_hl , i ) * eVAngs_2_Newton 
        
         end do
 
@@ -85,21 +85,23 @@ end subroutine EhrenfestForce
 !
 !
 !
-!=====================================================================
- function Ehrenfest( system, basis, wp_occ , QM , site ) result(Force)
-!=====================================================================
+!====================================================================================
+ function Ehrenfest( system, basis, wp_occ, MO_bra, MO_ket, QM , site ) result(Force)
+!====================================================================================
 use Semi_empirical_parms , only: atom
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 real*8           , intent(in)    :: wp_occ(:)
+complex*16       , intent(in)    :: MO_bra(:,:)
+complex*16       , intent(in)    :: MO_ket(:,:)
 type(R_eigen)    , intent(in)    :: QM
 integer          , intent(in)    :: site 
 
 ! local variables ...
-integer :: i , j , n , xyz
+integer :: i , j , m , n , xyz
 integer :: k , ik , DOS_atom_k , BasisPointer_k 
-real*8  :: Force_xyz
+real*8  :: Force_AD , Force_NAD , rho_nm
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
@@ -128,24 +130,46 @@ do xyz = 1 , 3
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       Force_xyz = D_zero
+       Force_AD = D_zero
 
-       !$omp parallel do schedule(dynamic,10) private(n,ik,i,j) default(shared) reduction(+:Force_xyz)
+       ! adiabatic component of the Force ...
+       !==============================================================================================
+       !$omp parallel do schedule(dynamic,10) private(n,ik,i,j) default(shared) reduction(+:Force_AD)
        do n = 1 , size(basis) 
+         do ik = 1 , DOS_atom_k
+            i = BasisPointer_k + ik
+            do j = 1 , size(basis)
+                Force_AD = Force_AD - wp_occ(n) * ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
+            end do
+         end do
+       end do
+       !$end parallel do
+       !==============================================================================================
 
-       do ik = 1 , DOS_atom_k
+       Force_NAD = D_zero
+
+       ! non-adiabatic component of the Force ...
+       !==============================================================================================
+       !$omp parallel do schedule(dynamic,10) private(n,m,rho_nm,ik,i,j) default(shared) reduction(+:Force_NAD)
+       do n = 1   , size(basis)
+       do m = n+1 , size(basis)
+         rho_nm = two * ( real(MO_bra(m,1)*MO_ket(n,1)) - real(MO_bra(m,2)*MO_ket(n,2)) )
+
+         do ik = 1 , DOS_atom_k
             i = BasisPointer_k + ik
             do j = 1 , size(basis)
 
-                Force_xyz = Force_xyz - wp_occ(n) * ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
-       
-            end do
-       end do
+                Force_NAD = Force_NAD - rho_nm * ( QM%erg(n)*QM%L(m,j)*QM%L(n,i) + QM%erg(m)*QM%L(m,i)*QM%L(n,j) ) * grad_S(i,j) 
 
+            end do
+         end do
+
+       end do
        end do
        !$end parallel do
+       !==============================================================================================
 
-       Force(xyz) = two*Force_xyz
+       Force(xyz) = two*Force_AD + Force_NAD
 
 end do 
 
