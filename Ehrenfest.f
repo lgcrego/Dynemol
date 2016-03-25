@@ -4,7 +4,6 @@ module Ehrenfest_Builder
     use type_m
     use constants_m
     use parameters_m            , only  : driver , verbose , n_part
-    use MD_read_m               , only  : atom
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
 
@@ -26,6 +25,7 @@ contains
 !=============================================================================
  subroutine EhrenfestForce( system , basis , MO_bra , MO_ket , QM_el , QM_hl )
 !=============================================================================
+ use MD_read_m              , only  : atom
  implicit none
  type(structure)            , intent(inout) :: system
  type(STO_basis)            , intent(in)    :: basis(:)
@@ -42,6 +42,9 @@ contains
  real*8 , parameter :: eVAngs_2_Newton = 1.602176565d-9
 
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
+
+! preprocess overlap matrix for Pulay calculations ...
+CALL Overlap_Matrix( system , basis )
 
 select case( driver )
 
@@ -85,6 +88,7 @@ end subroutine EhrenfestForce
 !=====================================================================
  function Ehrenfest( system, basis, wp_occ , QM , site ) result(Force)
 !=====================================================================
+use Semi_empirical_parms , only: atom
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
@@ -93,73 +97,71 @@ type(R_eigen)    , intent(in)    :: QM
 integer          , intent(in)    :: site 
 
 ! local variables ...
-real*8  :: xb , yb , zb
-real*8  :: delta_b(3) 
-integer :: ib , xyz
-integer :: i , j , n
+integer :: i , j , n , xyz
+integer :: k , ik , DOS_atom_k , BasisPointer_k 
+real*8  :: Force_xyz
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
-real*8                :: Force(3)
+real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
 
 !force on atom site ...
-ib = site 
+k = site 
+DOS_atom_k     =  atom( system% AtNo(k) )% DOS
+BasisPointer_k =  system% BasisPointer(k) 
 
 ! save coordinate ...
-xb = system% coord (ib,1) 
-yb = system% coord (ib,2) 
-zb = system% coord (ib,3) 
+tmp_coord = system% coord(k,:)
 
 do xyz = 1 , 3
 
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
-
-       system% coord (ib,1) = xb + delta_b(1)
-       system% coord (ib,2) = yb + delta_b(2)
-       system% coord (ib,3) = zb + delta_b(3)
-
+    
+       system% coord (k,:) = tmp_coord + delta_b
        CALL Overlap_Matrix( system , basis , S_fwd )
 
-       system% coord (ib,1) = xb - delta_b(1)
-       system% coord (ib,2) = yb - delta_b(2)
-       system% coord (ib,3) = zb - delta_b(3)
-
+       system% coord (k,:) = tmp_coord - delta_b
        CALL Overlap_Matrix( system , basis , S_bck )
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       Force(xyz) = C_zero
+       Force_xyz = D_zero
 
-       do i = 1 , size(basis)
-       do j = 1 , size(basis)
+       !$omp parallel do schedule(dynamic,10) private(n,ik,i,j) default(shared) reduction(+:Force_xyz)
+       do n = 1 , size(basis) 
 
-            do n = 1 , size(basis) 
+       do ik = 1 , DOS_atom_k
+            i = BasisPointer_k + ik
+            do j = 1 , size(basis)
 
-                Force(xyz) = Force(xyz) - wp_occ(n) * ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
+                Force_xyz = Force_xyz - ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
        
             end do
+       end do
+
+       Force_xyz = wp_occ(n) * Force_xyz
 
        end do
-       end do
-            
+       !$end parallel do
+
+       Force(xyz) = two*Force_xyz
+
 end do 
 
 ! recover original system ...
-system% coord (ib,1) = xb 
-system% coord (ib,2) = yb 
-system% coord (ib,3) = zb 
+system% coord (k,:) = tmp_coord
 
 end function Ehrenfest
 !
 !
 !
 !
-!======================================
- function Huckel_stuff( i , j , basis )
-!======================================
+!===========================================
+ pure function Huckel_stuff( i , j , basis )
+!===========================================
 implicit none
 integer         , intent(in) :: i , j
 type(STO_basis) , intent(in) :: basis(:)

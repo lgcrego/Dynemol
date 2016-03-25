@@ -13,12 +13,17 @@ module Overlap_Builder
 
     private
 
+    interface Overlap_matrix
+        module procedure Overlap_Matrix
+        module procedure Preprocess_OverlapMatrix
+    end interface
+
     !module variables ...
-    logical               , save :: done = .false. , ready = .false.
-    integer , allocatable , save :: ija(:)
-    real*8  , allocatable , save :: a_xyz(:,:)
-    real*8  , allocatable , save :: b_xyz(:,:)
-    real*8  , allocatable , save :: S_pack(:)
+    logical               , save :: done = .false. , ready = .false. , Pulay = .false.
+    integer , allocatable , save :: ija(:)     
+    real*8  , allocatable , save :: a_xyz(:,:) 
+    real*8  , allocatable , save :: b_xyz(:,:) 
+    real*8  , allocatable , save :: S_pack(:)  
 
 contains
 !
@@ -45,7 +50,6 @@ contains
  
  if(.not. allocated(S_matrix))  allocate(S_matrix(S_size,S_size))
 
-
  select case (purpose)
 
     case('FMO')
@@ -58,6 +62,16 @@ contains
         CALL Generate_Periodic_Structure( system, basis, pbc_system, pbc_basis ) 
 
         CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix )
+
+        CALL Deallocate_Structures(pbc_system)
+        If( allocated(pbc_basis) ) deallocate(pbc_basis)
+
+    case('Pulay')
+
+        ! if no PBC pbc_system = system ...
+        CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
+
+        CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix , recycle = .true. )
 
         CALL Deallocate_Structures(pbc_system)
         If( allocated(pbc_basis) ) deallocate(pbc_basis)
@@ -100,6 +114,40 @@ contains
 !
 !
 !
+!=====================================================
+ subroutine Preprocess_OverlapMatrix( system , basis )
+!=====================================================
+ implicit none
+ type(structure)                , intent(in)    :: system
+ type(STO_basis)                , intent(in)    :: basis(:)
+
+! local variables ... 
+ real*8          , allocatable :: S_matrix(:,:)
+ integer                       :: S_size
+ type(structure)               :: pbc_system
+ type(STO_basis) , allocatable :: pbc_basis(:)
+
+ ! this subroutine simply instantiate the ORIGINAL Overlap Matrix for future use ...
+
+ CALL util_overlap     
+ S_size = sum(atom(system%AtNo)%DOS)
+ allocate(S_matrix(S_size,S_size))
+
+ Pulay = .true.
+ done  = .false.
+
+ ! if no PBC pbc_system = system ...
+ CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
+
+ CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix )
+
+ CALL Deallocate_Structures(pbc_system)
+ If( allocated(pbc_basis) ) deallocate(pbc_basis)
+
+ end subroutine Preprocess_OverlapMatrix
+!
+!
+!
 !===========================================================================================
  subroutine Build_OVERLAP_Matrix( b_system, b_basis, a_system, a_basis, S_matrix , recycle )
 !===========================================================================================
@@ -139,14 +187,14 @@ S_matrix = D_zero
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
 
-    ! if atoms ia and ib remaing fixed => recover S_matrix
+    ! ckecking: if atoms ia and ib remain fixed => recover S_matrix
     If( motion_detector_ready ) then
-
-        atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
 
         Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
 
         If(Rab > cutoff_Angs) goto 10
+
+        atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
 
         If( atom_not_moved ) then
 
@@ -229,10 +277,15 @@ end do
 forall(i=1:size(b_basis)) S_matrix(i,i) = D_one
 
 ! save overlap data for reuse ...
-If( present(recycle) .AND. (.NOT. static) .AND. (.NOT. done) ) then
+If( (.NOT. static .OR. Pulay) .AND. (.NOT. done) ) then
 
-    allocate( a_xyz , source = a_system%coord)
-    allocate( b_xyz , source = b_system%coord)
+    If( allocated(a_xyz) ) then
+        a_xyz = a_system%coord
+        b_xyz = b_system%coord
+    else
+        allocate( a_xyz , source = a_system%coord)
+        allocate( b_xyz , source = b_system%coord)
+    end if
 
     CALL sprsin( S_matrix )
 
@@ -271,7 +324,6 @@ integer , parameter :: mxn = 15 , mxl = 5
 ! INPUT DATA
 ! na, la, expa, xa, ya, za:  N, L, EXPONENT and cartesian coordinates of function on A
 ! nb, lb, expb, xb, yb, zb:  N', L', EXPONENT' and cartesian coordinates of function on B
-!
 
 AtNo_a = a_system%AtNo (ia)
 AtNo_b = b_system%AtNo (ib)
@@ -330,10 +382,11 @@ real*8 , intent(in) :: S_matrix(:,:)
 !=====================================================================
 
 !local variables ...
-integer               :: i , j , k , n , length, nnz
-real*8                :: thresh = mid_prec
-integer , allocatable :: tmp_ij(:)
-real*8  , allocatable :: tmp_S(:)
+integer                      :: i , j , k , n , length, nnz
+real*8                       :: thresh = mid_prec
+integer , allocatable , save :: tmp_ij(:)
+real*8  , allocatable , save :: tmp_S(:)
+logical               , save :: NOT_been_here = .true.
 
 !local parameters ...
 integer  :: nmax
@@ -342,12 +395,16 @@ n = size( S_matrix(:,1) )
 
 nmax = (n*(n + 1))/2 + 1
 
-allocate( tmp_ij(nmax) )
-allocate( tmp_S (nmax) , source=D_zero )
+If( NOT_been_here ) then
+    allocate( tmp_ij(nmax) )
+    allocate( tmp_S (nmax) )
+end if
+tmp_S = D_zero 
 
 do j = 1 , n
     tmp_S(j) = S_matrix(j,j)
 end do 
+
 tmp_ij(1) = n + 2
 k = n + 1
 do i = 1 , n
@@ -367,10 +424,14 @@ end do
 length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of S_pack and ija
 nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
 
-allocate( S_pack(length) , source = tmp_S  )
-allocate( ija   (length) , source = tmp_ij ) 
+If( NOT_been_here ) then
+    allocate( S_pack(length) )
+    allocate( ija   (length) ) 
+end If
+S_pack = tmp_S  
+ija    = tmp_ij  
 
-deallocate( tmp_S , tmp_IJ )
+NOT_been_here = .false.
 
 END subroutine sprsin
 !

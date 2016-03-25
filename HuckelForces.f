@@ -52,6 +52,8 @@ contains
  !=========================================================================
  ! Hellman-Feynman-Pulay ...
 
+ CALL Overlap_Matrix( system , basis )
+
  do n = 1 , n_MO
 
     ! bra = ket ...
@@ -129,6 +131,7 @@ end subroutine HuckelForces
 !=================================================================================
 function Hellman_Feynman_Pulay( system, basis, bra, ket, erg, site ) result(Force)
 !=================================================================================
+use Semi_Empirical_parms , only : atom
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in) :: basis(:)
@@ -138,59 +141,50 @@ real*8           , intent(in) :: erg
 integer          , intent(in) :: site 
 
 ! local variables ...
-real*8  :: xb , yb , zb 
-real*8  :: delta_b(3) 
-integer :: ib , xyz
-integer :: i , j 
+integer :: i , j , k , ik , xyz
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) , grad_S(:,:)
-real*8                :: Force(3)
+real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
 
 !force on atom site ...
-ib = site 
+k = site 
 
 ! save coordinate ...
-xb = system% coord (ib,1) 
-yb = system% coord (ib,2) 
-zb = system% coord (ib,3) 
+tmp_coord = system% coord(k,:)
 
 do xyz = 1 , 3
 
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
 
-       system% coord (ib,1) = xb + delta_b(1)
-       system% coord (ib,2) = yb + delta_b(2)
-       system% coord (ib,3) = zb + delta_b(3)
+       system% coord (k,:) = tmp_coord + delta_b
+       CALL Overlap_Matrix( system , basis , S_fwd , purpose='Pulay')
 
-       CALL Overlap_Matrix( system , basis , S_fwd )
-
-       system% coord (ib,1) = xb - delta_b(1)
-       system% coord (ib,2) = yb - delta_b(2)
-       system% coord (ib,3) = zb - delta_b(3)
-
-       CALL Overlap_Matrix( system , basis , S_bck )
+       system% coord (k,:) = tmp_coord - delta_b
+       CALL Overlap_Matrix( system , basis , S_bck , purpose='Pulay')
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
        Force(xyz) = D_zero
-       do i = 1 , size(basis)
-       do j = 1 , size(basis)
 
-           Force(xyz) = Force(xyz) - ( Huckel_stuff(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
+       do ik = 1 , atom( system% AtNo(k) )% DOS  
+            i = system% BasisPointer(k) + ik
+            do j = 1 , size(basis)
 
-       end do
+                Force(xyz) = Force(xyz) - ( Huckel_stuff(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
+
+            end do
        end do
 
 end do 
 
+Force = two * Force
+
 ! recover original system ...
-system% coord (ib,1) = xb 
-system% coord (ib,2) = yb 
-system% coord (ib,3) = zb 
+system% coord (k,:) = tmp_coord
 
 end function Hellman_Feynman_Pulay
 !
@@ -206,34 +200,28 @@ type(STO_basis)  , intent(in)    :: basis(:)
 integer          , intent(in)    :: site 
 
 ! local variables ...
-integer :: ib , xyz 
+integer :: k , xyz 
 real*8  :: xb , yb , zb
-real*8  :: delta_b(3) 
+real*8  :: delta_b(3) , tmp_coord(3)
 real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force(size(basis),3)
 
 Force = D_zero
 
 !force on atom site ...
-ib = site 
+k = site 
 
 ! save coordinate ...
-xb = system% coord (ib,1) 
-yb = system% coord (ib,2) 
-zb = system% coord (ib,3) 
+tmp_coord = system% coord(k,:)
 
     do xyz = 1 , 3
 
             delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
 
-            system% coord (ib,1) = xb + delta_b(1)
-            system% coord (ib,2) = yb + delta_b(2)
-            system% coord (ib,3) = zb + delta_b(3)
+            system% coord (k,:) = tmp_coord + delta_b
 
             CALL LocalEigenSystem( system , basis , erg_fwd )
 
-            system% coord (ib,1) = xb - delta_b(1)
-            system% coord (ib,2) = yb - delta_b(2)
-            system% coord (ib,3) = zb - delta_b(3)
+            system% coord (k,:) = tmp_coord - delta_b
 
             CALL LocalEigenSystem( system , basis , erg_bck )
 
@@ -242,9 +230,7 @@ zb = system% coord (ib,3)
     end do 
 
 ! recover original system ...
-system% coord (ib,1) = xb 
-system% coord (ib,2) = yb 
-system% coord (ib,3) = zb 
+system% coord (k,:) = tmp_coord
 
 end function grad_E
 !
