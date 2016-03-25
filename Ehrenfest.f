@@ -137,12 +137,10 @@ do xyz = 1 , 3
             i = BasisPointer_k + ik
             do j = 1 , size(basis)
 
-                Force_xyz = Force_xyz - ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
+                Force_xyz = Force_xyz - wp_occ(n) * ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
        
             end do
        end do
-
-       Force_xyz = wp_occ(n) * Force_xyz
 
        end do
        !$end parallel do
