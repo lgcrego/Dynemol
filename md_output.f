@@ -24,7 +24,7 @@ contains
 !========================================
 use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
-                        ryck_dih, proper_dih, harmpot, Morspot
+                        ryck_dih, proper_dih, harm_dih, harm_bond, morse_bond, Morspot
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -36,27 +36,27 @@ real*8  , intent(in)    :: dt
 IF( .NOT. done ) then 
     open (10, file='MM_log.out', status='unknown')
     write(10,*)
-    write(10,'(''********************************************'')')
-    write(10,'(''*                                          *'')')
-    write(10,'(''*               MM_Dynamics                *'')')
-    write(10,'(''*                                          *'')')
-    write(10,'(''********************************************'')')
+    write(10,'(''!==========================================!'')')
+    write(10,'(''!                                          !'')')
+    write(10,'(''!               MM_Dynamics                !'')')
+    write(10,'(''!                                          !'')')
+    write(10,'(''!==========================================!'')')
     write(10,*)
     write(10,*)            
-    write(10,*)'Initial Paramenters'
+    write(10,*)'INITIAL Parameters'
     write(10,*)
     write(10,*)
-    write(10,'(''Number of Molecules      :'',I10)') MM % N_of_molecules
-    write(10,'(''Initial Bath Temperature :'',F10.2,'' Kelvin'')') bath_T
-    write(10,'(''Box dimensions           :'',3F10.2,'' Angstroms'')') MM % box(1:3)
-    write(10,'(''Cut off radius           :'',F10.2,'' Angstroms'')') rcut
-    write(10,'(''Density                  :'',F10.4,'' g/cm3'')') Initial_density
+    write(10,'(''Number of Molecules       :'',I10)') MM % N_of_molecules
+    write(10,'(''Initial Bath Temperature  :'',F10.2,'' Kelvin'')') bath_T
+    write(10,'(''Box dimensions            :'',3F10.2,'' Angstroms'')') MM % box(1:3)
+    write(10,'(''Cut-off radius            :'',F10.2,'' Angstroms'')') rcut
+    write(10,'(''Density                   :'',F10.4,'' g/cm³'')') Initial_density
     write(10,*)
-    write(10,'(''System Temperature       :'',F10.2,'' Kelvin'')') Ttrans
+    write(10,'(''System Temperature        :'',F10.2,'' Kelvin'')') Ttrans
     write(10,*)
-    write(10,'(''Total Simulation Steps   :'',i10)') n_t
-    write(10,'(''Integration time step    :'',F10.3,'' femtosec'')') dt*1.d15
-    write(10,'(''frame-output step        :'',i10,'' steps'')') MM_frame_step
+    write(10,'(''Total Simulation Steps    :'',i10)') n_t
+    write(10,'(''Integration time step     :'',F10.3,'' femtosec'')') dt*1.d15
+    write(10,'(''frame-output step         :'',i10,'' steps'')') MM_frame_step
     write(10,*)
 
     select case( forcefield )
@@ -87,28 +87,29 @@ end IF
 open (10, file='MM_log.out', status='unknown', access='append')
 
     write(10,'(''<======  ###############  ==>'')')
-    write(10,'(''<====  A V E R A G E S  ====>'')')
+    write(10,'(''<====  E N E R G I E S  ====>'')')
     write(10,'(''<==  ###############  ======>'')')
     write(10,*)
     write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
-    write(10,*)'Energies (kJ/mol)'
-    write(10,'(''Bond Potential             :'',F12.4)') bdpot     *mol*factor3*1.d-6    
-    write(10,'(''Harm Bond Potential        :'',F12.4)') harmpot   *mol*factor3*1.d-6    
-    write(10,'(''Morse Bond Potential       :'',F12.4)') Morspot   *mol*factor3*1.d-6    
-    write(10,'(''Angle Potential            :'',F12.4)') angpot    *mol*factor3*1.d-6   
-    write(10,'(''Dihedral Potential         :'',F12.4)') dihpot    *mol*factor3*1.d-6   
-    write(10,'(''Proper Dihedral            :'',F12.4)') proper_dih*mol*factor3*1.d-6   
-    write(10,'(''Ryckaert-Bell. Dihedral    :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
-    write(10,'(''Lennard-Jones 1-4          :'',F12.4)') LJ_14     *mol*1.d-6  
-    write(10,'(''Lennard-Jones Intra        :'',F12.4)') LJ_Intra  *mol*1.d-6  
-    write(10,'(''Coulomb 1-4                :'',F12.4)') Coul_14   *mol*1.d-6  
-    write(10,'(''Coulomb Intra              :'',F12.4)') Coul_Intra*mol*1.d-6  
-    write(10,'(''Lennard-Jones              :'',F12.4)') evdw      *mol*1.d-6      
-    write(10,'(''Coulomb self-interaction   :'',F15.4)') eintra    *mol*1.d-6    
-    write(10,'(''Coulomb short-range        :'',F15.4)') ecoul     *mol*1.d-6      
-    write(10,'(''Total Coulomb              :'',F15.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
-    write(10,'(''Potential (INTER) Energy   :'',F12.4)') pot_INTER*mol*1.d-6 / MM % N_of_molecules
-    write(10,'(''Potential Energy(gmx-like) :'',ES16.7E3)') pot_total*mol*1.d-3 / MM % N_of_molecules  
+    write(10,*)'                                (kJ/mol)'
+    write(10,'(''Bond Potential              :'',F12.4)') bdpot     *mol*factor3*1.d-6    
+    write(10,'(''Harmonic Bond Potential     :'',F12.4)') harm_bond *mol*factor3*1.d-6    
+    write(10,'(''Morse Bond Potential        :'',F12.4)') morse_bond*mol*factor3*1.d-6    
+    write(10,'(''Morse (Inter) Potential     :'',F12.4)') Morspot   *mol*factor3*1.d-6    
+    write(10,'(''Angle Potential             :'',F12.4)') angpot    *mol*factor3*1.d-6   
+    write(10,'(''Dihedral Potential          :'',F12.4)') dihpot    *mol*factor3*1.d-6   
+    write(10,'(''Proper Dihedral             :'',F12.4)') proper_dih*mol*factor3*1.d-6   
+    write(10,'(''Ryckaert-Bell. Dihedral     :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
+    write(10,'(''Lennard-Jones 1-4           :'',F12.4)') LJ_14     *mol*1.d-6  
+    write(10,'(''Lennard-Jones Intra         :'',F12.4)') LJ_Intra  *mol*1.d-6  
+    write(10,'(''Lennard-Jones               :'',F12.4)') evdw      *mol*1.d-6      
+    write(10,'(''Coulomb 1-4                 :'',F12.4)') Coul_14   *mol*1.d-6  
+    write(10,'(''Coulomb Intra               :'',F12.4)') Coul_Intra*mol*1.d-6  
+    write(10,'(''Coulomb self-interaction    :'',F12.4)') eintra    *mol*1.d-6    
+    write(10,'(''Coulomb short-range         :'',F12.4)') ecoul     *mol*1.d-6      
+    write(10,'(''Total Coulomb               :'',F12.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
+    write(10,'(''Potential (INTER) Energy    :'',F12.4)') pot_INTER
+    write(10,'(''Potential Energy (gmx-like) :'',ES16.7E3)') pot_total
     write(10,*)
 
 close (10)

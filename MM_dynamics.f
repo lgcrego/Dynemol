@@ -25,7 +25,7 @@ module MM_dynamics_m
 
     private
 
-    !local variables ...
+    ! local variables ...
     logical             :: done = .false.
     type(Berendsen)     :: VV_Berendsen
     type(Nose_Hoover)   :: VV_Nose_Hoover
@@ -96,12 +96,12 @@ real*8  , optional , intent(in)    :: Net_Charge(:)
 real*8  :: dt , Temperature , pressure , density , Kinetic
 integer :: i
 
-! time units are PICOseconds in EHT - seconds in MM ; converts picosencond to second ...
+! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
 
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
-! Molecuar dynamic ...
+! Molecular dynamics ...
 CALL this % VV1( dt )
 
 CALL move_to_box_CM
@@ -162,10 +162,10 @@ implicit none
 integer , optional , intent(inout) :: frame_init
 real*8  , optional , intent(in)    :: Net_Charge(:)
 
-!local variables ...
+! local variables ...
 integer         :: frame , i 
 
-! selectc thermostat ...
+! select thermostat ...
 select case( thermostat )
 
     case( "Berendsen" )
@@ -213,6 +213,8 @@ else
 
     if( present(frame_init) ) frame_init = 1
 
+    CALL output( Ttrans=D_zero, frame=0, dt=D_zero )
+
 endif
 
 call VDOS_init
@@ -226,7 +228,7 @@ subroutine MoveToBoxCM( )
 !========================
 implicit none
 
-!local variables ...
+! local variables ...
 integer :: i 
 
 ! just pass nuclear configuration to QM routines and leave ...

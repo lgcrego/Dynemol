@@ -2,9 +2,10 @@ module F_intra_m
    
     use constants_m
     use parameters_m , only : PBC
-    use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot, harmpot ,   &
-                              vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total , &    
-                              Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih
+    use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
+                              vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
+                              Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
+                              harm_dih, harm_bond, morse_bond
     use MD_read_m    , only : atom , molecule , MM , read_from_gmx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex   , only : SpecialPairs , SpecialMorse
@@ -34,7 +35,7 @@ subroutine FORCEINTRA
 !====================
 implicit none
 
-!local_variables ...
+! local_variables ...
 
 rtwopi = 1.d0/twopi
 
@@ -53,8 +54,10 @@ bdpot      = D_zero
 angpot     = D_zero
 dihpot     = D_zero
 Morspot    = D_zero
-harmpot    = D_zero
+harm_bond  = D_zero
+morse_bond = D_zero
 proper_dih = D_zero
+harm_dih   = D_zero
 ryck_dih   = D_zero
 LJ_14      = D_zero
 LJ_intra   = D_zero
@@ -79,14 +82,15 @@ do i = 1 , MM % N_of_molecules
                 ! harmonic potential ...
                 qterm   = HALF * molecule(i) % kbond0(j,1) * ( rijsq - molecule(i) % kbond0(j,2) ) * ( rijsq - molecule(i) % kbond0(j,2) ) 
                 coephi  = molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )/rijsq
-                harmpot = qterm + harmpot 
+                harm_bond = qterm + harm_bond
 
                 case ( "Mors" )
                 ! Morse potential ...
                 qterm0 = exp( -molecule(i) % kbond0(j,3) * ( rijsq - molecule(i) % kbond0(j,2) ) ) 
                 qterm  = molecule(i) % kbond0(j,1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
                 coephi = TWO * molecule(i) % kbond0(j,1) * molecule(i) % kbond0(j,3) * qterm0 * ( D_ONE - qterm0 ) / rijsq 
-
+                morse_bond = qterm + morse_bond               
+ 
             end select
 
             atom(atj) % fbond(:) = atom(atj) % fbond(:) - coephi*rij(:)
@@ -291,7 +295,7 @@ do i = 1 , MM % N_of_molecules
             end select
             eps   =  atom(ati) % eps * atom(atj) % eps 
 
-            ! Nbond_params directive on ...
+            ! Nbond_parms directive on ...
             read_loop1: do  n = 1, size(SpecialPairs)
                 flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
                         ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
@@ -368,7 +372,7 @@ do i = 1 , MM % N_of_molecules
             end select
             eps   =  atom(ati) % eps * atom(atj) % eps
 
-            ! Nbond_params directive on ...
+            ! Nbond_parms directive on ...
             read_loop: do  n = 1, size(SpecialPairs)
                 flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
                         ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
@@ -492,7 +496,7 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
         
         term  = molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
         pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
-        proper_dih =   proper_dih + pterm
+        proper_dih = proper_dih + pterm
         gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
 
     case ('harm')   ! V = 1/2.k( xi - xi_0 )²
@@ -502,7 +506,8 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
            dtheta = dtheta - Nint( dtheta * 1.d0/TWOPI ) * TWOPI
 
            term  = molecule(i) % kdihed0(j,2) * dtheta 
-           pterm = 0.5d0 * term * dtheta 
+           pterm = 0.5d0 * term * dtheta
+           harm_dih = harm_dih + pterm 
            gamma = term * rsinphi * rijkj * rjkkl
 
     case('cos3')    ! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)  
@@ -537,19 +542,21 @@ end subroutine gmx
 !==================
 implicit none
 
-!local variables ...
+! local variables ...
 
 select case( adjustl(Dihedral_Potential_Type) )
     case ('cos') ! V = k[1 + cos(n.phi - theta)]
         term  = molecule(i) % Nharm * phi - molecule(i) % kdihed0(j,2)
         pterm = molecule(i) % kdihed0(j,1) * ( 1.d0 + cos(term) )
+        proper_dih = proper_dih + pterm
         gamma = - molecule(i) % kdihed0(j,1) * molecule(i) % Nharm * sin(term) * rsinphi * rijkj * rjkkl
           
     case('harm') ! V = 1/2.k(phi - phi0)²
         dphi  = phi - molecule(i) % kdihed0(j,2)
-        dphi  = dphi - NINT(dphi*rtwopi) * rtwopi
+        dphi  = dphi - NINT(dphi*rtwopi) * twopi
         term  = molecule(i) % kdihed0(j,1) * dphi
         pterm = 0.5d0 * term * dphi
+        harm_dih = harm_dih + pterm
         gamma = term * rsinphi * rijkj * rjkkl          
 
     case('hcos') ! V = 1/2.k[cos(phi) - cos(phi0)]²
@@ -571,6 +578,7 @@ select case( adjustl(Dihedral_Potential_Type) )
         C0    = molecule(i) % kdihed0(j,1) ; C1 = molecule(i) % kdihed0(j,2) ; C2 = molecule(i) % kdihed0(j,3) 
         C3    = molecule(i) % kdihed0(j,4) ; C4 = molecule(i) % kdihed0(j,5) ; C5 = molecule(i) % kdihed0(j,6) 
         pterm = C0 - C1 * eme + C2 * eme**2 - C3 * eme**3 + C4 * eme**4 - C5 * eme**5 
+        ryck_dih = ryck_dih + pterm
         gamma = - ( -C1 + 2.d0 * C2 * eme - 3.d0 * C3 * eme**2 + 4.d0 * C4 * eme**3 - 5.d0 * C5 * eme**4 ) * rijkj * rjkkl
 
     case('opls') ! V = A0 + 1/2{A1[1 + cos(phi)] + A2[1 - cos(2.phi)] + A3[1 + cos(3.phi)]}
