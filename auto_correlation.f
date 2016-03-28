@@ -52,11 +52,10 @@ module Auto_Correlation_m
 contains
 
 
-!==================================================================
-subroutine Auto_Correlation_init( system, basis, bra )
-!==================================================================
+!=============================================
+subroutine Auto_Correlation_init( basis, bra )
+!=============================================
 implicit none
-type(structure), intent(in) :: system
 type(STO_basis), intent(in) :: basis(:)
 complex*16,      intent(in) :: bra(:,:)
 
@@ -100,7 +99,7 @@ end if
 !------------------
 ! Calculate auto correlation at t=t_i:
 allocate( AC(n_t, n_part) )
-call Auto_Correlation( system, basis, bra, t_i, 1 )
+call Auto_Correlation( basis, bra, t_i, 1 )
 
 end subroutine Auto_Correlation_init
 !
@@ -129,11 +128,10 @@ end subroutine Auto_Correlation_restart
 !
 !
 !
-!=============================================================
-subroutine Auto_Correlation( system_t, basis_t, ket_t, t, it )
-!=============================================================
+!===================================================
+subroutine Auto_Correlation( basis_t, ket_t, t, it )
+!===================================================
 implicit none
-type(structure), intent(in) :: system_t
 type(STO_basis), intent(in) :: basis_t(:)
 complex*16,      intent(in) :: ket_t(:,:)
 real*8,          intent(in) :: t

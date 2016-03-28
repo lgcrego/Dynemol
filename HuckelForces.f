@@ -201,7 +201,6 @@ integer          , intent(in)    :: site
 
 ! local variables ...
 integer :: k , xyz 
-real*8  :: xb , yb , zb
 real*8  :: delta_b(3) , tmp_coord(3)
 real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force(size(basis),3)
 
