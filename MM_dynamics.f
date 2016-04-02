@@ -1,7 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
-    use parameters_m        , only : driver , restart , step_security , QMMM , n_t
+    use parameters_m        , only : driver , restart , step_security , QMMM , VDOS_ , n_t
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
@@ -45,7 +45,7 @@ integer            , intent(in) :: frame
 real*8  , optional , intent(in) :: Net_Charge(:)
 
 
-call VDOS_Correlation( frame )
+If( VDOS_ ) CALL VDOS_Correlation( frame )
 
 ! selectc thermostat ...
 select case( thermostat )
@@ -68,16 +68,16 @@ select case( thermostat )
 
 end select
 
-
-if ( DRIVER == "MM_Dynamics" ) then
-    if (frame == n_t)  call VDOS_end
-else
-    if (frame == n_t - 1) then  ! in this case, the dyn. loop ends at n_t - 1
-        call VDOS_Correlation( n_t )
-        call VDOS_end
+If ( VDOS_ ) then
+    If ( DRIVER == "MM_Dynamics" ) then
+        if (frame == n_t)  call VDOS_end
+    else
+        if (frame == n_t - 1) then  ! in this case, the dyn. loop ends at n_t - 1
+            call VDOS_Correlation( n_t )
+            call VDOS_end
+        end if
     end if
-end if
-
+end If 
 
 end subroutine MolecularMechanics
 !
@@ -217,7 +217,7 @@ else
 
 endif
 
-call VDOS_init
+If( VDOS_ ) CALL VDOS_init
 
 end subroutine preprocess_MM
 !

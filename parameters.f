@@ -12,9 +12,9 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
-logical                 :: DensityMatrix , AutoCorrelation , Mutate_Cross , QMMM , LCMO , exist
+logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , EHM_Forces
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , EHM_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -31,7 +31,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_ElHl"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -57,7 +57,7 @@ logical :: dynamic
   
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
-  EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
+  EHM_Forces        = T_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
   GaussianCube      = F_                       
   GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
@@ -68,6 +68,7 @@ logical :: dynamic
 
   DensityMatrix     = T_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
+  VDOS_             = F_
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
@@ -78,7 +79,7 @@ logical :: dynamic
 !
   DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
 
-  Coulomb_     =  T_                          ! <== use dipole potential for solvent molecules
+  Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
   Induced_     =  F_                          ! <== use induced dipole potential 
 !--------------------------------------------------------------------
@@ -90,7 +91,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                              
   t_f  =  0.4d0                               ! <== final time in PICOseconds
-  n_t  =  20000                               ! <== number of time steps
+  n_t  =  40000                               ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 

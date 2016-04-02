@@ -204,11 +204,11 @@ do ia = ib+1 , a_system% atoms
                 a = a-(a_basis(a)%copy_No)*size(b_basis)
 
                 If( S_matrix(a,b) /= D_zero ) cycle
-                 
+               
                 do k = ija(a) , ija(a+1)-1
                     if( ija(k) == b ) S_matrix(a,b) = S_pack(k)
                 end do
-
+                
             enddo
             enddo
 
@@ -396,10 +396,11 @@ n = size( S_matrix(:,1) )
 nmax = (n*(n + 1))/2 + 1
 
 If( NOT_been_here ) then
-    allocate( tmp_ij(nmax) )
-    allocate( tmp_S (nmax) )
+    allocate( tmp_ij(nmax) , ija   (nmax) )
+    allocate( tmp_S (nmax) , S_pack(nmax) )
 end if
-tmp_S = D_zero 
+tmp_ij = I_Zero
+tmp_S  = D_zero 
 
 do j = 1 , n
     tmp_S(j) = S_matrix(j,j)
@@ -424,12 +425,10 @@ end do
 length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of S_pack and ija
 nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
 
-If( NOT_been_here ) then
-    allocate( S_pack(length) )
-    allocate( ija   (length) ) 
-end If
-S_pack = tmp_S  
-ija    = tmp_ij  
+! prepare S_pack and ija for new data ...
+deallocate( S_pack , ija )
+allocate( S_pack(length) , source = tmp_S  )
+allocate( ija   (length) , source = tmp_ij ) 
 
 NOT_been_here = .false.
 
