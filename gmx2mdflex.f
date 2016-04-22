@@ -6,6 +6,7 @@ use for_force
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
+use Babel_routines_m       , only : TO_UPPER_CASE
 
 private
  
@@ -105,11 +106,15 @@ do a = 1 , MM % N_of_species
         end do read_loop1
         backspace(33)
  
+
         ! DANDO ERRO NO COMENTÁRIO ABAIXO
         !If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
         !stop "residue size of this species differs from atom%residue; check tuning.f"
 
         N_of_atoms = species(a) % N_of_atoms
+
+        ! convert residues to upper case ...
+        forall( i=1:N_of_atoms ) species(a)% atom(i)% residue = TO_UPPER_CASE( species(a)% atom(i)% residue )
 
         i = 1
         do
