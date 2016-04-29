@@ -447,11 +447,11 @@ integer         , intent(in) :: it
 
 ! local variables ...
 integer    :: nf , n
-complex*16 :: wp_energy
+complex*16 :: wp_energy(n_part)
 
 do n = 1 , n_part
 
-    wp_energy = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+    wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
 
     If( it == 1 ) then
 
@@ -459,7 +459,7 @@ do n = 1 , n_part
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
-        write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+        write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
 
     else
 
@@ -472,12 +472,15 @@ do n = 1 , n_part
     write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
 
     ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+    write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
 
     close(52)
     close(53)
 
 end do
+
+! QM_erg = E_occ - E_empty ...
+Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
 12 FORMAT(10A10)
 13 FORMAT(F11.6,9F10.5)

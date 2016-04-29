@@ -134,7 +134,7 @@ if( mod(frame,MM_log_step) == 0   ) then
         write(*,10) frame, Temperature, density, pressure, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
 
         write(13,'(I7,3F15.5)') frame, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
-        write(16,'(I7,2F15.5)') frame , Unit_Cell% QM_erg , (pot_total)*kJmol_2_eV + Unit_Cell% QM_erg 
+        write(16,'(I7,2F15.5)') frame , Unit_Cell% QM_erg , (Kinetic+pot_total)*kJmol_2_eV + Unit_Cell% QM_erg 
 
         case default
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total

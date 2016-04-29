@@ -361,7 +361,6 @@ character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
-real*8                          :: fudgeLJ , fudgeQQ
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NMorseParms
 character(3)                    :: dummy_char
@@ -389,7 +388,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     i=1
     read_loop: do
-        read(33,*,iostat=ioerr) dummy_char, MM % CombinationRule, dummy_char, fudgeLJ, fudgeQQ 
+        read(33,*,iostat=ioerr) dummy_char, MM% CombinationRule, dummy_char, MM% fudgeLJ, MM% fudgeQQ 
         if ( index( dummy_char, ";") /= 0 ) cycle read_loop
         if( ioerr /= 0 ) exit
         i = i + 1

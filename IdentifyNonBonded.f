@@ -25,14 +25,15 @@ integer             , intent(in)    :: a
 integer         , allocatable   :: InputIntegers(:,:) , vector_of_pairs(:,:)
 integer                         :: i , j , k , m , n , idx
 logical                         :: flagB1, flagB2, flagA1, flagA2, flagD1, flagD2, flagB11, flagB12, flagB21, flagB22
-logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222
-logical         , allocatable   :: InputRef(:,:)
+logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222 , flag1, flag2
+logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
 !==============================================================================================
 
  If( species(a) % N_of_atoms <= 3 ) return
 
  allocate( InputRef      ( 5*species(a) % N_of_Atoms , 5*species(a) % N_of_Atoms ) , source = .true. )
+ allocate( Input14       ( 5*species(a) % N_of_Atoms , 5*species(a) % N_of_Atoms ) , source = .false. )
  allocate( InputIntegers ( 5*species(a) % N_of_Atoms , 5*species(a) % N_of_Atoms ) , source = I_zero )
 
  ! Intramolecular LJ list generation ... 
@@ -68,10 +69,12 @@ logical         , allocatable   :: InputRef(:,:)
                       if ( flagB111 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,2)
                          InputRef(i,species(a)%bonds(m,2)) = .false.
+                         Input14(i,species(a)%bonds(m,2))  = .true.
                          idx = idx + 1
                       elseif ( flagB112 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,1)
                          InputRef(i,species(a)%bonds(m,1)) = .false.
+                         Input14(i,species(a)%bonds(m,1))  = .true.
                          idx = idx + 1
                       end if
                    end do
@@ -89,10 +92,12 @@ logical         , allocatable   :: InputRef(:,:)
                       if ( flagB121 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,2)
                          InputRef(i,species(a)%bonds(m,2)) = .false.
+                         Input14(i,species(a)%bonds(m,2))  = .true.
                          idx = idx + 1
                       elseif ( flagB122 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,1)
                          InputRef(i,species(a)%bonds(m,1)) = .false.
+                         Input14(i,species(a)%bonds(m,1))  = .true.
                          idx = idx + 1
 
                    end if
@@ -124,10 +129,12 @@ logical         , allocatable   :: InputRef(:,:)
                       if ( flagB211 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,2)
                          InputRef(i,species(a)%bonds(m,2)) = .false.
+                         Input14(i,species(a)%bonds(m,2))  = .true.
                          idx = idx + 1
                       elseif ( flagB212 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,1)
                          InputRef(i,species(a)%bonds(m,1)) = .false.
+                         Input14(i,species(a)%bonds(m,1))  = .true.
                          idx = idx + 1
                       end if
                    end do
@@ -145,10 +152,12 @@ logical         , allocatable   :: InputRef(:,:)
                       if ( flagB221 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,2)
                          InputRef(i,species(a)%bonds(m,2)) = .false.
+                         Input14(i,species(a)%bonds(m,2))  = .true.
                          idx = idx + 1
                       elseif ( flagB222 ) then
                          InputIntegers(i,idx) = species(a) % bonds(m,1)
                          InputRef(i,species(a)%bonds(m,1)) = .false.
+                         Input14(i,species(a)%bonds(m,1))  = .true.
                          idx = idx + 1
                       end if
                    end do
@@ -184,10 +193,12 @@ logical         , allocatable   :: InputRef(:,:)
          if ( flagD1 ) then
              InputIntegers(i,idx) = species(a) % diheds(k,4)
              InputRef(i,species(a)%diheds(k,4)) = .false.
+             Input14(i,species(a)%diheds(k,4))  = .true.
              idx = idx + 1
          elseif ( flagD2 ) then
              InputIntegers(i,idx) = species(a) % diheds(k,1)
              InputRef(i,species(a)%diheds(k,1)) = .false.
+             Input14(i,species(a)%diheds(k,1))  = .true.
              idx = idx + 1
          end if
 
@@ -232,7 +243,41 @@ logical         , allocatable   :: InputRef(:,:)
      species(a) % IntraLJ(i,2) = vector_of_pairs(i,2)
  end do
 
- deallocate( InputRef , vector_of_pairs )
+
+! 1--4 Interactions: only if [ pairs ] is not read in the .itp file ...
+if ( .NOT. allocated (species(a) % bonds14) ) then 
+
+ ! Eliminating bonding terms in 1--4 interactions ...
+ do i = 1 , species(a) % N_of_atoms
+   do j = 1 , species(a) % N_of_atoms 
+     do k = 1 , species(a) % Nbonds
+       flag1 = ( species(a) % bonds(k,1) == i ) .and. ( species(a) % bonds(k,2) == j )
+       flag2 = ( species(a) % bonds(k,1) == j ) .and. ( species(a) % bonds(k,2) == i )   
+       if( ( flag1 ) .or. ( flag2 ) ) Input14(i,j) = .false.
+     end do
+   end do
+ end do
+
+ ! Preparing 1--4 interactions ...
+ species(a) % Nbonds14 = ( size( pack( Input14(:,:), Input14(:,:) .eqv. .true. ) ) ) / 2
+ allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
+
+ ! Associating 1--4 interactions to species ...
+ k = 1
+ do i = 1 , species(a) % N_of_atoms
+   do j = i , species(a) % N_of_atoms 
+     if( Input14(i,j) .eqv. .true. ) then
+        species(a) % bonds14(k,1) = i
+        species(a) % bonds14(k,2) = j
+        k = k + 1
+     end if
+   end do
+ end do
+
+end if
+
+
+ deallocate( InputRef , Input14 , vector_of_pairs )
 
 !==============================================================================================
 
