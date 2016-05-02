@@ -155,8 +155,8 @@ use util_m , factorial => fact
 implicit none
 type(structure)            , intent(in)     :: b_system
 type(STO_basis)            , intent(in)     :: b_basis(:)
-type(structure) , optional , intent(in)     :: a_system
-type(STO_basis) , optional , intent(in)     :: a_basis(:)
+type(structure)            , intent(in)     :: a_system
+type(STO_basis)            , intent(in)     :: a_basis(:)
 real*8                     , intent(inout)  :: S_matrix(:,:)
 logical         , optional , intent(in)     :: recycle
 

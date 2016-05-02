@@ -266,7 +266,7 @@ do i = 1 , MM % N_of_molecules
         end if
     end do
 end do
- 
+
 !====================================================================
 ! Non-bonded 1,4 intramolecular interactions ...
 do i = 1 , MM % N_of_molecules

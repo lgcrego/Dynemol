@@ -161,8 +161,6 @@ do k = 1 , MM % N_of_atoms - 1
                         atk = atom(k) % my_intra_id + species_offset(atom(k) % my_species)
                         atl = atom(l) % my_intra_id + species_offset(atom(l) % my_species)
                        
-                        rklsq = SQRT(rklq)
-
                     select case ( MM % CombinationRule )
 
                         case (2) 
@@ -195,6 +193,8 @@ do k = 1 , MM % N_of_atoms - 1
                     sr6  = sr2 * sr2 * sr2
                     sr12 = sr6 * sr6
                     
+                    rklsq   = SQRT(rklq)
+
                     ! factor3 is used here in the force calculation because fscut was multiplied by it in md_setup ...
                     fs   = 24.d0 * ( eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
                     fs   = fs / rklq - fscut(atk,atl) / rklsq
