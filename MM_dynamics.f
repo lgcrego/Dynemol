@@ -115,9 +115,14 @@ CALL ForceIntra
 ! QMMM coupling ...
 if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 
-CALL this % VV2( dt )
+CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
+
+! total energy in eV; for classical dynamics Unit_Cell%QM_erg = 0  ...
+Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV
+Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV
+Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 
 
 if( mod(frame,MM_log_step) == 0   ) then 
 
@@ -131,10 +136,10 @@ if( mod(frame,MM_log_step) == 0   ) then
     select case (Units_MM)
 
         case( "eV" )    
-        write(*,10) frame, Temperature, density, pressure, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
+        write(*,10) frame, Temperature, density, pressure, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
 
-        write(13,'(I7,3F15.5)') frame, Kinetic*kJmol_2_eV, pot_total*kJmol_2_eV, (Kinetic+pot_total)*kJmol_2_eV
-        write(16,'(I7,2F15.5)') frame , Unit_Cell% QM_erg , (Kinetic+pot_total)*kJmol_2_eV + Unit_Cell% QM_erg 
+        write(13,'(I7,3F15.5)') frame, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
+        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
 
         case default
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total

@@ -99,6 +99,12 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
 
+    ! calculate for use in MM ...
+    If( QMMM ) then 
+        Net_Charge_MM = Net_Charge
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+    end If
+
     t = t + t_rate 
 
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
@@ -118,9 +124,6 @@ do frame = frame_init , frame_final , frame_step
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 
-    ! save for use in MM ...
-    If( QMMM ) Net_Charge_MM = Net_Charge
-
     ! save populations(t + t_rate)  and  update Net_Charge ...
     If( nn == 1) then
         QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
@@ -133,8 +136,6 @@ do frame = frame_init , frame_final , frame_step
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
-
-    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -160,8 +161,8 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
-
-            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
+            ! MM precedes QM ; notice calling with frame -1 ...
+            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
         case default
 

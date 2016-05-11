@@ -13,7 +13,10 @@ module QMMM_m
 
     ! module parameters ...
     real*8  :: D_2_eAngs = 0.20819434d0
-    real*8  :: cutoff    = 4.0d0
+    real*8  :: beta_QQ   = 1.0
+    real*8  :: mu_QQ     = 6.0
+    real*8  :: beta_QP   = 0.8
+    real*8  :: mu_QP     = 10.0
 
     ! module variables ...
     real*8 , allocatable :: dq(:)
@@ -38,53 +41,11 @@ dq = NetCharge
 forall( i=1:size(atom) ) atom(i) % fcoupling(:) = D_zero
 U_Coul = D_zero
 
-! INTRA molecular ...
-!================================================================================================
-do i = 1 , MM% N_of_molecules
-
-    ! (1,4)-BONDS ...
-    do j = 1 , molecule(i)%  Nbonds14
-
-        ati = molecule(i)% bonds14(j,1)
-        atj = molecule(i)% bonds14(j,2)
-        if( atom(atj)% flex .OR. atom(ati)% flex ) then
-
-            FourVector(1:4) = CoulFourVector( ati , atj ) * MM% fudgeQQ
-
-            atom(ati)% fcoupling(1:3) = atom(ati)% fcoupling(1:3) + FourVector(1:3)
-            atom(atj)% fcoupling(1:3) = atom(atj)% fcoupling(1:3) - FourVector(1:3)
-
-            U_Coul = U_Coul + FourVector(4)
-
-        end if
-    end do
-
-    ! (1,5..)-BONDS ...
-    do j = 1 , molecule(i)%  NintraLJ
-
-        ati = molecule(i)% IntraLJ(j,1)
-        atj = molecule(i)% IntraLJ(j,2)
-        if( atom(atj)% flex .OR. atom(ati)% flex ) then
-
-            FourVector(1:4) = CoulFourVector( ati , atj )
-
-            atom(ati)% fcoupling(1:3) = atom(ati)% fcoupling(1:3) + FourVector(1:3)
-            atom(atj)% fcoupling(1:3) = atom(atj)% fcoupling(1:3) - FourVector(1:3)
-
-            U_Coul = U_Coul + FourVector(4)
-
-        end if
-    end do
-
-end do
-
-! INTER-molecular ...
 !================================================================================================
 do ati = 1 , MM % N_of_atoms 
     do atj = ati+1 , MM % N_of_atoms
 
-       ! do it for different molecules ...
-        if ( atom(ati) % nr /= atom(atj) % nr ) then
+            if( atom(atj)% flex .OR. atom(ati)% flex ) then
         
             FourVector(1:4) = CoulFourVector( ati , atj )
 
@@ -107,9 +68,9 @@ end subroutine QMMM_FORCE
 !
 !
 !
-!====================================================
- function CoulFourVector( i , j ) result(FourVector)
-!====================================================
+!=========================================================
+ pure  function CoulFourVector( i , j ) result(FourVector)
+!=========================================================
 implicit none
 integer , intent(in) :: i
 integer , intent(in) :: j
@@ -118,6 +79,7 @@ integer , intent(in) :: j
 real*8  , dimension (4) :: FourVector
 real*8  , dimension (3) :: rij , a , QiPj , QjPi , F_QQ , F_QP
 real*8                  :: rijq , rijsq , Q_i, Q_j , QQ_ij , U_QQ , U_QP
+real*8                  :: g , step , barrier
 
 rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
 rij(:) = rij(:) - MM % box(:) * DINT( rij(:) * MM % ibox(:) )
@@ -129,10 +91,10 @@ rijsq  = sqrt( rijq )
 QQ_ij = dq(i)*dq(j) + atom(i)%charge*dq(j) + atom(j)%charge*dq(i)
 
 ! force ...
-F_QQ = coulomb * QQ_ij * rij(1:3) / (rijq * rijsq) 
+F_QQ = QQ_ij * rij(1:3) / (rijq * rijsq) 
 
 ! energy ...
-U_QQ = coulomb * QQ_ij / rijsq  
+U_QQ = QQ_ij / rijsq
 !================================================================================================
 
 ! charge/induced-dipole interaction ...
@@ -150,15 +112,35 @@ a(1:3) = dot_product(Induced_DP(i,1:3),rij(1:3)) * rij(1:3)
 QjPi(1:3) = Q_j * (THREE * a(1:3) * ( D_ONE / rijq ) - Induced_DP(i,1:3) )
 
 ! force ...
-F_QP = coulomb * D_2_eAngs * (QiPj - QjPi) / (rijq * rijsq)  
+F_QP = (QiPj - QjPi) / (rijq * rijsq)  
 
 ! energy ...
 a(:) = Q_i*Induced_DP(j,:) - Q_j*Induced_DP(i,:)
-U_QP = coulomb * D_2_eAngs * dot_product( a(:) , rij(:) ) / ( rijq * rijsq ) 
+U_QP = dot_product( a(:) , rij(:) ) / ( rijq * rijsq ) 
 !================================================================================================
 
-FourVector(1:3) = F_QQ + F_QP
-FourVector(4)   = U_QQ + U_QP
+
+! applying smooth cutoffs ...
+!================================================================================================
+! charge-charge ...
+g       = exp(beta_QQ*(rijsq - mu_QQ))
+step    = g / (g + D_one)
+barrier = beta_QQ*step - beta_QQ*step*step  
+
+U_QQ = U_QQ * step  
+F_QQ = F_QQ * step - U_QQ * barrier * rij(1:3)/rijsq 
+
+! charge-dipole ...
+g       = exp(beta_QP*(rijsq - mu_QP))
+step    = g / (g + D_one)
+barrier = beta_QP*step - beta_QP*step*step  
+
+U_QP = U_QP * step  
+F_QP = F_QP * step - U_QP * barrier * rij(1:3)/rijsq 
+!================================================================================================
+
+FourVector(1:3) = Coulomb*F_QQ + Coulomb*D_2_eAngs*F_QP
+FourVector(4)   = Coulomb*U_QQ + Coulomb*D_2_eAngs*U_QP
 
 end function CoulFourVector
 !

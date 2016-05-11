@@ -120,6 +120,12 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
 
+    ! calculate for use in MM ...
+    If( QMMM ) then 
+        Net_Charge_MM = Net_Charge
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI_el , UNI_hl )
+    end If
+
     t = t + t_rate 
 
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
@@ -144,8 +150,6 @@ do frame = frame_init , frame_final , frame_step
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_bra(:,2) , mm , C_zero , DUAL_bra(:,2) , mm )
     CALL DZgemm( 'N' , 'N' , mm , 1 , mm , C_one , UNI_hl%R , mm , MO_ket(:,2) , mm , C_zero , DUAL_ket(:,2) , mm )
 
-    If( QMMM ) Net_Charge_MM = Net_Charge
-
     ! save populations(t + t_rate)  and  update Net_Charge ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
@@ -154,8 +158,6 @@ do frame = frame_init , frame_final , frame_step
     If( GaussianCube .AND. mod(frame,GaussianCube_step) == 0 ) CALL  Send_to_GaussianCube( frame , t )
 
     If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
-
-    If( QMMM ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI_el , UNI_hl )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -182,7 +184,8 @@ do frame = frame_init , frame_final , frame_step
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )
 
-            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )    ! <== MM precedes QM ...
+            ! MM precedes QM ; notice calling with frame -1 ...
+            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
         case default
 
@@ -469,19 +472,11 @@ integer         , intent(in) :: it
 
 ! local variables ...
 integer     :: nf , n
-complex*16  :: wp_energy
+complex*16  :: wp_energy(n_part)
 
 do n = 1 , n_part
 
-    select case( n_part )
-     
-        case( 1 ) 
-        wp_energy = sum(MO_bra(:,n)*UNI_el%erg(:)*MO_ket(:,n))
-
-        case( 2 ) 
-        wp_energy = sum(MO_bra(:,n)*UNI_hl%erg(:)*MO_ket(:,n))
-
-    end select
+    wp_energy(n) = sum(MO_bra(:,n)*UNI_el%erg(:)*MO_ket(:,n))
 
     If( it == 1 ) then
 
@@ -489,7 +484,7 @@ do n = 1 , n_part
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
-        write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+        write(53,14) QDyn%dyn(it,0,n) , real(wp_energy(n)) , dimag(wp_energy(n))
 
     else
 
@@ -502,12 +497,15 @@ do n = 1 , n_part
     write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
 
     ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy(n)) , dimag(wp_energy(n))
 
     close(52)
     close(53)
 
 end do
+
+! QM_erg = E_occ - E_empty ...
+Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
 12 FORMAT(15A10)
 13 FORMAT(F11.6,14F10.5)

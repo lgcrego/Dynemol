@@ -187,6 +187,7 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
      ! Looking for 'explicit' dihedrals (just in case) ...
      do k = 1 , species(a) % Ndiheds
+       if( species(a) %funct_dihed(k) == 3 ) then
          flagD1 = ( species(a) % atom(i) % my_id == species(a) % diheds(k,1) )
          flagD2 = ( species(a) % atom(i) % my_id == species(a) % diheds(k,4) )
 
@@ -201,7 +202,7 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
              Input14(i,species(a)%diheds(k,1))  = .true.
              idx = idx + 1
          end if
-
+       end if
      end do
 
      ! Eliminating repeated indexes ... 
@@ -260,6 +261,7 @@ if ( .NOT. allocated (species(a) % bonds14) ) then
 
  ! Preparing 1--4 interactions ...
  species(a) % Nbonds14 = ( size( pack( Input14(:,:), Input14(:,:) .eqv. .true. ) ) ) / 2
+ 
  allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
 
  ! Associating 1--4 interactions to species ...
