@@ -74,9 +74,9 @@ SOURCE2 = constants_m.o \
 		  EHT_input.o \
 		  tuning.o \
           IdentifyNonBonded.o \
-		  gmx2mdflex.o \
 		  babel_routines.o \
 		  babel.o \
+		  gmx2mdflex.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
