@@ -99,6 +99,7 @@ real*8  :: Force_AD , Force_NAD , rho_nm
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
 real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
+real*8                :: X_ij
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
@@ -143,16 +144,20 @@ do xyz = 1 , 3
 
        ! non-adiabatic component of the Force ...
        !==============================================================================================
-       !$omp parallel do schedule(dynamic,10) private(n,m,rho_nm,ik,i,j) default(shared) reduction(+:Force_NAD)
+       !$omp parallel do schedule(dynamic,10) private(n,m,rho_nm,ik,i,j,X_ij) default(shared) reduction(+:Force_NAD)
        do n = 1   , size(basis)
        do m = n+1 , size(basis)
-         rho_nm = two * ( real(MO_bra(m,1)*MO_ket(n,1)) - real(MO_bra(m,2)*MO_ket(n,2)) )
+
+         rho_nm = real(MO_bra(m,1)*MO_ket(n,1)) - real(MO_bra(m,2)*MO_ket(n,2)) 
 
          do ik = 1 , DOS_atom_k
             i = BasisPointer_k + ik
             do j = 1 , size(basis)
 
-                Force_NAD = Force_NAD - rho_nm * ( QM%erg(n)*QM%L(m,j)*QM%L(n,i) + QM%erg(m)*QM%L(m,i)*QM%L(n,j) ) * grad_S(i,j) 
+                X_ij = Huckel_stuff(i,j,basis) 
+
+                Force_NAD = Force_NAD - rho_nm * grad_S(j,i)                                                &
+                          * ((X_ij-QM%erg(m))*QM%L(m,j)*QM%L(n,i) + (X_ij-QM%erg(n))*QM%L(m,i)*QM%L(n,j))
 
             end do
          end do
@@ -162,7 +167,7 @@ do xyz = 1 , 3
        !$end parallel do
        !==============================================================================================
 
-       Force(xyz) = two*Force_AD + Force_NAD
+       Force(xyz) = two * (Force_AD + Force_NAD)
 
 end do 
 
