@@ -42,6 +42,7 @@ contains
 !===================================
  function constructor() result( me )
 !===================================
+use setup_m, only : setup
 implicit none
 type(MM_OPT) :: me 
 
@@ -56,6 +57,9 @@ me % accuracy    = mid_prec
 me % driver      = driver_MM
 
 If( driver_MM == "Parametrize" ) me % profiling = .false.
+
+! setup cutoff parameters for LJ and Coulomb interactions ...
+CALL setup
 
 ! number of degrees of freedom allowed to relax ...
 N_of_free = count( atom % flex )
