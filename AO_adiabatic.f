@@ -100,10 +100,8 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 do frame = frame_init , frame_final , frame_step
 
     ! calculate for use in MM ...
-    If( QMMM ) then 
-        Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
-    end If
+    If( QMMM ) Net_Charge_MM = Net_Charge
+    CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
     t = t + t_rate 
 
@@ -313,6 +311,8 @@ do n = 1 , n_part
         end select
 end do
 
+UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO
+
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
@@ -479,9 +479,6 @@ do n = 1 , n_part
     close(53)
 
 end do
-
-! QM_erg = E_occ - E_empty ...
-Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
 12 FORMAT(10A10)
 13 FORMAT(F11.6,9F10.5)
