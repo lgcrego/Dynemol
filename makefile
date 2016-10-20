@@ -17,8 +17,8 @@ CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict
 # MKLROOT  = If MKLROOT is not defined in your environment, edit and uncomment this line
 LIB_BLAS   = -lmkl_blas95_lp64
 LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
-LIB_OMP    = -liomp5 -lmatmul -lpthread
-INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64
+LIB_OMP    = -liomp5 -lpthread
+INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 
 # Uncomment the lines below when compiling for GPUs
 # GPU_DEFS options:
@@ -36,10 +36,10 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64
 #
 # CUDA and MAGMA paths:
 #CUDADIR   = /usr/local/cuda
-#MAGMADIR  = /opt/magma
+#MAGMADIR  = /opt/magma-2.1.0
 #
 # CUDA and MAGMA libs:
-#LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcudart
+#LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcusparse -lcudart
 #LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
 #
 #LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++

@@ -15,7 +15,7 @@
   #include <cuda_runtime_api.h>
   #include "cublas_v2.h"
   #include "magma.h"
-  #include "magma_dbulge.h"
+  #include "magma_bulge.h"
 #else
   #warning "Compiling only for CPU"
 #endif
@@ -206,6 +206,9 @@ int myGPU = -1;  // none
 cublasHandle_t myHandle;
 cudaStream_t cublas_default;
 
+// MAGMA queue
+magma_queue_t magma_default_queue;
+
 // streams
 const int nStreams = 3;
 cudaStream_t stream[nStreams];
@@ -243,6 +246,9 @@ void GPU_Init(const int *pid, const int *procs_per_dev)
         cublasCreate( &myHandle );
         cublasSetAtomicsMode( myHandle, CUBLAS_ATOMICS_ALLOWED );   // Enables faster *symm (see cublas manual)
         cublasGetStream( myHandle, &cublas_default );
+        
+        magma_queue_create_v2( myGPU, &magma_default_queue );
+//         magma_queue_create_from_cuda( myGPU, cublas_default, myHandle, NULL, &magma_default_queue );
 
         for(int i=0; i<nStreams; ++i)
             cudaStreamCreate( &stream[i] );
@@ -265,8 +271,11 @@ void GPU_Finalize(void)
 #ifdef USE_GPU
     if(IuseGPU)
     {
+        magma_queue_destroy( magma_default_queue );
         for(int i=0; i<nStreams; ++i)
+        {
             cudaStreamDestroy( stream[i] );
+        }
         cublasDestroy( myHandle );
         magma_finalize();
     }
@@ -745,12 +754,13 @@ static inline void gpu_dsygvd_2s( const int *itype, const char *jobZ, const char
                                   double *A, const int *ldA, double *B, const int *ldB, double *W, int *info )
 {
 #ifdef USE_GPU
-    const int n = *N;
-    const int lq2 = magma_dbulge_get_lq2( n, magma_get_parallel_numthreads() );
-    const int liwork = 3 + 5*n;
-    const int lwork  = 1 + 6*n + 2*n*n + lq2;
     const magma_vec_t  vec  = lapack_to_magma_jobZ( *jobZ );
     const magma_uplo_t uplo = lapack_to_magma_uplo( *UpLo );
+    const int wantz = (vec == MagmaVec);
+    const int n = *N;
+    const int lq2 = magma_get_dbulge_lq2( n, magma_get_parallel_numthreads(), wantz );
+    const int liwork = 3 + 5*n;
+    const int lwork  = 1 + 6*n + 2*n*n + lq2;
     int nZ;
     int *iwork;
     double *work;
@@ -876,7 +886,7 @@ static inline void gpu_syInvert( const char *UpLo, double *hA, const int * const
     int *ipiv = (int*) malloc( n*sizeof(int) );
     double *dA, *dwork;
 
-    magmablasSetKernelStream( cublas_default );
+    magmablasSetKernelStream( magma_default_queue );
 
     magma_dmalloc( &dA, n*lddA );
     magma_dmalloc( &dwork, lwork );
@@ -906,7 +916,7 @@ void gpu_dgeInvert( double *dA, const int n, const int lddA, cudaStream_t stream
     int *ipiv = (int*) malloc( n*sizeof(int) );
     double *dwork;
 
-    magmablasSetKernelStream( cublas_default );  // doesn't work in non-default stream!
+    magmablasSetKernelStream( magma_default_queue );  // doesn't work in non-default stream!
 
     magma_dmalloc( &dwork, lwork );
 
