@@ -49,6 +49,7 @@ contains
  pbc_cell % k_WH               (1:cell%atoms)      =  cell % k_WH
  pbc_cell % solvation_hardcore (1:cell%atoms)      =  cell % solvation_hardcore
  pbc_cell % hardcore           (1:cell%atoms)      =  cell % hardcore
+ pbc_cell % V_shift            (1:cell%atoms)      =  cell % V_shift 
  pbc_cell % polar              (1:cell%atoms)      =  cell % polar
  pbc_cell % solute             (1:cell%atoms)      =  cell % solute
  pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
@@ -88,6 +89,7 @@ contains
             pbc_cell % k_WH               (k)   =  cell % k_WH               (n)
             pbc_cell % solvation_hardcore (k)   =  cell % solvation_hardcore (n)
             pbc_cell % hardcore           (k)   =  cell % hardcore           (n)
+            pbc_cell % V_shift            (k)   =  cell % V_shift            (n)
             pbc_cell % polar              (k)   =  cell % polar              (n)
             pbc_cell % solute             (k)   =  cell % solute             (n) 
             pbc_cell % DPF                (k)   =  cell % DPF                (n) 
@@ -208,6 +210,7 @@ end subroutine Generate_Periodic_DPs
  pbc_cell % k_WH               (1:cell%atoms)      =  cell % k_WH
  pbc_cell % solvation_hardcore (1:cell%atoms)      =  cell % solvation_hardcore
  pbc_cell % hardcore           (1:cell%atoms)      =  cell % hardcore
+ pbc_cell % V_shift            (1:cell%atoms)      =  cell % V_shift 
  pbc_cell % polar              (1:cell%atoms)      =  cell % polar
  pbc_cell % solute             (1:cell%atoms)      =  cell % solute
  pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
@@ -247,6 +250,7 @@ end subroutine Generate_Periodic_DPs
             pbc_cell % k_WH               (k)   =  cell % k_WH               (n)
             pbc_cell % solvation_hardcore (k)   =  cell % solvation_hardcore (n)
             pbc_cell % hardcore           (k)   =  cell % hardcore           (n)
+            pbc_cell % V_shift            (k)   =  cell % V_shift            (n)
             pbc_cell % polar              (k)   =  cell % polar              (n)
             pbc_cell % solute             (k)   =  cell % solute             (n) 
             pbc_cell % DPF                (k)   =  cell % DPF                (n) 

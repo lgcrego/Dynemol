@@ -75,7 +75,7 @@ else
     do j = 1 , size(basis)
         do i = j, size(basis)
 
-            h(i,j) = huckel(i,j,S_matrix(i,j),basis)
+            h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
 
         end do
     end do
@@ -152,24 +152,26 @@ end subroutine EigenSystem
 
 ! local variables ... 
  real*8  :: Huckel
- real*8  :: k_eff , k_WH , c1 , c2 , c3
+ real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
  
  if (i == j) then
-    huckel = basis(i)%IP
+    huckel = basis(i)%IP + basis(i)%V_shift
  else
     c1 = basis(i)%IP - basis(j)%IP
     c2 = basis(i)%IP + basis(j)%IP
 
     c3 = (c1/c2)*(c1/c2)
 
+    c4 = (basis(i)%V_shift + basis(j)%V_shift)*HALF
+
     k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
     k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-    huckel = k_eff * S_ij * c2 / two
+    huckel = k_eff*S_ij*c2/two + c4*S_ij
  endif
 
  end function Huckel

@@ -743,6 +743,7 @@ a % atom % mass               = 0.d0
 a % atom % charge             = 0.d0
 a % atom % solvation_hardcore = 2.5d0
 a % atom % hardcore           = 2.5d0
+a % atom % V_shift            = 0.d0   
 a % atom % AtNo               = 0
 a % atom % nr                 = 0
 a % atom % residue            = "XXX"
@@ -777,6 +778,7 @@ end forall
 
 a % solvation_hardcore        = 2.5d0
 a % hardcore                  = 2.5d0
+a % V_shift                   = 0.0d0
 a % AtNo                      = 0
 a % nr                        = 1
 a % residue                   = "XXX"

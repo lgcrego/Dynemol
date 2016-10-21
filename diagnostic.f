@@ -70,8 +70,6 @@ end do
 
 !.........................................................
 
-! Quantum Dynamics ...
-
  CALL Generate_Structure(1)
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )

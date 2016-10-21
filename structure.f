@@ -48,7 +48,7 @@ select case( file_type )
             case( "xyz" )
                 CALL Read_from_XYZ      ( Unit_Cell ) 
             case( "pdb" )
-                CALL Read_from_PDB      ( Unit_Cell )
+                CALL Read_from_PDB      ( Unit_Cell ) 
             case( "vasp" )
                 CALL Read_from_POSCAR   ( Unit_Cell )
             case default
@@ -95,7 +95,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! GENERATES   THE   EXTENDED-STRUCTURE (REAL,not periodic)
 !----------------------------------------------------------
 
- If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , extended_cell )
+ If( .NOT. allocated(Extended_Cell%coord) ) CALL Allocate_Structures( (2*nnx+1)*(2*nny+1)*unit_cell%atoms , Extended_cell )
 
  k      =  0
  copy   =  0
@@ -129,6 +129,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             extended_cell % Hl                 (k+n)   =  unit_cell % Hl       (n)
             extended_cell % hardcore           (k+n)   =  unit_cell % hardcore (n)
             extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
+            extended_cell % V_shift            (k+n)   =  unit_cell % V_shift            (n)
             extended_cell % copy_No  (k+n)             =  copy
         
         END FORALL
@@ -158,6 +159,7 @@ integer :: copy , nr_sum , ix , iy , k , n
     extended_cell % Hl                 (k+n)      =  unit_cell % Hl       (n)
     extended_cell % hardcore           (k+n)      =  unit_cell % hardcore (n)
     extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
+    extended_cell % V_shift            (k+n)      =  unit_cell % V_shift            (n)
     extended_cell % copy_No  (k+n)                =  0
 
  END FORALL
@@ -241,6 +243,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             basis(k) % Hl                  =  system % Hl       (i)
             basis(k) % hardcore            =  system % hardcore (i)
             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
+            basis(k) % V_shift             =  system % V_shift  (i)
 
             basis(k) % n        =  atom(AtNo) % Nquant(l)
             basis(k) % l        =  l
