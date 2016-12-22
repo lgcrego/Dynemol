@@ -36,26 +36,34 @@ type(universe) , intent(inout) :: univ
 !      define %residue
 !-----------------------------------
 
+univ % atom(35:36) % residue = "CCC"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
+
+univ % atom (35:36) % nr = 2
 
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
 !------------------------------------
 
+!---------------------------------------------------
+!      define %QMMM  
+!      default is QMMM = QM  
+!      set QMMM = MM for classical atoms ... 
+!---------------------------------------------------
+!where(univ % atom % residue == "CCC") univ % atom % QMMM = "MM"
 
 !-----------------------------------
 !      define %El   : mandatory !!
 !-----------------------------------
-!where(univ % atom % residue == "BZN") univ % atom % El = .true.
-univ % atom % El = .true.
+where(univ % atom % residue == "PRC") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-!where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
-univ % atom % Hl = .true.
+where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
 
 !......................................................................
 
@@ -120,12 +128,6 @@ DO i = 1 , size(a%atom)
             a%atom(i)%fragment = 'S' 
             a%atom(i)%solvation_hardcore = 3.d0
 
-        case( 'H2C') 
-            a%atom(i)%fragment = 'C' 
-
-        case( 'H3R') 
-            a%atom(i)%fragment = 'R' 
-
     end select
 
  end if
@@ -184,9 +186,13 @@ select case ( instance )
 !      define residues
 !----------------------------------
 
+atom(35:36) % residue = "PRC"
+
 !----------------------------------
 !      define nr
 !----------------------------------
+
+atom(35:36) % nr = 1
 
 !----------------------------------
 !       charge of the atoms 

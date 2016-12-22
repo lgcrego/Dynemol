@@ -1,12 +1,10 @@
 module PBC_m
 
     use type_m
-    use parameters_m            , only  : PBC
-    use Babel_m
     use constants_m
-    use Allocation_m
-    use Structure_Builder 
-    use Semi_Empirical_Parms
+    use parameters_m            , only  : PBC
+    use Allocation_m            , only  : Allocate_Structures
+    use Structure_Builder       , only  : Basis_Builder 
 
     public ::  Generate_Periodic_Structure , Generate_Periodic_DPs
 
@@ -44,6 +42,7 @@ contains
  pbc_cell % symbol             (1:cell%atoms)      =  cell % symbol
  pbc_cell % residue            (1:cell%atoms)      =  cell % residue
  pbc_cell % MMSymbol           (1:cell%atoms)      =  cell % MMSymbol
+ pbc_cell % QMMM               (1:cell%atoms)      =  cell % QMMM    
  pbc_cell % AtNo               (1:cell%atoms)      =  cell % AtNo
  pbc_cell % Nvalen             (1:cell%atoms)      =  cell % Nvalen
  pbc_cell % k_WH               (1:cell%atoms)      =  cell % k_WH
@@ -84,6 +83,7 @@ contains
             pbc_cell % Symbol             (k)   =  cell % Symbol             (n)         
             pbc_cell % residue            (k)   =  cell % residue            (n)
             pbc_cell % MMSymbol           (k)   =  cell % MMSymbol           (n)
+            pbc_cell % QMMM               (k)   =  cell % QMMM               (n)
             pbc_cell % AtNo               (k)   =  cell % AtNo               (n)
             pbc_cell % Nvalen             (k)   =  cell % Nvalen             (n)
             pbc_cell % k_WH               (k)   =  cell % k_WH               (n)
@@ -205,6 +205,7 @@ end subroutine Generate_Periodic_DPs
  pbc_cell % symbol             (1:cell%atoms)      =  cell % symbol
  pbc_cell % residue            (1:cell%atoms)      =  cell % residue
  pbc_cell % MMSymbol           (1:cell%atoms)      =  cell % MMSymbol
+ pbc_cell % QMMM               (1:cell%atoms)      =  cell % QMMM    
  pbc_cell % AtNo               (1:cell%atoms)      =  cell % AtNo
  pbc_cell % Nvalen             (1:cell%atoms)      =  cell % Nvalen
  pbc_cell % k_WH               (1:cell%atoms)      =  cell % k_WH
@@ -245,6 +246,7 @@ end subroutine Generate_Periodic_DPs
             pbc_cell % Symbol             (k)   =  cell % Symbol             (n)         
             pbc_cell % residue            (k)   =  cell % residue            (n)
             pbc_cell % MMSymbol           (k)   =  cell % MMSymbol           (n)
+            pbc_cell % QMMM               (k)   =  cell % QMMM               (n)
             pbc_cell % AtNo               (k)   =  cell % AtNo               (n)
             pbc_cell % Nvalen             (k)   =  cell % Nvalen             (n)
             pbc_cell % k_WH               (k)   =  cell % k_WH               (n)

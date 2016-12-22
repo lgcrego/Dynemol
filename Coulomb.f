@@ -94,6 +94,8 @@ allocate( Coul_tmp (-mxl:mxl,-mxl:mxl,-mxl:mxl,-mxl:mxl) , source=0.d0 )
 do ia = 1       , system % atoms
 do ib = ia + 1  , system % atoms 
 
+    if( system% QMMM(ia) /= "QM" .OR. system% QMMM(ib) /= "QM" ) cycle
+
     begin_a = system%BasisPointer(ia)+1       ;       end_a = system%BasisPointer(ia) + atom( system%AtNo(ia) )%DOS
     begin_b = system%BasisPointer(ib)+1       ;       end_b = system%BasisPointer(ib) + atom( system%AtNo(ib) )%DOS
 

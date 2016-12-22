@@ -46,7 +46,7 @@ contains
 
  CALL util_overlap     
 
- S_size = sum(atom(system%AtNo)%DOS)
+ S_size = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
  
  if(.not. allocated(S_matrix))  allocate(S_matrix(S_size,S_size))
 
@@ -128,9 +128,10 @@ contains
  type(STO_basis) , allocatable :: pbc_basis(:)
 
  ! this subroutine simply instantiate the ORIGINAL Overlap Matrix for future use ...
+ ! called by HFP force routines ...
 
  CALL util_overlap     
- S_size = sum(atom(system%AtNo)%DOS)
+ S_size = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
  allocate(S_matrix(S_size,S_size))
 
  Pulay = .true.
@@ -187,6 +188,8 @@ S_matrix = D_zero
 do ib = 1    , b_system% atoms
 do ia = ib+1 , a_system% atoms  
 
+    If( (b_system%QMMM(ib) /= "QM") .OR. (a_system%QMMM(ia) /= "QM") ) cycle
+
     ! ckecking: if atoms ia and ib remain fixed => recover S_matrix
     If( motion_detector_ready ) then
 
@@ -208,7 +211,7 @@ do ia = ib+1 , a_system% atoms
                 do k = ija(a) , ija(a+1)-1
                     if( ija(k) == b ) S_matrix(a,b) = S_pack(k)
                 end do
-                
+               
             enddo
             enddo
 
@@ -239,13 +242,13 @@ do ia = ib+1 , a_system% atoms
             expb = b_basis(b)% zeta(j)
             expa = a_basis(a)% zeta(i)
 
-! OVERLAP SUBROUTINE: lined-up frame
+            ! OVERLAP SUBROUTINE: lined-up frame
 
             call solap(na, la, expa, nb, lb, expb, Rab, solvec)
 
             anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI
 
-! Introduces normalization of the STO in the integrals 
+            ! Introduces normalization of the STO in the integrals 
 
             do m = 0, msup-1
                 sol_partial(m) = solvec(m) * anor
@@ -258,7 +261,7 @@ do ia = ib+1 , a_system% atoms
         end do
         end do
 
-! Rotation of overlap integrals to the molecular frame
+        ! Rotation of overlap integrals to the molecular frame
  
         sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
         forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
@@ -409,7 +412,7 @@ end do
 tmp_ij(1) = n + 2
 k = n + 1
 do i = 1 , n
-    do j = 1 , n
+    do j = 1 , i
         IF(abs(S_matrix(i,j)) >= thresh) then
         IF(i .NE. j) then
             k = k + 1

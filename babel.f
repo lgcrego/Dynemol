@@ -73,6 +73,7 @@ forall( j=1:unit_cell%atoms )
     unit_cell % hardcore           (j)   =  System % atom(j) % hardcore
     unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
     unit_cell % V_shift            (j)   =  System % atom(j) % V_shift
+    unit_cell % QMMM               (j)   =  System % atom(j) % QMMM
 
     unit_cell % Nvalen   (j)   =  atom(unit_cell%AtNo(j)) % Nvalen
     unit_cell % polar    (j)   =  atom(unit_cell%AtNo(j)) % polar
@@ -571,6 +572,7 @@ forall(i = 2:model )
     trj(i) % atom % hardcore            =  trj(1) % atom % hardcore   
     trj(i) % atom % solvation_hardcore  =  trj(1) % atom % solvation_hardcore   
     trj(i) % atom % V_shift             =  trj(1) % atom % V_shift
+    trj(i) % atom % QMMM                =  trj(1) % atom % QMMM   
 
     trj(i) % atom % Nvalen              =  atom(trj(1)%atom%AtNo) % Nvalen
     trj(i) % atom % polar               =  atom(trj(1)%atom%AtNo) % polar 
@@ -727,6 +729,7 @@ forall(i = 2:model )
     trj(i) % atom % residue  = trj(1) % atom % residue
     trj(i) % atom % hardcore = trj(1) % atom % hardcore   
     trj(i) % atom % V_shift  = trj(1) % atom % V_shift
+    trj(i) % atom % QMMM     = trj(1) % atom % QMMM   
 end forall
 
 ! GROUP residues ...

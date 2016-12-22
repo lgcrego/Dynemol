@@ -100,8 +100,10 @@ frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 do frame = frame_init , frame_final , frame_step
 
     ! calculate for use in MM ...
-    If( QMMM ) Net_Charge_MM = Net_Charge
-    CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+    If( QMMM ) then
+        Net_Charge_MM = Net_Charge
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+    end If
 
     t = t + t_rate 
 
@@ -289,6 +291,7 @@ Print 56 , initial_state
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 ! assuming non-interacting electrons ...
+
 do n = 1 , n_part                         
     select case( eh_tag(n) )
 

@@ -121,6 +121,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             extended_cell % fragment           (k+n)   =  unit_cell % fragment (n)
             extended_cell % Symbol             (k+n)   =  unit_cell % Symbol   (n)
             extended_cell % MMSymbol           (k+n)   =  unit_cell % MMSymbol (n)
+            extended_cell % QMMM               (k+n)   =  unit_cell % QMMM     (n)
             extended_cell % nr                 (k+n)   =  unit_cell % nr       (n)   + nr_sum
             extended_cell % residue            (k+n)   =  unit_cell % residue  (n)
             extended_cell % solute             (k+n)   =  unit_cell % solute   (n)
@@ -128,8 +129,8 @@ integer :: copy , nr_sum , ix , iy , k , n
             extended_cell % El                 (k+n)   =  unit_cell % El       (n)
             extended_cell % Hl                 (k+n)   =  unit_cell % Hl       (n)
             extended_cell % hardcore           (k+n)   =  unit_cell % hardcore (n)
+            extended_cell % V_shift            (k+n)   =  unit_cell % V_shift  (n)
             extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
-            extended_cell % V_shift            (k+n)   =  unit_cell % V_shift            (n)
             extended_cell % copy_No  (k+n)             =  copy
         
         END FORALL
@@ -151,6 +152,7 @@ integer :: copy , nr_sum , ix , iy , k , n
     extended_cell % fragment           (k+n)      =  unit_cell % fragment (n)
     extended_cell % symbol             (k+n)      =  unit_cell % Symbol   (n)
     extended_cell % MMSymbol           (k+n)      =  unit_cell % MMSymbol (n)
+    extended_cell % QMMM               (k+n)      =  unit_cell % QMMM     (n)
     extended_cell % nr                 (k+n)      =  unit_cell % nr       (n)
     extended_cell % residue            (k+n)      =  unit_cell % residue  (n)
     extended_cell % solute             (k+n)      =  unit_cell % solute   (n)
@@ -158,8 +160,8 @@ integer :: copy , nr_sum , ix , iy , k , n
     extended_cell % El                 (k+n)      =  unit_cell % El       (n)
     extended_cell % Hl                 (k+n)      =  unit_cell % Hl       (n)
     extended_cell % hardcore           (k+n)      =  unit_cell % hardcore (n)
+    extended_cell % V_shift            (k+n)      =  unit_cell % V_shift  (n)
     extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
-    extended_cell % V_shift            (k+n)      =  unit_cell % V_shift            (n)
     extended_cell % copy_No  (k+n)                =  0
 
  END FORALL
@@ -213,13 +215,15 @@ integer :: copy , nr_sum , ix , iy , k , n
  integer :: k , i , l , m , AtNo , N_of_orbitals
 
 ! total number of orbitals ...
- N_of_orbitals = sum(atom(system%AtNo)%DOS)
+ N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
 
 ! building AO basis ...  
  allocate( basis(N_of_orbitals) )
 
  k = 1
  do i = 1 , system%atoms
+
+    If( system% QMMM(i) /= "QM" ) cycle
 
     AtNo = system%AtNo(i)
 
@@ -236,14 +240,15 @@ integer :: copy , nr_sum , ix , iy , k , n
             basis(k) % symbol              =  system % symbol   (i)
             basis(k) % fragment            =  system % fragment (i)
             basis(k) % EHSymbol            =  system % MMSymbol (i)
+            basis(k) % QMMM                =  system % QMMM     (i)
             basis(k) % residue             =  system % residue  (i)
             basis(k) % solute              =  system % solute   (i)
             basis(k) % DPF                 =  system % DPF      (i)
             basis(k) % El                  =  system % El       (i)
             basis(k) % Hl                  =  system % Hl       (i)
             basis(k) % hardcore            =  system % hardcore (i)
-            basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
             basis(k) % V_shift             =  system % V_shift  (i)
+            basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
             basis(k) % n        =  atom(AtNo) % Nquant(l)
             basis(k) % l        =  l
@@ -311,16 +316,23 @@ integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , f
 integer :: first_nr , last_nr , N_of_residue_members 
 
 ! total number of orbitals ...
-N_of_orbitals = sum(atom(a%AtNo)%DOS)
+N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
 Print 120 , N_of_orbitals                       
 
 ! total number of electrons ...
-a%N_of_electrons = sum( a%Nvalen )
+a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
 Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
 Print 141 , a%atoms
 
+! total number of QM atoms ...
+Print 142 , count( a%QMMM == "QM" )
+
+! total number of MM atoms ...
+Print 143 , count( a%QMMM == "MM" )
+
+! total number of atoms of given type ...
 ! total number of atoms of given type ...
 do AtNo = 1 , size(atom)
 

@@ -749,6 +749,7 @@ a % atom % nr                 = 0
 a % atom % residue            = "XXX"
 a % atom % Symbol             = "XX"
 a % atom % MMsymbol           = "XXX"
+a % atom % QMMM               = "QM"      ! <== default is Quantum Mechanics for quantum dynamics calcs. ...
 a % atom % fragment           = "X"
 a % atom % solute             = .false.
 a % atom % DPF                = .false.
@@ -784,6 +785,7 @@ a % nr                        = 1
 a % residue                   = "XXX"
 a % Symbol                    = "XX"
 a % MMsymbol                  = "XXX"
+a % QMMM                      = "QM"       ! <== default is Quantum Mechanics for quantum dynamics calcs. ...
 a % fragment                  = "X"
 a % solute                    = .false.
 a % DPF                       = .false.

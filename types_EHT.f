@@ -17,6 +17,7 @@ module type_m
         character(1) , allocatable :: list_of_fragments(:)
         character(3) , allocatable :: list_of_residues(:)
         character(3) , allocatable :: MMSymbol(:)
+        character(2) , allocatable :: QMMM(:)
         integer      , allocatable :: AtNo(:)
         integer      , allocatable :: Nvalen(:)
         real*8       , allocatable :: coord(:,:)
@@ -56,6 +57,7 @@ module type_m
         character(3)                  :: residue
         character(2)                  :: Symbol
         character(3)                  :: MMSymbol
+        character(2)                  :: QMMM
         character(1)                  :: TorF(3)
         character(1)                  :: fragment
         logical                       :: solute
@@ -136,6 +138,7 @@ module type_m
         real*8           :: hardcore
         real*8           :: V_shift
         character(len=2) :: symbol
+        character(len=2) :: QMMM
         character(len=1) :: fragment
         character(len=3) :: EHSymbol
         character(len=3) :: residue 
@@ -274,10 +277,11 @@ do
     write(*,*) ' (14) El                        '
     write(*,*) ' (15) Hl                        '
     write(*,*) ' (16) solute                    '
-    write(*,*) ' (17) atoms                     '
-    write(*,*) ' (18) N_of_electrons            '
-    write(*,*) ' (19) N_of_solvent_Molecules    '
-    write(*,*) ' (20) N_of_solute_Molecules     '
+    write(*,*) ' (17) QM-MM                     '
+    write(*,*) ' (18) atoms                     '
+    write(*,*) ' (19) N_of_electrons            '
+    write(*,*) ' (20) N_of_solvent_Molecules    '
+    write(*,*) ' (21) N_of_solute_Molecules     '
     write(*,*) ' any other number cotinues      '
 
 
@@ -337,15 +341,18 @@ do
             write(*,70) a % solute(:)
 
         case(17)
-            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
+            write(*,20) a % QMMM(:)
 
         case(18)
-            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
+            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
 
         case(19)
-            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
 
         case(20)
+            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+
+        case(21)
             write(*,'(a25,i5)') "N. of Solute Molecules = ", a % N_of_solute_Molecules
 
         case default
@@ -394,6 +401,7 @@ do
     write(*,*) ' (10) DPF        '
     write(*,*) ' (11) El         '
     write(*,*) ' (12) Hl         '
+    write(*,*) ' (13) QM-MM      '
     write(*,*) ' any other number continues     '
 
     read (*,*) option
@@ -438,6 +446,9 @@ do
 
         case(12)
             write(*,70) a(:) % Hl
+            
+        case(13)
+            write(*,20) a(:) % QMMM
             
         case default
             exit
@@ -490,6 +501,7 @@ do
     write(*,*) ' (14) DPF            '
     write(*,*) ' (15) El             '
     write(*,*) ' (16) Hl             '
+    write(*,*) ' (17) QM-MM          '
     write(*,*) ' any other number continues     '
 
 
@@ -547,6 +559,9 @@ do
 
         case(16)
             write(*,70) a(:) % Hl
+
+        case(17)
+            write(*,20) a(:) % QMMM
 
 
         case default

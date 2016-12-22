@@ -134,6 +134,8 @@
         TotalPsiKet = C_zero 
         DO k = 1 , extended_cell%atoms
 
+            if( Extended_Cell% QMMM(k) /= "QM" ) cycle
+
             AtNo = extended_cell%AtNo(k)
 
             ! distance from the center of the nuclei, in a.u.
@@ -323,6 +325,8 @@
         TotalPsiBra = C_zero 
         TotalPsiKet = C_zero 
         DO k = 1 , extended_cell%atoms
+
+            if( Extended_Cell% QMMM(k) /= "QM" ) cycle
 
             AtNo = extended_cell%AtNo(k)
 

@@ -3,7 +3,7 @@ module Semi_Empirical_Parms
     use type_m
     use parameters_m    , only  : OPT_parms
 
-    type(EHT)                   , public    , protected :: atom(300) 
+    type(EHT) , public , protected :: atom(300) 
 
     public :: read_EHT_parameters , Include_OPT_parameters
 

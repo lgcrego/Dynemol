@@ -56,6 +56,7 @@
 
  CALL Allocate_Structures(FMO_system%atoms,FMO_system)
 
+! Notice: not everything needs to be cloned into FMO ... 
  forall(i=1:3)
  FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
  end forall
@@ -65,9 +66,14 @@
  FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
  FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
  FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
+ FMO_system%QMMM       =  pack( system%QMMM      , system%fragment == fragment )
  FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
  FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
+ FMO_system%V_shift    =  pack( system%V_shift   , system%fragment == fragment )
  FMO_system%copy_No    =  0
+
+! check point ...
+ If( any(FMO_system%QMMM /= "QM") ) stop ">> FMO fragment contains MM atoms <<"
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 

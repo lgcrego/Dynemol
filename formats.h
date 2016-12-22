@@ -86,7 +86,11 @@
 
 140   FORMAT(/,1x,'Total number of electrons  = ',I6)
 
-141   FORMAT(/,1x,'Total number of atoms  = ',I6,/)
+141   FORMAT(/,1x,'Total number of atoms  = ',I6)
+
+142   FORMAT(/,1x,'Total number of QM atoms  = ',I6)
+
+143   FORMAT(/,1x,'Total number of MM atoms  = ',I6,/)
 
 153   FORMAT(/,1x,'======== STARTING  DIPOLE MATRIX ANALYSIS =========')
 

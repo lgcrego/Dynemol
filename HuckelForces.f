@@ -61,6 +61,8 @@ contains
     ket = bra 
     do i = 1 , system% atoms
 
+        If( system% QMMM(i) /= "QM" ) cycle
+
         i1 = (i-1)*3 + 1
         i2 = (i-1)*3 + 3
 

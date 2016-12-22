@@ -362,8 +362,9 @@ allocate( FMO_DP_matrix_AO(size(basis),size(basis),3) , source = D_zero )
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
 
-! calculate rotation matrix for the highest l
+    if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle
 
+    ! calculate rotation matrix for the highest l
     call RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
 
     If(Rab > cutoff_Angs) goto 10

@@ -58,7 +58,7 @@ If( verbose ) Print 153
 CALL Util_Multipoles
 
 ! size of M matrix ...
-M_size = sum(atom(system%AtNo)%DOS)
+M_size = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
 
 If( allocated(DP_matrix_AO) ) deallocate( DP_matrix_AO )
 allocate( DP_matrix_AO(M_size,M_size,3) )
@@ -201,6 +201,8 @@ DP_matrix_AO = D_zero
 !$omp private(ib,ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,j,i,expb,expa,rl,rl2,qlm)
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms  
+
+    if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle
 
     ! if atoms ia and ib remaing fixed => recover DP_matrix_AO ...
     If( ready ) then

@@ -59,15 +59,21 @@ select case( driver )
 
     case( "slice_AO" )
 
-        do i = 1 , system% atoms
+        do i = 1 , system%atoms 
+        if( system%QMMM(i) /= "QM" ) cycle
+
             atom(i)% Ehrenfest = Ehrenfest_AO( system, basis, QM_el, i ) * eVAngs_2_Newton 
+
         end do
 
     case( "slice_ElHl" )
 
         ! electron and hole contributions ...
-        do i = 1 , system% atoms
+        do i = 1 , system%atoms 
+        if( system%QMMM(i) /= "QM" ) cycle
+
             atom(i)% Ehrenfest = Ehrenfest_ElHl( system, basis, MO_bra, MO_ket, QM_el, QM_hl, i ) * eVAngs_2_Newton 
+
         end do
 
 end select
