@@ -62,7 +62,8 @@ forall( i=1:n_of_DOS_states ) list_of_DOS_states(i) = i1 + (i-1)
 allocate( atom(system%atoms) , source=I_zero ) 
 j=1
 do i = 1 , system%atoms
-    if( (system%residue(i) == PDOS(nr)%residue) ) then
+    ! only quantum species contribute to PDOS ...
+    if( (system%residue(i) == PDOS(nr)%residue) .AND. (system%QMMM(i) == "QM") ) then
         atom(j) = i
         j = j + 1
     end if

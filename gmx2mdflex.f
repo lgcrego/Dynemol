@@ -1,4 +1,5 @@
 ! Convert gmx data to mdflex program :: verify gmx format in IO FORMATS 
+
 module gmx2mdflex
 
 use constants_m
@@ -10,12 +11,13 @@ use Babel_routines_m       , only : TO_UPPER_CASE
 
 private
  
-public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialMorse 
+public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialPairs14, SpecialMorse 
 
     ! module variables ...
     character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
     real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
     type(DefinePairs) , allocatable :: SpecialPairs(:)
+    type(DefinePairs) , allocatable :: SpecialPairs14(:)
     type(DefineMorse) , allocatable :: SpecialMorse(:)
 
 contains
@@ -313,7 +315,7 @@ do a = 1 , MM % N_of_species
             species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
              
         end if
- 
+
 !==============================================================================================
 
     close(33)
@@ -362,7 +364,7 @@ real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , k , ioerr , dummy_int , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NMorseParms
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NPairsParms , NMorseParms
 character(3)                    :: dummy_char
 character(18)                   :: keyword
 character(200)                  :: line
@@ -641,6 +643,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if ( ioerr /= 0 ) exit read_loop4
         read(line,*,iostat=ioerr) InputChars(i,1), InputChars(i,2)
         if( index(InputChars(i,1),";") /= 0 ) cycle read_loop4
+        if( trim(InputChars(i,1)) == "[  "  ) exit
         if( trim(InputChars(i,1)) == "#in"  ) exit
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop4
@@ -703,6 +706,49 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     forall(k=1:6) DihedParameters(:NdihedTypes,k) = InputReals(:NdihedTypes,k)
 
     Dihed_Type(:NdihedTypes) = InputIntegers(:NdihedTypes,1)
+
+!=====================================================================================
+!  [ pairtypes ] parameters :: reading ...
+    do
+        read(33,100,iostat=ioerr) keyword
+        if( trim(keyword) == "[ pairtypes ]" .OR. ioerr /= 0 ) exit
+    end do
+
+    if( trim(keyword) == "[ pairtypes ]" ) then
+    i = 1
+    k = 1
+    read_loop6: do
+
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop6
+        read(line,*,iostat=ioerr) InputChars(i,1), InputChars(i,2)
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop6
+        if( trim(InputChars(i,1)) == "#in"  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loop6
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , dummy_int, (InputReals(i,j), j=1,2)
+
+        i = i + 1
+    
+    end do read_loop6
+    backspace(33)
+
+    NPairsParms = i - 1
+
+    allocate( SpecialPairs14 ( NPairsParms ) )
+
+    forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
+
+    SpecialPairs14(:NPairsParms) % Parms(2) = InputReals(:NPairsParms,2)
+    SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
+
+    ! conversion 
+    ! factor1 = 1.0d26      <== Factor used to correct the units readed from Gromacs
+    SpecialPairs14(:NPairsParms) % Parms(2) = sqrt( SpecialPairs14(:NPairsParms)%Parms(2) * factor1 * imol )
+    SpecialPairs14(:NPairsParms) % Parms(1) = sqrt( SpecialPairs14(:NPairsParms)%Parms(1) * nano_2_angs    )
+
+  end if
+!
 
 close(33)
 
@@ -953,6 +999,10 @@ do i = 1 , N
         case( 3 ) ! v = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
             
             a % dihedral_type(i) = "cos3"
+
+        case( 9 ) ! V = k[1 + cos(n.phi - theta)] (multiple; charmm FF)
+
+            a % dihedral_type(i) = "chrm"
 
     end select
 

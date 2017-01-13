@@ -2,13 +2,14 @@ module F_intra_m
    
     use constants_m
     use parameters_m , only : PBC
+    use setup_m      , only : offset
     use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                               vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
                               Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
                               harm_dih, harm_bond, morse_bond
     use MD_read_m    , only : atom , molecule , MM , read_from_gmx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use gmx2mdflex   , only : SpecialPairs , SpecialMorse
+    use gmx2mdflex   , only : SpecialPairs , SpecialPairs14 , SpecialMorse
 
     private
 
@@ -21,9 +22,10 @@ module F_intra_m
                                sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
                                term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm ,&
                                sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq
-    integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop
+    integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
     logical                 :: flag1, flag2
     real*8                  :: pot_INTRA
+    integer , allocatable   :: species_offset(:)
 
 
 contains
@@ -63,6 +65,8 @@ LJ_14      = D_zero
 LJ_intra   = D_zero
 Coul_14    = D_zero
 Coul_intra = D_zero
+
+CALL offset( species_offset )
 
 ! Bonding - stretching potential ...
 do i = 1 , MM % N_of_molecules
@@ -296,14 +300,14 @@ do i = 1 , MM % N_of_molecules
             eps   =  atom(ati) % eps * atom(atj) % eps 
 
             ! Nbond_parms directive on ...
-            read_loop1: do  n = 1, size(SpecialPairs)
-                flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+            read_loop1: do  n = 1, size(SpecialPairs14)
+                flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+                flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                        ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
                 if ( flag1 .OR. flag2 ) then
-                    sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
-                    eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                    sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
+                    eps = SpecialPairs14(n) % Parms(2) * SpecialPairs14(n) % Parms(2)
                     exit read_loop1
                 end if
                 cycle  read_loop1
@@ -347,10 +351,11 @@ end do
 ! Lennard-Jones intramolecular interactions ...
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % NintraLJ
-        ati    = molecule(i) % IntraLJ(j,1)
-        atj    = molecule(i) % IntraLJ(j,2) 
+        ati  = molecule(i) % IntraLJ(j,1) 
+        ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+        atj  = molecule(i) % IntraLJ(j,2) 
+        atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
-
             chrgi  = atom(ati) % charge
             chrgj  = atom(atj) % charge
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
@@ -391,14 +396,14 @@ do i = 1 , MM % N_of_molecules
             sr12  = sr6 * sr6
             fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
             ! with force cut-off ...
-            fs    = (fs / rklq) - fscut(ati,atj) / rklsq     
+            fs    = (fs / rklq) - fscut(ati1,atj1) / rklsq     
             atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
             ! factor used to compensate factor1 ...
             ! factor3 = 1.0d-20
             sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 )
             ! alternative formula with cutoff ...
-            sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
+            sterm  = sterm - vscut(ati1,atj1) + fscut(ati1,atj1) * ( rklsq - rcut ) 
 
             !  Real part (Number of charges equal to the number of sites)
             sr2   = 1.d0 / rklq
