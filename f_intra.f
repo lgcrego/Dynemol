@@ -1,7 +1,7 @@
 module F_intra_m
    
     use constants_m
-    use parameters_m , only : PBC
+    use parameters_m , only : PBC , QMMM
     use setup_m      , only : offset
     use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                               vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
@@ -479,7 +479,7 @@ do i = 1 , MM % N_of_atoms
                                                   ) * Angs_2_mts
 
     ! Append total forces with Excited State Ehrenfest terms; nonzero only if QMMM = T_ ...
-    atom(i)% ftotal(:) = atom(i)% ftotal(:) + atom(i)% Ehrenfest(:)
+    IF( QMMM ) atom(i)% ftotal(:) = atom(i)% ftotal(:) + atom(i)% Ehrenfest(:)
 
 end do
 

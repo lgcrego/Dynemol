@@ -164,6 +164,9 @@ do frame = frame_init , frame_final , frame_step
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
+            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+            QMMM = .NOT. (Unit_Cell% QM_erg < D_zero) 
+
         case default
 
             Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -482,6 +485,9 @@ do n = 1 , n_part
     close(53)
 
 end do
+
+! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
+Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
 12 FORMAT(10A10)
 13 FORMAT(F11.6,9F10.5)

@@ -138,7 +138,6 @@ module type_m
         real*8           :: hardcore
         real*8           :: V_shift
         character(len=2) :: symbol
-        character(len=2) :: QMMM
         character(len=1) :: fragment
         character(len=3) :: EHSymbol
         character(len=3) :: residue 
@@ -501,7 +500,6 @@ do
     write(*,*) ' (14) DPF            '
     write(*,*) ' (15) El             '
     write(*,*) ' (16) Hl             '
-    write(*,*) ' (17) QM-MM          '
     write(*,*) ' any other number continues     '
 
 
@@ -559,10 +557,6 @@ do
 
         case(16)
             write(*,70) a(:) % Hl
-
-        case(17)
-            write(*,20) a(:) % QMMM
-
 
         case default
             exit

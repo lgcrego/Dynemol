@@ -54,34 +54,22 @@ CALL Overlap_Matrix( system , basis , S )
 ! build up electron-hole density matrix ...
 forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2)
 
-If( QMMM ) then
 select case( driver )
 
     case( "slice_AO" )
 
-        do i = 1 , system%atoms 
-        if( system%QMMM(i) /= "QM" ) cycle
-
+        do i = 1 , system% atoms
             atom(i)% Ehrenfest = Ehrenfest_AO( system, basis, QM_el, i ) * eVAngs_2_Newton 
-
         end do
 
     case( "slice_ElHl" )
 
         ! electron and hole contributions ...
-        do i = 1 , system%atoms 
-        if( system%QMMM(i) /= "QM" ) cycle
-
+        do i = 1 , system% atoms
             atom(i)% Ehrenfest = Ehrenfest_ElHl( system, basis, MO_bra, MO_ket, QM_el, QM_hl, i ) * eVAngs_2_Newton 
-
         end do
 
 end select
-end If
-
-! QM_erg = E_occ - E_empty ...
-Unit_Cell% QM_erg = sum( [ (QM_el%erg(i)*rho_eh(i,i) , i=1,size(basis)) ] )
-QMMM = .NOT. (Unit_Cell% QM_erg < D_zero) 
 
 deallocate( S )
 If( allocated(grad_S) ) deallocate( grad_S )
@@ -130,11 +118,11 @@ do xyz = 1 , 3
        system% coord (k,:) = tmp_coord + delta_b
        CALL Overlap_Matrix( system , basis , S_fwd )
 
-!       system% coord (k,:) = tmp_coord - delta_b
-!       CALL Overlap_Matrix( system , basis , S_bck )
-!       grad_S = (S_fwd - S_bck) / (TWO*delta) 
+       system% coord (k,:) = tmp_coord - delta_b
+       CALL Overlap_Matrix( system , basis , S_bck )
+       grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       grad_S = (S_fwd - S) / delta 
+!       grad_S = (S_fwd - S) / delta 
 
        Force_AD = D_zero
 

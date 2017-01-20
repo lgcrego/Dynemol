@@ -240,7 +240,6 @@ integer :: copy , nr_sum , ix , iy , k , n
             basis(k) % symbol              =  system % symbol   (i)
             basis(k) % fragment            =  system % fragment (i)
             basis(k) % EHSymbol            =  system % MMSymbol (i)
-            basis(k) % QMMM                =  system % QMMM     (i)
             basis(k) % residue             =  system % residue  (i)
             basis(k) % solute              =  system % solute   (i)
             basis(k) % DPF                 =  system % DPF      (i)
