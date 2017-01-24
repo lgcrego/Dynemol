@@ -4,7 +4,7 @@ module MD_read_m
     use atomicmass
     use MM_input                
     use parameters_m            , only : restart , ad_hoc , driver
-    use MM_types                , only : MM_system , MM_molecular , MM_atomic , debug_MM
+    use MM_types                , only : MM_molecular , MM_atomic , debug_MM
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, forcefield, rcut
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 

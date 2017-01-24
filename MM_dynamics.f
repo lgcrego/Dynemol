@@ -120,8 +120,8 @@ CALL this% VV2( dt )
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
 ! total energy in eV; for classical dynamics Unit_Cell%QM_erg = 0  ...
-Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV
-Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV
+Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
+Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
 Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 
 
 if( mod(frame,MM_log_step) == 0   ) then 

@@ -214,6 +214,9 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! local variables ...
  integer :: k , i , l , m , AtNo , N_of_orbitals
 
+! garbage collection ... 
+system% BasisPointer = 0
+
 ! total number of orbitals ...
  N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
 
@@ -227,7 +230,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 
     AtNo = system%AtNo(i)
 
-    system%BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
+    system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
 
     do l = 0 , atom(AtNo)%AngMax
 
