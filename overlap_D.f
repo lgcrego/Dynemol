@@ -47,7 +47,7 @@ contains
  CALL util_overlap     
 
  S_size = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
- 
+
  if(.not. allocated(S_matrix))  allocate(S_matrix(S_size,S_size))
 
  select case (purpose)
@@ -66,7 +66,7 @@ contains
         CALL Deallocate_Structures(pbc_system)
         If( allocated(pbc_basis) ) deallocate(pbc_basis)
 
-    case('Pulay')
+    case('Pulay') ! <== used by diagnostic through Hellman_Feynman_Pulay function ...
 
         ! if no PBC pbc_system = system ...
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
@@ -144,6 +144,7 @@ contains
 
  CALL Deallocate_Structures(pbc_system)
  If( allocated(pbc_basis) ) deallocate(pbc_basis)
+ deallocate(S_matrix)
 
  end subroutine Preprocess_OverlapMatrix
 !
@@ -172,7 +173,6 @@ logical :: motion_detector_ready , atom_not_moved
 
 ! local parameters ....
 integer , parameter :: mxn = 15 , mxl = 5
-real*8  , parameter :: cutoff_Angs = 12.d0
 
 ! local arrays ...
 real*8  , dimension(0:mxl)                   :: solvec 

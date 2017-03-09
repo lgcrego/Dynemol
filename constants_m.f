@@ -31,6 +31,7 @@ MODULE constants_m
     real*8     , parameter :: infty      = 1.d+30
     real*8     , parameter :: deg_2_rad  = PI / 180.0d0
     real*8     , parameter :: rad_2_deg  = 180.0d0 / PI
+    real*8     , parameter :: cutoff_Angs = 12.d0                   ! <== cutoff radius for overlap related calculations  
 
     complex*16 , parameter :: zi = (0.d0,1.d0)
 

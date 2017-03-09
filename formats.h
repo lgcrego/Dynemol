@@ -86,7 +86,7 @@
 
 140   FORMAT(/,1x,'Total number of electrons  = ',I6)
 
-141   FORMAT(/,1x,'Total number of atoms  = ',I6)
+141   FORMAT(/,1x,'Total number of atoms  = ',I6,' / # of flex atoms = ',I6)
 
 142   FORMAT(/,1x,'Total number of QM atoms  = ',I6)
 

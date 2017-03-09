@@ -128,6 +128,7 @@ integer :: copy , nr_sum , ix , iy , k , n
             extended_cell % DPF                (k+n)   =  unit_cell % DPF      (n)
             extended_cell % El                 (k+n)   =  unit_cell % El       (n)
             extended_cell % Hl                 (k+n)   =  unit_cell % Hl       (n)
+            extended_cell % flex               (k+n)   =  unit_cell % flex     (n)
             extended_cell % hardcore           (k+n)   =  unit_cell % hardcore (n)
             extended_cell % V_shift            (k+n)   =  unit_cell % V_shift  (n)
             extended_cell % solvation_hardcore (k+n)   =  unit_cell % solvation_hardcore (n)
@@ -159,6 +160,7 @@ integer :: copy , nr_sum , ix , iy , k , n
     extended_cell % DPF                (k+n)      =  unit_cell % DPF      (n)
     extended_cell % El                 (k+n)      =  unit_cell % El       (n)
     extended_cell % Hl                 (k+n)      =  unit_cell % Hl       (n)
+    extended_cell % flex               (k+n)      =  unit_cell % flex     (n)
     extended_cell % hardcore           (k+n)      =  unit_cell % hardcore (n)
     extended_cell % V_shift            (k+n)      =  unit_cell % V_shift  (n)
     extended_cell % solvation_hardcore (k+n)      =  unit_cell % solvation_hardcore (n)
@@ -248,6 +250,7 @@ system% BasisPointer = 0
             basis(k) % DPF                 =  system % DPF      (i)
             basis(k) % El                  =  system % El       (i)
             basis(k) % Hl                  =  system % Hl       (i)
+            basis(k) % flex                =  system % flex     (i)
             basis(k) % hardcore            =  system % hardcore (i)
             basis(k) % V_shift             =  system % V_shift  (i)
             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
@@ -326,7 +329,7 @@ a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
 Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
-Print 141 , a%atoms
+Print 141 , a%atoms , count(a%flex)
 
 ! total number of QM atoms ...
 Print 142 , count( a%QMMM == "QM" )

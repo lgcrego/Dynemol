@@ -70,6 +70,7 @@ forall( j=1:unit_cell%atoms )
     unit_cell % DPF                (j)   =  System % atom(j) % DPF     
     unit_cell % El                 (j)   =  System % atom(j) % El      
     unit_cell % Hl                 (j)   =  System % atom(j) % Hl      
+    unit_cell % flex               (j)   =  System % atom(j) % flex
     unit_cell % hardcore           (j)   =  System % atom(j) % hardcore
     unit_cell % solvation_hardcore (j)   =  System % atom(j) % solvation_hardcore
     unit_cell % V_shift            (j)   =  System % atom(j) % V_shift

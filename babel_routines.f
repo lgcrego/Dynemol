@@ -755,6 +755,7 @@ a % atom % solute             = .false.
 a % atom % DPF                = .false.
 a % atom % El                 = .false.
 a % atom % Hl                 = .false.
+a % atom % flex               = .false.
 
 a % N_of_Surface_Atoms        = 0
 a % N_of_Solvent_Atoms        = 0
@@ -791,6 +792,7 @@ a % solute                    = .false.
 a % DPF                       = .false.
 a % El                        = .false.
 a % Hl                        = .false.
+a % flex                      = .false.
 a % Nvalen                    = 0
 a % polar                     = 0
 a % N_of_electrons            = 0

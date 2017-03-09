@@ -54,6 +54,7 @@ contains
  pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
  pbc_cell % El                 (1:cell%atoms)      =  cell % El    
  pbc_cell % Hl                 (1:cell%atoms)      =  cell % Hl    
+ pbc_cell % flex               (1:cell%atoms)      =  cell % flex  
  pbc_cell % copy_No  (1:cell%atoms)                =  0
 
 
@@ -95,6 +96,7 @@ contains
             pbc_cell % DPF                (k)   =  cell % DPF                (n) 
             pbc_cell % El                 (k)   =  cell % El                 (n) 
             pbc_cell % Hl                 (k)   =  cell % Hl                 (n) 
+            pbc_cell % flex               (k)   =  cell % flex               (n) 
             pbc_cell % copy_No  (k)             =  copy
 
         END DO
@@ -217,6 +219,7 @@ end subroutine Generate_Periodic_DPs
  pbc_cell % DPF                (1:cell%atoms)      =  cell % DPF   
  pbc_cell % El                 (1:cell%atoms)      =  cell % El    
  pbc_cell % Hl                 (1:cell%atoms)      =  cell % Hl    
+ pbc_cell % flex               (1:cell%atoms)      =  cell % flex  
  pbc_cell % copy_No  (1:cell%atoms)                =  0
 
 
@@ -258,6 +261,7 @@ end subroutine Generate_Periodic_DPs
             pbc_cell % DPF                (k)   =  cell % DPF                (n) 
             pbc_cell % El                 (k)   =  cell % El                 (n) 
             pbc_cell % Hl                 (k)   =  cell % Hl                 (n) 
+            pbc_cell % flex               (k)   =  cell % flex               (n) 
             pbc_cell % copy_No  (k)             =  copy
 
         END DO

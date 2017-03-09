@@ -38,6 +38,7 @@ module type_m
         logical     , allocatable  :: DPF(:)
         logical     , allocatable  :: El(:)
         logical     , allocatable  :: Hl(:)
+        logical     , allocatable  :: flex(:)
     end type structure
 
 !-----------------------------------------------------------------------------
@@ -64,6 +65,7 @@ module type_m
         logical                       :: DPF
         logical                       :: El
         logical                       :: Hl
+        logical                       :: flex
     end type atomic
 
     type molecular
@@ -145,6 +147,7 @@ module type_m
         logical          :: DPF
         logical          :: El
         logical          :: Hl
+        logical          :: flex
     end type STO_basis
 
 
@@ -275,12 +278,13 @@ do
     write(*,*) ' (13) DPF                       '
     write(*,*) ' (14) El                        '
     write(*,*) ' (15) Hl                        '
-    write(*,*) ' (16) solute                    '
-    write(*,*) ' (17) QM-MM                     '
-    write(*,*) ' (18) atoms                     '
-    write(*,*) ' (19) N_of_electrons            '
-    write(*,*) ' (20) N_of_solvent_Molecules    '
-    write(*,*) ' (21) N_of_solute_Molecules     '
+    write(*,*) ' (16) flex                      '
+    write(*,*) ' (17) solute                    '
+    write(*,*) ' (18) QM-MM                     '
+    write(*,*) ' (19) atoms                     '
+    write(*,*) ' (20) N_of_electrons            '
+    write(*,*) ' (21) N_of_solvent_Molecules    '
+    write(*,*) ' (22) N_of_solute_Molecules     '
     write(*,*) ' any other number cotinues      '
 
 
@@ -337,21 +341,24 @@ do
             write(*,70) a % Hl(:)
 
         case(16)
-            write(*,70) a % solute(:)
+            write(*,70) a % flex(:)
 
         case(17)
-            write(*,20) a % QMMM(:)
+            write(*,70) a % solute(:)
 
         case(18)
-            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
+            write(*,20) a % QMMM(:)
 
         case(19)
-            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
+            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
 
         case(20)
-            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
 
         case(21)
+            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+
+        case(22)
             write(*,'(a25,i5)') "N. of Solute Molecules = ", a % N_of_solute_Molecules
 
         case default
@@ -400,7 +407,8 @@ do
     write(*,*) ' (10) DPF        '
     write(*,*) ' (11) El         '
     write(*,*) ' (12) Hl         '
-    write(*,*) ' (13) QM-MM      '
+    write(*,*) ' (13) flex       '
+    write(*,*) ' (14) QM-MM      '
     write(*,*) ' any other number continues     '
 
     read (*,*) option
@@ -447,6 +455,9 @@ do
             write(*,70) a(:) % Hl
             
         case(13)
+            write(*,70) a(:) % flex
+
+        case(14)
             write(*,20) a(:) % QMMM
             
         case default
@@ -500,6 +511,7 @@ do
     write(*,*) ' (14) DPF            '
     write(*,*) ' (15) El             '
     write(*,*) ' (16) Hl             '
+    write(*,*) ' (17) flex           '
     write(*,*) ' any other number continues     '
 
 
@@ -557,6 +569,9 @@ do
 
         case(16)
             write(*,70) a(:) % Hl
+
+        case(17)
+            write(*,70) a(:) % flex
 
         case default
             exit

@@ -14,8 +14,10 @@ module Ehrenfest_Builder
 
     !module variables ...
     real*8                      :: delta = 1.d-8
-    real*8      , allocatable   :: grad_S(:,:) , S(:,:)
+    real*8      , allocatable   :: grad_S(:,:) , S(:,:) , F_ADmtx(:), F_NADmtx(:), F_mtx_vec(:,:,:)
     complex*16  , allocatable   :: rho_eh(:,:)
+    logical     , allocatable   :: mask(:,:)
+    integer     , allocatable   :: BasisPointer(:) , DOS(:)
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -38,18 +40,23 @@ contains
 
 ! local variables ... 
  integer :: i , j
- logical :: mask
 
 ! local parameters ...
- real*8 , parameter :: eVAngs_2_Newton = 1.602176565d-9
+ real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
+ logical , parameter :: T_ = .true. , F_ = .false.
 
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 
-If( .NOT. allocated(rho_eh) ) allocate( rho_eh(size(basis),size(basis)) )
+If( .NOT. allocated(rho_eh   ) ) allocate( rho_eh   (size(basis) ,size(basis) )                   )
+If( .NOT. allocated(F_ADmtx  ) ) allocate( F_ADmtx  (system%atoms)   , source=D_zero )
+If( .NOT. allocated(F_NADmtx ) ) allocate( F_NADmtx (system%atoms)   , source=D_zero )
+If( .NOT. allocated(F_mtx_vec) ) allocate( F_mtx_vec(system%atoms,system%atoms,3) , source=D_zero )
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis )
 CALL Overlap_Matrix( system , basis , S )
+
+CALL preprocess(system)
 
 ! build up electron-hole density matrix ...
 forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2)
@@ -59,7 +66,7 @@ select case( driver )
     case( "slice_AO" )
 
         do i = 1 , system% atoms
-            If( system%QMMM(i) /= "QM" ) cycle
+            If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
             atom(i)% Ehrenfest = Ehrenfest_AO( system, basis, QM_el, i ) * eVAngs_2_Newton 
         end do
 
@@ -67,13 +74,13 @@ select case( driver )
 
         ! electron and hole contributions ...
         do i = 1 , system% atoms
-            If( system%QMMM(i) /= "QM" ) cycle
+            If( system%QMMM(i) == "MM" ) cycle
             atom(i)% Ehrenfest = Ehrenfest_ElHl( system, basis, MO_bra, MO_ket, QM_el, QM_hl, i ) * eVAngs_2_Newton 
         end do
 
 end select
 
-deallocate( S )
+deallocate( S , mask , F_ADmtx , F_NADmtx , F_mtx_vec )
 If( allocated(grad_S) ) deallocate( grad_S )
 
 include 'formats.h'
@@ -93,22 +100,26 @@ type(R_eigen)    , intent(in)    :: QM
 integer          , intent(in)    :: site 
 
 ! local variables ...
-integer :: i , j , m , n , xyz
+integer :: i , j , m , n , xyz , size_basis , jL , L , indx
 integer :: k , ik , DOS_atom_k , BasisPointer_k 
-real*8  :: Force_AD , Force_NAD , rho_nm
+real*8  :: Force_AD , Force_NAD , X_ij 
 
 ! local arrays ...
+integer , allocatable :: pairs(:)
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
 real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
-real*8                :: X_ij
 
 verbose = .false.
-If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
+size_basis = size(basis)
+If( .NOT. allocated(grad_S) ) allocate( grad_S( size_basis , 10 ) )
+grad_S = D_zero
 
 !force on atom site ...
 k = site 
 DOS_atom_k     =  atom( system% AtNo(k) )% DOS
 BasisPointer_k =  system% BasisPointer(k) 
+
+allocate( pairs , source = pack([( L , L=1,system% atoms )] , mask(:,K)) )
 
 ! save coordinate ...
 tmp_coord = system% coord(k,:)
@@ -122,59 +133,64 @@ do xyz = 1 , 3
 
        system% coord (k,:) = tmp_coord - delta_b
        CALL Overlap_Matrix( system , basis , S_bck )
-       grad_S = (S_fwd - S_bck) / (TWO*delta) 
+
+       forall( j=1:DOS_Atom_K ) grad_S(:,j) = ( S_fwd( : , BasisPointer_K+j ) - S_bck( : , BasisPointer_K+j ) ) / (TWO*delta) 
 
 !       grad_S = (S_fwd - S) / delta 
 
-       Force_AD = D_zero
-
-       ! adiabatic component of the Force ...
        !==============================================================================================
-       !$omp parallel do schedule(dynamic,10) private(n,ik,i,j) default(shared) reduction(+:Force_AD)
-       do n = 1 , size(basis) 
-         do ik = 1 , DOS_atom_k
-            i = BasisPointer_k + ik
-            do j = 1 , size(basis)
-                Force_AD = Force_AD - rho_eh(n,n) * ( Huckel_stuff(i,j,basis) - QM%erg(n) ) * grad_S(i,j) * QM%L(n,i) * QM%L(n,j)
-            end do
-         end do
-       end do
-       !$end parallel do
-       !==============================================================================================
+       F_ADmtx  = D_zero
+       F_NADmtx = D_zero
 
-       Force_NAD = D_zero
+       !$OMP parallel do schedule(dynamic,5) private(n,m,iK,jL,i,j,L,X_ij) default(shared) reduction(+:F_ADmtx,F_NADmtx)
+       do indx = 1 , size(pairs)
+         
+         L = pairs(indx)
+         do jL = 1 , DOS(L)
+            j = BasisPointer(L) + jL
 
-       ! non-adiabatic component of the Force ...
-       !==============================================================================================
-       !$omp parallel do schedule(dynamic,10) private(n,m,rho_nm,ik,i,j,X_ij) default(shared) reduction(+:Force_NAD)
-       do n = 1   , size(basis)
-       do m = n+1 , size(basis)
+           do iK = 1 , DOS_atom_K
+              i = BasisPointer_K + iK
 
-         rho_nm = real( rho_eh(m,n) ) 
+              X_ij = Huckel_stuff(i,j,basis)
+          
+              ! adiabatic component of the Force ...
+              do n = 1 , size_basis 
+                  F_ADmtx(L) = F_ADmtx(L) - real(rho_eh(n,n)) * ( X_ij - QM%erg(n) ) * grad_S(j,iK) * QM%L(n,i) * QM%L(n,j)
+              end do
 
-         do ik = 1 , DOS_atom_k
-            i = BasisPointer_k + ik
-            do j = 1 , size(basis)
+              ! non-adiabatic component of the Force ...
+              do n = 1   , size_basis
+              do m = n+1 , size_basis
+                  
+                  F_NADmtx(L) = F_NADmtx(L) - real( rho_eh(m,n) ) * grad_S(j,iK)                             &
+                              * ((X_ij-QM%erg(m))*QM%L(m,j)*QM%L(n,i) + (X_ij-QM%erg(n))*QM%L(m,i)*QM%L(n,j))
 
-                X_ij = Huckel_stuff(i,j,basis) 
+              end do
+              end do
 
-                Force_NAD = Force_NAD - rho_nm * grad_S(j,i)                                                &
-                          * ((X_ij-QM%erg(m))*QM%L(m,j)*QM%L(n,i) + (X_ij-QM%erg(n))*QM%L(m,i)*QM%L(n,j))
-
-            end do
+           end do   
          end do
 
        end do
-       end do
-       !$end parallel do
+       !$OMP end parallel do
        !==============================================================================================
+     
+       ! anti-symmetric F_mtx (action-reaction) ...
+       do L = K+1, system% atoms
+          F_mtx_vec(K,L,xyz) =   F_ADmtx(L) + F_NADmtx(L) 
+          F_mtx_vec(L,K,xyz) = - F_mtx_vec(K,L,xyz) 
+       end do
+       F_mtx_vec(K,K,xyz) = D_zero
 
-       Force(xyz) = two * (Force_AD + Force_NAD)
+       Force(xyz) = two * sum( F_mtx_vec(K,:,xyz) )
 
 end do 
 
 ! recover original system ...
-system% coord (k,:) = tmp_coord
+system% coord (K,:) = tmp_coord
+        
+deallocate(pairs)
 
 end function Ehrenfest_AO
 !
@@ -318,6 +334,47 @@ else
 end if 
 
 end function Huckel_stuff
+!
+!
+!
+!
+!============================
+ subroutine Preprocess( sys ) 
+!============================
+use Semi_empirical_parms , only: atom
+implicit none
+type(structure) , intent(in) :: sys
+
+!local variables ...
+real*8                :: R_LK
+integer               :: K , L
+logical               :: flag1 , flag2 , flag3
+
+If( .NOT. allocated(BasisPointer) ) allocate( BasisPointer(sys%atoms) , DOS(sys%atoms) )
+
+Allocate( mask(sys%atoms,sys%atoms) , source = .false. )
+
+do K = 1   , sys% atoms
+   do L = K+1 , sys% atoms
+   
+       R_LK = sqrt(sum( (sys%coord(K,:)-sys%coord(L,:))**2 ) )
+   
+       flag1 = R_LK < cutoff_Angs  
+        
+       flag2 = sys% flex(K) .AND. sys% flex(L)
+   
+       flag3 = (sys% QMMM(L) == "QM") .AND. (sys% QMMM(K) == "QM")
+   
+       mask(L,K) = flag1 .AND. flag2 .AND. flag3
+
+   end do
+   BasisPointer(K) = sys% BasisPointer(K) 
+   DOS(K)          = atom( sys% AtNo(K) )% DOS
+end do    
+
+end subroutine Preprocess
+!
+!
 !
 !
 end module Ehrenfest_Builder

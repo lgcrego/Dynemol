@@ -461,6 +461,7 @@ end do
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+Unit_Cell% flex(:) = atom(:)% flex
 
 end subroutine Build_MM_Environment
 !
@@ -635,7 +636,7 @@ do j = 1 , MM % N_of_atoms
     atom(i) % MM_charge    = 0.d0
     atom(i) % eps          = 0.d0
     atom(i) % sig          = 0.d0
-    atom(i) % flex         = .true.
+    atom(i) % flex         = Unit_Cell % flex(i)
 end do
 
 ! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
