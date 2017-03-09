@@ -54,9 +54,7 @@ If( .NOT. allocated(F_mtx_vec) ) allocate( F_mtx_vec(system%atoms,system%atoms,3
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis )
-CALL Overlap_Matrix( system , basis , S )
-
-CALL preprocess(system)
+CALL preprocess    ( system )
 
 ! build up electron-hole density matrix ...
 forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2)
@@ -80,7 +78,7 @@ select case( driver )
 
 end select
 
-deallocate( S , mask , F_ADmtx , F_NADmtx , F_mtx_vec )
+deallocate( mask , F_ADmtx , F_NADmtx , F_mtx_vec )
 If( allocated(grad_S) ) deallocate( grad_S )
 
 include 'formats.h'
@@ -129,10 +127,10 @@ do xyz = 1 , 3
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
  
        system% coord (k,:) = tmp_coord + delta_b
-       CALL Overlap_Matrix( system , basis , S_fwd )
+       CALL Overlap_Matrix( system , basis , S_fwd , purpose = "Pulay" , site = K )
 
        system% coord (k,:) = tmp_coord - delta_b
-       CALL Overlap_Matrix( system , basis , S_bck )
+       CALL Overlap_Matrix( system , basis , S_bck , purpose = "Pulay" , site = K )
 
        forall( j=1:DOS_Atom_K ) grad_S(:,j) = ( S_fwd( : , BasisPointer_K+j ) - S_bck( : , BasisPointer_K+j ) ) / (TWO*delta) 
 
@@ -142,6 +140,7 @@ do xyz = 1 , 3
        F_ADmtx  = D_zero
        F_NADmtx = D_zero
 
+       ! Run, Forest, Run ...
        !$OMP parallel do schedule(dynamic,5) private(n,m,iK,jL,i,j,L,X_ij) default(shared) reduction(+:F_ADmtx,F_NADmtx)
        do indx = 1 , size(pairs)
          

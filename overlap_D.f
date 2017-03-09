@@ -29,14 +29,15 @@ contains
 !
 !
 !
-!================================================================
- subroutine Overlap_Matrix( system , basis , S_matrix , purpose )
-!================================================================
+!=======================================================================
+ subroutine Overlap_Matrix( system , basis , S_matrix , purpose , site )
+!=======================================================================
  implicit none
  type(structure)                , intent(in)    :: system
  type(STO_basis)                , intent(in)    :: basis(:)
  real*8           , allocatable , intent(inout) :: S_matrix(:,:)
  character(len=*) , optional    , intent(in)    :: purpose             
+ integer          , optional    , intent(in)    :: site
 
 ! local variables ... 
  type(structure)               :: pbc_system
@@ -71,7 +72,7 @@ contains
         ! if no PBC pbc_system = system ...
         CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis ) 
 
-        CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix , recycle = .true. )
+        CALL Pulay_Overlap( system, basis, pbc_system, pbc_basis, S_matrix , site )
 
         CALL Deallocate_Structures(pbc_system)
         If( allocated(pbc_basis) ) deallocate(pbc_basis)
@@ -162,7 +163,7 @@ type(STO_basis)            , intent(in)     :: a_basis(:)
 real*8                     , intent(inout)  :: S_matrix(:,:)
 logical         , optional , intent(in)     :: recycle
 
-! local variables ...
+ ! local variables ...
 real*8  :: expa, expb, Rab , aux , anor
 real*8  :: sux(0:10)
 integer :: a , b , ia , ib , ja , jb
@@ -301,6 +302,116 @@ End If
 forall(i=1:size(b_basis))  S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
 
 end subroutine Build_OVERLAP_Matrix
+!
+!
+!
+!=================================================================================
+ subroutine Pulay_OVERLAP( b_system, b_basis, a_system, a_basis, S_matrix , site )
+!=================================================================================
+use util_m , factorial => fact
+implicit none
+type(structure) , intent(in)     :: b_system
+type(STO_basis) , intent(in)     :: b_basis(:)
+type(structure) , intent(in)     :: a_system
+type(STO_basis) , intent(in)     :: a_basis(:)
+real*8          , intent(inout)  :: S_matrix(:,:)
+integer         , intent(in)     :: site 
+
+ ! local variables ...
+real*8  :: expa, expb, Rab , aux , anor
+real*8  :: sux(0:10)
+integer :: a , b , ia , ib , ja , jb
+integer :: na , la , ma 
+integer :: nb , lb , mb
+integer :: msup , i , j , k , m 
+logical :: atom_not_moved
+
+! local parameters ....
+integer , parameter :: mxn = 15 , mxl = 5
+
+! local arrays ...
+real*8  , dimension(0:mxl)                   :: solvec 
+real*8  , dimension(0:mxl)                   :: solnorm , sol_partial
+real*8  , dimension(-mxl:mxl,-mxl:mxl,0:mxl) :: rl , rl2
+
+S_matrix = D_zero
+
+ib = site
+
+!$omp parallel do schedule(dynamic,1) default(shared) &
+!$omp private(ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,aux,msup,solnorm,j,i,expb,expa,solvec,anor,m,sol_partial,sux,rl,rl2)
+do ia = ib+1 , a_system% atoms  
+
+    If( a_system%QMMM(ia) /= "QM" ) goto 10
+
+    ! ckecking: if atoms ia and ib remain fixed ...
+    Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
+    If(Rab > cutoff_Angs) goto 10
+
+    atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
+    If( atom_not_moved ) goto 10
+
+    ! if atoms ia and ib move => calculate rotation matrix for the highest l
+    call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
+
+    do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
+    do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
+
+        nb = b_basis(b)% n  ;  lb = b_basis(b)% l  ;  mb = b_basis(b)% m
+        na = a_basis(a)% n  ;  la = a_basis(a)% l  ;  ma = a_basis(a)% m
+   
+        aux = 1.d0 / ( factorial(na+na) * factorial(nb+nb) )
+        msup = min(la,lb)
+
+        solnorm(0:msup) = 0.d0
+
+        do j = 1 , b_basis(b)% Nzeta
+        do i = 1 , a_basis(a)% Nzeta
+  
+            expb = b_basis(b)% zeta(j)
+            expa = a_basis(a)% zeta(i)
+
+            ! OVERLAP SUBROUTINE: lined-up frame
+
+            call solap(na, la, expa, nb, lb, expb, Rab, solvec)
+
+            anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI
+
+            ! Introduces normalization of the STO in the integrals 
+
+            do m = 0, msup-1
+                sol_partial(m) = solvec(m) * anor
+                anor = anor / dsqrt((la+m+1.d0)*(la-m)*(lb+m+1.d0)*(lb-m))
+                if (m == 0) anor = anor + anor
+            enddo
+            sol_partial(msup) = solvec(msup) * anor
+            forall(k=0:msup) solnorm(k) = solnorm(k) + a_basis(a)%coef(i)*b_basis(b)%coef(j)*sol_partial(k)
+  
+        end do
+        end do
+
+        ! Rotation of overlap integrals to the molecular frame
+ 
+        sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
+        forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
+
+        a = a-(a_basis(a)%copy_No)*size(b_basis)
+        S_matrix(a,b) = S_matrix(a,b) + sum(sux(0:msup))
+
+    enddo
+    enddo
+
+10 end do
+!$omp end parallel do
+
+! diagonal elements
+forall(i=1:size(b_basis)) S_matrix(i,i) = D_one
+
+! symmetric overlap matrix
+forall(i=1:size(b_basis))  S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
+
+end subroutine Pulay_OVERLAP
+!
 !
 !
 !
