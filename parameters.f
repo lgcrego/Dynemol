@@ -12,7 +12,8 @@ type (integer_interval) :: holes , electrons , rho_range
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
-logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist
+character (len=7)       :: argument
+logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , EHM_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -57,16 +58,16 @@ logical :: dynamic
   
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
-  EHM_Forces        = T_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
+  EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
   GaussianCube      = F_                       
-  GaussianCube_step = 500000                  ! <== time step for saving Gaussian Cube files
+  GaussianCube_step = 500                     ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
   CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
-  DensityMatrix     = T_                      ! <== generates data for postprocessing 
+  DensityMatrix     = F_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
   VDOS_             = F_
 !--------------------------------------------------------------------
@@ -90,8 +91,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  0.4d0                               ! <== final time in PICOseconds
-  n_t  =  40000                               ! <== number of time steps
+  t_f  =  1.00d0                              ! <== final time in PICOseconds
+  n_t  =  200000                              ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -110,7 +111,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -182,6 +183,20 @@ If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
     stop
 End If    
+
+!-------------------------------------------------------------
+! get command line argument to turn off hole dynamics ...
+CALL GET_COMMAND_ARGUMENT( 1 , argument )
+preview = F_
+if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
+    select case ( argument )
+
+        case( "preview" )
+        preview = .true.
+
+    end select
+end if
+!--------------------------------------------------------------
 
 include 'formats.h'
 

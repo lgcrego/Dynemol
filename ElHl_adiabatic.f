@@ -9,7 +9,7 @@ module ElHl_adiabatic_m
                                              DP_Field_ , DP_Moment ,        &
                                              Induced_ , QMMM ,              &
                                              GaussianCube , static ,        &
-                                             GaussianCube_step ,            &
+                                             GaussianCube_step , preview ,  &
                                              hole_state , initial_state ,   &
                                              restart , Coulomb_ ,           &
                                              DensityMatrix
@@ -338,6 +338,8 @@ do n = 1 , n_part
 
         end select
 end do
+! stop here to preview and check input and system info ...
+If( preview ) stop
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_bra(:,1) , mm , C_zero , DUAL_bra(:,1) , mm )

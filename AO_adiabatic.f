@@ -11,7 +11,7 @@ module AO_adiabatic_m
                                              DP_Field_ , DP_Moment ,        &
                                              Induced_ , QMMM , restart ,    &
                                              GaussianCube , static ,        &
-                                             GaussianCube_step ,            &
+                                             GaussianCube_step , preview ,  &
                                              hole_state , initial_state ,   &
                                              DensityMatrix , AutoCorrelation
     use Babel_m                     , only : Coords_from_Universe ,         &
@@ -316,6 +316,8 @@ do n = 1 , n_part
 
         end select
 end do
+! stop here to preview and check input and system info ...
+If( preview ) stop
 
 UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO
 
