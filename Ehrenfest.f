@@ -1,6 +1,9 @@
 ! Program for computing Ehrenfest forces from Huckel Hamiltonian
 module Ehrenfest_Builder
 
+    use f95_precision
+    use blas95
+    use lapack95
     use type_m
     use constants_m
     use parameters_m            , only  : driver , verbose , n_part , QMMM
@@ -13,14 +16,14 @@ module Ehrenfest_Builder
     private
 
     !module variables ...
-    real*8                      :: delta = 1.d-8
-    real*8      , allocatable   :: grad_S(:,:) , S(:,:) , F_ADmtx(:), F_NADmtx(:), F_mtx_vec(:,:,:)
-    complex*16  , allocatable   :: rho_eh(:,:)
-    logical     , allocatable   :: mask(:,:)
     integer     , allocatable   :: BasisPointer(:) , DOS(:)
+    real*8      , allocatable   :: A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , rho_eh(:,:) , tool(:,:) , X_ij(:,:)
+    real*8      , allocatable   :: grad_S(:,:) , S(:,:) , F_vec(:) , F_mtx(:,:,:)
+    logical     , allocatable   :: mask(:,:)
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
+    real*8  , parameter :: delta      = 1.d-8
 
 contains
 !
@@ -40,27 +43,52 @@ contains
 
 ! local variables ... 
  integer :: i , j
+ real*8  , allocatable :: X_ij(:,:)
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
  logical , parameter :: T_ = .true. , F_ = .false.
 
-forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
-
-If( .NOT. allocated(rho_eh   ) ) allocate( rho_eh   (size(basis) ,size(basis) )                   )
-If( .NOT. allocated(F_ADmtx  ) ) allocate( F_ADmtx  (system%atoms)   , source=D_zero )
-If( .NOT. allocated(F_NADmtx ) ) allocate( F_NADmtx (system%atoms)   , source=D_zero )
-If( .NOT. allocated(F_mtx_vec) ) allocate( F_mtx_vec(system%atoms,system%atoms,3) , source=D_zero )
+!================================================================================================
+! some preprocessing ...
+!================================================================================================
+If( .NOT. allocated(F_mtx ) ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
+If( .NOT. allocated(F_vec ) ) allocate( F_vec   (system%atoms)                , source=D_zero )
+If( .NOT. allocated(rho_eh) ) then
+    allocate( rho_eh  (size(basis),size(basis)))
+    allocate( A_ad_nd (size(basis),size(basis)))
+    allocate( B_ad_nd (size(basis),size(basis)))
+    allocate( tool    (size(basis),size(basis)))
+    allocate( Kernel  (size(basis),size(basis)))
+end if
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis )
 CALL preprocess    ( system )
 
 ! build up electron-hole density matrix ...
-forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2)
+forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+tool   = transpose(rho_eh)
+rho_eh = ( rho_eh + tool ) / two 
 
+CALL symm( rho_eh , QM_el%L , tool )
+CALL gemm( QM_el%L , tool , A_ad_nd , 'T' , 'N' )
+
+forall( j=1:size(basis) ) rho_eh(:,j) = QM_el%erg(j) * rho_eh(:,j) 
+CALL gemm( rho_eh , QM_el%L , tool )
+CALL gemm( tool , QM_el%L  , B_ad_nd , 'T' , 'N' )
+
+CALL Huckel_stuff( basis , X_ij )
+
+Kernel = X_ij * A_ad_nd - B_ad_nd
+!
+!================================================================================================
+
+! set all forces to zero beforehand ...
+forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
+
+! Run, Forrest, Run ...
 select case( driver )
-
     case( "slice_AO" )
 
         do i = 1 , system% atoms
@@ -75,10 +103,9 @@ select case( driver )
             If( system%QMMM(i) == "MM" ) cycle
             atom(i)% Ehrenfest = Ehrenfest_ElHl( system, basis, MO_bra, MO_ket, QM_el, QM_hl, i ) * eVAngs_2_Newton 
         end do
-
 end select
 
-deallocate( mask , F_ADmtx , F_NADmtx , F_mtx_vec )
+deallocate( mask , X_ij , F_vec , F_mtx )
 If( allocated(grad_S) ) deallocate( grad_S )
 
 include 'formats.h'
@@ -100,7 +127,6 @@ integer          , intent(in)    :: site
 ! local variables ...
 integer :: i , j , m , n , xyz , size_basis , jL , L , indx
 integer :: k , ik , DOS_atom_k , BasisPointer_k 
-real*8  :: Force_AD , Force_NAD , X_ij 
 
 ! local arrays ...
 integer , allocatable :: pairs(:)
@@ -134,14 +160,10 @@ do xyz = 1 , 3
 
        forall( j=1:DOS_Atom_K ) grad_S(:,j) = ( S_fwd( : , BasisPointer_K+j ) - S_bck( : , BasisPointer_K+j ) ) / (TWO*delta) 
 
-!       grad_S = (S_fwd - S) / delta 
-
        !==============================================================================================
-       F_ADmtx  = D_zero
-       F_NADmtx = D_zero
+       F_vec = D_zero
 
-       ! Run, Forrest, Run ...
-       !$OMP parallel do schedule(dynamic,5) private(n,m,iK,jL,i,j,L,X_ij) default(shared) reduction(+:F_ADmtx,F_NADmtx)
+       !$OMP parallel do schedule(dynamic,3) private(iK,jL,i,j,L) default(shared) reduction(+:F_vec)
        do indx = 1 , size(pairs)
          
          L = pairs(indx)
@@ -151,22 +173,8 @@ do xyz = 1 , 3
            do iK = 1 , DOS_atom_K
               i = BasisPointer_K + iK
 
-              X_ij = Huckel_stuff(i,j,basis)
-          
-              ! adiabatic component of the Force ...
-              do n = 1 , size_basis 
-                  F_ADmtx(L) = F_ADmtx(L) - real(rho_eh(n,n)) * ( X_ij - QM%erg(n) ) * grad_S(j,iK) * QM%L(n,i) * QM%L(n,j)
-              end do
-
-              ! non-adiabatic component of the Force ...
-              do n = 1   , size_basis
-              do m = n+1 , size_basis
-                  
-                  F_NADmtx(L) = F_NADmtx(L) - real( rho_eh(m,n) ) * grad_S(j,iK)                             &
-                              * ((X_ij-QM%erg(m))*QM%L(m,j)*QM%L(n,i) + (X_ij-QM%erg(n))*QM%L(m,i)*QM%L(n,j))
-
-              end do
-              end do
+              ! adiabatic and non-adiabatic components of the Force ...
+              F_vec(L) = F_vec(L) -  grad_S(j,iK) * Kernel(i,j)
 
            end do   
          end do
@@ -177,12 +185,12 @@ do xyz = 1 , 3
      
        ! anti-symmetric F_mtx (action-reaction) ...
        do L = K+1, system% atoms
-          F_mtx_vec(K,L,xyz) =   F_ADmtx(L) + F_NADmtx(L) 
-          F_mtx_vec(L,K,xyz) = - F_mtx_vec(K,L,xyz) 
+          F_mtx(K,L,xyz) =   F_vec(L)
+          F_mtx(L,K,xyz) = - F_mtx(K,L,xyz) 
        end do
-       F_mtx_vec(K,K,xyz) = D_zero
+       F_mtx(K,K,xyz) = D_zero
 
-       Force(xyz) = two * sum( F_mtx_vec(K,:,xyz) )
+       Force(xyz) = two * sum( F_mtx(K,:,xyz) )
 
 end do 
 
@@ -252,9 +260,9 @@ do xyz = 1 , 3
          do ik = 1 , DOS_atom_k
             i = BasisPointer_k + ik
             do j = 1 , size(basis)
-                Force_AD = Force_AD                                                                                             &
-                         - wp_occ(n,1) * ( Huckel_stuff(i,j,basis) - QM_el%erg(n) ) * grad_S(i,j) * QM_el%L(n,i) * QM_el%L(n,j) &
-                         + wp_occ(n,2) * ( Huckel_stuff(i,j,basis) - QM_hl%erg(n) ) * grad_S(i,j) * QM_hl%L(n,i) * QM_hl%L(n,j) 
+!                Force_AD = Force_AD                                                                                             &
+!                         - wp_occ(n,1) * ( Huckel_stuff(i,j,basis) - QM_el%erg(n) ) * grad_S(i,j) * QM_el%L(n,i) * QM_el%L(n,j) &
+!                         + wp_occ(n,2) * ( Huckel_stuff(i,j,basis) - QM_hl%erg(n) ) * grad_S(i,j) * QM_hl%L(n,i) * QM_hl%L(n,j) 
             end do
          end do
        end do
@@ -299,40 +307,50 @@ end function Ehrenfest_ElHl
 !
 !
 !
-!===========================================
- pure function Huckel_stuff( i , j , basis )
-!===========================================
+!=====================================
+ subroutine Huckel_stuff( basis , Xi ) 
+!=====================================
 implicit none
-integer         , intent(in) :: i , j
 type(STO_basis) , intent(in) :: basis(:)
+real*8          , allocatable , intent(out) :: Xi(:,:)
 
 !local variables ...
-real*8 :: Huckel_stuff
-real*8 :: k_eff , k_WH , c1 , c2 , c3
+integer :: i , j
+real*8  :: k_eff , k_WH , c1 , c2 , c3
+
+allocate ( Xi( size(basis) , size(basis) ) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-if (i == j) then
+do j = 1 , size(basis)
+do i = j , size(basis)
 
-    huckel_stuff = basis(i)%IP
+    if (i == j) then
 
-else
+         Xi(i,i) = basis(i)%IP
 
-    c1 = basis(i)%IP - basis(j)%IP
-    c2 = basis(i)%IP + basis(j)%IP
+    else
 
-    c3 = (c1/c2)*(c1/c2)
+         c1 = basis(i)%IP - basis(j)%IP
+         c2 = basis(i)%IP + basis(j)%IP
+ 
+         c3 = (c1/c2)*(c1/c2)
 
-    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+         k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
-    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-    Huckel_stuff = k_eff * c2 * HALF
+         Xi(i,j) = k_eff * c2 * HALF
 
-end if 
+         Xi(j,i) = Xi(i,j) 
 
-end function Huckel_stuff
+    end if 
+
+end do
+end do    
+
+end subroutine Huckel_stuff
 !
 !
 !
