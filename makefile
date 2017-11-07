@@ -2,7 +2,8 @@
 .SUFFIXES:
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
-FC=ifort -xHost -ip -fpp
+#FC=ifort -xHost -ip -fpp
+FC=mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
@@ -36,7 +37,7 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 #
 # CUDA and MAGMA paths:
 #CUDADIR   = /usr/local/cuda
-#MAGMADIR  = /opt/magma-2.1.0
+#MAGMADIR  = /opt/magma
 #
 # CUDA and MAGMA libs:
 #LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcusparse -lcudart
@@ -66,6 +67,7 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
+                  MPI_defs.o \
 		  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
