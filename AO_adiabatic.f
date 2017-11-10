@@ -7,8 +7,9 @@ module AO_adiabatic_m
     use type_m
     use constants_m
     use blas95
-    use MPI_definitions_m           , only : master , slave , world ,       &
-                                             EigenComm , EigenCrew , myid
+    use MPI_definitions_m           , only : master , master , world , myid,&
+                                             KernelComm , KernelCrew ,      &
+                                             ForceCrew , EigenCrew
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
@@ -111,12 +112,15 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
 
+        ! ForceCrew dwell in EhrenfestForce ...
+        If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
+
+999     CALL MPI_Barrier( KernelComm , err )
+
         Net_Charge_MM = Net_Charge
 
-999     if( EigenCrew ) then
-            CALL MPI_BCAST( UNI%erg , mm    , mpi_double_precision , 0 , EigenComm , err )
-            CALL MPI_BCAST( UNI%L   , mm*mm , mpi_double_precision , 0 , EigenComm , err )
-        end if
+        CALL MPI_BCAST( UNI%erg , mm    , mpi_double_precision , 0 , KernelComm , err )
+        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
 
         CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
@@ -134,8 +138,8 @@ do frame = frame_init , frame_final , frame_step
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+    DUAL_bra = conjg(DUAL_ket)
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
     If( nn == 1) then
@@ -198,11 +202,11 @@ do frame = frame_init , frame_final , frame_step
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
 
     ! project back to MO_basis with UNI(t + t_rate)
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    MO_bra = conjg(MO_ket)
 
 !============================================================================
 
@@ -290,19 +294,20 @@ end If
 
 CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-! SLAVES only calculate S_matrix and return, wait for BCAST ...
-CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , flag2=it )
+! SLAVES only calculate S_matrix and return ...
+CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
 
-If( slave ) then
+! done for ForceCrew ...
+If( ForceCrew ) return
+
+If( .not. master ) then
         allocate( UNI%erg (mm)    )
         allocate( UNI%L   (mm,mm) )
         allocate( UNI%R   (mm,mm) )
 end if
-
-CALL MPI_BCAST( UNI%Fermi_state ,   1   , mpi_integer          , 0 , world , err )
-CALL MPI_BCAST( UNI%erg         , mm    , mpi_double_precision , 0 , world , err )
-CALL MPI_BCAST( UNI%L           , mm*mm , mpi_double_precision , 0 , world , err )
-CALL MPI_BCAST( UNI%R           , mm*mm , mpi_double_precision , 0 , world , err )
+CALL MPI_BCAST( UNI%erg , mm    , mpi_double_precision , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%L   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%R   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
 
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
@@ -350,8 +355,8 @@ If( preview ) stop
 UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+DUAL_bra = conjg(DUAL_ket)
 
 ! save populations ...
 If( nn == 1) then

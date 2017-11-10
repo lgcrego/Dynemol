@@ -135,6 +135,7 @@ contains
  S_size = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
  allocate(S_matrix(S_size,S_size))
 
+ ! this will allow saving present overlap data in S_pack for future use in HFP forces ...
  Pulay = .true.
  done  = .false.
 
@@ -145,6 +146,8 @@ contains
 
  CALL Deallocate_Structures(pbc_system)
  If( allocated(pbc_basis) ) deallocate(pbc_basis)
+
+ ! no need to keep S_matrix, because data is stored in S_pack ...
  deallocate(S_matrix)
 
  end subroutine Preprocess_OverlapMatrix
@@ -372,7 +375,7 @@ do ia = ib+1 , a_system% atoms
             expa = a_basis(a)% zeta(i)
 
             ! OVERLAP SUBROUTINE: lined-up frame
-
+    
             call solap(na, la, expa, nb, lb, expb, Rab, solvec)
 
             anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI

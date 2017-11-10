@@ -112,7 +112,7 @@ if( driver == "slice_ElHl") then
 
 else
 
-    CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el , flag2=it )
+    CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
 end if
 

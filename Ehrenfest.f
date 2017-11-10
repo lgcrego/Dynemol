@@ -7,7 +7,7 @@ module Ehrenfest_Builder
     use lapack95
     use type_m
     use constants_m
-    use MPI_definitions_m       , only  : myid , world , master , slave , np , EigenComm , EigenCrew , ForceCrew 
+    use MPI_definitions_m       , only  : myForce , master , npForce , KernelComm , ForceComm , KernelCrew , ForceCrew 
     use parameters_m            , only  : driver , verbose , n_part , QMMM
     use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
@@ -31,17 +31,16 @@ contains
 !
 !
 !
-!=============================================================================
- subroutine EhrenfestForce( system , basis , MO_bra , MO_ket , QM_el , QM_hl )
-!=============================================================================
+!=====================================================================
+ subroutine EhrenfestForce( system , basis , MO_bra , MO_ket , QM_el )
+!=====================================================================
  use MD_read_m              , only  : atom
  implicit none
  type(structure)            , intent(inout) :: system
  type(STO_basis)            , intent(in)    :: basis(:)
- complex*16                 , intent(in)    :: MO_bra(:,:)
- complex*16                 , intent(in)    :: MO_ket(:,:)
- type(R_eigen)              , intent(inout) :: QM_el
- type(R_eigen)   , optional , intent(inout) :: QM_hl
+ complex*16      , optional , intent(in)    :: MO_bra(:,:)
+ complex*16      , optional , intent(in)    :: MO_ket(:,:)
+ type(R_eigen)   , optional , intent(inout) :: QM_el
 
 ! local variables ... 
  integer               :: i , j , N , xyz , err  
@@ -61,29 +60,27 @@ N = size(basis)
 If( .NOT. allocated(Kernel) ) then
         allocate( Kernel (N,N)                         )
         allocate( F_snd  (system%atoms,system%atoms,3) )
+        allocate( F_rcv  (system%atoms,system%atoms,3) )
         allocate( F_vec  (system%atoms)                ) 
 end If
 
-If( ForceCrew ) deallocate( QM_el%erg , QM_el%L , QM_el%R )
-
-! ForceCrews in stand-by ...
-99 CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_double_precision , 0 , world , err )
+! ForceCrew in stand-by ...
+99 CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_double_precision , 0 , ForceComm, err )
 
 ! preprocess overlap matrix for Pulay calculations ...
  CALL Overlap_Matrix( system , basis )
  CALL preprocess    ( system )
 
 ! build up electron-hole density matrix ...
-if( EigenCrew ) then
+if( KernelCrew ) then
 
     If( .NOT. allocated(rho_eh) ) then
         allocate( rho_eh  (N,N) )
         allocate( B_ad_nd (N,N) )
         allocate( tool    (N,N) )
         If( master ) then
-                allocate( F_rcv   (system%atoms,system%atoms,3) )
-                allocate( A_ad_nd (N,N) )
-                CALL Huckel_stuff( basis )
+             allocate( A_ad_nd (N,N) )
+             CALL Huckel_stuff( basis )
         end If
     end If
 
@@ -91,35 +88,32 @@ if( EigenCrew ) then
 
         forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
 
-        tool   = transpose(rho_eh)
-        rho_eh = ( rho_eh + tool ) / two 
-
-        CALL MPI_ISend( rho_eh , N*N , mpi_double_precision , 1 , 0 , EigenComm , request , err )
+        CALL MPI_ISend( rho_eh , N*N , mpi_double_precision , 1 , 0 , KernelComm , request , err )
         CALL MPI_Request_Free( request , err )
 
         CALL symm( rho_eh , QM_el%L , tool )
         CALL gemm( QM_el%L , tool , A_ad_nd , 'T' , 'N' )
 
-        CALL MPI_Recv( B_ad_nd , N*N , mpi_double_precision , 1 , mpi_any_tag , EigenComm , mpi_status , err )
+        CALL MPI_Recv( B_ad_nd , N*N , mpi_double_precision , 1 , mpi_any_tag , KernelComm , mpi_status , err )
 
         Kernel = X_ij * A_ad_nd - B_ad_nd
 
-    else  ! <== firstmate of EigenCrew ...
+    else  ! <== firstmate of KernelCrew ...
 
-        CALL MPI_Recv( rho_eh , N*N , mpi_double_precision , 0 , mpi_any_tag , EigenComm , mpi_status , err )
+        CALL MPI_Recv( rho_eh , N*N , mpi_double_precision , 0 , mpi_any_tag , KernelComm , mpi_status , err )
 
         forall( j=1:N ) rho_eh(:,j) = QM_el%erg(j) * rho_eh(:,j) 
 
         CALL gemm( rho_eh , QM_el%L , tool )
         CALL gemm( tool , QM_el%L  , B_ad_nd , 'T' , 'N' )
 
-        CALL MPI_ISend( B_ad_nd , N*N , mpi_double_precision , 0 , 0 , EigenComm , request , err )
+        CALL MPI_ISend( B_ad_nd , N*N , mpi_double_precision , 0 , 0 , KernelComm , request , err )
         CALL MPI_Request_Free( request , err )
 
     end if
 end if
 
-call MPI_BCAST( Kernel , N*N , mpi_double_precision , 0 , world , err )
+call MPI_BCAST( Kernel , N*N , mpi_double_precision , 0 , ForceComm , err )
 
 ! Run, Forrest, Run ...
 !================================================================================================
@@ -132,14 +126,14 @@ select case( driver )
 
     case( "slice_AO" )
 
-        do i = myid+1 , system% atoms , np
+        do i = myForce+1 , system% atoms , npForce
 
             If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
             CALL Ehrenfest_AO( system, basis, i ) 
 
         end do
 
-        call MPI_reduce( F_snd , F_rcv , 3*system%atoms**2 , MPI_double_precision , mpi_SUM , 0 , world , err )
+        call MPI_reduce( F_snd , F_rcv , 3*system%atoms**2 , MPI_double_precision , mpi_SUM , 0 , ForceComm , err )
 
         if( master ) then
             do i = 1 , system% atoms

@@ -1,7 +1,7 @@
  module FMO_m
 
     use type_m
-    use MPI_definitions_m           , only : master
+    use MPI_definitions_m           , only : master , myid
     use parameters_m                , only : n_part ,                   &
                                              Survival ,                 &
                                              initial_state ,            &
@@ -229,7 +229,8 @@ implicit none
  if( dabs(check-FMO_size) < low_prec ) then
      If( master ) Print*, '>> projection done <<'
  else
-     Print 58 , check 
+     Print * , check , myid
+!     Print 58 , check 
      If( master ) Print*, '---> problem in projector <---'
  end if
 
@@ -254,16 +255,20 @@ implicit none
  character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
- integer               :: N_of_FMO_electrons, i, j , info
+ integer               :: N_of_FMO_electrons, i, j , N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
+ real*8  , ALLOCATABLE :: dumb_s(:,:) , s_eigen(:) , tool(:,:)
 
- ALLOCATE( s_FMO(size(basis),size(basis)), h_FMO(size(basis),size(basis)),  FMO%erg(size(basis)) )
+ N = size(basis)
+
+ ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  FMO%erg(N) )
+ ALLOCATE( dumb_s(N,N) , tool(N,N)  ,  s_eigen(N) )
 
 !-----------------------------------------------------------------------
 
  CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
- DO j = 1 , size(basis)
+ DO j = 1 , N
    DO i = 1 , j 
 
       h_FMO(i,j) = huckel( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
@@ -271,20 +276,43 @@ implicit none
    END DO
  END DO
 
+ dumb_S = S_FMO
+
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
- CALL SYGVD(h_FMO,s_FMO,FMO%erg,1,'V','U',info)
+ CALL SYGVD(h_FMO , s_FMO , FMO%erg , 1 , 'V' , 'U' , info)
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
  FMO % Fermi_State = sum( system%Nvalen ) / two
 !---------------------------------------------------------------------
 
- ALLOCATE( wv_FMO(size(basis),size(basis)) )
+!---------------------------------------------------------------------
+! Overlap Matrix Factorization: S^(1/2) ...
+
+ CALL SYEV(dumb_s , s_eigen , 'V' , 'L' , info)
+
+ tool  = transpose( dumb_s )
+
+ forall( i=1:N ) tool(:,i) = sqrt(s_eigen) * tool(:,i)
+
+! now S_matrix = S^(1/2) matrix transformation ...
+ CALL gemm(dumb_s , tool , S_FMO , 'N' , 'N')
+
+ DEALLOCATE( s_eigen  )
+ DEALLOCATE( dumb_S   )
+
+!---------------------------------------------------------------------
+
+ tool = h_FMO
+
+ CALL symm( S_FMO , tool , h_FMO )
+
+ ALLOCATE( wv_FMO(N,N) )
 
  wv_FMO = transpose(h_FMO)
 
- DeAllocate( s_FMO , h_FMO )
+ DeAllocate( s_FMO , h_FMO , tool )
 
 ! save energies of the FMO system 
  If( present(fragment) .AND. (fragment=="H") ) then
@@ -295,7 +323,7 @@ implicit none
 
  N_of_FMO_electrons = sum( system%Nvalen )
  write(9,*) float(N_of_FMO_electrons) / 2.0
- do i = 1 , size(basis)
+ do i = 1 , N
     write(9,*) i , FMO%erg(i)
  end do
  CLOSE(9)   
