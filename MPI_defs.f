@@ -45,27 +45,26 @@ contains
 
 ! define sub_groups and new communicators ...
 !------------------------------------------------------------------------
-! KernelComm group = (0,1) ...
+! KernelComm group = (0,1,2) ...
  select case ( myid )
-    case (0:1)
+    case (0)
+        my_color   =  0
+    case (1:2)
         my_color   =  0
         KernelCrew =  .true.
-    case (2)
+    case (3:)
         my_color   =  MPI_undefined
-    case (3:) 
-        my_color   =  MPI_undefined
-        ForceCrew  =  .true.
  end select
  CALL MPI_Comm_split( world , my_color , myid , KernelComm  , err )
  If( KernelCrew ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
-
+ 
 !------------------------------------------------------------------------
-! EigenComm group = (0,2)  ...
+! EigenComm group = (0,3)  ...
  select case ( myid )
-    case (0,2)
+    case (0,3)
         my_color = 0
         EigenCrew = .true.
-    case (1,3:) 
+    case (1,2,4:) 
         my_color = MPI_undefined
  end select
  CALL MPI_Comm_split( world , my_color , myid , EigenComm  , err )
@@ -74,10 +73,14 @@ contains
 !------------------------------------------------------------------------
 ! ForceComm group = KernelCrew + ForceCrew  ...
  select case ( myid )
-    case (0,1,3:)
+    case (0:2)
         my_color = 0
         drafted  = .true.
-    case (2) 
+    case (4:)
+        my_color   = 0
+        drafted    = .true.
+        ForceCrew  = .true.
+    case (3) 
         my_color = MPI_undefined
  end select
  CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )

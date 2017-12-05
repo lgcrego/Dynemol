@@ -9,7 +9,8 @@ module AO_adiabatic_m
     use blas95
     use MPI_definitions_m           , only : master , master , world , myid,&
                                              KernelComm , KernelCrew ,      &
-                                             ForceCrew , EigenCrew
+                                             ForceComm , ForceCrew ,        &
+                                             EigenCrew
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
@@ -75,6 +76,8 @@ integer         , intent(out)   :: it
 
 ! local variables ...
 integer         :: j , frame , frame_init , frame_final , frame_restart , err
+integer         :: mpi_D_R = mpi_double_precision
+integer         :: mpi_D_C = mpi_double_complex
 real*8          :: t , t_rate 
 type(universe)  :: Solvated_System
 
@@ -112,19 +115,15 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
 
-        ! ForceCrew dwell in EhrenfestForce ...
-        If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-
-999     CALL MPI_Barrier( KernelComm , err )
-
         Net_Charge_MM = Net_Charge
 
-        CALL MPI_BCAST( UNI%erg , mm    , mpi_double_precision , 0 , KernelComm , err )
-        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
+        CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
 
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
-
-        if( .not. master ) goto 999
+call start_clock
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis )
+call stop_clock("Ehrenfest")
 
     end If
 
@@ -186,12 +185,15 @@ do frame = frame_init , frame_final , frame_step
 
         case default
 
-            If( master ) Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
+            Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
             stop
 
     end select
 
     CALL Generate_Structure ( frame )
+
+    ! export new coordinates for ForceCrew ...
+    CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
     CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
 
@@ -202,7 +204,9 @@ do frame = frame_init , frame_final , frame_step
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
+call start_clock
     CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
+call stop_clock("Eigen")
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
@@ -217,7 +221,7 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    If( master ) Print*, frame 
+    Print*, frame 
 
 end do
 
@@ -238,6 +242,7 @@ integer         , intent(in)    :: it
 
 ! local variables
 integer         :: hole_save , n , err
+integer         :: mpi_D_R = mpi_double_precision
 logical         :: el_hl_
 type(universe)  :: Solvated_System
 
@@ -297,21 +302,17 @@ CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 ! SLAVES only calculate S_matrix and return ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
 
-! done for ForceCrew ...
-If( ForceCrew ) return
+! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
+If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
 
-If( .not. master ) then
+If( KernelCrew ) then
         allocate( UNI%erg (mm)    )
         allocate( UNI%L   (mm,mm) )
         allocate( UNI%R   (mm,mm) )
 end if
-CALL MPI_BCAST( UNI%erg , mm    , mpi_double_precision , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%L   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%R   , mm*mm , mpi_double_precision , 0 , KernelComm , err )
-
-CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
-
-If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
+CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 
 CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
                           MO_bra   , MO_ket   ,       &
@@ -319,6 +320,13 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           DUAL_bra , DUAL_ket ,       &
                           phase )
                           
+! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
+If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
+
+CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
+
+If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
+
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! initial state of the isolated molecule ...
@@ -381,8 +389,10 @@ End If
 !If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
-!..........................................................................
+! export new coordinates for ForceCrew on stand-by ...
+CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
+!..........................................................................
 include 'formats.h'
 
 end subroutine Preprocess

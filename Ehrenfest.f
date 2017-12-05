@@ -7,7 +7,7 @@ module Ehrenfest_Builder
     use lapack95
     use type_m
     use constants_m
-    use MPI_definitions_m       , only  : myForce , master , npForce , KernelComm , ForceComm , KernelCrew , ForceCrew 
+    use MPI_definitions_m       , only  : myForce , master , npForce , myKernel , KernelComm , ForceComm , KernelCrew , ForceCrew 
     use parameters_m            , only  : driver , verbose , n_part , QMMM
     use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
@@ -22,6 +22,7 @@ module Ehrenfest_Builder
     real*8      , allocatable   :: A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , rho_eh(:,:) , tool(:,:) , X_ij(:,:)
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_snd(:,:,:) , F_rcv(:,:,:) 
     logical     , allocatable   :: mask(:,:)
+    logical :: first_time = .true.
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -31,21 +32,23 @@ contains
 !
 !
 !
-!=====================================================================
- subroutine EhrenfestForce( system , basis , MO_bra , MO_ket , QM_el )
-!=====================================================================
+!==================================================================
+ subroutine EhrenfestForce( system , basis , QM , MO_bra , MO_ket )
+!==================================================================
  use MD_read_m              , only  : atom
  implicit none
  type(structure)            , intent(inout) :: system
  type(STO_basis)            , intent(in)    :: basis(:)
- complex*16      , optional , intent(in)    :: MO_bra(:,:)
- complex*16      , optional , intent(in)    :: MO_ket(:,:)
- type(R_eigen)   , optional , intent(inout) :: QM_el
+ type(R_eigen)   , optional , intent(in)    :: QM
+ complex*16      , optional , intent(inout) :: MO_bra(:,:)
+ complex*16      , optional , intent(inout) :: MO_ket(:,:)
 
 ! local variables ... 
- integer               :: i , j , N , xyz , err  
- integer               :: mpi_status(mpi_status_size) , request
- real*8                :: start , endtime
+ integer :: i , j , N , xyz , err  
+ integer :: mpi_status(mpi_status_size) , request
+ integer :: mpi_D_R = mpi_double_precision
+ integer :: mpi_D_C = mpi_double_complex
+ real*8  :: start , endtime
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -65,55 +68,65 @@ If( .NOT. allocated(Kernel) ) then
 end If
 
 ! ForceCrew in stand-by ...
-99 CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_double_precision , 0 , ForceComm, err )
+99 If( .not. master ) CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
-! preprocess overlap matrix for Pulay calculations ...
+! preprocess overlap matrix for Pulay calculations, all ForceCrew must do it ...
  CALL Overlap_Matrix( system , basis )
  CALL preprocess    ( system )
 
-! build up electron-hole density matrix ...
 if( KernelCrew ) then
+
+    ! KernelCrew in stand-by to receive data from master ...
+    CALL MPI_BCAST( QM%erg , N   , mpi_D_R , 0 , KernelComm , err )
+    CALL MPI_BCAST( QM%L   , N*N , mpi_D_R , 0 , KernelComm , err )
+    CALL MPI_BCAST( MO_ket , N*2 , mpi_D_C , 0 , KernelComm , err )
 
     If( .NOT. allocated(rho_eh) ) then
         allocate( rho_eh  (N,N) )
         allocate( B_ad_nd (N,N) )
         allocate( tool    (N,N) )
-        If( master ) then
+        If( myKernel == 1 ) then
              allocate( A_ad_nd (N,N) )
              CALL Huckel_stuff( basis )
         end If
     end If
 
-    If( master ) then
+    select case (myKernel)
 
-        forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+        case (1)
 
-        CALL MPI_ISend( rho_eh , N*N , mpi_double_precision , 1 , 0 , KernelComm , request , err )
-        CALL MPI_Request_Free( request , err )
+           MO_bra = conjg( MO_ket )
 
-        CALL symm( rho_eh , QM_el%L , tool )
-        CALL gemm( QM_el%L , tool , A_ad_nd , 'T' , 'N' )
+           ! build up electron-hole density matrix ...
+           forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
 
-        CALL MPI_Recv( B_ad_nd , N*N , mpi_double_precision , 1 , mpi_any_tag , KernelComm , mpi_status , err )
+           CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
+           CALL MPI_Request_Free( request , err )
 
-        Kernel = X_ij * A_ad_nd - B_ad_nd
+           CALL symm( rho_eh , QM%L , tool )
+           CALL gemm( QM%L , tool , A_ad_nd , 'T' , 'N' )
 
-    else  ! <== firstmate of KernelCrew ...
+           CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
 
-        CALL MPI_Recv( rho_eh , N*N , mpi_double_precision , 0 , mpi_any_tag , KernelComm , mpi_status , err )
+           Kernel = X_ij * A_ad_nd - B_ad_nd
 
-        forall( j=1:N ) rho_eh(:,j) = QM_el%erg(j) * rho_eh(:,j) 
+        case (2)  ! <== firstmate of KernelCrew ...
 
-        CALL gemm( rho_eh , QM_el%L , tool )
-        CALL gemm( tool , QM_el%L  , B_ad_nd , 'T' , 'N' )
+           CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
 
-        CALL MPI_ISend( B_ad_nd , N*N , mpi_double_precision , 0 , 0 , KernelComm , request , err )
-        CALL MPI_Request_Free( request , err )
+           forall( j=1:N ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
 
-    end if
+           CALL gemm( rho_eh , QM%L , tool )
+           CALL gemm( tool , QM%L  , B_ad_nd , 'T' , 'N' )
+
+           CALL MPI_ISend( B_ad_nd , N*N , mpi_D_R , 1 , 0 , KernelComm , request , err )
+           CALL MPI_Request_Free( request , err )
+
+    end select
+
 end if
 
-call MPI_BCAST( Kernel , N*N , mpi_double_precision , 0 , ForceComm , err )
+call MPI_BCAST( Kernel , N*N , mpi_D_R , 1 , ForceComm , err )
 
 ! Run, Forrest, Run ...
 !================================================================================================
@@ -150,8 +163,8 @@ end select
 
 deallocate( mask )
 
-! return ForceCrews to stand-by ...
-If( ForceCrew ) goto 99
+! return Extended ForceCrew to stand-by ...
+If( ForceCrew .OR. KernelCrew ) goto 99
 
 include 'formats.h'
 
