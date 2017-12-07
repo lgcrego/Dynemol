@@ -131,7 +131,7 @@ do a = 1 , MM % N_of_species
             if( i > size(atom) ) exit
 
         end do
-
+        rewind 33
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -173,7 +173,7 @@ do a = 1 , MM % N_of_species
                 species(a) % bond_type(i) = "Mors"     
            end select 
         end do
-
+        rewind 33
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
@@ -216,7 +216,7 @@ do a = 1 , MM % N_of_species
                 species(a) % angle_type(i) = "urba"
            end select
         end do
-
+        rewind 33
 !==============================================================================================
         ! Dihedral parameters :: reading ...
         do
@@ -256,7 +256,7 @@ do a = 1 , MM % N_of_species
             CALL define_DihedralType( species(a) , Ndiheds )
 
         end if
-
+        rewind 33
 !==============================================================================================
             ! Pairs 1-4 parameters :: reading ...
         do

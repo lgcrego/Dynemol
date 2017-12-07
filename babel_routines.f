@@ -2,7 +2,7 @@
 
     use type_m                  
     use Allocation_m            , only : Allocate_UnitCell
-    use tuning_m                , only : Setting_fragments , ad_hoc_tuning
+    use tuning_m                , only : ad_hoc_tuning
 
     PUBLIC :: Symbol_2_AtNo ,       &
               Identify_Fragments ,  &
@@ -378,10 +378,10 @@ character(len=2)    :: element2
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
 
-        case( 'Cd','CD' ) 
-            a(i)%Symbol = 'Cd' 
+!        case( 'Cd','CD' ) 
+!            a(i)%Symbol = 'Cd' 
 
-        case( 'SS','S' ) 
+        case( 'SS','S', 'SG', 'SD' ) 
             a(i)%Symbol = 'S' 
 
         case( 'Pb','PB' ) 
