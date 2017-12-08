@@ -45,7 +45,7 @@ type(R_eigen)                               , intent(inout) :: QM
 integer               :: mpi_D_R = mpi_double_precision
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
 real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
-real*8  , ALLOCATABLE , save :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
+real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
 integer               :: i , j , N , info , err , mpi_status(mpi_status_size)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
