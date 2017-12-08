@@ -42,9 +42,10 @@ type(STO_basis)                             , intent(in)    :: basis(:)
 type(R_eigen)                               , intent(inout) :: QM
 
 ! local variables ...
+integer               :: mpi_D_R = mpi_double_precision
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
-real*8  , ALLOCATABLE :: h(:,:) , dumb_S(:,:) , tool(:,:)
-real*8  , ALLOCATABLE :: S_matrix(:,:) , S_eigen(:) 
+real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE , save :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
 integer               :: i , j , N , info , err , mpi_status(mpi_status_size)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -59,7 +60,7 @@ N = size(basis)
 If( master ) then
 
      ! Send S_matrix to EigenComm mate ...     
-     CALL MPI_Send( S_matrix , N*N , mpi_double_precision , 1 , 0 , EigenComm , err )
+     CALL MPI_Send( S_matrix , N*N , mpi_D_R , 1 , 0 , EigenComm , err )
 
      If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(N))
 
@@ -88,37 +89,42 @@ If( master ) then
      CALL SYGVD( h , S_matrix , QM%erg , 1 , 'V' , 'L' , info )
      If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 
+     ! save energies of the TOTAL system 
+     OPEN(unit=9,file='system-ergs.dat',status='unknown')
+         do i = 1 , N
+             write(9,*) i , QM%erg(i)
+         end do
+     CLOSE(9)  
+
 else If( myEigen == 1 ) then 
 
      do  ! <== myEigen = 1 dwells in here Forever ...
-
          !--------------------------------------------------------
          ! Overlap Matrix Factorization: S^(1/2) ...
 
-         CALL MPI_Recv( S_matrix , N*N , mpi_double_precision , 0 , mpi_any_tag , EigenComm , mpi_status , err )
-         
+         CALL MPI_Recv( S_matrix , N*N , mpi_D_R , 0 , mpi_any_tag , EigenComm , mpi_status , err )
+
          ! clone S_matrix because SYGVD and SYEV will destroy it ... 
          Allocate( dumb_S(N,N) , source = S_matrix )
 
          Allocate( S_eigen(N) )
 
-         CALL SYEV(dumb_S , S_eigen , 'V' , 'L' , info)
+         CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
 
          Allocate( tool(N,N) , source = transpose(dumb_S) )
 
          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
-         ! now S_matrix = S^(1/2) matrix transformation ...
+         ! now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
          CALL gemm(dumb_S , tool , S_matrix , 'N' , 'N')
 
          DEALLOCATE( S_eigen  )
          DEALLOCATE( dumb_S   )
          DEALLOCATE( tool     )
 
-         CALL MPI_Send( S_matrix , N*N , mpi_double_precision , 0 , 0 , EigenComm , err )
+         CALL MPI_Send( S_matrix , N*N , mpi_D_R , 0 , 0 , EigenComm , err )
 
      end do  !<== Return to Forever ...
-     !--------------------------------------------------------
 
 end If
 
@@ -132,13 +138,17 @@ end If
 !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 !     ---------------------------------------------------
 
-CALL MPI_Recv( S_matrix , N*N , mpi_double_precision , 1 , mpi_any_tag , EigenComm , mpi_status , err )
-
 Allocate( Lv(N,N) )
 Allocate( Rv(N,N) )
 
 Lv = h
 Deallocate( h )
+
+If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+! eigenvectors in the rows of QM%L
+QM%L = transpose(Lv) 
+
+CALL MPI_Recv( S_matrix , N*N , mpi_D_R , 1 , mpi_any_tag , EigenComm , mpi_status , err )
 
 ! Rv = S^(1/2) * Lv ...
 CALL symm( S_matrix , Lv , Rv )
@@ -147,25 +157,9 @@ If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
 ! eigenvectors in the columns of QM%R
 QM%R = Rv
 
-Deallocate( Rv , S_matrix )
+Deallocate( Lv , Rv , S_matrix )
 
-If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-! eigenvectors in the rows of QM%L
-QM%L = transpose(Lv) 
-Deallocate( Lv )
-
-!  the order of storage is the ascending order of eigenvalues
-!----------------------------------------------------------
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-! save energies of the TOTAL system 
-OPEN(unit=9,file='system-ergs.dat',status='unknown')
-    do i = 1 , N
-        write(9,*) i , QM%erg(i)
-    end do
-CLOSE(9)  
-
-99 If( verbose ) Print*, '>> EigenSystem done <<'
+If( verbose ) Print*, '>> EigenSystem done <<'
 
 end subroutine EigenSystem
 !

@@ -5,8 +5,7 @@
                                          ad_hoc ,               &
                                          driver
     use Allocation_m            , only : Allocate_UnitCell
-    use tuning_m                , only : Setting_fragments ,    &
-                                         ad_hoc_tuning
+    use tuning_m                , only : ad_hoc_tuning
     use Babel_routines_m        , only : Symbol_2_AtNo ,        &
                                          Identify_Fragments ,   &
                                          AtNo_2_Symbol ,        &
@@ -244,7 +243,6 @@ If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%at
 ! preprocessing the universe system ...
 CALL Symbol_2_AtNo      ( system%atom )
 CALL Identify_Residues  ( system      )
-CALL Setting_Fragments  ( system      )
 CALL Identify_Fragments ( system      )
 CALL Pack_Residues      ( system%atom , system%list_of_residues )
 
@@ -517,7 +515,6 @@ do j = 1 , model
         CALL Symbol_2_AtNo      ( trj(j)%atom )
         ! use ad hoc tuning of parameters ...
         If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
-        CALL Setting_Fragments  ( trj(j)      )
 
         trj(j)%atom % Nvalen    =  atom(trj(j)%atom%AtNo) % Nvalen
         trj(j)%atom % polar     =  atom(trj(j)%atom%AtNo) % polar 

@@ -60,7 +60,7 @@ do a = 1 , MM % N_of_species
             print*, string,' file not found; terminating execution' ; stop
         end if
 
-        If( master ) Write(*,'(/2a9)',advance='no') "Reading ", string
+        If( master ) write(*,'(/2a9)',advance='no') "Reading ", string
 
         ! start reading the molecular structure of species(a) ...
         do
@@ -132,7 +132,7 @@ do a = 1 , MM % N_of_species
             if( i > size(atom) ) exit
 
         end do
-
+        rewind 33
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -174,7 +174,7 @@ do a = 1 , MM % N_of_species
                 species(a) % bond_type(i) = "Mors"     
            end select 
         end do
-
+        rewind 33
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
@@ -217,7 +217,7 @@ do a = 1 , MM % N_of_species
                 species(a) % angle_type(i) = "urba"
            end select
         end do
-
+        rewind 33
 !==============================================================================================
         ! Dihedral parameters :: reading ...
         do
@@ -257,7 +257,7 @@ do a = 1 , MM % N_of_species
             CALL define_DihedralType( species(a) , Ndiheds )
 
         end if
-
+        rewind 33
 !==============================================================================================
             ! Pairs 1-4 parameters :: reading ...
         do
@@ -321,7 +321,7 @@ do a = 1 , MM % N_of_species
 
     close(33)
 
-    If( master ) Write(*,'(a9)') " << done "
+    If( master ) write(*,'(a9)') " << done "
 
 end do
 
