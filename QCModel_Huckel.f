@@ -102,7 +102,7 @@ else If( myEigen == 1 ) then
          !--------------------------------------------------------
          ! Overlap Matrix Factorization: S^(1/2) ...
 
-         CALL MPI_Recv( S_matrix , N*N , mpi_D_R , 0 , mpi_any_tag , EigenComm , mpi_status , err )
+         CALL MPI_Recv( S_matrix, N*N, mpi_D_R, 0, mpi_any_tag, EigenComm, mpi_status, err )
 
          ! clone S_matrix because SYGVD and SYEV will destroy it ... 
          Allocate( dumb_S(N,N) , source = S_matrix )
@@ -129,11 +129,7 @@ else If( myEigen == 1 ) then
 end If
 
 !     ---------------------------------------------------
-!   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-!
-!   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-!
-!   Rv = <AO|MO> coefficients
+!   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
 !
 !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 !     ---------------------------------------------------
@@ -210,8 +206,8 @@ end subroutine EigenSystem
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8   :: DP(4)
- real*8   :: r0(3) , Ri(3) , vector(3)
+ real*8  :: DP(4)
+ real*8  :: r0(3) , Ri(3) , vector(3)
  real*8  :: Huckel_with_FIELDS
  real*8  :: k_eff , k_WH , c1 , c2 , c3
  logical :: flag
