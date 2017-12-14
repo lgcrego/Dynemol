@@ -25,7 +25,6 @@ module Backup_m
                                      Saving_MM_Backup
     use Data_Output         , only : Net_Charge
 
-
     public  :: Security_Copy , Restart_State , Restart_Sys
 
     interface Security_Copy
@@ -89,20 +88,19 @@ select case ( nuclear_matter )
 
 end select
 
-CALL Generate_Structure ( frame )
+CALL Generate_Structure( frame )
 
-CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-if( DP_Moment ) &
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
 if( DP_field_ ) then
 
-    CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
+    CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Molecular_DPs( Extended_Cell )
 
 end If
 
@@ -112,6 +110,7 @@ if( driver == "slice_ElHl") then
 
 else
 
+    ! SLAVES only calculate S_matrix and return ...
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
 end if

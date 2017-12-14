@@ -7,10 +7,9 @@ module AO_adiabatic_m
     use type_m
     use constants_m
     use blas95
-    use MPI_definitions_m           , only : master , master , world , myid,&
+    use MPI_definitions_m           , only : master , world , myid ,        &
                                              KernelComm , KernelCrew ,      &
-                                             ForceComm , ForceCrew ,        &
-                                             EigenCrew
+                                             ForceComm , ForceCrew 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , DP_Moment ,        &
@@ -121,9 +120,7 @@ do frame = frame_init , frame_final , frame_step
         CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
         CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
 
-call start_clock
         CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-call stop_clock("Ehrenfest")
 
     end If
 
@@ -204,9 +201,7 @@ call stop_clock("Ehrenfest")
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
-call start_clock
     CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
-call stop_clock("Eigen")
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
@@ -302,7 +297,7 @@ CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 ! SLAVES only calculate S_matrix and return ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
 
-! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
+! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
 
 If( KernelCrew ) then
@@ -320,7 +315,7 @@ CALL Allocate_Brackets  ( size(ExCell_basis)  ,       &
                           DUAL_bra , DUAL_ket ,       &
                           phase )
                           
-! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
+! done for KernelCrew ; KernelCrew also dwells in EhrenfestForce ...
 If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
@@ -375,11 +370,11 @@ end If
 
 CALL dump_Qdyn( Qdyn , it )
 
-If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
-If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -389,7 +384,7 @@ End If
 !If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
-! export new coordinates for ForceCrew on stand-by ...
+! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
 !..........................................................................
@@ -553,26 +548,51 @@ real*8          , intent(inout) :: t
 integer         , intent(inout) :: it
 integer         , intent(inout) :: frame_restart
 
+integer :: err
+integer :: mpi_D_R = mpi_double_precision
+
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
-CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
+If( master .OR. KernelCrew ) then
+    CALL Restart_State( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
+    allocate( phase(size(MO_bra(:,1))) )
+end If
 
-allocate( phase(size(MO_bra(:,1))) )
+Call mpi_barrier( world , err )
 
-CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
+CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
 
 mm = size(ExCell_basis)
 nn = n_part
+
+! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
+If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
+
+If( KernelCrew ) then
+        allocate( UNI%erg (mm)    )
+        allocate( UNI%L   (mm,mm) )
+        allocate( UNI%R   (mm,mm) )
+end if
+CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+
+! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
+If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
 If( QMMM ) then 
 
     allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    CALL Build_Induced_DP( instance = "allocate" )
-
-    CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ ) then
+         CALL Build_Induced_DP( instance = "allocate" )
+         CALL DP_stuff ( t , "Induced_DP" )
+    end if
 
 end If
+
+! ForceCrew is on stand-by for this ...
+CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
 end subroutine Restart_stuff
 !
