@@ -1,8 +1,10 @@
 module GA_m
 
+    use mpi
     use type_m
     use constants_m
     use MM_types                , only : LogicalKey
+    use MPI_definitions_m       , only : master , world , myid , np , slave
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
@@ -45,10 +47,12 @@ type(STO_basis)                 , intent(in)  :: basis(:)
 type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) 
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(:)
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
-integer                         :: i , generation , info , Pop_start , GeneSize
+integer                         :: mpi_D_R = mpi_double_precision
+integer                         :: i , generation , info , err , Pop_start , GeneSize
+logical                         :: done = .false.
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
@@ -62,28 +66,40 @@ CALL Read_GA_key
 GeneSize = GA%GeneSize
 
 ! Initial Populations ...
-allocate( Pop     (Pop_Size , GeneSize) )
-allocate( Old_Pop (Pop_Size , GeneSize) )
-allocate( indx    (Pop_Size)               )
-
-CALL random_seed
-
+allocate( Pop(Pop_Size , GeneSize) )
 Pop_start = 1
-CALL generate_RND_Pop( Pop_start , Pop )       
 
-indx = [ ( i , i=1,Pop_Size ) ]
+! only master handles this stuff ...
+If( master ) then
+    allocate( Old_Pop (Pop_Size , GeneSize)     )
+    allocate( indx    (Pop_Size)                )
+    allocate( cost    (Pop_size), source=D_zero ) 
 
+    CALL random_seed
+
+    CALL generate_RND_Pop( Pop_start , Pop )       
+
+    indx = [ ( i , i=1,Pop_Size ) ]
+end If
 !-----------------------------------------------
 
 ! create new basis ...
 allocate( GA_basis (size(basis)) )
 GA_basis = basis
 
-allocate( custo(Pop_size) )
+allocate( snd_cost(Pop_size) )
 
 do generation = 1 , N_generations
 
-    do i = Pop_start , Pop_Size
+99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
+    If( done ) return
+
+    CALL MPI_BCAST( Pop       , Pop_Size*GeneSize , mpi_D_R     , 0 , world , err )
+    CALL MPI_BCAST( Pop_start , 1                 , mpi_integer , 0 , world , err )
+
+    snd_cost = D_zero
+
+    do i = myid + Pop_start , Pop_Size , np
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
@@ -92,7 +108,7 @@ do generation = 1 , N_generations
         CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
 
         If (info /= 0) then 
-            custo(i) = 1.d14
+            cost(i) = 1.d14
             continue
         end if
 
@@ -100,13 +116,17 @@ do generation = 1 , N_generations
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
-!       gather data and evaluate population cost ...
-        custo(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP , Alpha_ii )
+        ! population cost ...
+        snd_cost(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 
+    ! gather data ...
+    CALL MPI_reduce( snd_cost(Pop_start:) , cost(Pop_start:) , (Pop_size-Pop_start+1) , MPI_D_R , mpi_SUM , 0 , world , err )
+    If ( slave ) goto 99
+
 !   evolve populations ...    
-    CALL sort2(custo,indx)
+    CALL sort2(cost,indx)
 
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
@@ -123,6 +143,11 @@ do generation = 1 , N_generations
     indx = [ ( i , i=1,Pop_Size ) ]
 
     Print 160 , generation , N_generations
+
+    If( generation == N_generations ) then
+         done = .true.
+         CALL MPI_Bcast( done , 1 , mpi_logical , 0 ,world , err ) 
+    end If
 
 end do
 
@@ -377,7 +402,7 @@ end subroutine modify_EHT_parameters
 implicit none
 
 ! local variables ...
-integer :: i , j , ioerr , nr , N_of_EHSymbol
+integer :: i , j , ioerr , nr , N_of_EHSymbol , err , size_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
@@ -394,23 +419,30 @@ N_of_EHSymbol = nr - 1
 allocate( GA%EHSymbol    ( N_of_EHSymbol) )
 allocate( GA%key      (7 , N_of_EHSymbol) )
 
+! future use in bcasting ...
+size_EHSymbol = len(GA%EHSymbol(1)) * N_of_EHSymbol
+
 ! read the input-GA ...
 rewind 3
 read(3,*) dumb
 
-Print 40 
-Print 41
-do j = 1 , N_of_EHSymbol
+If( master ) then
+    Print 40 
+    Print 41
+    do j = 1 , N_of_EHSymbol
 
-    read(3,42)   GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+        read(3,42)   GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
-    write(*,421) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+        write(*,421) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
-end do
+    end do
 
-CLOSE(3)
+    CLOSE(3)
 
-Print 43
+    Print 43
+end If
+CALL MPI_BCAST( GA%EHSymbol , size_EHSymbol   , mpi_CHARACTER , 0 , world , err )
+CALL MPI_BCAST( GA%key      , 7*N_of_EHSymbol , mpi_INTEGER   , 0 , world , err )
 
 GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N_of_EHSymbol ) ] )
 
@@ -600,7 +632,7 @@ real*8          , allocatable , intent(out)   :: GA_Selection(:,:)
 character(*)                  , intent(in)    :: directives
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) , p0(:)
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , p0(:)
 integer         , allocatable   :: indx(:)
 integer                         :: i , generation , Pop_start ,  GeneSize
 type(LogicalKey)                :: key
@@ -642,7 +674,7 @@ indx = [ ( i , i=1,Pop_Size ) ]
 !-----------------------------------------------
 ! setting normal mode data in FF_OPT_class ...
 
-allocate( custo(Pop_size) )
+allocate( cost(Pop_size) )
 
 do generation = 1 , N_generations
 
@@ -652,12 +684,12 @@ do generation = 1 , N_generations
         MM_parms % p(:) = p0(:) * (D_one + Pop(i,:))
 
         ! evaluate  Pop(i,:)'s  cost ...
-        custo(i) = MM_parms % cost()
+        cost(i) = MM_parms % cost()
 
     end do
 
 !   evolve populations ...    
-    CALL sort2(custo,indx)
+    CALL sort2(cost,indx)
 
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
@@ -679,7 +711,7 @@ do generation = 1 , N_generations
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    Print 161 , generation , N_generations , custo(1) , directives 
+    Print 161 , generation , N_generations , cost(1) , directives 
 
 end do
 

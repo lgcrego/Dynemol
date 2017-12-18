@@ -32,18 +32,15 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
+ univ % atom(51:100) % V_shift = 5.d1
 
 !-----------------------------------
 !      define %residue
 !-----------------------------------
 
-univ % atom(35:36) % residue = "CCC"
-
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-
-univ % atom (35:36) % nr = 2
 
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
@@ -51,21 +48,16 @@ univ % atom (35:36) % nr = 2
 
 !---------------------------------------------------
 !      define %QMMM  
-!      default is QMMM = QM  
-!      set QMMM = MM for classical atoms ... 
+!      default is QMMM = QM;  set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
-!where(univ % atom % residue == "CCC") univ % atom % QMMM = "MM"
-!where(univ % atom % xyz(3) < 0.) univ % atom % QMMM = "MM"
 
 !----------------------------------------------------
 !      define %El   : mandatory !!
 !----------------------------------------------------
-where(univ % atom % residue == "PRC") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
 
 !----------------------------------------------------
 !      define %fragment 
