@@ -85,32 +85,23 @@ Print 154, DP, sqrt( dot_product(DP,DP) )
 Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(5) - UNI%erg(4)
-!Print*, "dE2 = ",UNI%erg(89) - UNI%erg(87)
-!Print*, "dE3 = ",UNI%erg(89) - UNI%erg(88)
-!Print*, "dE4 = ",UNI%erg(87) - UNI%erg(86)
-!Print*, "dE5 = ",UNI%erg(88) - UNI%erg(86)
+Print*, "dE1 = ",UNI%erg(56) - UNI%erg(55) , 3.49
+Print*, "dE2 = ",UNI%erg(55) - UNI%erg(54) , 1.16
+Print*, "dE3 = ",UNI%erg(57) - UNI%erg(56) , 1.7
+Print*, "dE4 = ",UNI%erg(58) - UNI%erg(56) , 2.62
+Print*, "dE5 = ",UNI%erg(58) - UNI%erg(57) , 0.92
 Print*, " "
+Print*, "dE1 = ",UNI%erg(166) - UNI%erg(165) , 2.16
+Print*, "dE2 = ",UNI%erg(165) - UNI%erg(164) , 1.49
+Print*, "dE3 = ",UNI%erg(167) - UNI%erg(166) , 1.94
+Print*, "dE4 = ",UNI%erg(168) - UNI%erg(166) , 3.22
+Print*, "dE5 = ",UNI%erg(168) - UNI%erg(167) , 1.28
+
 
 ! Population analysis ...
-!print*, "H"
 ! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TPH") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="CBX") 
-!print*, "L"
-! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TRI") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="TPH") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=88,residue="CBX") 
-!print*, "L+1"
-! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TRI") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="TPH") 
-! print*,  Mulliken(UNI,ExCell_basis,MO=89,residue="CBX") 
 
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(2,:) , UNI%R(:,2) , 2 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(3,:) , UNI%R(:,3) , 3 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(4,:) , UNI%R(:,4) , 4 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(5,:) , UNI%R(:,5) , 5 , 0.d0 )
-If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(6,:) , UNI%R(:,6) , 6 , 0.d0 )
+!If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(6,:) , UNI%R(:,6) , 6 , 0.d0 )
 
 !----------------------------------------------
 
