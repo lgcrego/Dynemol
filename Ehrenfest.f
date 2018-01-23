@@ -187,7 +187,6 @@ integer :: k , ik , DOS_atom_k , BasisPointer_k
 
 ! local arrays ...
 integer , allocatable :: pairs(:)
-real*8  :: start , endtime
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
 real*8                :: tmp_coord(3) , delta_b(3) 
 

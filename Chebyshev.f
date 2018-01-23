@@ -8,6 +8,7 @@ module Chebyshev_m
     use parameters_m        , only : t_i , frame_step ,             &
                                      DP_Field_ , driver ,           &
                                      n_part , restart                  
+    use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag                  
     use QCmodel_Huckel      , only : Huckel ,                       &
@@ -441,18 +442,28 @@ do n = 1 , n_part
     If( it == 1 ) then
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,12) "#" , QDyn%fragments , "total"
+
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+
     else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "unknown", action = "write" , position = "append" )
+        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )        
     end If
 
-    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
+    ! dumps el-&-hl populations ...    
+    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
+
+    ! dumps el-&-hl wavepachet energies ...
+    write(53,14) QDyn%dyn(it,0,n) , real( Unit_Cell% QM_wp_erg(n) ) , dimag( Unit_Cell% QM_wp_erg(n) )
 
     close(52)
+    close(53)
 
 end do
 
 12 FORMAT(10A10)
 13 FORMAT(F11.6,9F10.5)
+14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
 !

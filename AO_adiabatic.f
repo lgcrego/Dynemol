@@ -3,11 +3,11 @@
 ! Subroutine for computing time evolution adiabatic on the AO
 module AO_adiabatic_m
 
-    use mpi
+    use MPI
     use type_m
     use constants_m
     use blas95
-    use MPI_definitions_m           , only : master , world , myid ,        &
+    use MPI_definitions_m           , only : master , world , myid,         &
                                              KernelComm , KernelCrew ,      &
                                              ForceComm , ForceCrew 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &

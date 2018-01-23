@@ -33,6 +33,7 @@ module type_m
         real*8                     :: MD_Kin
         real*8                     :: MD_Pot
         real*8                     :: QM_erg
+        complex*16                 :: QM_wp_erg(2)
         real*8                     :: Total_erg
         logical     , allocatable  :: solute(:)
         logical     , allocatable  :: DPF(:)
@@ -163,6 +164,7 @@ module type_m
         real*8     , allocatable :: R(:,:)
         real*8     , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
+        real*8                   :: time
         integer                  :: Fermi_state
     end type R_eigen
 

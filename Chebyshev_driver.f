@@ -1,7 +1,13 @@
 module Chebyshev_driver_m
 
+    use MPI
     use type_m
     use constants_m
+    use MPI_definitions_m           , only : master , world , myid,         &
+                                             ForceComm , ForceCrew ,        &
+                                             ChebyCrew, KernelComm          &
+                                             , myid , world
+
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              DP_Field_ , Induced_ , QMMM ,  &
@@ -34,6 +40,7 @@ module Chebyshev_driver_m
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM 
+    use DiabaticEhrenfest_Builder   , only : EhrenfestForce 
     use Chebyshev_m                 , only : Chebyshev ,                    &
                                              preprocess_Chebyshev
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
@@ -44,9 +51,9 @@ module Chebyshev_driver_m
     private
 
     ! module variables ...
-    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    integer                                         :: nn
+    integer :: N
 
 contains
 !
@@ -60,13 +67,14 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-real*8          :: t , t_rate 
+integer         :: mpi_D_R = mpi_double_precision
+integer         :: mpi_D_C = mpi_double_complex , err
 integer         :: frame , frame_init , frame_final , frame_restart
+real*8          :: t , t_rate 
 type(universe)  :: Solvated_System
 
 it = 1
 t  = t_i
-nn = n_part
 
 !--------------------------------------------------------------------------------
 ! Quantum Dynamics & All that Jazz ...
@@ -94,14 +102,23 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    If( nn == 1) then
-        CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
-    else
-        CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
+    If( QMMM .and. master ) then
+    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+         CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
+         CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
     end If    
 
-    ! save for use in MM ...
-    If( QMMM ) Net_Charge_MM = Net_Charge
+    If( n_part == 1) then
+         CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
+    else
+         CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
+    end If
+
+    ! calculate, for using in MM ...
+    If( QMMM ) then
+        Net_Charge_MM = Net_Charge
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis )
+    end If
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
@@ -129,8 +146,11 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
-
+            ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
+
+            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+            QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
 
         case default
 
@@ -141,11 +161,15 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure ( frame )
 
+    ! export new coordinates for ForceCrew ...
+    CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+
     CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-    If( Induced_ .OR. QMMM ) CALL DP_stuff ( "Induced_DP" )
+!    If( Induced_ .OR. QMMM ) CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -171,7 +195,8 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(in)    :: it
 
 ! local variables
-integer         :: hole_save 
+integer         :: hole_save , err
+integer         :: mpi_D_R = mpi_double_precision
 logical         :: el_hl_
 type(universe)  :: Solvated_System
 
@@ -208,7 +233,8 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
 
@@ -223,20 +249,27 @@ If( DP_field_ ) then
     static     = .false.
 
 end If
+N = size(ExCell_basis)
+CALL Allocate_Brackets( N , AO_bra , AO_ket , DUAL_bra , DUAL_ket , past_AO_bra , past_AO_ket )
 
-CALL Allocate_Brackets( size(ExCell_basis) , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
-
-If( nn == 1) then
+If( n_part == 1) then
     CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )
 else
     CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
 end If
 
+! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
+If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket)
+
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+
+! export new coordinates for ForceCrew on stand-by ...
+If( master ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
 !..........................................................................
 

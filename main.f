@@ -3,7 +3,7 @@ Program qdynamo
 use MPI
 use type_m
 use constants_m
-use MPI_definitions_m      
+use MPI_definitions_m       , only : launch_MPI , master
 use parameters_m            , only : Define_Environment , driver , nuclear_matter              
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -22,18 +22,18 @@ use Ehrenfest_Builder       , only : EhrenfestForce
 ! local variables ...
 integer :: err
 
+CALL Define_Environment
+   
 ! Initialize MPI if necessary ...
 call launch_MPI
+
+! Initialize GPU if necessary ...
+CALL GPU_Init(myid,1)
 
 !========================================================
 !                   DRIVER ROUTINE
 !========================================================
 
-! Initialize GPU if necessary ...
-CALL GPU_Init(myid,1)
-
-CALL Define_Environment
-   
 If( master .and. driver /= "avrg_confgs") CALL system( "./env.sh" )
 
 CALL read_EHT_parameters

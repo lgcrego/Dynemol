@@ -32,7 +32,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+!  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -92,7 +93,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                              
   t_f  =  1.00d-2                             ! <== final time in PICOseconds
-  n_t  =  4000!00                              ! <== number of time steps
+  n_t  =  4000                                ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -168,7 +169,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") 
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb")
 
 If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
     Print*," >>> halting: " 
