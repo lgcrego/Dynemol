@@ -7,7 +7,7 @@ FC=mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = -check all -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align #array64byte
 FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 
@@ -88,6 +88,7 @@ SOURCE2 = constants_m.o \
 		  pbc.o \
 		  overlap_D.o \
 		  Ehrenfest.o \
+		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  STO.o \
 		  multip_routines.o \
