@@ -2,7 +2,8 @@
 
     use type_m
     use MPI_definitions_m           , only : master , myid
-    use parameters_m                , only : n_part ,                   &
+    use parameters_m                , only : driver ,                   &
+                                             n_part ,                   &
                                              Survival ,                 &
                                              initial_state ,            &
                                              hole_state ,               &
@@ -257,12 +258,12 @@ implicit none
 ! local variables ... 
  integer               :: N_of_FMO_electrons, i, j , N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
- real*8  , ALLOCATABLE :: dumb_s(:,:) , s_eigen(:) , tool(:,:)
+ real*8  , ALLOCATABLE :: dumb_s(:,:) , s_eigen(:) , aux(:,:)
 
  N = size(basis)
 
  ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  FMO%erg(N) )
- ALLOCATE( dumb_s(N,N) , tool(N,N)  ,  s_eigen(N) )
+ ALLOCATE( dumb_s(N,N) , aux (N,N)  ,  s_eigen(N) )
 
 !-----------------------------------------------------------------------
 
@@ -287,32 +288,35 @@ implicit none
  FMO % Fermi_State = sum( system%Nvalen ) / two
 !---------------------------------------------------------------------
 
+ If( driver == "slice_AO" ) then
 !---------------------------------------------------------------------
-! Overlap Matrix Factorization: S^(1/2) ...
+     ! Overlap Matrix Factorization: S^(1/2) ...
 
- CALL SYEV(dumb_s , s_eigen , 'V' , 'L' , info)
+     CALL SYEV(dumb_s , s_eigen , 'V' , 'L' , info)
 
- tool  = transpose( dumb_s )
+     aux = transpose( dumb_s )
 
- forall( i=1:N ) tool(:,i) = sqrt(s_eigen) * tool(:,i)
+     forall( i=1:N ) aux(:,i) = sqrt(s_eigen) * aux(:,i)
 
-! now S_matrix = S^(1/2) matrix transformation ...
- CALL gemm(dumb_s , tool , S_FMO , 'N' , 'N')
+     ! now S_matrix = S^(1/2) matrix transformation ...
+     CALL gemm(dumb_s , aux , S_FMO , 'N' , 'N')
 
- DEALLOCATE( s_eigen  )
- DEALLOCATE( dumb_S   )
+     DEALLOCATE( s_eigen  )
+     DEALLOCATE( dumb_S   )
 
+     aux = h_FMO
+
+     CALL symm( S_FMO , aux , h_FMO )
+
+     DeAllocate(aux)
 !---------------------------------------------------------------------
-
- tool = h_FMO
-
- CALL symm( S_FMO , tool , h_FMO )
+ end If
 
  ALLOCATE( wv_FMO(N,N) )
 
  wv_FMO = transpose(h_FMO)
 
- DeAllocate( s_FMO , h_FMO , tool )
+ DeAllocate( s_FMO , h_FMO )
 
 ! save energies of the FMO system 
  If( present(fragment) .AND. (fragment=="H") ) then
