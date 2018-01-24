@@ -34,6 +34,7 @@ module Chebyshev_driver_m
                                              Restart_Sys
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM 
+    use Ehrenfest_Builder           , only : EhrenfestForce 
     use Chebyshev_m                 , only : Chebyshev ,                    &
                                              preprocess_Chebyshev
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
@@ -44,7 +45,7 @@ module Chebyshev_driver_m
     private
 
     ! module variables ...
-    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
     integer                                         :: nn
 
@@ -94,14 +95,23 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
+    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+    If( QMMM ) then
+        past_AO_ket = AO_ket
+        past_AO_bra = AO_bra
+    end If    
+
     If( nn == 1) then
         CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
     else
         CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
     end If    
 
-    ! save for use in MM ...
-    If( QMMM ) Net_Charge_MM = Net_Charge
+    ! calculate, for using in MM ...
+    If( QMMM ) then
+        Net_Charge_MM = Net_Charge
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis , past_AO_bra , past_AO_ket )
+    end If
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
@@ -129,8 +139,11 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
-
+            ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
+
+            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+            QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
 
         case default
 
@@ -224,7 +237,7 @@ If( DP_field_ ) then
 
 end If
 
-CALL Allocate_Brackets( size(ExCell_basis) , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
+CALL Allocate_Brackets( size(ExCell_basis) , AO_bra , AO_ket , DUAL_bra , DUAL_ket , past_AO_bra , past_AO_ket )
 
 If( nn == 1) then
     CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )

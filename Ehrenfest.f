@@ -11,14 +11,19 @@ module Ehrenfest_Builder
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: EhrenfestForce 
+    public :: EhrenfestForce , store_Hprime
 
     private
 
+    interface EhrenfestForce 
+        module procedure Ehrenfest_Adiabatic
+        module procedure Ehrenfest_Diabatic
+    end interface EhrenfestForce 
+
     !module variables ...
     integer     , allocatable   :: BasisPointer(:) , DOS(:)
-    real*8      , allocatable   :: A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , rho_eh(:,:) , tool(:,:) , X_ij(:,:)
-    real*8      , allocatable   :: grad_S(:,:) , S(:,:) , F_vec(:) , F_mtx(:,:,:)
+    real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , aux(:,:) 
+    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , H_prime(:,:)
     logical     , allocatable   :: mask(:,:)
 
     !module parameters ...
@@ -29,21 +34,22 @@ contains
 !
 !
 !
-!=============================================================================
- subroutine EhrenfestForce( system , basis , MO_bra , MO_ket , QM_el , QM_hl )
-!=============================================================================
+!========================================================================================
+ subroutine Ehrenfest_Adiabatic( system , basis , MO_bra , MO_ket , QM , representation )
+!========================================================================================
  use MD_read_m              , only  : atom
  implicit none
  type(structure)            , intent(inout) :: system
  type(STO_basis)            , intent(in)    :: basis(:)
  complex*16                 , intent(in)    :: MO_bra(:,:)
  complex*16                 , intent(in)    :: MO_ket(:,:)
- type(R_eigen)              , intent(in)    :: QM_el
- type(R_eigen)   , optional , intent(in)    :: QM_hl
+ type(R_eigen)              , intent(in)    :: QM
+ character(len=*)           , intent(in)    :: representation
 
 ! local variables ... 
- integer :: i , j
- real*8  , allocatable :: X_ij(:,:)
+ integer                  :: i , j , mm , nn
+ real*8     , allocatable :: X_ij(:,:) 
+ complex*16 , allocatable :: AO_bra(:,:) , AO_ket(:,:)
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -52,13 +58,17 @@ contains
 !================================================================================================
 ! some preprocessing ...
 !================================================================================================
+mm = size(basis)
+nn = n_part
+
 If( .NOT. allocated(F_mtx ) ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
 If( .NOT. allocated(F_vec ) ) allocate( F_vec   (system%atoms)                , source=D_zero )
 If( .NOT. allocated(rho_eh) ) then
+    allocate( grad_S  (size(basis), 10        ))
     allocate( rho_eh  (size(basis),size(basis)))
     allocate( A_ad_nd (size(basis),size(basis)))
     allocate( B_ad_nd (size(basis),size(basis)))
-    allocate( tool    (size(basis),size(basis)))
+    allocate( aux     (size(basis),size(basis)))
     allocate( Kernel  (size(basis),size(basis)))
 end if
 
@@ -66,19 +76,44 @@ end if
 CALL Overlap_Matrix( system , basis )
 CALL preprocess    ( system )
 
-! build up electron-hole density matrix ...
-forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
-tool   = transpose(rho_eh)
-rho_eh = ( rho_eh + tool ) / two 
+select case( representation )
 
-CALL symm( rho_eh , QM_el%L , tool )
-CALL gemm( QM_el%L , tool , A_ad_nd , 'T' , 'N' )
+    case( "MO" )
+         ! build up electron-hole density matrix ...
+         forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+         aux   = transpose(rho_eh)
+         rho_eh = ( rho_eh + aux ) / two 
+        
+         CALL symm( rho_eh , QM%L , aux )
+         CALL gemm( QM%L , aux , A_ad_nd , 'T' , 'N' )
+        
+         forall( j=1:size(basis) ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
+         CALL gemm( rho_eh , QM%L , aux )
+         CALL gemm( aux , QM%L  , B_ad_nd , 'T' , 'N' )
 
-forall( j=1:size(basis) ) rho_eh(:,j) = QM_el%erg(j) * rho_eh(:,j) 
-CALL gemm( rho_eh , QM_el%L , tool )
-CALL gemm( tool , QM_el%L  , B_ad_nd , 'T' , 'N' )
+         CALL Huckel_stuff( basis , X_ij )
 
-CALL Huckel_stuff( basis , X_ij )
+    case( "AO" )
+         If( .NOT. allocated(AO_bra) ) then
+              allocate( AO_bra  (size(basis),n_part) )
+              allocate( AO_ket  (size(basis),n_part) )
+         end If
+         ! coefs of <k(t)| in AO basis 
+         CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , QM%L , mm , MO_bra , mm , C_zero , AO_bra , mm )
+         ! coefs of |k(t)> in AO basis 
+         CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , QM%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+
+         ! build up electron-hole density matrix ...
+         forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) - AO_ket(j,2)*AO_bra(i,2) )
+         aux     = transpose(rho_eh)
+         A_ad_nd = ( rho_eh + aux ) / two 
+
+         CALL Huckel_stuff( basis , X_ij )
+         CALL S_invH( system , basis , X_ij )
+
+         CALL gemm( H_prime , A_ad_nd , B_ad_nd )
+
+end select
 
 Kernel = X_ij * A_ad_nd - B_ad_nd
 !
@@ -93,39 +128,102 @@ select case( driver )
 
         do i = 1 , system% atoms
             If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
-            atom(i)% Ehrenfest = Ehrenfest_AO( system, basis, QM_el, i ) * eVAngs_2_Newton 
+            atom(i)% Ehrenfest = Ehrenfest( system, basis, i ) * eVAngs_2_Newton 
         end do
 
     case( "slice_ElHl" )
 
-        ! electron and hole contributions ...
-        do i = 1 , system% atoms
-            If( system%QMMM(i) == "MM" ) cycle
-            atom(i)% Ehrenfest = Ehrenfest_ElHl( system, basis, MO_bra, MO_ket, QM_el, QM_hl, i ) * eVAngs_2_Newton 
-        end do
 end select
 
 deallocate( mask , X_ij , F_vec , F_mtx )
-If( allocated(grad_S) ) deallocate( grad_S )
 
 include 'formats.h'
 
-end subroutine EhrenfestForce
+end subroutine Ehrenfest_Adiabatic
 !
 !
 !
-!===============================================================
- function Ehrenfest_AO( system, basis, QM , site ) result(Force)
-!===============================================================
+!
+!=================================================================
+ subroutine Ehrenfest_Diabatic( system , basis , AO_bra , AO_ket )
+!=================================================================
+ use MD_read_m   , only  : atom
+ implicit none
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
+ complex*16      , intent(in)    :: AO_bra(:,:)
+ complex*16      , intent(in)    :: AO_ket(:,:)
+
+! local variables ... 
+ integer               :: i , j , mm , nn
+ real*8  , allocatable :: X_ij(:,:) 
+
+! local parameters ...
+ real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
+ logical , parameter :: T_ = .true. , F_ = .false.
+
+!================================================================================================
+! some preprocessing ...
+!================================================================================================
+
+mm = size(basis)
+nn = n_part
+
+If( .NOT. allocated(F_mtx ) ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
+If( .NOT. allocated(F_vec ) ) allocate( F_vec   (system%atoms)                , source=D_zero )
+If( .NOT. allocated(rho_eh) ) then
+    allocate( grad_S  (size(basis), 10        ))
+    allocate( rho_eh  (size(basis),size(basis)))
+    allocate( A_ad_nd (size(basis),size(basis)))
+    allocate( B_ad_nd (size(basis),size(basis)))
+    allocate( Kernel  (size(basis),size(basis)))
+end if
+
+! preprocess overlap matrix for Pulay calculations ...
+CALL Overlap_Matrix( system , basis )
+CALL preprocess    ( system )
+
+! build up electron-hole density matrix ...
+forall( i=1:mm , j=1:mm ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) - AO_ket(j,2)*AO_bra(i,2) )
+
+CALL Huckel_stuff( basis , X_ij )
+
+A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two 
+
+CALL gemm( H_prime , A_ad_nd , B_ad_nd )
+
+Kernel = X_ij * A_ad_nd - B_ad_nd
+!
+!================================================================================================
+
+! set all forces to zero beforehand ...
+forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
+
+! Run, Forrest, Run ...
+do i = 1 , system% atoms
+    If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
+    atom(i)% Ehrenfest = Ehrenfest( system, basis, i ) * eVAngs_2_Newton 
+end do
+
+deallocate( mask , X_ij , F_vec , F_mtx )
+
+include 'formats.h'
+
+end subroutine Ehrenfest_Diabatic
+!
+!
+!
+!=======================================================
+ function Ehrenfest( system, basis, site ) result(Force)
+!=======================================================
 use Semi_empirical_parms , only: atom
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
-type(R_eigen)    , intent(in)    :: QM
 integer          , intent(in)    :: site 
 
 ! local variables ...
-integer :: i , j , m , n , xyz , size_basis , jL , L , indx
+integer :: i , j , xyz , size_basis , jL , L , indx
 integer :: k , ik , DOS_atom_k , BasisPointer_k 
 
 ! local arrays ...
@@ -133,10 +231,9 @@ integer , allocatable :: pairs(:)
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
 real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
 
-verbose = .false.
+verbose    = .false.
 size_basis = size(basis)
-If( .NOT. allocated(grad_S) ) allocate( grad_S( size_basis , 10 ) )
-grad_S = D_zero
+grad_S     = D_zero
 
 !force on atom site ...
 k = site 
@@ -199,110 +296,41 @@ system% coord (K,:) = tmp_coord
         
 deallocate(pairs)
 
-end function Ehrenfest_AO
+end function Ehrenfest
 !
 !
 !
-!=========================================================================================
- function Ehrenfest_ElHl( system, basis, MO_bra, MO_ket,QM_el, QM_hl, site ) result(Force)
-!=========================================================================================
-use Semi_empirical_parms , only: atom
+!
+!==========================================
+ subroutine S_invH( system , basis , X_ij )
+!==========================================
 implicit none
-type(structure)  , intent(inout) :: system
-type(STO_basis)  , intent(in)    :: basis(:)
-complex*16       , intent(in)    :: MO_bra(:,:)
-complex*16       , intent(in)    :: MO_ket(:,:)
-type(R_eigen)    , intent(in)    :: QM_el
-type(R_eigen)    , intent(in)    :: QM_hl
-integer          , intent(in)    :: site 
+type(structure)     , intent(in)  :: system
+type(STO_basis)     , intent(in)  :: basis(:)
+real*8              , intent(in)  :: X_ij(:,:)
 
-! local variables ...
-integer :: i , j , m , n , xyz
-integer :: k , ik , DOS_atom_k , BasisPointer_k 
-real*8  :: Force_AD , Force_NAD , rho_nm_el , rho_nm_hl
+! local variables...
+integer :: n
+real*8 , allocatable :: H(:,:) , S(:,:) , S_inv(:,:) 
 
-! local arrays ...
-real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
-real*8                :: Force(3) , tmp_coord(3) , delta_b(3) , wp_occ(size(basis),2)
+n = size(basis)
 
-verbose = .false.
-If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
+CALL Overlap_Matrix( system , basis , S )
 
-!force on atom site ...
-k = site 
-DOS_atom_k     =  atom( system% AtNo(k) )% DOS
-BasisPointer_k =  system% BasisPointer(k) 
+allocate( H(n,n) , source = X_ij*S )
 
-! some preprocessing ...
-forall(j=1:2) wp_occ(:,j) = MO_bra(:,j)*MO_ket(:,j)
+! compute S_inverse...
+call Invertion_Matrix( S , S_inv )
+deallocate( S )
 
-! save coordinate ...
-tmp_coord = system% coord(k,:)
+! allocate and compute H' = S_inv * H ...
+If( .not. allocated(H_prime) ) allocate( H_prime ( size(basis) , size(basis) ) )
 
-do xyz = 1 , 3
+CALL symm( S_inv , H , H_prime )
 
-       delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
-    
-       system% coord (k,:) = tmp_coord + delta_b
-       CALL Overlap_Matrix( system , basis , S_fwd )
+deallocate( S_inv , H )
 
-       system% coord (k,:) = tmp_coord - delta_b
-       CALL Overlap_Matrix( system , basis , S_bck )
-
-       grad_S = (S_fwd - S_bck) / (TWO*delta) 
-
-       Force_AD = D_zero
-
-       ! adiabatic component of the Force ...
-       !==============================================================================================
-       !$omp parallel do schedule(dynamic,10) private(n,ik,i,j) default(shared) reduction(+:Force_AD)
-       do n = 1 , size(basis) 
-         do ik = 1 , DOS_atom_k
-            i = BasisPointer_k + ik
-            do j = 1 , size(basis)
-!                Force_AD = Force_AD                                                                                             &
-!                         - wp_occ(n,1) * ( Huckel_stuff(i,j,basis) - QM_el%erg(n) ) * grad_S(i,j) * QM_el%L(n,i) * QM_el%L(n,j) &
-!                         + wp_occ(n,2) * ( Huckel_stuff(i,j,basis) - QM_hl%erg(n) ) * grad_S(i,j) * QM_hl%L(n,i) * QM_hl%L(n,j) 
-            end do
-         end do
-       end do
-       !$end parallel do
-       !==============================================================================================
-
-       Force_NAD = D_zero
-
-       ! non-adiabatic component of the Force ...
-       !==============================================================================================
-       !$omp parallel do schedule(dynamic,10) private(n,m,rho_nm_el,rho_nm_hl,ik,i,j) default(shared) reduction(+:Force_NAD)
-       do n = 1   , size(basis)
-       do m = n+1 , size(basis)
-         rho_nm_el = two * real(MO_bra(m,1)*MO_ket(n,1)) 
-         rho_nm_hl = two * real(MO_bra(m,2)*MO_ket(n,2)) 
-
-         do ik = 1 , DOS_atom_k
-            i = BasisPointer_k + ik
-            do j = 1 , size(basis)
-
-                Force_NAD = Force_NAD                                                                                                     &
-                          - rho_nm_el * ( QM_el%erg(n)*QM_el%L(m,j)*QM_el%L(n,i) + QM_el%erg(m)*QM_el%L(m,i)*QM_el%L(n,j) ) * grad_S(i,j) &
-                          + rho_nm_hl * ( QM_hl%erg(n)*QM_hl%L(m,j)*QM_hl%L(n,i) + QM_hl%erg(m)*QM_hl%L(m,i)*QM_hl%L(n,j) ) * grad_S(i,j) 
-
-            end do
-         end do
-
-       end do
-       end do
-       !$end parallel do
-       !==============================================================================================
-
-       Force(xyz) = two*Force_AD + Force_NAD
-
-end do 
-
-! recover original system ...
-system% coord (k,:) = tmp_coord
-
-end function Ehrenfest_ElHl
+end subroutine S_invH
 !
 !
 !
@@ -392,6 +420,63 @@ end do
 end subroutine Preprocess
 !
 !
+!
+!=================================================
+subroutine Invertion_Matrix( matrix , matrix_inv )
+!=================================================
+implicit none
+real*8                  , intent(in)  :: matrix(:,:)
+real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
+
+! local variables...
+real*8  , allocatable   :: work(:)
+integer , allocatable   :: ipiv(:)
+integer                 :: i , j , info , N
+
+N = size( matrix(:,1) )
+
+! compute inverse of S_matrix...
+allocate( ipiv       ( N     ) )
+allocate( work       ( N     ) )
+allocate( matrix_inv ( N , N ) )
+
+matrix_inv = matrix
+
+CALL dsytrf( 'u' , N , matrix_inv , N , ipiv , work , N , info )
+if ( info /= 0 ) then
+    write(*,*) 'info = ',info,' in DSYTRF '
+    stop
+end if
+
+CALL dsytri( 'u' , N , matrix_inv , N , ipiv , work , info )
+if ( info /= 0 ) then
+    write(*,*) 'info = ',info,' in DSYTRI '
+    stop
+end if
+
+deallocate( ipiv , work )
+
+do i = 2 , N
+    do j = 1 , i - 1
+        matrix_inv(i,j) = matrix_inv(j,i)
+    end do
+end do
+
+end subroutine Invertion_Matrix
+!
+!
+!
+!===========================================
+ subroutine store_Hprime( N , fetch_Hprime )
+!===========================================
+implicit none
+integer , intent(in) :: N
+real*8  , intent(in) :: fetch_Hprime(:,:)
+
+If( .not. allocated(H_prime) ) allocate( H_prime (N,N) )
+H_prime = fetch_Hprime
+
+end subroutine store_Hprime
 !
 !
 end module Ehrenfest_Builder

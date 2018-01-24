@@ -33,6 +33,7 @@ module type_m
         real*8                     :: MD_Kin
         real*8                     :: MD_Pot
         real*8                     :: QM_erg
+        complex*16                 :: QM_wp_erg(2)
         real*8                     :: Total_erg
         logical     , allocatable  :: solute(:)
         logical     , allocatable  :: DPF(:)

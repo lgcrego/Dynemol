@@ -123,7 +123,7 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then 
         Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI_el , UNI_hl )
+!        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI_el , UNI_hl )
     end If
 
     t = t + t_rate 

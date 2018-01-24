@@ -35,6 +35,10 @@ real*8  , intent(in) :: NetCharge(:)
 real*8  :: FourVector(4) , U_Coul
 integer :: i , j , ati , atj 
 
+return
+
+print*,"QMMM_FORCE"
+
 if( .NOT. allocated(dq) ) allocate( dq(size(atom)) )
 dq = NetCharge
 

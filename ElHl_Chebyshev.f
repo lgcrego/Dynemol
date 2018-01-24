@@ -8,14 +8,16 @@ module ElHl_Chebyshev_m
     use parameters_m        , only : t_i , frame_step ,         &
                                      Coulomb_ , n_part,         &
                                      driver , restart
+    use Structure_Builder   , only : Unit_Cell 
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag    
     use Data_Output         , only : Populations 
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
     use Chebyshev_m         , only : Propagation, dump_Qdyn
+    use Ehrenfest_Builder   , only : store_Hprime                               
     use Matrix_Math
 
-    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev
+    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
 
     private
 
@@ -26,13 +28,14 @@ module ElHl_Chebyshev_m
 
 ! module variables ...
     real*8      ,   save          :: save_tau(2)
-    logical     ,   save          :: done = .false.
+    logical     ,   save          :: ready = .false.
     logical     ,   save          :: necessary_  = .true.
     logical     ,   save          :: first_call_ = .true.
     real*8, target, allocatable   :: h0(:,:)
     real*8      ,   allocatable   :: S_matrix(:,:)
     real*8      ,   allocatable   :: V_Coul_El(:) , V_Coul_Hl(:)
     complex*16  ,   allocatable   :: V_Coul(:,:)
+    complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
     
 #ifdef USE_GPU
 #  define _electron_  -1
@@ -43,14 +46,14 @@ contains
 !
 !
 !
-!============================================================================================================
- subroutine preprocess_ElHl_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
-!============================================================================================================
+!==========================================================================================================
+ subroutine preprocess_ElHl_Chebyshev( system , basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
+!==========================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
-complex*16      , intent(out)   :: Psi_bra(:,:)
-complex*16      , intent(out)   :: Psi_ket(:,:)
+complex*16      , intent(out)   :: AO_bra(:,:)
+complex*16      , intent(out)   :: AO_ket(:,:)
 complex*16      , intent(out)   :: DUAL_bra(:,:) 
 complex*16      , intent(out)   :: DUAL_ket(:,:) 
 type(g_time)    , intent(inout) :: QDyn
@@ -62,7 +65,6 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
-
 !========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
@@ -72,8 +74,9 @@ li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
-ELHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
+ElHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
+
 !========================================================================
 ! prepare hole state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
@@ -84,44 +87,65 @@ N  = size(wv_FMO)
 
 ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
+
 !========================================================================
 
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #ifdef USE_GPU
 allocate( S_matrix(size(basis),size(basis)) )
 call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
 #endif
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
-! prepare DUAL basis for local properties ...
+! compute S ...
 CALL Overlap_Matrix( system , basis , S_matrix )
+CALL Huckel( basis , S_matrix , h0 )
+! for a rigid structure once is enough ...
+If( driver == 'q_dynamics' ) necessary_ = .false.
+
+!==============================================
+! prepare DUAL basis for local properties ...
+! DUAL_bra = (C*)^T    ;    DUAL_ket = S*C ...
 DUAL_bra = dconjg( ElHl_Psi )
 call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
+!==============================================
 
-call bra_x_op( Psi_bra, ElHl_Psi , S_matrix )
-Psi_ket = ElHl_Psi
+!==============================================
+!vector states to be propagated ...
+!Psi_bra = C^T*S       ;      Psi_ket = C ...
+allocate( Psi_t_bra(size(basis),n_part) )
+allocate( Psi_t_ket(size(basis),n_part) )
+call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
+Psi_t_ket = ElHl_Psi
+!==============================================
+
+!==============================================
+AO_bra = ElHl_Psi 
+AO_ket = ElHl_Psi 
+CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
+!==============================================
 
 If( .not. restart ) then
     ! save populations(time=t_i) ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-
     CALL dump_Qdyn( Qdyn , it )
 end If    
 
 ! clean and exit ...
 ! leaving S_matrix allocated
-!deallocate( S_matrix )
 
 end subroutine preprocess_ElHl_Chebyshev
 !
 !
 !
-!===================================================================================================================
- subroutine ElHl_Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
-!===================================================================================================================
+!=============================================================================================================
+ subroutine ElHl_Chebyshev( system , basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
+!=============================================================================================================
 implicit none
 type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
-complex*16       , intent(inout) :: Psi_t_bra(:,:)
-complex*16       , intent(inout) :: Psi_t_ket(:,:)
+complex*16       , intent(inout) :: AO_bra(:,:)
+complex*16       , intent(inout) :: AO_ket(:,:)
 complex*16       , intent(inout) :: Dual_bra(:,:)
 complex*16       , intent(inout) :: Dual_ket(:,:)
 type(g_time)     , intent(inout) :: QDyn
@@ -130,11 +154,10 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer                     :: i, j , N
+integer                     :: j , N
 real*8                      :: t_max , tau_max , tau(2) , t_init
 real*8      , pointer       :: h(:,:)
 real*8      , allocatable   :: V_coul_El(:) , V_coul_Hl(:) , H_prime(:,:)
-complex*16  , allocatable   :: AO_bra(:,:) , AO_ket(:,:) , V_coul(:,:) 
 
 t_init = t
 
@@ -152,49 +175,36 @@ N = size(basis)
 
 if(first_call_) then           ! allocate matrices
 #ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
     allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
     call GPU_Pin( H, N*N*8 )
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #else
     allocate( H(N,N) , H_prime(N,N) )
 #endif
 end if
 
-If ( necessary_ ) then
+If ( necessary_ ) then ! <== not necessary for a rigid structures ...
 
     ! compute S and S_inverse ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
     CALL Huckel( basis , S_matrix , h0 )
 
-    call syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
+    CALL syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
 #define S_inv S_matrix
-
-    ! for a rigid structure once is enough ...
-    If( driver == 'q_dynamics' ) necessary_ = .false.
 
 end If
 
-
 If( Coulomb_ ) then
 
-    If( done ) then
-
-        allocate( AO_bra(N,n_part) )
-        allocate( AO_ket(N,n_part) )
-        call op_x_ket( AO_bra, S_inv, Psi_t_bra )
-        forall( i=1:N, j=1:n_part ) AO_bra(i,j) = dconjg(AO_bra(i,j))
-        AO_ket = Psi_t_ket
-
+    If( ready ) then
         CALL Build_Coulomb_Potential( system , basis , AO_bra , AO_ket , V_coul , V_coul_El , V_coul_Hl )
-        deallocate( V_Coul , AO_bra , AO_ket )
-
+        deallocate( V_Coul )
     else
-
         allocate( V_coul_El(N) , source = D_zero )
         allocate( V_coul_Hl(N) , source = D_zero )
-
-        done = .true.
-
+        ready = .true.
     end If
 
 end If    
@@ -212,13 +222,15 @@ end if
 
 #ifndef USE_GPU
 ! allocate and compute H' = S_inv * H ...
-allocate( H_prime(N,N) )
+If (.not. allocated(H_prime) ) allocate( H_prime(N,N) )
 call syMultiply( S_inv , h , H_prime )
 #endif
 
 ! proceed evolution of ELECTRON wapacket with best tau ...
 #ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv(1,1), h(1,1), Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #else
 CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
 #endif
@@ -230,7 +242,9 @@ CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max
 if( Coulomb_ ) forall(j=1:N) h(j,j) = h0(j,j) + V_coul_Hl(j)
 
 #ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #endif
 
 if( Coulomb_ ) then
@@ -238,11 +252,6 @@ if( Coulomb_ ) then
     call syMultiply( S_inv , h , H_prime )
 #endif
     deallocate( h, V_coul_El, V_coul_Hl)
-end if
-
-If( driver /= 'q_dynamics' ) then
-    deallocate( h0 )
-    nullify( h )
 end if
 
 #ifndef USE_GPU
@@ -258,22 +267,33 @@ t = t_init + (delta_t*frame_step)
 DUAL_bra = dconjg(Psi_t_ket)
 DUAL_ket = Psi_t_bra
 
+! prepare Slater basis for FORCE properties ...
+call op_x_ket( AO_bra, S_inv, Psi_t_bra )
+AO_bra = dconjg(AO_bra) 
+AO_ket = Psi_t_ket
+
+CALL QuasiParticleEnergies( AO_bra , AO_ket , H )
+CALL store_Hprime( N , H_prime ) 
+
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
+If( driver /= 'q_dynamics' ) then
+    deallocate( h0 )
+    nullify( h )
+end if
 #ifndef USE_GPU
 deallocate( H_prime )
 #endif
+#undef S_inv
 
-Print 186, t
+first_call_ = .false.
 
 include 'formats.h'
 
-first_call_ = .false.
-#undef S_inv
 end subroutine ElHl_Chebyshev
 !
 !
@@ -319,6 +339,43 @@ end do
 call Matrix_Symmetrize( h0, 'U' )
 
 end subroutine Huckel
+!
+!
+!
+!=======================================================
+ subroutine QuasiParticleEnergies( AO_bra , AO_ket , H )
+!=======================================================
+implicit none
+complex*16 , intent(in) :: AO_bra(:,:)
+complex*16 , intent(in) :: AO_ket(:,:)
+real*8     , intent(in) :: H(:,:)
+
+!local variables ...
+integer :: i , j , mm
+complex*16 :: erg_el , erg_hl
+
+mm = size(AO_bra(:,1))
+
+erg_el = (0.d0,0.d0)
+erg_hl = (0.d0,0.d0)
+!$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el , erg_hl)
+do j = 1 , mm
+    do i = 1 , mm
+
+        erg_el = erg_el + AO_bra(i,1)*H(i,j)*AO_ket(j,1)
+        erg_hl = erg_hl + AO_bra(i,2)*H(i,j)*AO_ket(j,2)
+
+    end do
+end do
+!$OMP end parallel do  
+
+Unit_Cell% QM_wp_erg(1) = erg_el
+Unit_Cell% QM_wp_erg(2) = erg_hl
+
+! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
+Unit_Cell% QM_erg = erg_el - erg_hl
+
+end subroutine QuasiParticleEnergies
 !
 !
 !

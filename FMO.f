@@ -301,7 +301,7 @@ implicit none
 
  print*, '>> eigen_FMO done <<'
 
- end subroutine
+ end subroutine eigen_FMO
 !
 !
 !
