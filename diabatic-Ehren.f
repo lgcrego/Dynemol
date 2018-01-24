@@ -116,30 +116,22 @@ call MPI_BCAST( Kernel , N*N , mpi_D_R , 1 , ForceComm , err )
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 F_rcv = D_zero ; F_snd = D_zero ; F_vec = D_zero 
 
-select case( driver )
+do i = myForce+1 , system% atoms , npForce
 
-    case( "slice_AO" )
+    If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
+    CALL Ehrenfest( system, basis, i ) 
 
-        do i = myForce+1 , system% atoms , npForce
+end do
 
-            If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
-            CALL Ehrenfest( system, basis, i ) 
+call MPI_reduce( F_snd , F_rcv , 3*system%atoms**2 , MPI_double_precision , mpi_SUM , 0 , ForceComm , err )
 
-        end do
-
-        call MPI_reduce( F_snd , F_rcv , 3*system%atoms**2 , MPI_double_precision , mpi_SUM , 0 , ForceComm , err )
-
-        if( master ) then
-            do i = 1 , system% atoms
-            do xyz = 1 , 3
-               atom(i)% Ehrenfest(xyz) = two * sum( F_rcv(:,i,xyz) ) * eVAngs_2_Newton 
-            end do
-            end do
-        end if
-
-    case( "slice_ElHl" )
-
-end select
+if( master ) then
+    do i = 1 , system% atoms
+    do xyz = 1 , 3
+       atom(i)% Ehrenfest(xyz) = two * sum( F_rcv(:,i,xyz) ) * eVAngs_2_Newton 
+    end do
+    end do
+end if
 
 deallocate( mask )
 
