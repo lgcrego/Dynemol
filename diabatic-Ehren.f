@@ -7,15 +7,13 @@ module DiabaticEhrenfest_Builder
     use lapack95
     use type_m
     use constants_m
+    use parameters_m            , only  : verbose 
     use MPI_definitions_m       , only  : myForce , master , npForce ,            &
                                           KernelComm , ForceComm , KernelCrew ,   &
-                                          ForceCrew , myKernel , ChebyKernelComm , myid
-    use parameters_m            , only  : driver , verbose , n_part , QMMM
-    use Structure_Builder       , only  : Unit_Cell 
+                                          ForceCrew , myKernel , ChebyKernelComm 
     use Overlap_Builder         , only  : Overlap_Matrix
-    use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: EhrenfestForce , store_Hprime
+    public :: EhrenfestForce 
 
     private
 
@@ -28,7 +26,6 @@ module DiabaticEhrenfest_Builder
     real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) 
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_snd(:,:,:) , F_rcv(:,:,:) , H_prime(:,:)
     logical     , allocatable   :: mask(:,:)
-    logical     , save          :: first_time = .true.
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -48,8 +45,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz
- integer :: mpi_status(mpi_status_size) , request , err  
+ integer :: i , j , N , xyz , err  
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
 
@@ -229,43 +225,6 @@ end subroutine Ehrenfest
 !
 !
 !
-!
-!==========================================
- subroutine S_invH( system , basis , X_ij )
-!==========================================
-implicit none
-type(structure)     , intent(in)  :: system
-type(STO_basis)     , intent(in)  :: basis(:)
-real*8              , intent(in)  :: X_ij(:,:)
-
-! local variables...
-integer :: n
-real*8 , allocatable :: H(:,:) , S(:,:) , S_inv(:,:) 
-
-n = size(basis)
-
-CALL Overlap_Matrix( system , basis , S )
-
-allocate( H(n,n) , source = X_ij*S )
-
-! compute S_inverse...
-call Invertion_Matrix( S , S_inv )
-deallocate( S )
-
-! allocate and compute H' = S_inv * H ...
-If( .not. allocated(H_prime) ) allocate( H_prime ( size(basis) , size(basis) ) )
-
-CALL symm( S_inv , H , H_prime )
-
-deallocate( S_inv , H )
-
-first_time = .false.
-
-end subroutine S_invH
-!
-!
-!
-!
 !=====================================
  subroutine Huckel_stuff( basis , Xi ) 
 !=====================================
@@ -349,67 +308,6 @@ do K = 1   , sys% atoms
 end do    
 
 end subroutine Preprocess
-!
-!
-!
-!=================================================
-subroutine Invertion_Matrix( matrix , matrix_inv )
-!=================================================
-implicit none
-real*8                  , intent(in)  :: matrix(:,:)
-real*8  , allocatable   , intent(out) :: matrix_inv(:,:)
-
-! local variables...
-real*8  , allocatable   :: work(:)
-integer , allocatable   :: ipiv(:)
-integer                 :: i , j , info , N
-
-N = size( matrix(:,1) )
-
-! compute inverse of S_matrix...
-allocate( ipiv       ( N     ) )
-allocate( work       ( N     ) )
-allocate( matrix_inv ( N , N ) )
-
-matrix_inv = matrix
-
-CALL dsytrf( 'u' , N , matrix_inv , N , ipiv , work , N , info )
-if ( info /= 0 ) then
-    write(*,*) 'info = ',info,' in DSYTRF '
-    stop
-end if
-
-CALL dsytri( 'u' , N , matrix_inv , N , ipiv , work , info )
-if ( info /= 0 ) then
-    write(*,*) 'info = ',info,' in DSYTRI '
-    stop
-end if
-
-deallocate( ipiv , work )
-
-do i = 2 , N
-    do j = 1 , i - 1
-        matrix_inv(i,j) = matrix_inv(j,i)
-    end do
-end do
-
-end subroutine Invertion_Matrix
-!
-!
-!
-!===========================================
- subroutine store_Hprime( N , fetch_Hprime )
-!===========================================
-implicit none
-integer , intent(in) :: N
-real*8  , intent(in) :: fetch_Hprime(:,:)
-
-If( .not. allocated(H_prime) ) allocate( H_prime (N,N) )
-H_prime = fetch_Hprime
-
-
-
-end subroutine store_Hprime
 !
 !
 end module DiabaticEhrenfest_Builder

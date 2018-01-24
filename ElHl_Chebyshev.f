@@ -13,7 +13,6 @@ module ElHl_Chebyshev_m
     use FMO_m                     , only : FMO_analysis , eh_tag    
     use Data_Output               , only : Populations 
     use Chebyshev_m               , only : Propagation, dump_Qdyn
-    use DiabaticEhrenfest_Builder , only : store_Hprime                               
     use Matrix_Math
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
@@ -56,8 +55,6 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
-integer::err
-
 !========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
@@ -67,7 +64,7 @@ li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
-ELHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
+ElHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
 !========================================================================
@@ -118,7 +115,6 @@ CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
 If( .not. restart ) then
     ! save populations(time=t_i) ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-
     CALL dump_Qdyn( Qdyn , it )
 end If    
 
@@ -237,7 +233,6 @@ AO_bra = dconjg(AO_bra)
 AO_ket = Psi_t_ket
 
 CALL QuasiParticleEnergies( AO_bra , AO_ket , H )
-CALL store_Hprime( N , H_prime ) 
 
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
