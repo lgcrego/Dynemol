@@ -6,7 +6,7 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m         , only : myCheby , ChebyComm , ChebyKernelComm , myChebyKernel , master , myid, world
+    use MPI_definitions_m         , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master
     use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , restart
     use Structure_Builder         , only : Unit_Cell 
     use Overlap_Builder           , only : Overlap_Matrix
@@ -55,14 +55,27 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#ifdef USE_GPU
+allocate( S_matrix(size(basis),size(basis)) )
+call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
+#endif
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+
+! MUST compute S_matrix before FMO analysis ...
+CALL Overlap_Matrix( system , basis , S_matrix )
+CALL Huckel( basis , S_matrix , h0 )
+
+! After instantiating Overlap_matrix, processes wait outside ...
+If( .not. ChebyCrew ) return
+
 !========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the electron state in Structure's hilbert space ...
+! place the electron state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
-
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
 ElHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
@@ -71,24 +84,12 @@ deallocate( wv_FMO )
 ! prepare hole state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
-! place the hole state in Structure's hilbert space ...
+! place the hole state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
 N  = size(wv_FMO)
-
 ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
-
 !========================================================================
-
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-#ifdef USE_GPU
-allocate( S_matrix(size(basis),size(basis)) )
-call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
-#endif
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-! compute S ...
-CALL Overlap_Matrix( system , basis , S_matrix )
-CALL Huckel( basis , S_matrix , h0 )
 
 !==============================================
 ! prepare DUAL basis for local properties ...
@@ -158,6 +159,10 @@ t_max = delta_t*frame_step*(it-1)
 tau_max = delta_t / h_bar
 
 If( master ) then
+
+    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+    CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
+    CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
 
     if(first_call_) allocate( H(N,N) , H_prime(N,N) , S_inv(N,N) )
 

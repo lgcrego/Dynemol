@@ -102,12 +102,6 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    If( QMMM .and. master ) then
-    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
-         CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
-         CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
-    end If    
-
     If( n_part == 1) then
          CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
     else
@@ -270,7 +264,6 @@ If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 ! export new coordinates for ForceCrew on stand-by ...
 If( master ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-
 !..........................................................................
 
 include 'formats.h'
