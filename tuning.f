@@ -148,17 +148,14 @@ select case ( instance )
 !----------------------------------
 
 
-    case ("MegaMass")
-
-!----------------------------------
-!     Selective_Dynamics 
-!----------------------------------
-
- atom(1:1045) % mass = large
+    
+!----------------------------------------
+ case ("MegaMass")  ! Selective_Dynamics 
+!----------------------------------------
 
 
-    case( 'SpecialBonds' )
 
+case( 'SpecialBonds' )
 !----------------------------------
 !      define SPECIAL bonds
 !----------------------------------
