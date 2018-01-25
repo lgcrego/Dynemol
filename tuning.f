@@ -32,7 +32,6 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
- univ % atom(51:100) % V_shift = 5.d1
 
 !-----------------------------------
 !      define %residue
@@ -48,16 +47,19 @@ type(universe) , intent(inout) :: univ
 
 !---------------------------------------------------
 !      define %QMMM  
-!      default is QMMM = QM;  set QMMM = MM for classical atoms ... 
+!      default is QMMM = QM  
+!      set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
 
-!----------------------------------------------------
+!---------------------------------------------------
 !      define %El   : mandatory !!
-!----------------------------------------------------
+!---------------------------------------------------
+where(univ % atom % residue == "RET") univ % atom % El = .true.
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
+where(univ % atom % residue == "RET") univ % atom % Hl = .true.
 
 !----------------------------------------------------
 !      define %fragment 
@@ -69,7 +71,11 @@ else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
 
-!----------------------------------------------------
+univ % atom(1:22)  % fragment = 'L'
+univ % atom(23:36) % fragment = 'T'
+univ % atom(37:48) % fragment = 'S'
+
+!......................................................................
 
 If( ad_hoc_verbose_ .and. master ) then
     Print 46
@@ -84,7 +90,6 @@ include 'formats.h'
 end subroutine ad_hoc_tuning
 
 end module tuning_m
-!
 !
 !
 !
@@ -120,34 +125,7 @@ select case ( instance )
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
-atom(743)  % flex = .true.
-atom(770)  % flex = .true.
-atom(1087) % flex = .true.
-atom(766)  % flex = .true.
-atom(142)  % flex = .true.
-atom(332)  % flex = .true.
-atom(752)  % flex = .true.
-atom(139)  % flex = .true.
-atom(740)  % flex = .true.
-atom(328)  % flex = .true.
-atom(742)  % flex = .true.
-atom(1061) % flex = .true.
-atom(744)  % flex = .true.
-atom(1064) % flex = .true.
-atom(745)  % flex = .true.
-atom(146)  % flex = .true.
-atom(1066) % flex = .true.
-atom(910)  % flex = .true.
-atom(918)  % flex = .true.
-atom(232)  % flex = .true.
-atom(747)  % flex = .true.
-atom(143)  % flex = .true.
-atom(1068) % flex = .true.
-atom(335)  % flex = .true.
-atom(921)  % flex = .true.
-atom(924)  % flex = .true.
-atom(1497) % flex = .true.
-atom(243)  % flex = .true.
+
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -160,13 +138,10 @@ atom(243)  % flex = .true.
 !      define residues
 !----------------------------------
 
-atom(35:36) % residue = "PRC"
-
 !----------------------------------
 !      define nr
 !----------------------------------
 
-atom(35:36) % nr = 1
 
 !----------------------------------
 !       charge of the atoms 
@@ -178,6 +153,8 @@ atom(35:36) % nr = 1
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
+
+ atom(1:1045) % mass = large
 
 
     case( 'SpecialBonds' )
