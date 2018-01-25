@@ -65,6 +65,19 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#ifdef USE_GPU
+allocate( S_matrix(size(basis),size(basis)) )
+call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
+#endif
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+
+! MUST compute S_matrix before FMO analysis ...
+CALL Overlap_Matrix( system , basis , S_matrix )
+CALL Huckel( basis , S_matrix , h0 )
+! for a rigid structure once is enough ...
+If( driver == 'q_dynamics' ) necessary_ = .false.
+
 !========================================================================
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
@@ -72,7 +85,6 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 ! place the electron state in Structure's hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
-
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
 ElHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
@@ -84,24 +96,9 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 ! place the hole state in Structure's hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
 N  = size(wv_FMO)
-
 ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
-
 !========================================================================
-
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-#ifdef USE_GPU
-allocate( S_matrix(size(basis),size(basis)) )
-call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
-#endif
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-
-! compute S ...
-CALL Overlap_Matrix( system , basis , S_matrix )
-CALL Huckel( basis , S_matrix , h0 )
-! for a rigid structure once is enough ...
-If( driver == 'q_dynamics' ) necessary_ = .false.
 
 !==============================================
 ! prepare DUAL basis for local properties ...
