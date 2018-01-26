@@ -37,11 +37,13 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "PSB"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "RET"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 66         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 96         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
+  Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
+
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
 !
@@ -58,7 +60,7 @@ implicit none
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   cutoff_radius             = 15.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
-  damping_Wolf              = 0.2d0             ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+  damping_Wolf              = 0.005d0           ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
                                                 ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
@@ -69,10 +71,8 @@ implicit none
   read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
   gmx_input_format       = T_                   ! <== reads FF parameters from gmx input files : T_ , F_  
 
-  Selective_Dynamics     = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
-
   MM_log_step            =  100                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  20                  ! <== step for saving MM results & parameters
+  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------
