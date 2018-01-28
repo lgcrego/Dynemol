@@ -378,8 +378,8 @@ character(len=2)    :: element2
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
 
-        case( 'Cd','CD' ) 
-            a(i)%Symbol = 'Cd' 
+!        case( 'Cd','CD' ) 
+!            a(i)%Symbol = 'Cd' 
 
         case( 'SS','S', 'SG', 'SD' ) 
             a(i)%Symbol = 'S' 

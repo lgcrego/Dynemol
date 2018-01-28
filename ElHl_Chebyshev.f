@@ -142,7 +142,7 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer :: j , N , err , mpi_status(mpi_status_size)
+integer :: j , N , err , request , mpi_status(mpi_status_size)
 integer :: mpi_D_R = mpi_double_precision
 integer :: mpi_D_C = mpi_double_complex
 real*8  :: t_init , t_max , tau_max , tau(2) , t_stuff(2)
@@ -187,7 +187,8 @@ If( master ) then
     ! compute H' = S_inv * H ...
     CALL syMultiply( S_inv , h , H_prime )
 
-    CALL MPI_BCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , err )
+    CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , request , err )
+    CALL MPI_Request_Free( request , err ) 
 
     !===================
     ! Electron Dynamics
@@ -209,7 +210,7 @@ else If( myCheby == 1 ) then
 
          Allocate( H_prime(N,N) )
 
-         CALL MPI_BCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , err )
+         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , request , err )
 
          ! proceed evolution of HOLE wapacket with best tau ...
          CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_stuff(1) , t_stuff(2) , tau(2) , save_tau(2) )

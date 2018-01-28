@@ -22,8 +22,8 @@ type(MM_molecular)  , intent(inout) :: species(:)
 integer             , intent(in)    :: a
 
 ! local variables ...
-integer         , allocatable   :: InputIntegers(:,:) , vector_of_pairs(:,:)
-integer                         :: i , j , k , m , n , idx
+integer         , allocatable   :: InputIntegers(:,:) , vector_of_pairs(:,:) , vector_of_pairs14(:,:)
+integer                         :: i , j , k , m , n , idx, inteira
 logical                         :: flagB1, flagB2, flagA1, flagA2, flagD1, flagD2, flagB11, flagB12, flagB21, flagB22
 logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222 , flag1, flag2
 logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
@@ -38,7 +38,7 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
  ! Intramolecular LJ list generation ... 
  ! Preparing ...
-
+ 
  do i = 1 , species(a) % N_of_atoms
 
      idx = 1
@@ -216,12 +216,10 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
      end do
 
  end do 
-
+ 
  deallocate( InputIntegers )
-
  ! Intermediate variable ... 
  allocate( vector_of_pairs( species(a) % N_of_Atoms * species(a) % N_of_Atoms , 2 ) , source = I_zero )
-
  k = 1
  do i = 1 , species(a) % N_of_Atoms - 1
 
@@ -235,7 +233,8 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
  end do
 
- allocate( species(a) % IntraLJ( size( pack( vector_of_pairs, vector_of_pairs /= 0 ) ), 2 ) )
+
+ allocate( species(a) % IntraLJ( size( pack( vector_of_pairs(:,2), vector_of_pairs(:,2) /= 0 ) ), 2 ) )
  species(a)%NintraLJ = size( pack( vector_of_pairs(:,2), vector_of_pairs(:,2) /= 0 ) ) 
 
  ! Finally associating the nonbonded interactions to species ...
@@ -244,10 +243,8 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
      species(a) % IntraLJ(i,2) = vector_of_pairs(i,2)
  end do
 
-
 ! 1--4 Interactions: only if [ pairs ] is not read in the .itp file ...
 if ( .NOT. allocated (species(a) % bonds14) ) then 
-
  ! Eliminating bonding terms in 1--4 interactions ...
  do i = 1 , species(a) % N_of_atoms
    do j = 1 , species(a) % N_of_atoms 
@@ -259,11 +256,27 @@ if ( .NOT. allocated (species(a) % bonds14) ) then
    end do
  end do
 
+
+
+! Intermediate variable for 1-4... 
+allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,2 ) , source = I_zero )
+ k = 1
+ do i = 1 , species(a) % N_of_Atoms - 1
+
+     do j = i , species(a) % N_of_Atoms
+         if ( Input14(i,j) == .true. ) then
+             vector_of_pairs14(k,1) = i
+             vector_of_pairs14(k,2) = j
+             k = k + 1
+         end if
+     end do
+ end do
+species(a) % Nbonds14 = ( size( pack( vector_of_pairs14(:,2), vector_of_pairs14(:,2) /= 0 ) ) ) 
  ! Preparing 1--4 interactions ...
- species(a) % Nbonds14 = ( size( pack( Input14(:,:), Input14(:,:) .eqv. .true. ) ) ) / 2
+
+! species(a) % Nbonds14 = ( size( pack( Input14(:,:), Input14(:,:) .eqv. .true. ) ) ) / 2
  
  allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
-
  ! Associating 1--4 interactions to species ...
  k = 1
  do i = 1 , species(a) % N_of_atoms
@@ -278,11 +291,9 @@ if ( .NOT. allocated (species(a) % bonds14) ) then
 
 end if
 
-
  deallocate( InputRef , Input14 , vector_of_pairs )
 
 !==============================================================================================
-
 end subroutine Identify_NonBondPairs
 !
 !

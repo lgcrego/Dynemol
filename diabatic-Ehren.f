@@ -45,7 +45,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz , err  
+ integer :: i , j , N , xyz , err , request 
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
 
@@ -93,7 +93,7 @@ If( myKernel == 1 ) then
 
     CALL Huckel_stuff( basis , X_ij )
 
-    CALL MPI_BCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , err ) 
+    CALL MPI_IBCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , request , err ) 
 
     A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two 
 
