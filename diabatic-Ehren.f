@@ -8,9 +8,9 @@ module DiabaticEhrenfest_Builder
     use type_m
     use constants_m
     use parameters_m            , only  : verbose 
-    use MPI_definitions_m       , only  : myForce , master , npForce ,            &
-                                          KernelComm , ForceComm , KernelCrew ,   &
-                                          ForceCrew , myKernel , ChebyKernelComm 
+    use MPI_definitions_m       , only  : myForce , master , npForce ,           &
+                                          KernelComm , ForceComm , ForceCrew ,   &
+                                          myKernel , ChebyKernelComm 
     use Overlap_Builder         , only  : Overlap_Matrix
 
     public :: EhrenfestForce 
@@ -46,6 +46,7 @@ contains
 
 ! local variables ... 
  integer :: i , j , N , xyz , err , request 
+ integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
 
@@ -94,6 +95,7 @@ If( myKernel == 1 ) then
     CALL Huckel_stuff( basis , X_ij )
 
     CALL MPI_IBCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , request , err ) 
+    CALL MPI_Wait( request , mpi_status , err ) 
 
     A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two 
 
@@ -132,7 +134,7 @@ end if
 deallocate( mask )
 
 ! return Extended ForceCrew to stand-by ...
-If( ForceCrew .OR. KernelCrew ) goto 99
+If( ForceCrew ) goto 99
 
 include 'formats.h'
 

@@ -7,7 +7,7 @@ module ElHl_Chebyshev_m
     use constants_m
     use ifport
     use MPI_definitions_m         , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master
-    use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , restart
+    use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , restart , QMMM
     use Structure_Builder         , only : Unit_Cell 
     use Overlap_Builder           , only : Overlap_Matrix
     use FMO_m                     , only : FMO_analysis , eh_tag    
@@ -142,7 +142,8 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer :: j , N , err , request , mpi_status(mpi_status_size)
+integer :: j , N , err , mpi_status(mpi_status_size)
+integer :: req1 , req2 
 integer :: mpi_D_R = mpi_double_precision
 integer :: mpi_D_C = mpi_double_complex
 real*8  :: t_init , t_max , tau_max , tau(2) , t_stuff(2)
@@ -160,10 +161,6 @@ tau_max = delta_t / h_bar
 
 If( master ) then
 
-    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
-    CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
-    CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
-
     if(first_call_) allocate( H(N,N) , H_prime(N,N) , S_inv(N,N) )
 
     ! trying to adapt time step for efficient propagation ...
@@ -172,7 +169,8 @@ If( master ) then
     tau(1) = merge( tau_max , tau(1) , tau(1) > tau_max )
 
     t_stuff = [ t_init , t_max ]
-    CALL MPI_Send( t_stuff , 2 , mpi_D_R , 1 , 0 , ChebyComm , err )
+    CALL MPI_ISend( t_stuff , 2 , mpi_D_R , 1 , 0 , ChebyComm , req1 , err )
+    CALL MPI_Request_Free( req1 , err )
 
     ! compute S  and H0 ...
     CALL Overlap_Matrix( system , basis , S_matrix )
@@ -187,8 +185,17 @@ If( master ) then
     ! compute H' = S_inv * H ...
     CALL syMultiply( S_inv , h , H_prime )
 
-    CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , request , err )
-    CALL MPI_Request_Free( request , err ) 
+    CALL MPI_BCAST( QMMM , 1 , mpi_logical , 0 , ChebyComm , err )
+    If( QMMM ) then
+         ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+         CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
+         CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
+
+         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , req2 , err )
+    else
+         ! otherwise, only Hole Dynamics get it ...
+         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyComm , req2 , err )
+    end If
 
     !===================
     ! Electron Dynamics
@@ -204,13 +211,19 @@ else If( myCheby == 1 ) then
     do  ! <== myCheby = 1 dwells in here Forever ...
 
          CALL MPI_Recv( t_stuff , 2 , mpi_D_R , 0 , mpi_any_tag , ChebyComm , mpi_status , err )
+         CALL MPI_BCAST( QMMM , 1 , mpi_logical , 0 , ChebyComm , err )
 
          tau(2) = merge( tau_max , save_tau(2) * 1.15d0 , first_call_ )
          tau(2) = merge( tau_max , tau(2) , tau(2) > tau_max )
 
          Allocate( H_prime(N,N) )
 
-         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , request , err )
+         If( QMMM ) then
+              CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , req2 , err )
+         else
+              CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyComm , req2 , err )
+         end If
+         CALL MPI_Wait( req2 , mpi_status , err ) 
 
          ! proceed evolution of HOLE wapacket with best tau ...
          CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_stuff(1) , t_stuff(2) , tau(2) , save_tau(2) )
