@@ -32,15 +32,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
-!  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+!  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
   Survival       = T_                       
   DP_Moment      = F_                       
-  QMMM           = T_
+  QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
@@ -61,7 +61,7 @@ logical :: dynamic
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
   EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 500                     ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -97,11 +97,11 @@ logical :: dynamic
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 72                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 120                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 73                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 121                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -132,12 +132,12 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  500  
+  Pop_Size       =  50  
   N_generations  =  10    
   Top_Selection  =  20                     ! <== top selection < Pop_Size
-  Pop_range      =  0.35d0                 ! <== range of variation of parameters
+  Pop_range      =  0.05d0                 ! <== range of variation of parameters
   Mutation_rate  =  0.5           
-  Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
