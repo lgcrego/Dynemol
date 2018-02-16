@@ -206,7 +206,7 @@ excited_DPF = system%DPF(1) .AND. ( hole_state /= I_zero )
 
 ! contribution from valence states ...
 n_basis      =  size(basis)
-Fermi_state  =  system%N_of_electrons / 2
+Fermi_state  =  system% N_of_Electrons/two + mod( system% N_of_Electrons , 2 )
  
 allocate( a(n_basis,n_basis)              )
 allocate( b(n_basis,n_basis)              )

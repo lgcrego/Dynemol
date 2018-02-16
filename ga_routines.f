@@ -73,7 +73,7 @@ Pop_start = 1
 If( master ) then
     allocate( Old_Pop (Pop_Size , GeneSize)     )
     allocate( indx    (Pop_Size)                )
-    allocate( cost    (Pop_size), source=D_zero ) 
+!    allocate( cost    (Pop_size), source=D_zero ) 
 
     CALL random_seed
 
@@ -87,6 +87,7 @@ end If
 allocate( GA_basis (size(basis)) )
 GA_basis = basis
 
+allocate( cost    (Pop_size), source=D_zero ) 
 allocate( snd_cost(Pop_size) )
 
 do generation = 1 , N_generations
@@ -108,7 +109,7 @@ do generation = 1 , N_generations
         CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
 
         If (info /= 0) then 
-            cost(i) = 1.d14
+            snd_cost(i) = 1.d14
             continue
         end if
 

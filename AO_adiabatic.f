@@ -355,7 +355,7 @@ end do
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
-UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO
+UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_Electrons , 2 )
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )

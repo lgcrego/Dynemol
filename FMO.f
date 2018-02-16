@@ -285,7 +285,7 @@ implicit none
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
- FMO % Fermi_State = sum( system%Nvalen ) / two
+ FMO % Fermi_State = sum(system%Nvalen)/two + mod( sum(system%Nvalen) , 2 )
 !---------------------------------------------------------------------
 
  If( driver == "slice_AO" ) then

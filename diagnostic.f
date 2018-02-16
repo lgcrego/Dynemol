@@ -3,6 +3,7 @@ module diagnostic_m
  use type_m
  use omp_lib
  use constants_m
+ use DOS_m
  use parameters_m               , only : spectrum , DP_Moment , &
                                          survival , DP_Field_ , &
                                          Alpha_Tensor ,         &
@@ -11,14 +12,12 @@ module diagnostic_m
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
- use QCModel_Huckel             , only : EigenSystem
- use DOS_m
  use Structure_Builder          , only : Unit_Cell ,            &
                                          Extended_Cell ,        &
                                          Generate_Structure ,   &
                                          Basis_Builder ,        &
                                          ExCell_basis
- use GA_QCModel_m               , only : Mulliken
+ use GA_QCModel_m               , only : Mulliken , GA_Eigen
  use DP_main_m                  , only : Dipole_Matrix
  use DP_potential_m             , only : Molecular_DPs
  use Oscillator_m               , only : Optical_Transitions
@@ -76,7 +75,15 @@ end do
 
  If( DP_field_ )CALL Molecular_DPs( Extended_Cell )
 
- CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
+ ! this Eigen is MPI free ...
+ CALL GA_Eigen( Extended_Cell, ExCell_basis, UNI )
+
+ ! save energies of the TOTAL system 
+ OPEN(unit=9,file='system-ergs.dat',status='unknown')
+     do i = 1 , size(ExCell_basis)
+         write(9,*) i , UNI%erg(i)
+     end do
+ CLOSE(9) 
 
  CALL Total_DOS( UNI%erg , TDOS )
 

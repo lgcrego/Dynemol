@@ -29,7 +29,7 @@ module DP_main_m
 
     !module variables ...
     logical               , save :: done = .false. , ready = .false.
-    integer , allocatable , save :: ija(:)
+    integer , allocatable , save :: ija(:) , occupancy(:)
     real*8  , allocatable , save :: xyz(:,:)
     real*8  , allocatable , save :: DP_pack(:,:)
 
@@ -117,7 +117,12 @@ CALL Center_of_Charge( system , R_vector )
 
 Nuclear_DP = D_zero 
 
-Fermi_state = sum( system%Nvalen ) / two
+! set MO occupancy ...
+Fermi_state = sum( system%Nvalen )/two + mod( sum( system%Nvalen ) , 2 )
+If( .not. allocated(occupancy)) then
+    allocate(occupancy(Fermi_state), source = 2)
+    occupancy(Fermi_state) =  2 - mod( sum( system%Nvalen ) , 2 )
+end If
 
 do xyz = 1 , 3
 
@@ -340,7 +345,7 @@ allocate( origin_Independent(Fermi_state) )
             a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
         end do
 
-        origin_Dependent(states)  = two * sum( a(states,:)*R_vec(:,states) , AO_mask )
+        origin_Dependent(states) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
         !$OMP end task
     end do
     !$OMP end single    
@@ -352,7 +357,7 @@ b = DP_matrix_AO(:,:,xyz)
 
 CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )    
 
-forall( states=1:Fermi_state ) origin_Independent(states) = two * sum( a(states,:)*L_vec(states,:) , AO_mask )
+forall( states=1:Fermi_state ) origin_Independent(states) = occupancy(states) * sum( a(states,:)*L_vec(states,:) , AO_mask )
 
 deallocate( a , b )
 
@@ -434,9 +439,9 @@ mask = merge( mask , a%DPF , count(a%DPF) == I_zero )
 
 allocate( Qi_Ri(a%atoms,3) , source = D_zero )
 
-forall( j=1:3 , i=1:a%atoms , mask(i) ) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
+forall( j=1:3 , i=1:a%atoms , mask(i) ) Qi_Ri(i,j) = atom(a%AtNo(i))%Nvalen * a%coord(i,j)
 
-total_valence = sum( a%Nvalen , mask )
+total_valence = sum( atom(a%AtNo(:))%Nvalen, mask )
 
 forall(j=1:3) a%Center_of_Charge(j) = sum( Qi_Ri(:,j) , mask ) / total_valence
 

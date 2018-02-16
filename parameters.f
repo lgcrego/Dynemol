@@ -32,17 +32,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-!  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
-  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
-  DP_Moment      = F_                       
-  QMMM           = T_
+  Survival       = F_                       
+  DP_Moment      = T_                       
+  QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -132,11 +131,11 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  500  
-  N_generations  =  10    
-  Top_Selection  =  20                     ! <== top selection < Pop_Size
-  Pop_range      =  0.35d0                 ! <== range of variation of parameters
-  Mutation_rate  =  0.5           
+  Pop_Size       =  100   
+  N_generations  =  100    
+  Top_Selection  =  30                     ! <== top selection < Pop_Size
+  Pop_range      =  0.25d0                 ! <== range of variation of parameters
+  Mutation_rate  =  0.4           
   Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
@@ -155,11 +154,13 @@ select case( DRIVER )
 
         dynamic = F_ .OR. Survival
 
+        If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
+
     case( "MM_Dynamics" )
 
         QMMM = F_
         dynamic = F_
-        
+
     case default
         Print*, " >>> Check your driver options <<< :" , driver
         stop
