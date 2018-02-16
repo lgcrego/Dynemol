@@ -24,8 +24,9 @@ module GA_QCModel_m
     end interface
 
     ! module variables ...
-    Real*8 , allocatable :: DP_matrix_AO(:,:,:)
-    Real*8 , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
+    Real*8  , allocatable :: DP_matrix_AO(:,:,:)
+    Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
+    integer , allocatable :: occupancy(:)
 
 contains
 !
@@ -517,11 +518,16 @@ allocate(R_vector(system%atoms,3))
 forall(xyz=1:3) R_vector(:,xyz) = system%coord(:,xyz) - Center_of_Charge(xyz)
 
 ! Nuclear dipole ; if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
-forall(xyz=1:3) Nuclear_DP(xyz) = sum( system%Nvalen(:) * R_vector(:,xyz) )
+Nuclear_DP(xyz) = D_zero
 
 ! Electronic dipole 
-n_basis      =  size(basis)
-Fermi_state  =  system%N_of_electrons / 2
+n_basis     = size(basis)
+Fermi_state = system% N_of_electrons/2 + mod( system% N_of_electrons , 2 ) 
+If( .not. allocated(occupancy)) then
+    allocate(occupancy(Fermi_state), source = 2)
+    occupancy(Fermi_state) =  2 - mod( sum( system%Nvalen ) , 2 )
+end If
+
  
 allocate( a(n_basis,n_basis) )
 allocate( b(n_basis,n_basis) )
@@ -536,7 +542,7 @@ do xyz = 1 , 3
 
         forall(i=1:n_basis) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
 
-        origin_Dependent(states)%DP(xyz) = 2.d0 * sum( a(states,:) * R_vec(:,states) )
+        origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:) * R_vec(:,states) )
 
     end forall    
  
@@ -546,7 +552,7 @@ do xyz = 1 , 3
        
     CALL gemm(L_vec,b,a,'N','N',one,zero)    
 
-    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = 2.d0 * sum(a(states,:)*L_vec(states,:))
+    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:))
 
 end do
 
@@ -615,9 +621,9 @@ integer              :: i , j
 
  allocate(Qi_Ri(a%atoms,3))
 
- forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = a%Nvalen(i) * a%coord(i,j)
+ forall(j=1:3,i=1:a%atoms) Qi_Ri(i,j) = element(a%AtNo(i))% Nvalen * a%coord(i,j)
 
- total_valence = sum( a%Nvalen )
+ total_valence = sum( element(a%AtNo(:))% Nvalen )
 
  forall(j=1:3) Center_of_Charge(j) = sum(Qi_Ri(:,j)) / total_valence
 
