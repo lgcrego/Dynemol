@@ -155,6 +155,8 @@ select case( DRIVER )
 
         dynamic = F_ .OR. Survival
 
+        If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
+
     case( "MM_Dynamics" )
 
         QMMM = F_
