@@ -7,12 +7,13 @@ module GA_driver_m
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
  use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
- use DOS_m 
+ use cost_EH                    , only : REF_DP , REF_Alpha
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
+ use DOS_m 
 
  public :: GA_driver
 
@@ -84,20 +85,21 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 Print*, " " 
 Print 154, DP, sqrt( dot_product(DP,DP) )
-Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
+Print 152, REF_DP, sqrt( dot_product(REF_DP,REF_DP) )
+!Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
-Print*, " " 
-Print*, "dE1 = ",UNI%erg(56) - UNI%erg(55) , 3.49
-Print*, "dE2 = ",UNI%erg(55) - UNI%erg(54) , 1.16
-Print*, "dE3 = ",UNI%erg(57) - UNI%erg(56) , 1.7
-Print*, "dE4 = ",UNI%erg(58) - UNI%erg(56) , 2.62
-Print*, "dE5 = ",UNI%erg(58) - UNI%erg(57) , 0.92
 Print*, " "
-Print*, "dE1 = ",UNI%erg(166) - UNI%erg(165) , 2.16
-Print*, "dE2 = ",UNI%erg(165) - UNI%erg(164) , 1.49
-Print*, "dE3 = ",UNI%erg(167) - UNI%erg(166) , 1.94
-Print*, "dE4 = ",UNI%erg(168) - UNI%erg(166) , 3.22
-Print*, "dE5 = ",UNI%erg(168) - UNI%erg(167) , 1.28
+Print*, "dE1 = ",UNI%erg(121) - UNI%erg(120) , 2.016d0
+Print*, "dE2 = ",UNI%erg(120) - UNI%erg(119) , 0.842d0
+Print*, "dE3 = ",UNI%erg(122) - UNI%erg(121) , 1.625d0
+Print*, "dE4 = ",UNI%erg(123) - UNI%erg(121) , 2.359d0
+Print*, "dE5 = ",UNI%erg(123) - UNI%erg(122) , 0.734d0
+Print*, " "
+Print*, "dE1 = ",UNI%erg(345) - UNI%erg(344) , 2.000d0
+Print*, "dE2 = ",UNI%erg(344) - UNI%erg(343) , 0.102d0
+Print*, "dE3 = ",UNI%erg(346) - UNI%erg(345) , 1.730d0
+Print*, "dE4 = ",UNI%erg(347) - UNI%erg(345) , 3.429d0
+Print*, "dE5 = ",UNI%erg(347) - UNI%erg(346) , 1.700d0
 
 ! Population analysis ...
 ! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 

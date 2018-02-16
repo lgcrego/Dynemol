@@ -131,9 +131,9 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  100   
-  N_generations  =  100    
-  Top_Selection  =  30                     ! <== top selection < Pop_Size
+  Pop_Size       =  300 
+  N_generations  =  150   
+  Top_Selection  =  90                    ! <== top selection < Pop_Size
   Pop_range      =  0.25d0                 ! <== range of variation of parameters
   Mutation_rate  =  0.4           
   Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !

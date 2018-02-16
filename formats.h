@@ -92,6 +92,8 @@
 
 143   FORMAT(/,1x,'Total number of MM atoms  = ',I6,/)
 
+152   FORMAT(1x,'REF DP Vector = (',3F8.4,') ==> ',F7.4,' Debye')
+
 153   FORMAT(/,1x,'======== STARTING  DIPOLE MATRIX ANALYSIS =========')
 
 154   FORMAT(1x,'DIPOLE Vector = (',3F8.4,') ==> ',F7.4,' Debye')

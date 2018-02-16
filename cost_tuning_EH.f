@@ -5,7 +5,10 @@ module cost_EH
     use GA_QCModel_m            , only : Mulliken
 
 
-    public :: evaluate_cost 
+    public :: evaluate_cost , REF_DP , REF_Alpha
+
+    ! module variables ...
+    real*8 :: REF_DP(3) , REF_Alpha(3)
 
     private 
 
@@ -26,7 +29,6 @@ real*8                                    :: evaluate_cost
 ! local variables ...
 integer  :: dumb
 real*8   :: chi(20) , weight(20)
-real*8   :: REF_DP(3) , REF_Alpha(3)
 
 ! general definitions ...
 chi(:) = 0.d0   ;   weight(:) = 0.d0
@@ -35,17 +37,17 @@ chi(:) = 0.d0   ;   weight(:) = 0.d0
 ! HOMO-LUMO gaps ...     
 !--------------------
 
-chi(1) = ( OPT_UNI%erg(56) - OPT_UNI%erg(55) )  - 3.49d0                           ; weight(1) = 2.0d0
-chi(2) = ( OPT_UNI%erg(55) - OPT_UNI%erg(54) )  - 1.16d0                           ; weight(2) = 1.0d0
-chi(3) = ( OPT_UNI%erg(57) - OPT_UNI%erg(56) )  - 1.70d0                           ; weight(3) = 1.5d0
-chi(4) = ( OPT_UNI%erg(58) - OPT_UNI%erg(56) )  - 2.62d0                           ; weight(4) = 1.0d0
-chi(5) = ( OPT_UNI%erg(58) - OPT_UNI%erg(57) )  - 0.92d0                           ; weight(5) = 1.0d0
+chi(1) = ( OPT_UNI%erg(121) - OPT_UNI%erg(120) )  - 2.016d0                           ; weight(1) = 2.0d0
+chi(2) = ( OPT_UNI%erg(120) - OPT_UNI%erg(119) )  - 0.842d0                           ; weight(2) = 2.0d0
+chi(3) = ( OPT_UNI%erg(122) - OPT_UNI%erg(121) )  - 1.625d0                           ; weight(3) = 1.5d0
+chi(4) = ( OPT_UNI%erg(123) - OPT_UNI%erg(121) )  - 2.359d0                           ; weight(4) = 1.0d0
+chi(5) = ( OPT_UNI%erg(123) - OPT_UNI%erg(122) )  - 0.734d0                           ; weight(5) = 1.0d0
 
-chi(6) = ( OPT_UNI%erg(166) - OPT_UNI%erg(165) )  - 2.16d0                           ; weight(6) = 2.0d0
-chi(7) = ( OPT_UNI%erg(165) - OPT_UNI%erg(164) )  - 1.49d0                           ; weight(7) = 1.0d0
-chi(8) = ( OPT_UNI%erg(167) - OPT_UNI%erg(166) )  - 1.94d0                           ; weight(8) = 1.5d0
-chi(9) = ( OPT_UNI%erg(168) - OPT_UNI%erg(166) )  - 3.22d0                           ; weight(9) = 1.0d0
-chi(10)= ( OPT_UNI%erg(168) - OPT_UNI%erg(167) )  - 1.28d0                           ; weight(10)= 1.0d0
+chi(6)  = ( OPT_UNI%erg(345) - OPT_UNI%erg(344) )  - 2.000d0                          ; weight(6) = 2.0d0
+chi(7)  = ( OPT_UNI%erg(344) - OPT_UNI%erg(343) )  - 0.102d0                          ; weight(7) = 2.0d0
+chi(8)  = ( OPT_UNI%erg(346) - OPT_UNI%erg(345) )  - 1.730d0                          ; weight(8) = 1.5d0
+chi(9)  = ( OPT_UNI%erg(347) - OPT_UNI%erg(345) )  - 3.429d0                          ; weight(9) = 1.0d0
+chi(10) = ( OPT_UNI%erg(347) - OPT_UNI%erg(346) )  - 1.700d0                          ; weight(10) = 1.0d0
 
 !--------------------------------------------------------------------
 ! Population analysis ...
@@ -60,11 +62,11 @@ chi(10)= ( OPT_UNI%erg(168) - OPT_UNI%erg(167) )  - 1.28d0                      
 ! Total DIPOLE moment ...
 !-------------------------
 
-REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ]
+REF_DP = [ -8.45 , -2.92 , -5.325 ]
 
-!chi(6)  = DP(1) - REF_DP(1)     ; weight(6) = 1.d0
-!chi(7)  = DP(2) - REF_DP(2)     ; weight(7) = 2.d0
-!chi(8)  = DP(3) - REF_DP(3)     ; weight(8) = 1.d0
+!chi(11)  = DP(1) - REF_DP(1)     ; weight(11) = 1.d-1
+!chi(12)  = DP(2) - REF_DP(2)     ; weight(12) = 1.d-1
+!chi(13)  = DP(3) - REF_DP(3)     ; weight(13) = 1.d-1
 
 !-----------------------------------------------------
 ! Polarizability: Alpha tensor diagonal elements  ...
