@@ -45,7 +45,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz , err , request 
+ integer :: i , j , N , xyz , err , request_H_prime
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
@@ -89,16 +89,20 @@ If( myKernel == 1 ) then
         allocate( H_prime (N,N) )
     end If
 
+#ifdef USE_GPU
+    call MPI_Irecv( H_prime , N*N , mpi_D_R , 0 , mpi_any_tag , ChebyKernelComm , request_H_prime , err)
+#else
+    CALL MPI_IBCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , request_H_prime , err )
+#endif
+
     ! build up electron-hole density matrix ...
-    forall( i=1:N , j=1:N ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) - AO_ket(j,2)*AO_bra(i,2) )
+    forall( i=1:N , j=1:N ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) ) - real( AO_ket(j,2)*AO_bra(i,2) )
 
     CALL Huckel_stuff( basis , X_ij )
 
-    CALL MPI_IBCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , request , err ) 
-    CALL MPI_Wait( request , mpi_status , err ) 
-
     A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two 
 
+    CALL MPI_Wait( request_H_prime , mpi_status , err )
     CALL gemm( H_prime , A_ad_nd , B_ad_nd )
 
     Kernel = X_ij * A_ad_nd - B_ad_nd

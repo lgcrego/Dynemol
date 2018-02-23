@@ -43,8 +43,14 @@ module Chebyshev_driver_m
     use DiabaticEhrenfest_Builder   , only : EhrenfestForce 
     use Chebyshev_m                 , only : Chebyshev ,                    &
                                              preprocess_Chebyshev
+#ifdef USE_GPU
+    use gpu_ElHl_Chebyshev_m        , only : ElHl_Chebyshev => gpu_ElHl_Chebyshev,    &
+                                             preprocess_ElHl_Chebyshev => gpu_preprocess_ElHl_Chebyshev
+#warning "Compiling Chebyshev for GPU. Subroutine calls redirected to GPU ones"
+#else
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
                                              preprocess_ElHl_Chebyshev
+#endif
 
     public :: Chebyshev_driver
 
