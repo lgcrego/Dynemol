@@ -23,7 +23,7 @@ integer             , intent(in)    :: a
 
 ! local variables ...
 integer         , allocatable   :: vector_of_pairs(:,:) , vector_of_pairs14(:,:)
-integer                         :: i , j , k , m , n , NN , idx, inteira
+integer                         :: i , j , k , m , n , NN , idx
 logical                         :: flagB1, flagB2, flagA1, flagA2, flagD1, flagD2, flagB11, flagB12, flagB21, flagB22
 logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222 , flag1, flag2
 logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
