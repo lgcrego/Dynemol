@@ -3,17 +3,20 @@
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
 #FC=ifort -xHost -ip -fpp
-FC=mpif90 -xHost -ip -fpp
+FC = mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-check all -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all 
+#SAFE = -g -traceback #-check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
-FFLAGS1 = -O3 -align #array64byte
-FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 
+FFLAGS1 = -O3 -align 
+FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE)
+
+LDFLAGS = -static-intel
 
 CXX = icpc -std=c++11
-CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict 
+#SAFE_CXX = -g -traceback
+CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict $(SAFE_CXX)
 
 # MKLROOT  = If MKLROOT is not defined in your environment, edit and uncomment this line
 LIB_BLAS   = -lmkl_blas95_lp64
@@ -30,21 +33,31 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 #   -DGPU_SYGVD2S_VER  : Use two stage version of SYGVD (faster, but needs more memory)
 #   -DGPU_DONT_PIN_MEM : Don't use pinned memory for faster transfers (in Fortran code)
 #   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
-#GPU_DEFS  = -DUSE_GPU
+GPU_DEFS  = -DUSE_GPU
 #
-#NVCC      = nvcc
-#NVCCFLAGS = -O3 -arch=sm_35 -Xcompiler "-fno-strict-aliasing -march=native -fno-exceptions"
+ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
+# CUDA compiler
+NVCC = nvcc
+# compute capality (depends on your GPU, check!)
+SM = 35  # K20 family
+#SAFE_NVCC = -g -lineinfo
+NVCCFLAGS = -O3 -gencode arch=compute_${SM},code=sm_${SM} -Xcompiler "-fno-strict-aliasing -march=native -fno-exceptions" $(SAFE_NVCC)
+# -fno-strict-aliasing
 #
 # CUDA and MAGMA paths:
-#CUDADIR   = /usr/local/cuda
-#MAGMADIR  = /opt/magma
+CUDADIR   = /usr/local/cuda
+MAGMADIR  = /opt/magma
 #
 # CUDA and MAGMA libs:
+# dynamic linking:
 #LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcusparse -lcudart
-#LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
+# static linking:
+LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas_static -lcusparse_static -lculibos -lcudart_static -ldl
+LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
 #
-#LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
-#INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
+LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
+INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
+endif
 
 LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCS = $(INCS_MKL)
@@ -137,6 +150,7 @@ SOURCE2 = constants_m.o \
 		  diagnostic.o \
 		  qdynamics.o \
 		  Chebyshev.o \
+		  ElHl_Chebyshev_GPU.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
@@ -157,7 +171,7 @@ endif
 
 a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	rm -f a
-	$(FC) $(INCS) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
+	$(FC) $(INCS) $(LDFLAGS) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
 	-rm -f *.log
 
 
