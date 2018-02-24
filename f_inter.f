@@ -9,7 +9,7 @@ module F_inter_m
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
     use gmx2mdflex   , only : SpecialPairs
- 
+
     public :: FORCEINTER
     
     ! module variables ...
@@ -67,10 +67,12 @@ eintra = D_zero
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
+
+!$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
 do i = 1 , MM % N_of_atoms 
 
     nresid = atom(i) % nr
-
+    
     if ( molecule(nresid) % N_of_atoms > 1 ) then
 
         j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
@@ -84,16 +86,18 @@ do i = 1 , MM % N_of_atoms
                 rjkq       = sum( rjk(:) * rjk(:) )
                 rjksq      = sqrt(rjkq)
                 tmp        = KAPPA * rjksq
-                erfkr(i,j) = ( 1.d0 - ERFC(tmp) ) / rjksq
+                erfkr(i,j) = ( D_one - ERFC(tmp) ) / rjksq
                 erfkr(i,j) = erfkr(i,j) * coulomb * factor3
 
             end if
         end do
     end if
 end do
+!$OMP end parallel do
 
 pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * factor3
 
+!$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
     vself  = vself + pikap * atom(i) % charge * atom(i) % charge
@@ -107,13 +111,14 @@ do i = 1 , MM % N_of_atoms
        do j =  j1 , j2
           if ( i /= j ) then
 
-             erfkrq = 0.5d0 * ( erfkr(i,j) + vrecut )
+             erfkrq = HALF * ( erfkr(i,j) + vrecut )
              vself  = vself + atom(i) % charge * atom(j) % charge * erfkrq
 
           endif
        end do
     endif
 end do
+!$OMP end parallel do
 
 eintra = eintra + vself
 
