@@ -43,9 +43,9 @@ character(200)                  :: line
 integer                         :: i1 , i2 , i3 , sp , nr
 integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
 
-allocate( InputChars    ( 10000 , 10 )                   )
-allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
-allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
+allocate( InputChars    ( 20000 , 10 )                   )
+allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
+allocate( InputIntegers ( 20000 , 10 ) , source = I_zero )
 
 ! Reading different '.itp' species files ...
 counter = 0
@@ -108,10 +108,6 @@ do a = 1 , MM % N_of_species
         end do read_loop1
         backspace(33)
  
-
-        ! DANDO ERRO NO COMENTÁRIO ABAIXO
-        !If( size(species(a)%atom) /= count(atom(:)%residue == species(a)%atom(1)%residue) )  &
-        !stop "residue size of this species differs from atom%residue; check tuning.f"
 
         N_of_atoms = species(a) % N_of_atoms
 
