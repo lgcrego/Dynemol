@@ -44,9 +44,9 @@ character(200)                  :: line
 integer                         :: i1 , i2 , i3 , sp , nr
 integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
 
-allocate( InputChars    ( 10000 , 10 )                   )
-allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
-allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
+allocate( InputChars    ( 20000 , 10 )                   )
+allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
+allocate( InputIntegers ( 20000 , 10 ) , source = I_zero )
 
 ! Reading different '.itp' species files ...
 counter = 0

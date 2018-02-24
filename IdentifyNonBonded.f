@@ -23,7 +23,7 @@ integer             , intent(in)    :: a
 
 ! local variables ...
 integer         , allocatable   :: vector_of_pairs(:,:) , vector_of_pairs14(:,:)
-integer                         :: i , j , k , m , n , NN , idx
+integer                         :: i , j , k , m , n , NN , MM , idx
 logical                         :: flagB1, flagB2, flagA1, flagA2, flagD1, flagD2, flagB11, flagB12, flagB21, flagB22
 logical                         :: flagB111, flagB112, flagB121, flagB122, flagB211, flagB212, flagB221, flagB222 , flag1, flag2
 logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
@@ -188,7 +188,7 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
        end if
      end do
  end do 
- 
+
  ! Intermediate variable ... 
  allocate( vector_of_pairs( species(a) % N_of_Atoms * species(a) % N_of_Atoms , 2 ) , source = I_zero )
  k = 1
@@ -203,13 +203,13 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
      end do
 
  end do
-
-
- allocate( species(a) % IntraLJ( size( pack( vector_of_pairs(:,2), vector_of_pairs(:,2) /= 0 ) ), 2 ) )
- species(a)%NintraLJ = size( pack( vector_of_pairs(:,2), vector_of_pairs(:,2) /= 0 ) ) 
+ 
+ MM = count(vector_of_pairs(:,2) /= 0 ) 
+ allocate( species(a) % IntraLJ( MM , 2 ) )
+ species(a)%NintraLJ = MM
 
  ! Finally associating the nonbonded interactions to species ...
- do i = 1 , size( pack( vector_of_pairs(:,2), vector_of_pairs(:,2) /= 0 ) )
+ do i = 1 , MM
      species(a) % IntraLJ(i,1) = vector_of_pairs(i,1)
      species(a) % IntraLJ(i,2) = vector_of_pairs(i,2)
  end do
@@ -226,7 +226,6 @@ if ( .NOT. allocated (species(a) % bonds14) ) then
      end do
    end do
  end do
-
 
 
 ! Intermediate variable for 1-4... 
