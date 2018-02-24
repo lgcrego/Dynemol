@@ -9,7 +9,7 @@ module F_inter_m
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
     use gmx2mdflex   , only : SpecialPairs
-use execution_time_m 
+
     public :: FORCEINTER
     
     ! module variables ...
