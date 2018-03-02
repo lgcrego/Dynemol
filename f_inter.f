@@ -9,7 +9,7 @@ module F_inter_m
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
     use gmx2mdflex   , only : SpecialPairs
-
+use execution_time_m 
     public :: FORCEINTER
     
     ! module variables ...
@@ -67,8 +67,8 @@ eintra = D_zero
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
-
-!$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
+!$OMP parallel  default(shared)
+!$OMP do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp)
 do i = 1 , MM % N_of_atoms 
 
     nresid = atom(i) % nr
@@ -93,11 +93,11 @@ do i = 1 , MM % N_of_atoms
         end do
     end if
 end do
-!$OMP end parallel do
+!$OMP end do
 
-pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * factor3
+pikap = HALF * vrecut + rsqpi * KAPPA * coulomb * factor3
 
-!$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
+!$OMP do private(i,nresid,j1,j2,j,erfkrq) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
     vself  = vself + pikap * atom(i) % charge * atom(i) % charge
@@ -118,7 +118,8 @@ do i = 1 , MM % N_of_atoms
        end do
     endif
 end do
-!$OMP end parallel do
+!$OMP end do
+!$OMP end parallel 
 
 eintra = eintra + vself
 
