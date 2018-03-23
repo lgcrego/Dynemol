@@ -32,10 +32,10 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
  If( species(a) % N_of_atoms <= 3 ) return
 
- NN = species(a)% Nbonds14
+ NN = species(a)% Nbonds
 
- allocate( InputRef      ( NN , NN ) , source = .true. )
- allocate( Input14       ( NN , NN ) , source = .false. )
+ allocate( InputRef ( NN , NN ) , source = .true.  )
+ allocate( Input14  ( NN , NN ) , source = .false. )
 
  ! Intramolecular LJ list generation ... 
  ! Preparing ...

@@ -285,6 +285,10 @@ do a = 1 , MM % N_of_species
 
             forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
 
+        else
+
+            Nbonds14 = 0    
+
         end if
 
 !==============================================================================================
