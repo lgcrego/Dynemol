@@ -231,8 +231,8 @@ end do
 
 close(3)
 
-! use ad hoc tuning of parameters ...
-If( ad_hoc ) CALL ad_hoc_tuning( system )
+! use ad hoc tuning of EHT parameters ...
+If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( system )
 
 ! convert residues to upper case ...
 forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%atom(i)%residue )
@@ -513,8 +513,8 @@ do j = 1 , model
 
         CALL MMSymbol_2_Symbol  ( trj(j)%atom )
         CALL Symbol_2_AtNo      ( trj(j)%atom )
-        ! use ad hoc tuning of parameters ...
-        If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
+        ! use ad hoc tuning of EHT parameters ...
+        If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( trj(j) )
 
         trj(j)%atom % Nvalen    =  atom(trj(j)%atom%AtNo) % Nvalen
         trj(j)%atom % polar     =  atom(trj(j)%atom%AtNo) % polar 
@@ -701,8 +701,8 @@ do j = 1 , model
         end do
     end if
 
-    ! use ad hoc tuning of parameters ...
-    If( ad_hoc ) CALL ad_hoc_tuning( trj(j) )
+    ! use ad hoc tuning of EHT parameters ...
+    If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( trj(j) )
 
 end do
 
