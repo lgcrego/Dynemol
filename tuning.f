@@ -31,7 +31,6 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
- univ % atom(51:100) % V_shift = 5.d1
 
 !-----------------------------------
 !      define %residue
@@ -136,6 +135,8 @@ select case ( instance )
 !      define nr
 !----------------------------------
 
+atom(:)% nr = 1
+
 
 !----------------------------------
 !       charge of the atoms 
@@ -147,8 +148,6 @@ select case ( instance )
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
-
-where( atom % MMSymbol == "HM" ) atom % mass = large
 
 
     case( 'SpecialBonds' )
@@ -198,7 +197,7 @@ module for_force
  real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
  real*8                                :: ecoul, eintra, evdw
  real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
- real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih
+ real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, improper_dih
  real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
  real*8                                :: pot_INTER, pot_total
  character(4)                          :: Dihedral_Potential_Type

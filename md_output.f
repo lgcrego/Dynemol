@@ -24,7 +24,7 @@ contains
 !========================================
 use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
-                        ryck_dih, proper_dih, harm_dih, harm_bond, morse_bond, Morspot
+                        ryck_dih, proper_dih, harm_dih, improper_dih, harm_bond, morse_bond, Morspot
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -100,6 +100,7 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Dihedral Potential          :'',F12.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral             :'',F12.4)') proper_dih*mol*factor3*1.d-6   
     write(10,'(''Ryckaert-Bell. Dihedral     :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
+    write(10,'(''Improper Dihedral           :'',F12.4)') improper_dih*mol*factor3*1.d-6
     write(10,'(''Lennard-Jones 1-4           :'',F12.4)') LJ_14     *mol*1.d-6  
     write(10,'(''Lennard-Jones Intra         :'',F12.4)') LJ_Intra  *mol*1.d-6  
     write(10,'(''Lennard-Jones               :'',F12.4)') evdw      *mol*1.d-6      

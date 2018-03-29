@@ -31,19 +31,29 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 #   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
 #GPU_DEFS  = -DUSE_GPU
 #
-#NVCC      = nvcc
-#NVCCFLAGS = -O3 -arch=sm_35 -Xcompiler "-fno-strict-aliasing -march=native -fno-exceptions"
+ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
+# CUDA compiler
+NVCC = nvcc
+# compute capality (depends on your GPU, check!)
+SM = 35
+#SAFE_NVCC = -g -lineinfo
+NVCCFLAGS = -O3 -gencode arch=compute_${SM},code=sm_${SM} -Xcompiler "-fno-strict-aliasing -march=native -fno-exceptions" $(SAFE_NVCC)
+# -fno-strict-aliasing
 #
 # CUDA and MAGMA paths:
-#CUDADIR   = /usr/local/cuda
-#MAGMADIR  = /opt/magma-2.1.0
+CUDADIR   = /usr/local/cuda
+MAGMADIR  = /opt/magma
 #
 # CUDA and MAGMA libs:
+# dynamic linking:
 #LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas -lcusparse -lcudart
-#LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
+# static linking:
+LIB_CUDA  = -L$(CUDADIR)/lib64 -lcublas_static -lcusparse_static -lculibos -lcudart_static -ldl
+LIB_MAGMA = $(MAGMADIR)/lib/libmagma.a
 #
-#LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
-#INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
+LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
+INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
+endif
 
 LIB  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCS = $(INCS_MKL)
@@ -77,6 +87,7 @@ SOURCE2 = constants_m.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
+		  namd2mdflex.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
