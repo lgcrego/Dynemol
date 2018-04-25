@@ -13,8 +13,8 @@ public :: MMOPT_Control, Logicalkey
         integer                             :: nr
         character(3)                        :: residue
         character(2)                        :: Symbol
-        character(3)                        :: MMSymbol
-        character(3)                        :: EHSymbol
+        character(4)                        :: MMSymbol
+        character(4)                        :: EHSymbol
         real*8                              :: xyz(3)
         real*8                              :: vel(3)
         real*8                              :: fbond(3)
@@ -34,7 +34,9 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: charge
         real*8                              :: MM_charge
         real*8                              :: eps
+        real*8                              :: eps14
         real*8                              :: sig
+        real*8                              :: sig14
         logical                             :: flex
     end type MM_atomic
 
@@ -96,7 +98,7 @@ public :: MMOPT_Control, Logicalkey
     end type DefineAngles
 
     type DefinePairs
-        character(3)                        :: MMSymbols(2)
+        character(4)                        :: MMSymbols(2)
         real*8                              :: Parms(2)
     end type DefinePairs
 
@@ -160,9 +162,11 @@ do
     write(*,*) ' (10) charge     '
     write(*,*) ' (11) MM_charge  '
     write(*,*) ' (12) eps        '
-    write(*,*) ' (13) sig        '
-    write(*,*) ' (14) flex       '
-    write(*,*) ' (15) mass       '
+    write(*,*) ' (13) eps14      '
+    write(*,*) ' (14) sig        '
+    write(*,*) ' (15) sig14      '
+    write(*,*) ' (16) flex       '
+    write(*,*) ' (17) mass       '
 
     read (*,*) option
 
@@ -208,12 +212,18 @@ do
             write(*,60) a(:) % eps
 
         case(13)
+            write(*,60) a(:) % eps14
+
+        case(14)
             write(*,60) a(:) % sig
             
-        case(14)
+        case(15)
+            write(*,60) a(:) % sig14
+
+        case(16)
             write(*,70) a(:) % flex
 
-        case(15)
+        case(17)
             write(*,80) a(:) % mass
 
         case default

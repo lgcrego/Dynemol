@@ -54,6 +54,7 @@ MODULE constants_m
     real*8  , parameter :: coulomb     = 230.7113d0                 ! ee^2/(4.pi.epsilon_0) x 1.E+30 N.m^2
     real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
+    real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
     real*8  , parameter :: micro       = 1.0d-6                     ! micro unit
     real*8  , parameter :: pico_2_sec  = 1.0d-12                    ! converts picosecond units to second units
@@ -62,6 +63,7 @@ MODULE constants_m
     real*8  , parameter :: Angs_2_mts  = 1.0d-10                    ! converts Angs units to meter units
     real*8  , parameter :: mts_2_Angs  = 1.0d+10                    ! converts meter units to Angs units
     real*8  , parameter :: cm_2_Angs   = 1.0d+8                     ! converts centimeter units to Angs units
+    real*8  , parameter :: amber_LJ    = 1.12246204830937d0         ! converts sigma LJ (amber) to OPLS 
     real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors

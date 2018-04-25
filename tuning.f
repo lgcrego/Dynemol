@@ -52,7 +52,7 @@ type(universe) , intent(inout) :: univ
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-
+where( univ % atom % residue == "LYR" ) univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
@@ -135,7 +135,7 @@ select case ( instance )
 !      define nr
 !----------------------------------
 
-atom(:)% nr = 1
+!atom(:)% nr = 1
 
 
 !----------------------------------
@@ -197,7 +197,7 @@ module for_force
  real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
  real*8                                :: ecoul, eintra, evdw
  real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
- real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, improper_dih
+ real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, imp_dih
  real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
  real*8                                :: pot_INTER, pot_total
  character(4)                          :: Dihedral_Potential_Type

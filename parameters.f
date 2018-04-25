@@ -32,16 +32,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
-!  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ logical :: dynamic
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
   EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
-  GaussianCube      = T_                       
+  GaussianCube      = F_                       
   GaussianCube_step = 500                     ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -93,9 +93,9 @@ logical :: dynamic
 !
   t_i  =  0.d0                              
   t_f  =  1.0d-2                              ! <== final time in PICOseconds
-  n_t  =  4000                                ! <== number of time steps
+  n_t  =  40                                  ! <== number of time steps
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
   hole_state    = 120                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
@@ -188,7 +188,7 @@ If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
 End If    
 
 !-------------------------------------------------------------
-! get command line argument to turn off hole dynamics ...
+! get command line argument to preview input data, then stop  ...
 CALL GET_COMMAND_ARGUMENT( 1 , argument )
 preview = F_
 if( COMMAND_ARGUMENT_COUNT() /= 0 ) then

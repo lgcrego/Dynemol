@@ -32,14 +32,15 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
  If( species(a) % N_of_atoms <= 3 ) return
 
- NN = species(a)% Nbonds
+ NN = 10000
+ !NN = species(a)% Nbonds
 
  allocate( InputRef ( NN , NN ) , source = .true.  )
  allocate( Input14  ( NN , NN ) , source = .false. )
 
  ! Intramolecular LJ list generation ... 
  ! Preparing ...
- 
+
  do i = 1 , species(a) % N_of_atoms
 
      idx = 1
@@ -155,21 +156,6 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
          end if
      end do
 
-     ! Looking for 'explicit' angles (just in case) ...
-     do k = 1 , species(a) % Nangs
-         flagA1 = ( species(a) % atom(i) % my_id == species(a) % angs(k,1) )
-         flagA2 = ( species(a) % atom(i) % my_id == species(a) % angs(k,3) )
-
-         if ( flagA1 ) then
-             InputRef(i,species(a)%angs(k,3)) = .false.
-             idx = idx + 1
-         elseif ( flagA2 ) then
-             InputRef(i,species(a)%angs(k,1)) = .false.
-             idx = idx + 1
-         end if
-
-     end do
-
      ! Looking for 'explicit' dihedrals (just in case) ...
      do k = 1 , species(a) % Ndiheds
        if( species(a) %funct_dihed(k) == 3 ) then
@@ -187,6 +173,38 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
          end if
        end if
      end do
+
+     ! Looking for 'explicit' angles (just in case) ...
+     do k = 1 , species(a) % Nangs
+         flagA1 = ( species(a) % atom(i) % my_id == species(a) % angs(k,1) )
+         flagA2 = ( species(a) % atom(i) % my_id == species(a) % angs(k,3) )
+
+         if ( flagA1 ) then
+             InputRef(i,species(a)%angs(k,3)) = .false.
+             Input14(i,species(a)%angs(k,3)) = .false.
+             idx = idx + 1
+         elseif ( flagA2 ) then
+             InputRef(i,species(a)%angs(k,1)) = .false.
+             Input14(i,species(a)%angs(k,1)) = .false.
+             idx = idx + 1
+         end if
+
+     end do
+
+     ! Looking for 'explicit' bonds (just in case for 1,4 ints) ...
+     do k = 1 , species(a) % Nbonds
+         flag1 = ( species(a) % atom(i) % my_id == species(a) % bonds(k,1) )
+         flag2 = ( species(a) % atom(i) % my_id == species(a) % bonds(k,2) )
+
+         if ( flag1 ) then
+             Input14(i,species(a)%bonds(k,2)) = .false.
+             idx = idx + 1
+         elseif ( flag2 ) then
+             Input14(i,species(a)%bonds(k,1)) = .false.
+             idx = idx + 1
+         end if
+     end do
+
  end do 
 
  ! Intermediate variable ... 
@@ -216,23 +234,13 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 
 ! 1--4 Interactions: only if [ pairs ] is not read in the .itp file ...
 if ( .NOT. allocated (species(a) % bonds14) ) then 
- ! Eliminating bonding terms in 1--4 interactions ...
- do i = 1 , species(a) % N_of_atoms
-   do j = 1 , species(a) % N_of_atoms 
-     do k = 1 , species(a) % Nbonds
-       flag1 = ( species(a) % bonds(k,1) == i ) .and. ( species(a) % bonds(k,2) == j )
-       flag2 = ( species(a) % bonds(k,1) == j ) .and. ( species(a) % bonds(k,2) == i )   
-       if( ( flag1 ) .or. ( flag2 ) ) Input14(i,j) = .false.
-     end do
-   end do
- end do
-
 
 ! Intermediate variable for 1-4... 
-allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,2 ) , source = I_zero )
+allocate( vector_of_pairs14( 20000, 2 ) , source = I_zero )
+!allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,2 ) , source = I_zero )
+
  k = 1
  do i = 1 , species(a) % N_of_Atoms - 1
-
      do j = i , species(a) % N_of_Atoms
          if ( Input14(i,j) == .true. ) then
              vector_of_pairs14(k,1) = i
@@ -241,11 +249,10 @@ allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,
          end if
      end do
  end do
-species(a) % Nbonds14 = ( size( pack( vector_of_pairs14(:,2), vector_of_pairs14(:,2) /= 0 ) ) ) 
+
+ species(a) % Nbonds14 = ( size( pack( vector_of_pairs14(:,2), vector_of_pairs14(:,2) /= 0 ) ) ) 
  ! Preparing 1--4 interactions ...
 
-! species(a) % Nbonds14 = ( size( pack( Input14(:,:), Input14(:,:) .eqv. .true. ) ) ) / 2
- 
  allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
  ! Associating 1--4 interactions to species ...
  k = 1

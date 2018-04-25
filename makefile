@@ -6,7 +6,7 @@ FC=ifort -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align #array64byte
 FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE) -static #array64byte 

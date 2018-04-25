@@ -1,6 +1,7 @@
  module Babel_m
 
     use type_m                  
+    use MM_input                , only : MM_input_format
     use parameters_m            , only : file_type,             &
                                          ad_hoc ,               &
                                          driver
@@ -102,7 +103,7 @@ select case( file_type )
 end select
 
 ! sort the nr indices ...
-CALL Sort_nr( unit_cell )
+if( MM_input_format == "GMX" ) CALL Sort_nr( unit_cell )
 
 ! unit_cell dimensions ...
 unit_cell % T_xyz =  System % box

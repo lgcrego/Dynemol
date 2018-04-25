@@ -2,7 +2,7 @@ module MMechanics_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : t_i , n_t , t_f , frame_step
+    use parameters_m            , only : t_i , n_t , t_f , frame_step , preview
     use MM_dynamics_m           , only : MolecularMechanics , preprocess_MM
 
     public :: MMechanics
@@ -27,6 +27,9 @@ t  = t_i
 
 CALL preprocess_MM( frame_init )
 
+! stop here to preview and check input and system info ...
+If( preview ) stop
+
 !-------------------------------------------------------
 
 ! time is PICOseconds in EHT & seconds in MM ... 
@@ -42,6 +45,8 @@ do frame = frame_init , frame_final , frame_step
     it = it + 1
 
     CALL MolecularMechanics( t_rate , frame )
+
+    print*, frame
 
 end do
 

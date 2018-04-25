@@ -2,7 +2,6 @@
 
     use type_m                  
     use Allocation_m            , only : Allocate_UnitCell
-    use tuning_m                , only : ad_hoc_tuning
 
     PUBLIC :: Symbol_2_AtNo ,       &
               Identify_Fragments ,  &
