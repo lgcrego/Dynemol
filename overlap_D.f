@@ -7,7 +7,7 @@ module Overlap_Builder
     use parameters_m            , only  : verbose , PBC , static
     use PBC_m                   , only  : Generate_Periodic_Structure
     use Semi_Empirical_Parms    , only  : atom
-    use Allocation_m            , only  : DeAllocate_Structures    
+    use Allocation_m            , only  : DeAllocate_Structures
 
     public :: Overlap_Matrix
 
@@ -197,7 +197,7 @@ do ia = ib+1 , a_system% atoms
     ! ckecking: if atoms ia and ib remain fixed => recover S_matrix
     If( motion_detector_ready ) then
 
-        Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
+        Rab = norm2( (a_system%coord(ia,:)-b_system%coord(ib,:)) )  
 
         If(Rab > cutoff_Angs) goto 10
 
@@ -313,21 +313,22 @@ end subroutine Build_OVERLAP_Matrix
 !=================================================================================
 use util_m , factorial => fact
 implicit none
-type(structure) , intent(in)     :: b_system
-type(STO_basis) , intent(in)     :: b_basis(:)
-type(structure) , intent(in)     :: a_system
-type(STO_basis) , intent(in)     :: a_basis(:)
-real*8          , intent(inout)  :: S_matrix(:,:)
-integer         , intent(in)     :: site 
+type(structure) , intent(in)   :: b_system
+type(STO_basis) , intent(in)   :: b_basis(:)
+type(structure) , intent(in)   :: a_system
+type(STO_basis) , intent(in)   :: a_basis(:)
+real*8          , intent(out)  :: S_matrix(:,:)
+integer         , intent(in)   :: site 
 
  ! local variables ...
 real*8  :: expa, expb, Rab , aux , anor
+real*8  :: aux_b, anor_b, b_basis_coef_j
 real*8  :: sux(0:10)
 integer :: a , b , ia , ib , ja , jb
 integer :: na , la , ma 
 integer :: nb , lb , mb
 integer :: msup , i , j , k , m 
-logical :: atom_not_moved
+logical :: atom_a_not_moved, atom_b_not_moved
 
 ! local parameters ....
 integer , parameter :: mxn = 15 , mxl = 5
@@ -336,82 +337,98 @@ integer , parameter :: mxn = 15 , mxl = 5
 real*8  , dimension(0:mxl)                   :: solvec 
 real*8  , dimension(0:mxl)                   :: solnorm , sol_partial
 real*8  , dimension(-mxl:mxl,-mxl:mxl,0:mxl) :: rl , rl2
+real*8  , dimension(3)                       :: a_coord, b_coord
 
 S_matrix = D_zero
 
 ib = site
 
-!$omp parallel do schedule(dynamic,1) default(shared) &
-!$omp private(ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,aux,msup,solnorm,j,i,expb,expa,solvec,anor,m,sol_partial,sux,rl,rl2)
-do ia = ib+1 , a_system% atoms  
+b_coord = b_system%coord(ib,:)
+atom_b_not_moved = .false.  ! atom b is always moved before calling this subroutine
 
-    If( a_system%QMMM(ia) /= "QM" ) goto 10
+!$omp parallel default(shared) &
+!$omp private(ia,a_coord,atom_a_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,aux,aux_b,msup,solnorm,j,i,expb,expa,solvec,anor,anor_b,m,sol_partial,sux,rl,rl2,b_basis_coef_j)
+!$omp do schedule(dynamic,1)
+do ia = ib+1, a_system% atoms  
+
+    If( a_system%QMMM(ia) /= "QM" ) cycle
+
+    a_coord = a_system%coord(ia,:)
 
     ! ckecking: if atoms ia and ib remain fixed ...
-    Rab = sqrt(sum( (a_system%coord(ia,:)-b_system%coord(ib,:)) * (a_system%coord(ia,:)-b_system%coord(ib,:)) ) )  
-    If(Rab > cutoff_Angs) goto 10
+    Rab = norm2( a_coord - b_coord )  
+    If(Rab > cutoff_Angs) cycle
 
-    atom_not_moved = all(a_system%coord(ia,:)==a_xyz(ia,:)) .AND. all(b_system%coord(ib,:)==b_xyz(ib,:)) 
-    If( atom_not_moved ) goto 10
+    atom_a_not_moved = all( a_coord(:) == a_xyz(ia,:) )
+    if (atom_a_not_moved .and. atom_b_not_moved) cycle
 
     ! if atoms ia and ib move => calculate rotation matrix for the highest l
     call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
 
-    do jb = 1 , atom( b_system%AtNo(ib) )% DOS  ;  b  =  b_system%BasisPointer (ib) + jb
-    do ja = 1 , atom( a_system%AtNo(ia) )% DOS  ;  a  =  a_system%BasisPointer (ia) + ja
-
-        nb = b_basis(b)% n  ;  lb = b_basis(b)% l  ;  mb = b_basis(b)% m
-        na = a_basis(a)% n  ;  la = a_basis(a)% l  ;  ma = a_basis(a)% m
-   
-        aux = 1.d0 / ( factorial(na+na) * factorial(nb+nb) )
-        msup = min(la,lb)
-
-        solnorm(0:msup) = 0.d0
-
-        do j = 1 , b_basis(b)% Nzeta
-        do i = 1 , a_basis(a)% Nzeta
-  
-            expb = b_basis(b)% zeta(j)
-            expa = a_basis(a)% zeta(i)
-
-            ! OVERLAP SUBROUTINE: lined-up frame
+    do jb = 1 , atom( b_system%AtNo(ib) )% DOS
     
-            call solap(na, la, expa, nb, lb, expb, Rab, solvec)
+        b = b_system%BasisPointer(ib) + jb;   nb = b_basis(b)% n;   lb = b_basis(b)% l;   mb = b_basis(b)% m
+        aux_b = 1.d0 / factorial(nb+nb)
+       
+        do ja = 1 , atom( a_system%AtNo(ia) )% DOS
 
-            anor = dsqrt((expa+expa)**(na+na+1)*(expb+expb)**(nb+nb+1)*(la+la+1.d0)*(lb+lb+1.d0)*aux) / fourPI
+            a =  a_system%BasisPointer(ia) + ja;   na = a_basis(a)% n;   la = a_basis(a)% l;   ma = a_basis(a)% m
+          
+            aux = aux_b / factorial(na+na)
+            msup = min(la,lb)
 
-            ! Introduces normalization of the STO in the integrals 
+            solnorm(0:msup) = 0.d0
 
-            do m = 0, msup-1
-                sol_partial(m) = solvec(m) * anor
-                anor = anor / dsqrt((la+m+1.d0)*(la-m)*(lb+m+1.d0)*(lb-m))
-                if (m == 0) anor = anor + anor
-            enddo
-            sol_partial(msup) = solvec(msup) * anor
-            forall(k=0:msup) solnorm(k) = solnorm(k) + a_basis(a)%coef(i)*b_basis(b)%coef(j)*sol_partial(k)
+            do j = 1 , b_basis(b)% Nzeta
+          
+                expb = b_basis(b)% zeta(j)
+                anor_b = (expb+expb)**(2*nb+1) * (2*lb+1) * aux / fourPI**2
+                b_basis_coef_j = b_basis(b)% coef(j)
+             
+                do i = 1 , a_basis(a)% Nzeta
   
-        end do
-        end do
+                    expa = a_basis(a)% zeta(i)
 
-        ! Rotation of overlap integrals to the molecular frame
+                    ! OVERLAP SUBROUTINE: lined-up frame
+                    call solap(na, la, expa, nb, lb, expb, Rab, solvec)
+
+                    anor = dsqrt((expa+expa)**(2*na+1) * (2*la+1) * anor_b)
+
+                    ! Introduces normalization of the STO in the integrals 
+                    do m = 0, msup-1
+                        sol_partial(m) = solvec(m) * anor
+                        anor = anor / dsqrt(dfloat((la+m+1)*(la-m)*(lb+m+1)*(lb-m)))
+                        if (m == 0) anor = anor + anor
+                    enddo
+                    sol_partial(msup) = solvec(msup) * anor
+                    forall(k=0:msup) solnorm(k) = solnorm(k) + a_basis(a)%coef(i) * b_basis_coef_j * sol_partial(k)
+  
+                end do
+            end do
+
+            ! Rotation of overlap integrals to the molecular frame
  
-        sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
-        forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
+            sux(0) = solnorm(0) * rl(ma,0,la) * rl(mb,0,lb)
+            forall(k=1:msup) sux(k) = solnorm(k) * ( rl(ma,-k,la)*rl(mb,-k,lb) + rl(ma,k,la)*rl(mb,k,lb) )
 
-        a = a-(a_basis(a)%copy_No)*size(b_basis)
-        S_matrix(a,b) = S_matrix(a,b) + sum(sux(0:msup))
+            a = a - a_basis(a)%copy_No * size(b_basis)
+            S_matrix(a,b) = S_matrix(a,b) + sum(sux(0:msup))
 
-    enddo
-    enddo
+        end do
+    end do
 
-10 end do
-!$omp end parallel do
-
-! diagonal elements
-forall(i=1:size(b_basis)) S_matrix(i,i) = D_one
+end do
+!$omp end do
 
 ! symmetric overlap matrix
-forall(i=1:size(b_basis))  S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
+!$omp do
+do i = 1, size(b_basis)
+    S_matrix(i,i) = D_one
+    S_matrix(i,i+1:size(b_basis)) = S_matrix(i+1:size(b_basis),i)
+end do
+!$omp end do nowait
+!$omp end parallel
+
 
 end subroutine Pulay_OVERLAP
 !
