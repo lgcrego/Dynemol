@@ -16,7 +16,7 @@ module type_m
         character(3) , allocatable :: residue(:)
         character(1) , allocatable :: list_of_fragments(:)
         character(3) , allocatable :: list_of_residues(:)
-        character(3) , allocatable :: MMSymbol(:)
+        character(4) , allocatable :: MMSymbol(:)
         character(2) , allocatable :: QMMM(:)
         integer      , allocatable :: AtNo(:)
         integer      , allocatable :: Nvalen(:)
@@ -58,7 +58,7 @@ module type_m
         integer                       :: copy_No
         character(3)                  :: residue
         character(2)                  :: Symbol
-        character(3)                  :: MMSymbol
+        character(4)                  :: MMSymbol
         character(2)                  :: QMMM
         character(1)                  :: TorF(3)
         character(1)                  :: fragment
@@ -102,8 +102,8 @@ module type_m
 
 
     type EHT
-        character(len=2) :: symbol
-        character(len=3) :: EHSymbol
+        character(len=2) :: Symbol
+        character(len=4) :: EHSymbol
         integer          :: AtNo
         integer          :: Nvalen
         integer          :: Nzeta(0:3)
@@ -142,7 +142,7 @@ module type_m
         real*8           :: V_shift
         character(len=2) :: symbol
         character(len=1) :: fragment
-        character(len=3) :: EHSymbol
+        character(len=4) :: EHSymbol
         character(len=3) :: residue 
         logical          :: solute
         logical          :: DPF

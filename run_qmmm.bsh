@@ -18,10 +18,10 @@ n_nodes=2
 n_proc_per_node=4
 
 # number of threads per process
-n_threads_per_proc=2
+n_threads_per_proc=5
 
 # number of gpus
-n_gpus=2
+n_gpus=0
 
 # running inside PBS (true or false)
 if [ -z "$PBS_JOBID" ]

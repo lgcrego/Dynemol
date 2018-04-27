@@ -11,6 +11,7 @@ type(MM_molecular) , allocatable :: species(:)
 real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
 integer                :: MM_log_step, MM_frame_step , N_of_CGSteps 
 logical                :: read_velocities, gmx_input_format , Selective_Dynamics
+character (4)          :: MM_input_format
 character (5)          :: Units_MM
 character (len=6)      :: OPT_driver
 character (len=11)     :: driver_MM 
@@ -29,20 +30,30 @@ implicit none
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
-  MM % N_of_molecules = 1                   ! <== total number of molecules
-  MM % N_of_species   = 1                   ! <== total number of species
+  MM % N_of_molecules = 51                  ! <== total number of molecules
+  MM % N_of_species   = 3                   ! <== total number of species
 
   CALL allocate_species( MM % N_of_species )
 
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "RET"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "POL"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 96         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 5604       ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
   
-  Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
+  species(2) % residue         = "LIP"      ! <== Residue label for species i ; character(len3)
+  species(2) % N_of_molecules  = 18         ! <== Number of molecules of species i
+  species(2) % N_of_atoms      = 125        ! <== Number of atoms comprosing a single molecule of species i
+  species(2) % flex            = T_         ! <== Flexible : T_ , F_
+
+  species(3) % residue         = "WAT"      ! <== Residue label for species i ; character(len3)
+  species(3) % N_of_molecules  = 32         ! <== Number of molecules of species i
+  species(3) % N_of_atoms      = 3          ! <== Number of atoms comprosing a single molecule of species i
+  species(3) % flex            = T_         ! <== Flexible : T_ , F_
+
+  Selective_Dynamics = T_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
 
 !------------------------------------------------------------------------------
 ! ENVIRONMENT parameters ...
@@ -60,7 +71,7 @@ implicit none
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   cutoff_radius             = 15.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
-  damping_Wolf              = 0.005d0           ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+  damping_Wolf              = 0.032d0           ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
                                                 ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
@@ -69,10 +80,11 @@ implicit none
   driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
-  gmx_input_format       = T_                   ! <== reads FF parameters from gmx input files : T_ , F_  
+  MM_input_format        = "NAMD"               ! <== GMX, NAMD
+
 
   MM_log_step            =  100                 ! <== step for saving MM results & parameters
-  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  50                  ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

@@ -24,7 +24,7 @@ contains
 !========================================
 use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
-                        ryck_dih, proper_dih, harm_bond, morse_bond, Morspot
+                        ryck_dih, proper_dih, harm_dih, imp_dih, harm_bond, morse_bond, Morspot
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -46,17 +46,17 @@ IF( .NOT. done ) then
     write(10,*)'INITIAL Parameters'
     write(10,*)
     write(10,*)
-    write(10,'(''Number of Molecules       :'',I10)') MM % N_of_molecules
-    write(10,'(''Initial Bath Temperature  :'',F10.2,'' Kelvin'')') bath_T
+    write(10,'(''Number of Molecules       :'',I10)'                  ) MM % N_of_molecules
+    write(10,'(''Initial Bath Temperature  :'',F10.2,'' Kelvin'')'    ) bath_T
     write(10,'(''Box dimensions            :'',3F10.2,'' Angstroms'')') MM % box(1:3)
-    write(10,'(''Cut-off radius            :'',F10.2,'' Angstroms'')') rcut
-    write(10,'(''Density                   :'',F10.4,'' g/cm³'')') Initial_density
+    write(10,'(''Cut-off radius            :'',F10.2,'' Angstroms'')' ) rcut
+    write(10,'(''Density                   :'',F10.4,'' g/cm³'')'     ) Initial_density
     write(10,*)
-    write(10,'(''System Temperature        :'',F10.2,'' Kelvin'')') Ttrans
+    write(10,'(''System Temperature        :'',F10.2,'' Kelvin'')'    ) Ttrans
     write(10,*)
-    write(10,'(''Total Simulation Steps    :'',i10)') n_t
-    write(10,'(''Integration time step     :'',F10.3,'' femtosec'')') dt*1.d15
-    write(10,'(''frame-output step         :'',i10,'' steps'')') MM_frame_step
+    write(10,'(''Total Simulation Steps    :'',i10)'                  ) n_t
+    write(10,'(''Integration time step     :'',F10.3,'' femtosec'')'  ) dt * 1.d15
+    write(10,'(''frame-output step         :'',i10,'' steps'')'       ) MM_frame_step
     write(10,*)
 
     select case( forcefield )
@@ -70,7 +70,7 @@ IF( .NOT. done ) then
     end select
 
     write(10,*)
-    write(10,'(''Box contains'',i3,'' different species'')') MM % N_of_species
+    write(10,'(''Box contains'',i3,'' different species'')'             ) MM % N_of_species
     write(10,*)
     do i = 1, MM % N_of_species
         if (species(i) % N_of_atoms > 1) then
@@ -100,6 +100,8 @@ open (10, file='MM_log.out', status='unknown', access='append')
     write(10,'(''Dihedral Potential          :'',F12.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral             :'',F12.4)') proper_dih*mol*factor3*1.d-6   
     write(10,'(''Ryckaert-Bell. Dihedral     :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
+    write(10,'(''Harmonic Dihedral           :'',F12.4)') harm_dih  *mol*factor3*1.d-6
+    write(10,'(''Improper Dihedral (cos)     :'',F12.4)') imp_dih   *mol*factor3*1.d-6
     write(10,'(''Lennard-Jones 1-4           :'',F12.4)') LJ_14     *mol*1.d-6  
     write(10,'(''Lennard-Jones Intra         :'',F12.4)') LJ_Intra  *mol*1.d-6  
     write(10,'(''Lennard-Jones               :'',F12.4)') evdw      *mol*1.d-6      

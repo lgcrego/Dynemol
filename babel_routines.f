@@ -2,7 +2,6 @@
 
     use type_m                  
     use Allocation_m            , only : Allocate_UnitCell
-    use tuning_m                , only : ad_hoc_tuning
 
     PUBLIC :: Symbol_2_AtNo ,       &
               Identify_Fragments ,  &
@@ -345,7 +344,7 @@ character(len=2)    :: element2
         case( 'Ow','Ox','OxH','Om' )
             a(i)%Symbol = 'O' 
 
-        case( 'Hw','HB','HC' )
+        case( 'Hw','HB','HC', 'GH' )
             a(i)%Symbol = 'H' 
 
         case( 'Ix','Ic' )

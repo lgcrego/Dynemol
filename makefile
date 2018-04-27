@@ -33,7 +33,7 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 #   -DGPU_SYGVD2S_VER  : Use two stage version of SYGVD (faster, but needs more memory)
 #   -DGPU_DONT_PIN_MEM : Don't use pinned memory for faster transfers (in Fortran code)
 #   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
-GPU_DEFS  = -DUSE_GPU
+#GPU_DEFS  = -DUSE_GPU
 #
 ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
 # CUDA compiler
@@ -92,6 +92,7 @@ SOURCE2 = constants_m.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
+                  namd2mdflex.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
