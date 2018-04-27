@@ -39,7 +39,7 @@ ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
 # CUDA compiler
 NVCC = nvcc
 # compute capality (depends on your GPU, check!)
-SM = 35  # K20 family
+SM = 35
 #SAFE_NVCC = -g -lineinfo
 NVCCFLAGS = -O3 -gencode arch=compute_${SM},code=sm_${SM} -Xcompiler "-fno-strict-aliasing -march=native -fno-exceptions" $(SAFE_NVCC)
 # -fno-strict-aliasing
