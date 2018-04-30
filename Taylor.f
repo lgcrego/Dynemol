@@ -257,7 +257,6 @@ do while( t < t_max )
 
 end do
 
-write(*,*) 'k_ref',k_ref
 deallocate( bra, ket, tmp_bra, tmp_ket, C )
 
 end subroutine Propagation
@@ -446,33 +445,48 @@ real*8          , intent(out)   :: H(:,:)
 
 ! local variables ... 
 real*8  :: k_eff , k_WH , c1 , c2 , c3
-integer :: i , j
+real*8  :: basis_j_IP, basis_j_k_WH
+integer :: i, j, n
+
+n = size(basis)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
 
-do j = 1 , size(basis)
+!$omp parallel private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared)
+!$omp do schedule(dynamic,1)
+do j = 1, n
 
-    do i = 1 , j - 1
+    basis_j_IP   = basis(j)%IP
+    basis_j_k_WH = basis(j)%k_WH
 
-        c1 = basis(i)%IP - basis(j)%IP
-        c2 = basis(i)%IP + basis(j)%IP
+    do i = 1, j - 1
 
-        c3 = (c1/c2)*(c1/c2)
+        c1 = basis(i)%IP - basis_j_IP
+        c2 = basis(i)%IP + basis_j_IP
+        
+        c3 = (c1/c2)**2
 
-        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+        k_WH = (basis(i)%k_WH + basis_j_k_WH) * half
 
         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-        H(i,j) = k_eff * S_matrix(i,j) * c2 / two
+        H(i,j) = k_eff * S_matrix(i,j) * c2 * half
 
     end do
 
-    H(j,j) = basis(j)%IP
+    H(j,j) = basis_j_IP
 
 end do
+!$omp end do
 
-call Matrix_Symmetrize( H, 'U' )
+! call Matrix_Symmetrize( H, 'U' )
+!$omp do
+do i = 1, n
+    H( i+1:n, i ) = H( i, i+1:n )
+end do
+!$omp end do nowait
+!$omp end parallel
 
 end subroutine Huckelx
 

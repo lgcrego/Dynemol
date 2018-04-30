@@ -7,16 +7,16 @@ FC = mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-#SAFE = -g -traceback #-check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = -g -traceback #-check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align 
-FFLAGS2 = -O2 -align -openmp -parallel $(FREE) $(SAFE)
+FFLAGS2 = -O2 -align -qopenmp -parallel $(FREE) $(SAFE)
 
 LDFLAGS = -static-intel
 
 CXX = icpc -std=c++11
-#SAFE_CXX = -g -traceback
-CFLAGS = -O2 -align -xHost -ip -openmp -fno-exceptions -restrict $(SAFE_CXX)
+SAFE_CXX = #-g -traceback
+CFLAGS = -O2 -align -xHost -ip -qopenmp -fno-exceptions -restrict $(SAFE_CXX)
 
 # MKLROOT  = If MKLROOT is not defined in your environment, edit and uncomment this line
 LIB_BLAS   = -lmkl_blas95_lp64
@@ -33,7 +33,7 @@ INCS_MKL   = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 #   -DGPU_SYGVD2S_VER  : Use two stage version of SYGVD (faster, but needs more memory)
 #   -DGPU_DONT_PIN_MEM : Don't use pinned memory for faster transfers (in Fortran code)
 #   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
-GPU_DEFS  = -DUSE_GPU
+#GPU_DEFS  = -DUSE_GPU
 #
 ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
 # CUDA compiler
@@ -150,6 +150,7 @@ SOURCE2 = constants_m.o \
 		  diagnostic.o \
 		  qdynamics.o \
 		  Chebyshev.o \
+		  Taylor.o \
 		  ElHl_Chebyshev_GPU.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
@@ -172,7 +173,6 @@ endif
 a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	rm -f a
 	$(FC) $(INCS) $(LDFLAGS) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
-	-rm -f *.log
 
 
 .F.o:
