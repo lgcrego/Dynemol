@@ -32,16 +32,18 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+!  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
-  DP_Moment      = T_                       
-  QMMM           = F_
+  Survival       = T_                       
+  DP_Moment      = F_                       
+  QMMM           = T_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -64,7 +66,7 @@ logical :: dynamic
   GaussianCube_step = 500                     ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
-  CH_and_DP_step    = 1                       ! <== time step for saving charge and Induced DP values
+  CH_and_DP_step    = 10000000                ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
   DensityMatrix     = F_                      ! <== generates data for postprocessing 
@@ -91,16 +93,19 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.00d-2                             ! <== final time in PICOseconds
-  n_t  =  4000                                ! <== number of time steps
+  t_f  =  0.5d0                               ! <== final time in PICOseconds
+  n_t  =  100000                              ! <== number of time steps
+
+!  t_f  =  1.0d-1                              ! <== final time in PICOseconds
+!  n_t  =  400                                 ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 72                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 116                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 73                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 118                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -131,12 +136,12 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  300 
-  N_generations  =  150   
-  Top_Selection  =  90                    ! <== top selection < Pop_Size
-  Pop_range      =  0.25d0                 ! <== range of variation of parameters
-  Mutation_rate  =  0.4           
-  Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Pop_Size       =  50  
+  N_generations  =  10    
+  Top_Selection  =  20                     ! <== top selection < Pop_Size
+  Pop_range      =  0.05d0                 ! <== range of variation of parameters
+  Mutation_rate  =  0.5           
+  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
@@ -160,7 +165,7 @@ select case( DRIVER )
 
         QMMM = F_
         dynamic = F_
-
+        
     case default
         Print*, " >>> Check your driver options <<< :" , driver
         stop
@@ -170,7 +175,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb")
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") 
 
 If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
     Print*," >>> halting: " 
@@ -187,7 +192,7 @@ If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
 End If    
 
 !-------------------------------------------------------------
-! get command line argument to turn off hole dynamics ...
+! get command line argument to preview input data, then stop  ...
 CALL GET_COMMAND_ARGUMENT( 1 , argument )
 preview = F_
 if( COMMAND_ARGUMENT_COUNT() /= 0 ) then

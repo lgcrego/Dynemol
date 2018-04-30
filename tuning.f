@@ -33,17 +33,19 @@ type(universe) , intent(inout) :: univ
 !      define %atom
 !-----------------------------------
 
+!Carbono
+univ%atom(4666)%MMSymbol = "GH"
+
+!Nitrogênio 
+univ%atom(4761)%MMSymbol = "GH"
+
 !-----------------------------------
 !      define %residue
 !-----------------------------------
 
-univ % atom(35:36) % residue = "CCC"
-
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-
-univ % atom (35:36) % nr = 2
 
 !------------------------------------
 !      define %DPF (Dipole Fragment) 
@@ -51,32 +53,43 @@ univ % atom (35:36) % nr = 2
 
 !---------------------------------------------------
 !      define %QMMM  
-!      default is QMMM = QM  
-!      set QMMM = MM for classical atoms ... 
+!      default is QMMM = QM; set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
-!where(univ % atom % residue == "CCC") univ % atom % QMMM = "MM"
-!where(univ % atom % xyz(3) < 0.) univ % atom % QMMM = "MM"
-!where(univ % atom % xyz(3) < 3.) univ % atom % QMMM = "MM"
 
-!-----------------------------------
+univ % atom(1:4665) % QMMM = "MM" !AMI
+!4666 : Carbono "trocado" pelo hidrogênio
+univ % atom(4667) % QMMM = "MM" !AMI
+! 4668 - 4760 : RET+LYS+THR+SER
+!4761 : Nitrogênio "trocado" por hidrogênio 
+univ % atom(4762:7950) % QMMM = "MM" !AMI
+
+!---------------------------------------------------
 !      define %El   : mandatory !!
-!-----------------------------------
-where(univ % atom % residue == "PRC") univ % atom % El = .true.
+!---------------------------------------------------
+
+univ % atom(4666) % El = .true. !Carbono
+univ % atom(4668:4761) % El = .true. !RET+LYS+THR+SER+nitrogenio
 
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PRC") univ % atom % Hl = .true.
 
-!---------------------------------------------------
-!      define %fragment
-!---------------------------------------------------
+univ % atom(4666) % Hl = .true.
+univ % atom(4668:4761) % Hl = .true.
+
+!----------------------------------------------------
+!      define %fragment 
 !default: %El => DONOR
-If( any(univ% atom% El) ) then
-    where( univ% atom% El ) univ% atom% fragment = "D"
+!----------------------------------------------------
+If( any(univ % atom%El) ) then
+    where( univ % atom % El ) univ % atom % fragment = "D"
 else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
+
+univ % atom(4668:4687) % fragment = 'L'
+univ % atom(4736:4749) % fragment = 'T'
+univ % atom(4750:4760) % fragment = 'S'
 
 !......................................................................
 
@@ -91,9 +104,8 @@ univ = univ
 include 'formats.h'
 
 end subroutine ad_hoc_tuning
-!
-end module tuning_m 
-!
+
+end module tuning_m
 !
 !
 !
@@ -129,34 +141,7 @@ select case ( instance )
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------
-atom(743)  % flex = .true.
-atom(770)  % flex = .true.
-atom(1087) % flex = .true.
-atom(766)  % flex = .true.
-atom(142)  % flex = .true.
-atom(332)  % flex = .true.
-atom(752)  % flex = .true.
-atom(139)  % flex = .true.
-atom(740)  % flex = .true.
-atom(328)  % flex = .true.
-atom(742)  % flex = .true.
-atom(1061) % flex = .true.
-atom(744)  % flex = .true.
-atom(1064) % flex = .true.
-atom(745)  % flex = .true.
-atom(146)  % flex = .true.
-atom(1066) % flex = .true.
-atom(910)  % flex = .true.
-atom(918)  % flex = .true.
-atom(232)  % flex = .true.
-atom(747)  % flex = .true.
-atom(143)  % flex = .true.
-atom(1068) % flex = .true.
-atom(335)  % flex = .true.
-atom(921)  % flex = .true.
-atom(924)  % flex = .true.
-atom(1497) % flex = .true.
-atom(243)  % flex = .true.
+
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -169,13 +154,9 @@ atom(243)  % flex = .true.
 !      define residues
 !----------------------------------
 
-atom(35:36) % residue = "PRC"
-
 !----------------------------------
 !      define nr
 !----------------------------------
-
-atom(35:36) % nr = 1
 
 !----------------------------------
 !       charge of the atoms 
@@ -187,6 +168,10 @@ atom(35:36) % nr = 1
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
+
+atom(4666) % mass = 12.01078
+atom(4761) % mass = 14.00672
+
 
 
     case( 'SpecialBonds' )
@@ -236,7 +221,7 @@ module for_force
  real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
  real*8                                :: ecoul, eintra, evdw
  real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
- real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih
+ real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, imp_dih
  real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
  real*8                                :: pot_INTER, pot_total
  character(4)                          :: Dihedral_Potential_Type

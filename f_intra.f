@@ -1,13 +1,14 @@
 module F_intra_m
    
     use constants_m
+    use MM_input     , only : MM_input_format
     use parameters_m , only : PBC , QMMM
     use setup_m      , only : offset
     use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                               vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
                               Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                              harm_dih, harm_bond, morse_bond
-    use MD_read_m    , only : atom , molecule , MM , read_from_gmx
+                              harm_dih, imp_dih, harm_bond, morse_bond
+    use MD_read_m    , only : atom , molecule , MM 
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex   , only : SpecialPairs , SpecialPairs14 , SpecialMorse
 
@@ -20,10 +21,11 @@ module F_intra_m
     real*8                  :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
                                rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
                                sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
-                               term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm ,&
-                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq
+                               term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
+                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
+                               term4 , dphi1 , dphi2
     integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
-    logical                 :: flag1, flag2
+    logical                 :: flag1, flag2, flag3, flag4, flag5
     real*8                  :: pot_INTRA
     integer , allocatable   :: species_offset(:)
 
@@ -61,6 +63,7 @@ morse_bond = D_zero
 proper_dih = D_zero
 harm_dih   = D_zero
 ryck_dih   = D_zero
+imp_dih    = D_zero
 LJ_14      = D_zero
 LJ_intra   = D_zero
 Coul_14    = D_zero
@@ -135,7 +138,7 @@ do i = 1 , MM % N_of_molecules
                     rterm  = 0.0d0 
                 else 
                     coephi = ( phi - molecule(i) % kang0(j,2) ) / SIN(phi)
-                    rterm  = 0.5d0 * molecule(i) % kang0(j,1) * ( phi - molecule(i) % kang0(j,2) )**2
+                    rterm  = HALF * molecule(i) % kang0(j,1) * ( phi - molecule(i) % kang0(j,2) )**2
                 end if
                 angpot = rterm + angpot
          
@@ -168,7 +171,7 @@ do i = 1 , MM % N_of_molecules
                        ( riksq - molecule(i) % kang0(j,4) ) * ( riksq - molecule(i) % kang0(j,4) ) 
                     atom(atk) % fang(:) = atom(atk) % fang(:) - coephi0*rik(:)
                     atom(atj) % fang(:) = atom(atj) % fang(:) + coephi0*rik(:)  
-                    angpot = rterm0 + angpot
+                    angpot = rterm0 + angpot 
                 end if
               
             end select 
@@ -232,7 +235,7 @@ do i = 1 , MM % N_of_molecules
             rsinphi = 1.d0 / sinphi
       
             ! selection of potential energy function type
-            if( read_from_gmx ) then
+            if( MM_input_format == "GMX" ) then
                 CALL gmx
             else
                 CALL not_gmx
@@ -290,27 +293,40 @@ do i = 1 , MM % N_of_molecules
 
                 case (2)
                     ! AMBER FF :: GMX COMB-RULE 2
-                    sr2 = ( ( atom(ati) % sig + atom(atj) % sig  ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
+                    sr2 = ( ( atom(ati) % sig14 + atom(atj) % sig14  ) * ( atom(ati) % sig14 + atom(atj) % sig14 ) ) / rklq
 
                 case (3)
-                    ! AMBER FF :: GMX COMB-RULE 3
-                    sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
+                    ! OPLS  FF :: GMX COMB-RULE 3
+                    sr2 = ( ( atom(ati) % sig14 * atom(atj) % sig14 ) * ( atom(ati) % sig14 * atom(atj) % sig14 ) ) / rklq
 
             end select
-            eps   =  atom(ati) % eps * atom(atj) % eps 
-
+            eps   =  atom(ati) % eps14 * atom(atj) % eps14 
+     
             ! Nbond_parms directive on ...
             read_loop1: do  n = 1, size(SpecialPairs14)
                 flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
                         ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
                 flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
                         ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+ 
                 if ( flag1 .OR. flag2 ) then
-                    sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
+                    select case ( MM % CombinationRule )
+
+                       case (2)
+                          ! AMBER FF :: GMX COMB-RULE 2
+                          sr2 = ( (SpecialPairs14(n)%Parms(1)+SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)+SpecialPairs14(n)%Parms(1)) ) / rklq
+
+                       case (3)
+                          ! OPLS  FF :: GMX COMB-RULE 3
+                          sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
+
+                    end select
                     eps = SpecialPairs14(n) % Parms(2) * SpecialPairs14(n) % Parms(2)
+                    
                     exit read_loop1
                 end if
-                cycle  read_loop1
+             
+                cycle  read_loop1 
             end do read_loop1
 
             rklsq = sqrt(rklq)
@@ -337,7 +353,7 @@ do i = 1 , MM % N_of_molecules
             atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
             ! factor used to compensate the factor1 and factor2 factors ...
             ! factor3 = 1.0d-20
-            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * MM % fudgeQQ
+            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * MM % fudgeQQ
 !           alternative cutoff formula ...
 !           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
             LJ_14   = LJ_14   + sterm
@@ -354,7 +370,8 @@ do i = 1 , MM % N_of_molecules
         ati  = molecule(i) % IntraLJ(j,1) 
         ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
         atj  = molecule(i) % IntraLJ(j,2) 
-        atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
+        atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+        
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
             chrgi  = atom(ati) % charge
             chrgj  = atom(atj) % charge
@@ -371,7 +388,7 @@ do i = 1 , MM % N_of_molecules
                     sr2 = ( ( atom(ati) % sig + atom(atj) % sig ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
 
                 case (3)
-                    ! AMBER FF :: GMX COMB-RULE 3
+                    ! OPLS  FF :: GMX COMB-RULE 3
                     sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
 
             end select
@@ -383,10 +400,22 @@ do i = 1 , MM % N_of_molecules
                         ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
                 flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
                         ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+               
                 if ( flag1 .OR. flag2 ) then
-                    sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                    select case ( MM % CombinationRule )
+
+                       case (2)
+                          ! AMBER FF :: GMX COMB-RULE 2
+                          sr2 = ( (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) ) / rklq
+
+                       case (3)
+                          ! OPLS  FF :: GMX COMB-RULE 3
+                          sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+
+                    end select
                     eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
                     exit read_loop
+
                 end if
                 cycle  read_loop
             end do read_loop
@@ -417,7 +446,7 @@ do i = 1 , MM % N_of_molecules
             atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
             ! factor used to compensate factor1 ...
             ! factor3 = 1.0d-20
-            tterm = coulomb*factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
+            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
             ! alternative formula with cutoff ...
             tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
             LJ_intra   = LJ_intra   + sterm
@@ -499,16 +528,16 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] 
                     ! Eq. 4.60 (GMX 5.0.5 manual)
         
-        term  = molecule(i) % harm(j) * phi - molecule(i) % kdihed0(j,1)
+        term  = int(molecule(i) % kdihed0(j,3)) * phi - molecule(i) % kdihed0(j,1)
         pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
         proper_dih = proper_dih + pterm
-        gamma = - molecule(i) % kdihed0(j,2) * molecule(i) % harm(j) * sin(term) * rsinphi * rijkj * rjkkl
+        gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
 
     case ('harm')   ! V = 1/2.k( xi - xi_0 )²
                     ! Eq. 4.59 (GMX 5.0.5 manual)
 
            dtheta = ( phi - molecule(i) % kdihed0(j,1) )
-           dtheta = dtheta - Nint( dtheta * 1.d0/TWOPI ) * TWOPI
+           dtheta = dtheta - Dnint( dtheta * 1.d0/TWOPI ) * TWOPI
 
            term  = molecule(i) % kdihed0(j,2) * dtheta 
            pterm = 0.5d0 * term * dtheta
@@ -536,6 +565,37 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
                                4.0d0 * molecule(i) % kdihed0(j,5) * cos_Psi  * cos_Psi  * cos_Psi  +          &
                                5.0d0 * molecule(i) % kdihed0(j,6) * cos_Psi  * cos_Psi  * cos_Psi  * cos_PSi  ) * rsinphi * rijkj * rjkkl
 
+   case ('imp')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (improper) 
+                   ! Eq. 4.60 (GMX 5.0.5 manual)
+
+        term  = int(molecule(i) % kdihed0(j,3)) * phi - molecule(i) % kdihed0(j,1)
+        pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
+        imp_dih = imp_dih + pterm
+        gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
+
+    case ('chrm')   ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) 
+                    ! Eq. 4.60 (GMX 5.0.5 manual)
+
+        term  = int(molecule(i) % kdihed0(j,3))  * phi - molecule(i) % kdihed0(j,1)
+        term1 = int(molecule(i) % kdihed0(j,6))  * phi - molecule(i) % kdihed0(j,4)
+        term2 = int(molecule(i) % kdihed0(j,9))  * phi - molecule(i) % kdihed0(j,7)
+        term3 = int(molecule(i) % kdihed0(j,12)) * phi - molecule(i) % kdihed0(j,10)
+        term4 = int(molecule(i) % kdihed0(j,15)) * phi - molecule(i) % kdihed0(j,13)
+
+        pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
+        pterm = pterm + molecule(i) % kdihed0(j,5)  * ( 1.d0 + cos(term1) )
+        pterm = pterm + molecule(i) % kdihed0(j,8)  * ( 1.d0 + cos(term2) )
+        pterm = pterm + molecule(i) % kdihed0(j,11) * ( 1.d0 + cos(term3) )
+        pterm = pterm + molecule(i) % kdihed0(j,14) * ( 1.d0 + cos(term4) )
+
+        proper_dih = proper_dih + pterm
+
+        gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,5)  * int( molecule(i) % kdihed0(j,6)) * sin(term1) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,8)  * int( molecule(i) % kdihed0(j,9)) * sin(term2) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,11) * int(molecule(i) % kdihed0(j,12)) * sin(term3) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,14) * int(molecule(i) % kdihed0(j,15)) * sin(term4) * rsinphi * rijkj * rjkkl
+
 end select
 
 end subroutine gmx
@@ -549,18 +609,26 @@ implicit none
 
 ! local variables ...
 
-select case( adjustl(Dihedral_Potential_Type) )
+select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos') ! V = k[1 + cos(n.phi - theta)]
-        term  = molecule(i) % Nharm * phi - molecule(i) % kdihed0(j,2)
-        pterm = molecule(i) % kdihed0(j,1) * ( 1.d0 + cos(term) )
+        term  = int(molecule(i) % kdihed0(j,3)) * phi - molecule(i) % kdihed0(j,1)
+        pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
         proper_dih = proper_dih + pterm
-        gamma = - molecule(i) % kdihed0(j,1) * molecule(i) % Nharm * sin(term) * rsinphi * rijkj * rjkkl
-          
+        gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
+         
     case('harm') ! V = 1/2.k(phi - phi0)²
-        dphi  = phi - molecule(i) % kdihed0(j,2)
-        dphi  = dphi - NINT(dphi*rtwopi) * twopi
-        term  = molecule(i) % kdihed0(j,1) * dphi
-        pterm = 0.5d0 * term * dphi
+        dphi  = phi - molecule(i) % kdihed0(j,1)
+        dphi  = dphi - DNINT(dphi * rtwopi) * twopi
+        dphi1 = phi - molecule(i) % kdihed0(j,3)
+        dphi1 = dphi1 - DNINT(dphi1 * rtwopi) * twopi
+        dphi2 = phi - molecule(i) % kdihed0(j,5)
+        dphi2 = dphi2 - DNINT(dphi2 * rtwopi) * twopi
+        term  = molecule(i) % kdihed0(j,2) * dphi
+        term  = term + molecule(i) % kdihed0(j,4) * dphi1
+        term  = term + molecule(i) % kdihed0(j,6) * dphi2
+        pterm = HALF * term * dphi
+        pterm = pterm + HALF * term1 * dphi1
+        pterm = pterm + HALF * term2 * dphi2
         harm_dih = harm_dih + pterm
         gamma = term * rsinphi * rijkj * rjkkl          
 
@@ -592,7 +660,31 @@ select case( adjustl(Dihedral_Potential_Type) )
         A3    = molecule(i) % kdihed0(j,4)
         pterm = A0 + 0.5d0 * ( A1 * (1.d0 + cos(dphi)) + A2 * (1.d0 - cos(2.d0*dphi)) + A3 * (1.d0 + cos(3.d0*dphi)) )
         gamma = 0.5d0 * ( A1 * sin(dphi) - 2.d0 * A2 * sin(2.d0*dphi) + 3.d0 * A3 * sin(3.d0*dphi) ) * rsinphi * rijkj * rjkkl
-          
+        
+
+    case ('chrm')   ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) 
+                    ! Eq. 4.60 (GMX 5.0.5 manual)
+
+        term  = int(molecule(i) % kdihed0(j,3))  * phi - molecule(i) % kdihed0(j,1)
+        term1 = int(molecule(i) % kdihed0(j,6))  * phi - molecule(i) % kdihed0(j,4)
+        term2 = int(molecule(i) % kdihed0(j,9))  * phi - molecule(i) % kdihed0(j,7)
+        term3 = int(molecule(i) % kdihed0(j,12)) * phi - molecule(i) % kdihed0(j,10)
+        term4 = int(molecule(i) % kdihed0(j,15)) * phi - molecule(i) % kdihed0(j,13)
+
+        pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
+        pterm = pterm + molecule(i) % kdihed0(j,5)  * ( 1.d0 + cos(term1) )
+        pterm = pterm + molecule(i) % kdihed0(j,8)  * ( 1.d0 + cos(term2) )
+        pterm = pterm + molecule(i) % kdihed0(j,11) * ( 1.d0 + cos(term3) )
+        pterm = pterm + molecule(i) % kdihed0(j,14) * ( 1.d0 + cos(term4) )
+
+        proper_dih = proper_dih + pterm
+
+        gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,5)  * int( molecule(i) % kdihed0(j,6)) * sin(term1) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,8)  * int( molecule(i) % kdihed0(j,9)) * sin(term2) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,11) * int(molecule(i) % kdihed0(j,12)) * sin(term3) * rsinphi * rijkj * rjkkl
+        gamma = gamma - molecule(i) % kdihed0(j,14) * int(molecule(i) % kdihed0(j,15)) * sin(term4) * rsinphi * rijkj * rjkkl  
+
     case('none')
         pterm = 0.d0
         gamma = 0.d0

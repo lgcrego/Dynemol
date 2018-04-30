@@ -81,12 +81,24 @@ class(MM_OPT) , intent(inout)  :: me
 real*8                         :: Energy
 
 !local variables ...
-integer :: i 
+integer :: i , j , k
 
+k = 1
 do i = 1 , 3
-    atom(:) % ftotal(i) = D_zero
-    where( atom % flex ) atom(:) % xyz(i) = me % p( (i-1)*N_of_free+1 : i*N_of_free ) 
+    do j = 1 , size(atom)
+         atom(j) % ftotal(i) = D_zero
+         If( atom(j)%flex ) then
+              atom(j) % xyz(i) = me % p( k ) 
+              k = k + 1
+          end If     
+    end do
 end do
+
+! this may not work for very large systems ...
+!do i = 1 , 3
+!    atom(:) % ftotal(i) = D_zero
+!    where( atom % flex ) atom(:) % xyz(i) = me % p( (i-1)*N_of_free+1 : i*N_of_free ) 
+!end do
 
 If( MM % N_of_molecules == 1 ) then
 

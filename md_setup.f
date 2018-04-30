@@ -56,8 +56,8 @@ contains
 
 !################################################
  atmax = sum( species(:) % N_of_atoms )                 
- allocate ( fscut(atmax,atmax) , source = D_zero )
- allocate ( vscut(atmax,atmax) , source = D_zero )
+ If(.not. allocated(fscut)) allocate ( fscut(atmax,atmax) , source = D_zero )
+ If(.not. allocated(vscut)) allocate ( vscut(atmax,atmax) , source = D_zero )
 
  if (forcefield == 1) then
   ! Born-Mayer

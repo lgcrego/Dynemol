@@ -92,6 +92,7 @@ SOURCE2 = constants_m.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
+                  namd2mdflex.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \

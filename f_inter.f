@@ -9,7 +9,7 @@ module F_inter_m
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
     use gmx2mdflex   , only : SpecialPairs
-use execution_time_m 
+
     public :: FORCEINTER
     
     ! module variables ...
@@ -188,8 +188,18 @@ do k = 1 , MM % N_of_atoms - 1
                                ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
                        flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
                                ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+
                        if ( flag1 .OR. flag2 ) then
-                          sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+
+                          select case ( MM % CombinationRule )
+                              case (2) 
+                                 ! AMBER FF :: GMX COMB-RULE 2
+                                 sr2 = ( (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) ) / rklq
+                              case (3)
+                                 ! OPLS  FF :: GMX COMB-RULE 3
+                                 sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+
+                          end select
                           eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
                           exit read_loop
                        end if
