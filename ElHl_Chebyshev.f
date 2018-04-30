@@ -12,7 +12,8 @@ module ElHl_Chebyshev_m
     use Overlap_Builder           , only : Overlap_Matrix
     use FMO_m                     , only : FMO_analysis , eh_tag    
     use Data_Output               , only : Populations 
-    use Chebyshev_m               , only : Propagation, dump_Qdyn
+!    use Chebyshev_m               , only : Propagation, dump_Qdyn
+    use Taylor_m                  , only : Propagation, dump_Qdyn
     use Matrix_Math
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
@@ -55,12 +56,6 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-#ifdef USE_GPU
-allocate( S_matrix(size(basis),size(basis)) )
-call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
-#endif
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
@@ -201,7 +196,7 @@ If( master ) then
     ! Electron Dynamics
     !===================
     ! proceed evolution of ELECTRON wapacket with best tau ...
-    CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
+    CALL Propagation( N, H_prime, Psi_t_bra(:,1), Psi_t_ket(:,1), t_init, t_max, tau(1), save_tau(1) )
 
 else If( myCheby == 1 ) then
 
