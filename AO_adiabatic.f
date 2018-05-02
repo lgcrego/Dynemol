@@ -189,8 +189,8 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure ( frame )
 
-    ! export new coordinates for ForceCrew ...
-    CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+    ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
+    If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
     CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
 
