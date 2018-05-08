@@ -190,9 +190,9 @@ do i = 1 , size(atom)
     ! redefining atom % nr for NAMD input format ... 
     if ( MM_input_format == "NAMD" ) then
             if( atom(i) % my_species == 1 ) then 
-                    atom(i) % nr = ceiling( real(i) / real( species(1) % N_of_atoms ) )
+!                    atom(i) % nr = ceiling( real(i) / real( species(1) % N_of_atoms ) )
             else 
-                    atom(i) % nr = atom(i) % nr + sum( species( 1:atom(i)%my_species-1 ) % N_of_molecules ) 
+!                    atom(i) % nr = atom(i) % nr + sum( species( 1:atom(i)%my_species-1 ) % N_of_molecules ) 
             end if 
     end if
     atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )

@@ -239,13 +239,14 @@ If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( system )
 forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%atom(i)%residue )
 
 ! for use if atomic Symbols are not included in input.pdb ...
-If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%atom )
+!If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%atom )
+CALL MMSymbol_2_Symbol( system%atom )
 
 ! preprocessing the universe system ...
 CALL Symbol_2_AtNo      ( system%atom )
 CALL Identify_Residues  ( system      )
 CALL Identify_Fragments ( system      )
-CALL Pack_Residues      ( system%atom , system%list_of_residues )
+!CALL Pack_Residues      ( system%atom , system%list_of_residues )
 
 ! vector QMMM_key is the key to exchange QM and MM atomic properties ...
 allocate( QMMM_key(system%N_of_atoms) , source=system%atom%my_id)
