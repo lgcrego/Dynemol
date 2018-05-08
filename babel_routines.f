@@ -344,7 +344,7 @@ character(len=2)    :: element2
         case( 'Ow','Ox','OxH','Om' )
             a(i)%Symbol = 'O' 
 
-        case( 'Hw','HB','HC' )
+        case( 'Hw','HB','HC', 'GH' )
             a(i)%Symbol = 'H' 
 
         case( 'Ix','Ic' )
