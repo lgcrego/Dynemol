@@ -685,7 +685,6 @@ do a = 1 , MM % N_of_species
                     species(a) % kdihed0(n,3*(j+j1)+1) = DihedParameters(k,1) 
                     species(a) % kdihed0(n,3*(j+j1)+2) = DihedParameters(k,2) 
                     species(a) % kdihed0(n,3*(j+j1)+3) = DihedParameters(k,3) 
-                    write(31,*) "n=", n, "k=", k, "mult=", species(a)%kdihed0(n,3*j+3) , j
                     j = j + 1
                     cycle read_loop7
                 end if
@@ -698,7 +697,6 @@ do a = 1 , MM % N_of_species
                     species(a) % kdihed0(n,3*j1+1) = DihedParameters(k,1)
                     species(a) % kdihed0(n,3*j1+2) = DihedParameters(k,2)
                     species(a) % kdihed0(n,3*j1+3) = DihedParameters(k,3)
-                    write(32,*) "n=", n, "k=", k, "mult=", species(a)%kdihed0(n,3*j+3) , j1
                     j1= j1+ 1 
                     cycle read_loop7
                 end if
