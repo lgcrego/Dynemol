@@ -163,7 +163,8 @@ SOURCE2 = constants_m.o \
  		  main.o
 
 SOURCE_GPU = GPU_Interface.o \
-             Chebyshev_gpu.o
+             Taylor_gpu.o
+#             Chebyshev_gpu.o
 
 ifneq (,$(findstring USE_GPU,$(GPU_DEFS)))
 SOURCE_CUDA= Chebyshev_gpu_kernels.o \
