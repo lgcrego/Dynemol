@@ -271,7 +271,6 @@ QDyn%dyn(it,:,:) = Populations( QDyn%fragments, basis, DUAL_bra, DUAL_ket, t )
 call dump_Qdyn( Qdyn , it )
 
 call MPI_Wait( request_H_prime, mpi_status, err )
-call stop_clock("cheby_gpu")
 
 end subroutine gpu_ElHl_Chebyshev
 !
