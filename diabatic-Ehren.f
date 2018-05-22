@@ -30,7 +30,7 @@ module DiabaticEhrenfest_Builder
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
     real*8  , parameter :: delta      = 1.d-8
-
+    
 contains
 !
 !
@@ -45,7 +45,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz , err , request_H_prime
+ integer :: i , j , N , xyz , err , request_H_prime, Kernel_bcast
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
@@ -55,6 +55,7 @@ contains
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
  logical , parameter :: T_ = .true. , F_ = .false.
+ 
 
 !================================================================================================
 ! some preprocessing ...
@@ -82,30 +83,44 @@ If( myKernel == 1 ) then
     CALL MPI_BCAST( AO_bra, 2*N , mpi_D_C , 0 , KernelComm , err ) 
     CALL MPI_BCAST( AO_ket, 2*N , mpi_D_C , 0 , KernelComm , err ) 
 
-    If( .NOT. allocated(rho_eh) ) then
+    if( .not. allocated(rho_eh) ) then
         allocate( rho_eh  (N,N) )
-        allocate( B_ad_nd (N,N) )
         allocate( A_ad_nd (N,N) )
         allocate( H_prime (N,N) )
+#ifdef USE_GPU
+        allocate( X_ij    (N,N) )
+        call GPU_Pin( X_ij,    8*N**2 )
+        call GPU_Pin( Kernel,  8*N**2 )
+        call GPU_Pin( H_prime, 8*N**2 )
+        call GPU_Pin( A_ad_nd, 8*N**2 )
+#else
+        allocate( B_ad_nd (N,N) )
+#endif
     end If
 
+
 #ifdef USE_GPU
-    call MPI_Irecv( H_prime , N*N , mpi_D_R , 0 , mpi_any_tag , ChebyKernelComm , request_H_prime , err)
+    call MPI_Irecv( H_prime, N*N, mpi_D_R, 0, 0, ChebyKernelComm, request_H_prime, err)
 #else
-    CALL MPI_IBCAST( H_prime, N*N , mpi_D_R , 0 , ChebyKernelComm , request_H_prime , err )
+    CALL MPI_IBCAST( H_prime, N*N, mpi_D_R, 0, ChebyKernelComm, request_H_prime, err )
 #endif
 
     ! build up electron-hole density matrix ...
     forall( i=1:N , j=1:N ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) ) - real( AO_ket(j,2)*AO_bra(i,2) )
+    
+    A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two
 
-    CALL Huckel_stuff( basis , X_ij )
+    CALL Huckel_stuff( basis , X_ij ) 
 
-    A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two 
+    call MPI_Wait( request_H_prime, mpi_status, err )
 
-    CALL MPI_Wait( request_H_prime , mpi_status , err )
+#ifdef USE_GPU
+    call EhrenfestKernel_gpu( N, H_prime, A_ad_nd, X_ij, Kernel )
+#else
     CALL gemm( H_prime , A_ad_nd , B_ad_nd )
 
     Kernel = X_ij * A_ad_nd - B_ad_nd
+#endif
 
 end If
 
@@ -125,14 +140,17 @@ do i = myForce+1 , system% atoms , npForce
 
 end do
 
+
 call MPI_reduce( F_snd , F_rcv , 3*system%atoms**2 , MPI_double_precision , mpi_SUM , 0 , ForceComm , err )
 
 if( master ) then
+    !$omp parallel do private(i,xyz) default(shared)
     do i = 1 , system% atoms
     do xyz = 1 , 3
        atom(i)% Ehrenfest(xyz) = two * sum( F_rcv(:,i,xyz) ) * eVAngs_2_Newton 
     end do
     end do
+    !$omp end parallel do
 end if
 
 deallocate( mask )
@@ -162,7 +180,8 @@ integer :: k , ik , DOS_atom_k , BasisPointer_k
 ! local arrays ...
 integer , allocatable :: pairs(:)
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
-real*8                :: tmp_coord(3) , delta_b(3) 
+real*8                :: tmp_coord(3) , delta_b(3)
+
 
 verbose    = .false.
 size_basis = size(basis)
@@ -178,47 +197,49 @@ allocate( pairs , source = pack([( L , L=1,system% atoms )] , mask(:,K)) )
 ! save coordinate ...
 tmp_coord = system% coord(k,:)
 
+
 do xyz = 1 , 3
 
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
- 
+   
        system% coord (k,:) = tmp_coord + delta_b
        CALL Overlap_Matrix( system , basis , S_fwd , purpose = "Pulay" , site = K )
-
+       
        system% coord (k,:) = tmp_coord - delta_b
        CALL Overlap_Matrix( system , basis , S_bck , purpose = "Pulay" , site = K )
 
-       forall( j=1:DOS_Atom_K ) grad_S(:,j) = ( S_fwd( : , BasisPointer_K+j ) - S_bck( : , BasisPointer_K+j ) ) / (TWO*delta) 
+       forall( j=1:DOS_Atom_K ) grad_S(:,j) = ( S_fwd( : , BasisPointer_K+j ) - S_bck( : , BasisPointer_K+j ) ) / (TWO*delta)
 
        !==============================================================================================
        F_vec = D_zero
 
-       !$OMP parallel do schedule(dynamic,3) private(iK,jL,i,j,L) default(shared) reduction(+:F_vec)
-       do indx = 1 , size(pairs)
+       !$OMP parallel do schedule(dynamic) private(indx,iK,jL,i,j,L) default(shared) reduction(+:F_vec)
+       do indx = 1, size(pairs)
          
          L = pairs(indx)
          do jL = 1 , DOS(L)
             j = BasisPointer(L) + jL
 
-           do iK = 1 , DOS_atom_K
+            do iK = 1 , DOS_atom_K
               i = BasisPointer_K + iK
 
               ! adiabatic and non-adiabatic components of the Force ...
-              F_vec(L) = F_vec(L) -  grad_S(j,iK) * Kernel(i,j)
+              F_vec(L) = F_vec(L) - grad_S(j,iK) * Kernel(i,j)
 
-           end do   
+            end do
+
          end do
 
        end do
        !$OMP end parallel do
        !==============================================================================================
- 
+       
        ! anti-symmetric F_snd (action-reaction) ...
+       F_snd(K,K,xyz) = D_zero
        do L = K+1, system% atoms
           F_snd(L,K,xyz) =   F_vec(L)
-          F_snd(K,L,xyz) = - F_snd(L,K,xyz) 
+          F_snd(K,L,xyz) = - F_vec(L) ! F_snd(L,K,xyz) 
        end do
-       F_snd(K,K,xyz) = D_zero
  
 end do 
 
@@ -239,40 +260,49 @@ type(STO_basis) , intent(in) :: basis(:)
 real*8          , allocatable , intent(out) :: Xi(:,:)
 
 !local variables ...
-integer :: i , j
-real*8  :: k_eff , k_WH , c1 , c2 , c3
+integer :: i, j, n
+real*8  :: k_eff, k_WH, c1, c2, c3
+real*8  :: basis_j_IP, basis_j_k_WH
 
-allocate ( Xi( size(basis) , size(basis) ) )
+n = size(basis)
+
+if (.not. allocated(Xi)) allocate( Xi(n,n) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-do j = 1 , size(basis)
-do i = j , size(basis)
+!$omp parallel private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared)
+!$omp do schedule(dynamic,1)
+do j = 1, n
 
-    if (i == j) then
+    basis_j_IP   = basis(j)%IP
+    basis_j_k_WH = basis(j)%k_WH
 
-         Xi(i,i) = basis(i)%IP
+    do i = 1, j-1
 
-    else
+        c1 = basis(i)%IP - basis_j_IP
+        c2 = basis(i)%IP + basis_j_IP
+        c3 = (c1/c2)**2
 
-         c1 = basis(i)%IP - basis(j)%IP
-         c2 = basis(i)%IP + basis(j)%IP
- 
-         c3 = (c1/c2)*(c1/c2)
+        k_WH = (basis(i)%k_WH + basis_j_k_WH) * half
 
-         k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+        Xi(i,j) = k_eff * c2 * half
 
-         Xi(i,j) = k_eff * c2 * HALF
+    end do
 
-         Xi(j,i) = Xi(i,j) 
-
-    end if 
+    Xi(j,j) = basis_j_IP
 
 end do
-end do    
+!$omp end do
+
+!$omp do
+do i = 1, n
+    Xi( i+1:n, i ) = Xi( i, i+1:n )
+end do
+!$omp end do nowait
+!$omp end parallel
 
 end subroutine Huckel_stuff
 !
