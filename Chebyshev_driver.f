@@ -5,8 +5,8 @@ module Chebyshev_driver_m
     use constants_m
     use MPI_definitions_m           , only : master , world , myid,         &
                                              ForceComm , ForceCrew ,        &
-                                             ChebyCrew, KernelComm          &
-                                             , myid , world
+                                             ChebyCrew, KernelComm ,        &
+                                             myid , world
 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
@@ -49,7 +49,7 @@ module Chebyshev_driver_m
 #warning "Compiling Chebyshev for GPU. Subroutine calls redirected to GPU ones"
 #else
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
-                                             preprocess_ElHl_Chebyshev
+                                             preprocess_ElHl_Chebyshev 
 #endif
 
     public :: Chebyshev_driver
@@ -57,9 +57,9 @@ module Chebyshev_driver_m
     private
 
     ! module variables ...
-    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
+    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra 
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    integer :: N
+    integer                                         :: N 
 
 contains
 !
@@ -73,8 +73,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: it
 
 ! local variables ...
-integer         :: mpi_D_R = mpi_double_precision
-integer         :: mpi_D_C = mpi_double_complex , err
+integer         :: mpi_D_R = mpi_double_precision , err
 integer         :: frame , frame_init , frame_final , frame_restart
 real*8          :: t , t_rate 
 type(universe)  :: Solvated_System
@@ -161,8 +160,8 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure ( frame )
 
-    ! export new coordinates for ForceCrew ...
-    CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+    ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
+    If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
     CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
@@ -250,7 +249,7 @@ If( DP_field_ ) then
 
 end If
 N = size(ExCell_basis)
-CALL Allocate_Brackets( N , AO_bra , AO_ket , DUAL_bra , DUAL_ket , past_AO_bra , past_AO_ket )
+CALL Allocate_Brackets( N , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
 
 If( n_part == 1) then
     CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )
@@ -349,21 +348,36 @@ real*8          , intent(out) :: t
 integer         , intent(out) :: it
 integer         , intent(out) :: frame_restart
 
+!local variables ...
+integer :: err
+integer :: MPI_D_R = mpi_double_precision
+
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
 CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
 CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
+If( ChebyCrew ) CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
+
+CALL mpi_barrier( world , err )
+
+! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
+If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
+
 If( QMMM ) then 
 
     allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
-
-    CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ ) then
+          CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+          CALL DP_stuff ( "Induced_DP" )
+    end If
 
 end If
+
+! ForceCrew is on stand-by for this ...
+If( master ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm , err )
 
 end subroutine Restart_stuff
 !

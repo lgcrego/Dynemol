@@ -290,6 +290,8 @@ integer                     :: k , k_max, N
 real*8                      :: norm_tmp
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:,:) , Psi_tmp_ket(:,:)
 
+! external function...
+real*8      , external      :: nakedBessel
 
 N = size(Psi_bra)
 
@@ -305,7 +307,7 @@ C_k = coefficient(tau, order)
 
 k_max = order
 do k = 6, order
-    if( abs(c(k)/c(1)) < 1.0d-16 ) then
+    if( abs( C_k(k) ) < 1.0d-16 ) then
         k_max = k
         exit
     end if

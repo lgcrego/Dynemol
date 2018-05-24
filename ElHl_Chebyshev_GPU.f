@@ -33,6 +33,11 @@ module gpu_ElHl_Chebyshev_m
     real*8      ,   allocatable   :: S_matrix(:,:)
     complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
+    interface gpu_preprocess_ElHl_Chebyshev
+        module procedure gpu_preprocess_ElHl_Chebyshev
+        module procedure preprocess_from_restart
+    end interface
+
 contains
 !
 !
@@ -118,11 +123,9 @@ AO_ket = ElHl_Psi
 CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
 !==============================================
 
-If( .not. restart ) then
-    ! save populations(time=t_i) ...
-    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-    if (master) call dump_Qdyn( Qdyn , it )
-end If
+! save populations(time=t_i) ...
+QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+if (master) call dump_Qdyn( Qdyn , it )
 
 end subroutine gpu_preprocess_ElHl_Chebyshev
 !
@@ -356,6 +359,36 @@ Unit_Cell% QM_wp_erg = erg
 Unit_Cell% QM_erg = erg(1) - erg(2)
 
 end subroutine QuasiParticleEnergies
+!
+!
+!
+!
+!=================================================================================
+ subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket )
+!=================================================================================
+implicit none
+type(structure) , intent(inout) :: system
+type(STO_basis) , intent(inout) :: basis(:)
+complex*16      , intent(in)    :: DUAL_ket (:,:)
+complex*16      , intent(in)    :: AO_bra   (:,:)
+complex*16      , intent(in)    :: AO_ket   (:,:)
+
+!vector states to be propagated ...
+allocate( Psi_t_bra(size(basis),n_part) )
+allocate( Psi_t_ket(size(basis),n_part) )
+
+Psi_t_bra = DUAL_ket
+Psi_t_ket = AO_ket
+
+CALL Overlap_Matrix( system , basis , S_matrix )
+CALL Huckel( basis , S_matrix , h0 )
+
+CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
+
+! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
+
+end subroutine preprocess_from_restart
 !
 !
 !

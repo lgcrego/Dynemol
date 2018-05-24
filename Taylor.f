@@ -299,7 +299,7 @@ C = coefficient(tau, order)
 
 k_max = order
 do k = 2, order
-    if( abs(c(k)/c(1)) < 1.0d-16 ) then
+    if( abs( c(k) ) < 1.0d-16 ) then
         k_max = k
         exit
     end if

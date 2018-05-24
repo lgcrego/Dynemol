@@ -121,16 +121,14 @@
 !
 !
 !
- subroutine Allocate_BracKets_Chebyshev(Basis_Size, AO_bra, AO_ket, DUAL_bra, DUAL_ket,past_AO_bra,past_AO_ket)
+ subroutine Allocate_BracKets_Chebyshev(Basis_Size, AO_bra, AO_ket, DUAL_bra, DUAL_ket)
     implicit none
     integer                             , intent(in)  :: Basis_Size
     complex*16            , ALLOCATABLE , intent(out) :: AO_bra      (:,:) , AO_ket      (:,:) 
     complex*16            , ALLOCATABLE , intent(out) :: DUAL_ket    (:,:) , DUAL_bra    (:,:) 
-    complex*16 , optional , ALLOCATABLE , intent(out) :: past_AO_ket (:,:) , past_AO_bra (:,:) 
 
     allocate( AO_bra      (Basis_Size,n_part) , AO_ket      (Basis_Size,n_part) )
     allocate( DUAL_bra    (Basis_Size,n_part) , DUAL_ket    (Basis_Size,n_part) )
-    allocate( past_AO_bra (Basis_Size,n_part) , past_AO_ket (Basis_Size,n_part) )
 
     call GPU_Pin( AO_bra, Basis_Size*n_part*16 )
     call GPU_Pin( AO_ket, Basis_Size*n_part*16 )
