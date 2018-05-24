@@ -290,9 +290,6 @@ integer                     :: k , k_max, N
 real*8                      :: norm_tmp
 complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:,:) , Psi_tmp_ket(:,:)
 
-! external function...
-real*8      , external      :: nakedBessel
-
 N = size(Psi_bra)
 
 allocate( C_Psi_bra    ( N , order ) , source=C_zero )
