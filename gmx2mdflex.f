@@ -683,7 +683,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)] (improper; same as 1)
-                ! factor1 = 1.0d26      <== Factor used to correct the units readed fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -880,8 +880,19 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 1 )
 
-                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
-                    !===============================
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 1 )
+
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)
                     ! kdihed0(:,3) = n
@@ -924,7 +935,19 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
                         ( Dihed_Type(k) == 2 )
 
-                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     !======================================
                     ! kdihed0(:,1) = xi_0 (deg)
                     ! kdihed0(:,2) = k_xi [ kJ/(mol.rad^2) ]
@@ -966,8 +989,20 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. &
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 3 )
+
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 3 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 3 )
    
-                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+                if( flag1 .OR. flag2 .OR. flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     species(a) % kdihed0(n,1:6) = DihedParameters(k,1:6) 
                     cycle read_loop0
                 end if
@@ -992,7 +1027,6 @@ do a = 1 , MM % N_of_species
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
                         ( Dihed_Type(k) == 4 )
-
 
                 flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
@@ -1074,6 +1108,18 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
                         ( Dihed_Type(k) == 9 )
 
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
                 if( flag1 .OR. flag2 ) then
                     !================================
                     ! kdihed0(:,1) = phi_s (deg)
@@ -1089,7 +1135,7 @@ do a = 1 , MM % N_of_species
                     cycle read_loop7
                 end if
 
-                if( flag3 .OR. flag4 ) then
+                if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     !================================
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)

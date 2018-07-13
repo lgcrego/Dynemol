@@ -292,7 +292,7 @@ integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int ,
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NImproperTypes, NBondParms 
 character(18)                   :: keyword
 character(200)                  :: line
-logical                         :: flag1 , flag2 , flag3 , flag4
+logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( Input2Chars   ( 10000 , 10 )                   )
@@ -676,6 +676,18 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 9 )
 
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
                 if( flag1 .OR. flag2 ) then
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)
@@ -689,7 +701,7 @@ do a = 1 , MM % N_of_species
                     cycle read_loop7
                 end if
 
-                if( flag3 .OR. flag4 ) then
+                if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)
                     ! kdihed0(:,3) = n 
@@ -732,7 +744,19 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,2)) == 'X' ) .AND. &
                         ( adjustl(DihedSymbols(k,3)) == 'X' ) .AND. &
                         ( Dihed_Type(k) == 2 )
-                    
+
+                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
+                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 2 )
+
                 if( flag1 .OR. flag2 ) then
                     ! kdihed0(:,1) = xi_0 (deg)
                     ! kdihed0(:,2) = k_xi [ kJ/(mol.rad²) ] 
@@ -744,7 +768,7 @@ do a = 1 , MM % N_of_species
                     cycle read_loop7
                 end if
 
-             if( flag3 .OR. flag4 ) then
+             if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     ! kdihed0(:,1) = xi_0 (deg)
                     ! kdihed0(:,2) = k_xi [ kJ/(mol.rad²) ] 
                     if( l > 1 ) cycle read_loop7

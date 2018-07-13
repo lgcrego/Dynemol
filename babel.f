@@ -180,6 +180,7 @@ end subroutine Coords_from_Universe
 
 ! local variables ...
 integer             :: i , j , N_of_atoms 
+integer             :: k = 0
 integer             :: file_err , io_err
 character(len=5)    :: MMSymbol_char
 character(len=6)    :: keyword
@@ -226,7 +227,9 @@ do
                          system%atom(i)%MMSymbol = adjustl(MMSymbol_char)
         end do
     end if
+    k = k + 1
     if ( keyword == "MASTER" ) exit
+    if ( k > 20000 ) stop " *** reading of input.pdb halted ; ckeck file format *** " 
 end do
 !-------------------------------------------------------------------------------------------
 
