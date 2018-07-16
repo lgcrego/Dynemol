@@ -1,22 +1,22 @@
-module Chebyshev_m
+module Taylor_m
 
     use type_m              , g_time => f_time  
     use constants_m
     use blas95
     use lapack95
     use ifport
-    use parameters_m        , only : t_i , frame_step ,             &
-                                     DP_Field_ , driver ,           &
-                                     n_part , restart                  
+    use parameters_m        , only : t_i, frame_step,               &
+                                     DP_Field_, driver,             &
+                                     n_part, restart                  
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis , eh_tag                  
-    use QCmodel_Huckel      , only : Huckel ,                       &
+    use FMO_m               , only : FMO_analysis, eh_tag                  
+    use QCmodel_Huckel      , only : Huckel,                        &
                                      Huckel_with_FIELDS
     use Data_Output         , only : Populations
     use Matrix_Math
 
-    public  :: Chebyshev , preprocess_Chebyshev , Propagation , dump_Qdyn
+    public  :: Taylor, preprocess_Taylor, Propagation, dump_Qdyn
 
     private
 
@@ -29,15 +29,16 @@ module Chebyshev_m
     real*8  , save :: save_tau 
     logical , save :: necessary_  = .true.
     logical , save :: first_call_ = .true.
-    real*8  , allocatable , save :: H(:,:) , H_prime(:,:) , S_matrix(:,:)
+    real*8  , allocatable , save :: H(:,:), H_prime(:,:), S_matrix(:,:)
 
 contains
 !
 !
 !
-!=======================================================================================================
- subroutine preprocess_Chebyshev( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
-!=======================================================================================================
+!=====================================================================================================
+ subroutine preprocess_Taylor( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
+!! Excatly equal to preprocess_Chebyshev
+!=====================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
@@ -87,12 +88,13 @@ end If
 
 ! leaving S_matrix allocated
 
-end subroutine preprocess_Chebyshev
+end subroutine preprocess_Taylor
 !
 !
 !
 !==============================================================================================================
- subroutine Chebyshev( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
+ subroutine Taylor( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
+!! Equal to Chebyshev
 !==============================================================================================================
 implicit none
 type(structure)  , intent(in)    :: system
@@ -125,36 +127,23 @@ tau = merge( tau_max , tau , tau > tau_max )
 N = size(basis)
 
 if(first_call_) then           ! allocate matrices
-#ifdef USE_GPU
-    allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
-    call GPU_Pin( H, N*N*8 )
-#else
     allocate( H(N,N) , H_prime(N,N) )
-#endif
 end if
 
 If ( necessary_ ) then
     
-    ! building  S_matrix  and  H'= S_inv * H ...
-!     CALL Build_Hprime( system , basis )
-
     call Overlap_Matrix( system , basis , S_matrix )
     call Huckelx( basis , S_matrix , H )
-#ifndef USE_GPU
     call syInvert( S_matrix )   ! S_matrix content is destroyed and S_inv is returned
     call syMultiply( S_matrix , H , H_prime )
-#endif
 
     ! for a rigid structure once is enough ...
     If( driver ==  "q_dynamics" ) necessary_ = .false.
 
 end If
 
-#ifdef USE_GPU
-call PropagationElHl_gpucaller( 0, .false., N, S_matrix, H, Psi_t_bra, Psi_t_ket, t_init, t_max, tau, save_tau)
-#else
-call Propagation( N , H_prime , Psi_t_bra , Psi_t_ket , t_init , t_max , tau , save_tau )
-#endif
+! Propagation(..., type=Taylor)? 
+call Propagation( N, H_prime, Psi_t_bra, Psi_t_ket, t_init, t_max, tau, save_tau )
 
 t = t_init + (delta_t*frame_step)
 
@@ -173,7 +162,7 @@ include 'formats.h'
 
 first_call_ = .false.
 
-end subroutine Chebyshev
+end subroutine Taylor
 !
 !
 !
@@ -191,24 +180,25 @@ real*8          , intent(inout) :: tau
 real*8          , intent(out)   :: save_tau
 
 ! local variables...
-complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:) , Psi_tmp_ket(:) , C_k(:)
-real*8                      :: norm_ref , norm_test , t
-integer                     :: j , k_ref
+complex*16                  :: r
+complex*16  , allocatable   :: bra(:,:), ket(:,:), tmp_bra(:), tmp_ket(:), C(:)
+real*8                      :: norm_ref, norm_test, t
+integer                     :: k, k_ref
 logical                     :: OK
 
 
 ! complex variables ...
-allocate( C_Psi_bra   ( N , order ) )
-allocate( C_Psi_ket   ( N , order ) )
-allocate( Psi_tmp_bra ( N         ) )
-allocate( Psi_tmp_ket ( N         ) )
-allocate( C_k         (     order ) )
+allocate( bra     ( N , order ) )   ! redundant, only need n=2 vectors to generate the series, not n=order vectors
+allocate( ket     ( N , order ) )
+allocate( tmp_bra ( N         ) )
+allocate( tmp_ket ( N         ) )
+allocate( C       (     order ) )
 
-norm_ref = abs(dotc( Psi_t_bra , Psi_t_ket ))
+norm_ref = abs(dotc(Psi_t_bra, Psi_t_ket))
 
 ! first convergence: best tau-parameter for k_ref ...
 do
-    CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
+    call Convergence( Psi_t_bra, Psi_t_ket, C, k_ref, tau, H_prime, norm_ref, OK )
 
     if( OK ) exit
     tau = tau * 0.9d0
@@ -219,41 +209,42 @@ t = t_init + tau*h_bar
 
 if( t_max-t < tau*h_bar ) then
     tau = ( t_max - t ) / h_bar
-    C_k = coefficient(tau,order)
+    C = coefficient(tau,order)
 end if
 
 ! proceed evolution with best tau ...
 do while( t < t_max )
-        
-    C_Psi_bra(:,1) = Psi_t_bra
-    C_Psi_ket(:,1) = Psi_t_ket
+    
+    ! Ѱ₁ = c₁|Ѱ⟩ = |Ѱ⟩
+    bra(:,1) = Psi_t_bra
+    ket(:,1) = Psi_t_ket
 
-    call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
-    call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
+    tmp_bra = bra(:,1)
+    tmp_ket = ket(:,1)
 
-    do j = 3 , k_ref
-        call bra_x_op( C_Psi_bra(:,j), C_Psi_bra(:,j-1), H_prime, C_two )
-        C_Psi_bra(:,j) = C_Psi_bra(:,j) - C_Psi_bra(:,j-2)
-        call op_x_ket( C_Psi_ket(:,j), H_prime, C_Psi_ket(:,j-1), C_two )
-        C_Psi_ket(:,j) = C_Psi_ket(:,j) - C_Psi_ket(:,j-2)
+    do k = 2, k_ref
+
+        ! Ѱₙ = (cₙ/cₙ₋₁) H'Ѱₙ₋₁
+        r = c(k)/c(k-1)
+        call bra_x_op( bra(:,k), bra(:,k-1), H_prime, r )
+        call op_x_ket( ket(:,k), H_prime, ket(:,k-1), r )
+
+        ! add term Ѱₙ to series expansion
+        tmp_bra = tmp_bra + bra(:,k)
+        tmp_ket = tmp_ket + ket(:,k)
     end do
 
-    do j = 1, N
-        Psi_tmp_bra(j) = sum( C_k(1:k_ref) * C_Psi_bra(j,1:k_ref) )
-        Psi_tmp_ket(j) = sum( C_k(1:k_ref) * C_Psi_ket(j,1:k_ref) )
-    end do
-
-!   convergence criteria ...
-    norm_test = abs(dotc( Psi_tmp_bra , Psi_tmp_ket ))
-    if( abs( norm_test - norm_ref ) < norm_error ) then
-        Psi_t_bra = Psi_tmp_bra
-        Psi_t_ket = Psi_tmp_ket
+    ! convergence criteria
+    norm_test = abs(dotc( tmp_bra, tmp_ket ))
+    if (abs( norm_test - norm_ref ) < norm_error) then
+        Psi_t_bra = tmp_bra
+        Psi_t_ket = tmp_ket
     else
         OK = .false.
         do while( .not. OK )
             tau = tau * 0.975d0
-            print*, "rescaling tau" , tau
-            CALL Convergence( Psi_t_bra , Psi_t_ket , C_k , K_ref , tau , H_prime , norm_ref , OK )
+            print*, "rescaling tau", tau
+            call Convergence( Psi_t_bra, Psi_t_ket, C, k_ref, tau, H_prime, norm_ref, OK )
         end do
     end if
 
@@ -261,24 +252,24 @@ do while( t < t_max )
 
     if( t_max-t < tau*h_bar ) then
         tau = ( t_max-t ) / h_bar
-        C_k = coefficient(tau,order)
+        C = coefficient(tau, order)
     end if
 
 end do
 
-deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket , C_k )
+deallocate( bra, ket, tmp_bra, tmp_ket, C )
 
 end subroutine Propagation
 !
 !
 !
-!========================================================================================
-subroutine Convergence( Psi_bra , Psi_ket , C_k , k_ref , tau , H_prime , norm_ref , OK )
-!========================================================================================
+!===============================================================================
+subroutine Convergence( Psi_bra, Psi_ket, C, k_ref, tau, H_prime, norm_ref, OK )
+!===============================================================================
 implicit none
 complex*16  , intent(inout) :: Psi_bra(:)
 complex*16  , intent(inout) :: Psi_ket(:)
-complex*16  , intent(out)   :: C_k(:)
+complex*16  , intent(out)   :: C(:)
 integer     , intent(inout) :: k_ref
 real*8      , intent(in)    :: tau
 real*8      , intent(in)    :: H_prime(:,:)
@@ -286,25 +277,29 @@ real*8      , intent(in)    :: norm_ref
 logical     , intent(out)   :: OK
 
 ! local variables...
-integer                     :: k , k_max, N  
+integer                     :: k, k_max, N  
 real*8                      :: norm_tmp
-complex*16  , allocatable   :: C_Psi_bra(:,:) , C_Psi_ket(:,:) , Psi_tmp_bra(:,:) , Psi_tmp_ket(:,:)
+complex*16                  :: r
+complex*16  , allocatable   :: bra(:,:), ket(:,:), tmp_bra(:,:), tmp_ket(:,:)
+
+#define old 1
+#define new 2
 
 N = size(Psi_bra)
 
-allocate( C_Psi_bra    ( N , order ) , source=C_zero )
-allocate( C_Psi_ket    ( N , order ) , source=C_zero )
-allocate( Psi_tmp_bra  ( N , 2     ) )
-allocate( Psi_tmp_ket  ( N , 2     ) )
+allocate( bra      ( N , order ) , source=C_zero )
+allocate( ket      ( N , order ) , source=C_zero )
+allocate( tmp_bra  ( N , 2     ) )
+allocate( tmp_ket  ( N , 2     ) )
 
 OK = .false.
 
 ! get C_k coefficients ...
-C_k = coefficient(tau, order)
+C = coefficient(tau, order)
 
 k_max = order
-do k = 6, order
-    if( abs( C_k(k) ) < 1.0d-16 ) then
+do k = 2, order
+    if( abs( c(k) ) < 1.0d-16 ) then
         k_max = k
         exit
     end if
@@ -312,92 +307,51 @@ end do
 
 k_ref = k_max
 
-C_Psi_bra(:,1) = Psi_bra(:)
-C_Psi_ket(:,1) = Psi_ket(:)
-call bra_x_op( C_Psi_bra(:,2), C_Psi_bra(:,1), H_prime )
-call op_x_ket( C_Psi_ket(:,2), H_prime, C_Psi_ket(:,1) )
+! Ѱ₁ = c₁|Ѱ⟩ = |Ѱ⟩
+bra(:,1) = Psi_bra(:)
+ket(:,1) = Psi_ket(:)
 
-Psi_tmp_bra(:,1) = C_k(1)*C_Psi_bra(:,1) + C_k(2)*C_Psi_bra(:,2)
-Psi_tmp_ket(:,1) = C_k(1)*C_Psi_ket(:,1) + C_k(2)*C_Psi_ket(:,2)
+tmp_bra(:,old) = bra(:,1)
+tmp_ket(:,old) = ket(:,1)
 
-do k = 3, k_max
+do k = 2, k_max
 
-    call bra_x_op( C_Psi_bra(:,k), C_Psi_bra(:,k-1), H_prime, C_two )
-    C_Psi_bra(:,k) = C_Psi_bra(:,k) - C_Psi_bra(:,k-2)
-    call op_x_ket( C_Psi_ket(:,k), H_prime, C_Psi_ket(:,k-1), C_two )
-    C_Psi_ket(:,k) = C_Psi_ket(:,k) - C_Psi_ket(:,k-2)
+    ! Ѱₙ = (cₙ/cₙ₋₁) H'Ѱₙ₋₁
+    r = c(k)/c(k-1)
+    call bra_x_op( bra(:,k), bra(:,k-1), H_prime, r )
+    call op_x_ket( ket(:,k), H_prime, ket(:,k-1), r )
 
-    Psi_tmp_bra(:,2) = Psi_tmp_bra(:,1) + C_k(k)*C_Psi_bra(:,k)
-    Psi_tmp_ket(:,2) = Psi_tmp_ket(:,1) + C_k(k)*C_Psi_ket(:,k)
+    ! add term Ѱₙ to the expansion
+    tmp_bra(:,new) = tmp_bra(:,old) + bra(:,k)
+    tmp_ket(:,new) = tmp_ket(:,old) + ket(:,k)
 
 !   convergence criteria...
-    if( isConverged( Psi_tmp_bra(:,2), Psi_tmp_bra(:,1), error ) ) then
-    if( isConverged( Psi_tmp_ket(:,2), Psi_tmp_ket(:,1), error ) ) then
-        norm_tmp = abs(dotc( Psi_tmp_bra(:,2) , Psi_tmp_ket(:,2) ))
+    if( isConverged( tmp_bra(:,new), tmp_bra(:,old), error ) ) then
+    if( isConverged( tmp_ket(:,new), tmp_ket(:,old), error ) ) then
+
+        norm_tmp = abs(dotc( tmp_bra(:,new), tmp_ket(:,new) ))
+
         if( abs( norm_tmp - norm_ref ) < norm_error ) then
-            Psi_bra = Psi_tmp_bra(:,2)
-            Psi_ket = Psi_tmp_ket(:,2)
-            OK = .true.
+            Psi_bra = tmp_bra(:,new)
+            Psi_ket = tmp_ket(:,new)
+            ok = .true.
             exit
         end if
+
     end if ! ket conv.
     end if ! bra conv.
 
-    Psi_tmp_bra(:,1) = Psi_tmp_bra(:,2)
-    Psi_tmp_ket(:,1) = Psi_tmp_ket(:,2)
+    tmp_bra(:,old) = tmp_bra(:,new)
+    tmp_ket(:,old) = tmp_ket(:,new)
 
-end do !k = 3, order
+end do !k
 
-deallocate( C_Psi_bra , C_Psi_ket , Psi_tmp_bra , Psi_tmp_ket )
+deallocate( bra, ket, tmp_bra, tmp_ket )
+
+#undef old
+#undef new
 
 end subroutine Convergence
-
-!
-!
-!=========================================
- subroutine Build_Hprime( system , basis )
-!=========================================
-implicit none
-type(structure) , intent(in)  :: system
-type(STO_basis) , intent(in)  :: basis(:)
-
-! local variables...
-integer                 :: i, j, n
-
-n = size(basis)
-CALL Overlap_Matrix( system , basis , S_matrix )
-
-! call Huckelx( basis , S_matrix , H )
-
-If( DP_field_ ) then
- 
-    do j = 1 , n
-    do i = 1 , j
-        H(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
-    end do
-    end do  
-
-else
-
-    do j = 1 , n
-    do i = 1 , j
-        H(i,j) = huckel(i,j,S_matrix(i,j),basis)
-    end do
-    end do  
-
-end If
-
-call Matrix_Symmetrize( H, 'U' )
-
-#ifndef USE_GPU
-! compute S_inverse...
-call syInvert( S_matrix )
-
-! compute H' = S_inv * H ...
-call syMultiply( S_matrix, H, H_prime )
-#endif
-
-end subroutine Build_Hprime
 !
 !
 !
@@ -412,12 +366,9 @@ integer     , intent(in)        :: k_max
 !local variables ...
 integer :: k
 
-!local parameters ...
-complex*16  , parameter :: zi_k(0:3) = [ zi , C_one , -zi , -C_one ]
-
- coefficient(1) = dcmplx( dbesjn(0,tau), 0.d0 )
+coefficient(1) = C_one
 do k = 2 , k_max
-   coefficient(k) = (two * dbesjn(k-1,tau)) * zi_k(mod(k,4))
+   coefficient(k) = -zi * coefficient(k-1) * (tau/(k-1))
 end do
 
 end function coefficient
@@ -494,38 +445,53 @@ real*8          , intent(out)   :: H(:,:)
 
 ! local variables ... 
 real*8  :: k_eff , k_WH , c1 , c2 , c3
-integer :: i , j
+real*8  :: basis_j_IP, basis_j_k_WH
+integer :: i, j, n
+
+n = size(basis)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
 
-do j = 1 , size(basis)
+!$omp parallel private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared)
+!$omp do schedule(dynamic,1)
+do j = 1, n
 
-    do i = 1 , j - 1
+    basis_j_IP   = basis(j)%IP
+    basis_j_k_WH = basis(j)%k_WH
 
-        c1 = basis(i)%IP - basis(j)%IP
-        c2 = basis(i)%IP + basis(j)%IP
+    do i = 1, j - 1
 
-        c3 = (c1/c2)*(c1/c2)
+        c1 = basis(i)%IP - basis_j_IP
+        c2 = basis(i)%IP + basis_j_IP
+        
+        c3 = (c1/c2)**2
 
-        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+        k_WH = (basis(i)%k_WH + basis_j_k_WH) * half
 
         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-        H(i,j) = k_eff * S_matrix(i,j) * c2 / two
+        H(i,j) = k_eff * S_matrix(i,j) * c2 * half
 
     end do
 
-    H(j,j) = basis(j)%IP
+    H(j,j) = basis_j_IP
 
 end do
+!$omp end do
 
-call Matrix_Symmetrize( H, 'U' )
+! call Matrix_Symmetrize( H, 'U' )
+!$omp do
+do i = 1, n
+    H( i+1:n, i ) = H( i, i+1:n )
+end do
+!$omp end do nowait
+!$omp end parallel
 
 end subroutine Huckelx
 
 
-end module Chebyshev_m
+end module Taylor_m
 
 
 

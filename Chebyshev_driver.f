@@ -95,7 +95,7 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+    ! for use in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
     If( QMMM ) then
         past_AO_ket = AO_ket
         past_AO_bra = AO_bra
@@ -107,7 +107,7 @@ do frame = frame_init , frame_final , frame_step
         CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
     end If    
 
-    ! calculate, for using in MM ...
+    ! calculate, for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
         CALL EhrenfestForce( Extended_Cell , ExCell_basis , past_AO_bra , past_AO_ket )

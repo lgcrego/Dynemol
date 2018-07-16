@@ -13,7 +13,8 @@ module ElHl_Chebyshev_m
     use FMO_m               , only : FMO_analysis , eh_tag    
     use Data_Output         , only : Populations 
     use Coulomb_SMILES_m    , only : Build_Coulomb_potential
-    use Chebyshev_m         , only : Propagation, dump_Qdyn
+!    use Chebyshev_m         , only : Propagation, dump_Qdyn
+    use Taylor_m            , only : Propagation, dump_Qdyn
     use Ehrenfest_Builder   , only : store_Hprime                               
     use Matrix_Math
 

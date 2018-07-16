@@ -260,9 +260,9 @@ implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
 type(structure)                 , intent(inout) :: Unit_Cell
-complex*16                      , intent(inout) :: DUAL_ket (:,:)
-complex*16                      , intent(inout) :: AO_bra   (:,:)
-complex*16                      , intent(inout) :: AO_ket   (:,:)
+complex*16                      , intent(in)    :: DUAL_ket (:,:)
+complex*16                      , intent(in)    :: AO_bra   (:,:)
+complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
 
 ! local variables ...
