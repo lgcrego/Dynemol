@@ -2,6 +2,9 @@
 
  module QCModel_Huckel
 
+    use f95_precision
+    use blas95
+    use lapack95
     use type_m
     use omp_lib
     use constants_m
@@ -9,9 +12,6 @@
                                              Induced_ ,         &
                                              driver ,           &
                                              verbose
-    use f95_precision
-    use blas95
-    use lapack95
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use DP_main_m                   , only : DP_matrix_AO
@@ -30,41 +30,41 @@
 !
 !
 !
-!=============================================================
- subroutine EigenSystem( system , basis , QM , flag1 , flag2 )
-!=============================================================
+!=============================================
+ subroutine EigenSystem( system , basis , QM )
+!=============================================
 use Matrix_math
 implicit none
 type(structure)                             , intent(in)    :: system
 type(STO_basis)                             , intent(in)    :: basis(:)
 type(R_eigen)                               , intent(inout) :: QM
-integer          , optional                 , intent(inout) :: flag1
-integer          , optional                 , intent(in)    :: flag2
 
 ! local variables ...
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)
-real*8  , ALLOCATABLE :: h(:,:) , dumb_s(:,:)
-real*8  , ALLOCATABLE :: S_matrix(:,:)
-integer               :: i , j , info
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
+real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
+integer               :: i , j , N , info 
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-CALL Overlap_Matrix(system,basis,S_matrix)
+N = size(basis)
 
-If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(size(basis)))
+CALL Overlap_Matrix( system , basis , S_matrix )
 
-Allocate(      h( size(basis), size(basis)) )
-Allocate( dumb_s( size(basis), size(basis)) )
+If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(N))
 
-! clone S_matrix because SYGVD will destroy it ... 
+Allocate(      h(N,N) )
+Allocate( dumb_S(N,N) )
+
+! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
 
 If( DP_field_ .OR. Induced_ ) then
 
 !$OMP PARALLEL DO schedule( GUIDED , 10 )
-    do j = 1 , size(basis)
-        do i = j, size(basis)
-     
+    do j = 1 , N
+        do i = j , N
+    
             h(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
 
         end do
@@ -72,8 +72,8 @@ If( DP_field_ .OR. Induced_ ) then
 !$OMP END PARALLEL DO
 
 else
-    do j = 1 , size(basis)
-        do i = j, size(basis)
+    do j = 1 , N
+        do i = j , N
 
             h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
 
@@ -81,57 +81,98 @@ else
     end do
 end If
 
-CALL SYGVD( h , dumb_s , QM%erg , 1 , 'V' , 'L' , info )
+CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
-If ( present(flag1) ) flag1 = info
 
-Deallocate(dumb_s)
+select case ( driver ) 
 
-!     ---------------------------------------------------
-!   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-!
-!   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-!
-!   Rv = <AO|MO> coefficients
-!     ---------------------------------------------------
+    case ( "slice_AO" )
 
-Allocate( Lv(size(basis),size(basis)) )
+          !---------------------------------------------------
+          !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
+          !
+          !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
+          !
+          !   Rv = <AO|MO> coefficients
+          !---------------------------------------------------
 
-Lv = h
+          Allocate( Lv(size(basis),size(basis)) )
 
-Deallocate(h)
+          Lv = h
 
-! garantees continuity between basis:  Lv(old)  and  Lv(new) ...
-If( (driver == "slice_MOt") .AND. (flag2 > 1) ) CALL phase_locking( Lv , QM%R , QM%erg )
+          Deallocate(h)
 
-Allocate( Rv(size(basis), size(basis)) )
+          Allocate( Rv(size(basis), size(basis)) )
 
-!CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
-call Multiply( S_matrix, Lv, Rv )
+          !CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+          call Multiply( S_matrix, Lv, Rv )
 
-DEALLOCATE( S_matrix )
+          DEALLOCATE( S_matrix )
 
-!----------------------------------------------------------
-!  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+          !----------------------------------------------------------
+          !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
 
-If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
-! eigenvectors in the rows of QM%L
-QM%L = transpose(Lv) 
-Deallocate( Lv )
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
+          ! eigenvectors in the rows of QM%L
+          QM%L = transpose(Lv) 
+          Deallocate( Lv )
 
-If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
-! eigenvectors in the columns of QM%R
-QM%R = Rv
-Deallocate( Rv )
+          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
+          ! eigenvectors in the columns of QM%R
+          QM%R = Rv
+          Deallocate( Rv )
 
-!  the order of storage is the ascending order of eigenvalues
-!----------------------------------------------------------
+    case ("slice_FSSH" )    
+
+          !--------------------------------------------------------
+          ! Overlap Matrix Factorization: S^(1/2) ...
+          Allocate( S_eigen(N) )
+
+          dumb_s = S_matrix
+
+          CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
+
+          Allocate( tool(N,N) , source = transpose(dumb_S) )
+
+          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
+
+          !now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
+          CALL gemm(dumb_S , tool , S_matrix , 'N' , 'N')
+
+          DEALLOCATE( S_eigen , dumb_S , tool )
+
+          !---------------------------------------------------
+          !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
+          !
+          !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+          !---------------------------------------------------
+
+          Allocate( Lv(N,N) )
+          Allocate( Rv(N,N) )
+
+          Lv = h
+          Deallocate( h )
+
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+          ! eigenvectors in the rows of QM%L
+          QM%L = transpose(Lv) 
+
+          ! Rv = S^(1/2) * Lv ...
+          CALL symm( S_matrix , Lv , Rv )
+
+          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+          ! eigenvectors in the columns of QM%R
+          QM%R = Rv
+
+          Deallocate( Lv , Rv , S_matrix )
+
+end select
+
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-! save energies of the TOTAL system 
+! save energies of the TOTAL system ...
 OPEN(unit=9,file='system-ergs.dat',status='unknown')
-    do i = 1 , size(basis)
+    do i = 1 , N
         write(9,*) i , QM%erg(i)
     end do
 CLOSE(9)  
@@ -187,8 +228,8 @@ end subroutine EigenSystem
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8   :: DP(4)
- real*8   :: r0(3) , Ri(3) , vector(3)
+ real*8  :: DP(4)
+ real*8  :: r0(3) , Ri(3) , vector(3)
  real*8  :: Huckel_with_FIELDS
  real*8  :: k_eff , k_WH , c1 , c2 , c3
  logical :: flag
@@ -234,58 +275,6 @@ end subroutine EigenSystem
  end if
 
 end function Huckel_with_FIELDS
-!
-!
-!
-!=========================================
- subroutine phase_locking( Lv , CR , Erg )
-!=========================================
-implicit none
-real*8      , intent(inout) :: Lv(:,:)
-real*8      , intent(in)    :: CR(:,:)
-real*8      , intent(inout) :: Erg(:)
-
-! local variables ...
-real*8      , allocatable  :: temp_Lv(:,:) , Energies(:) , MO_ovlp(:,:) , old_Rv(:,:)
-integer     , allocatable  :: ind(:)
-integer                    :: N , i 
-
-N = size( CR(:,1) )
-
-allocate( old_Rv   ( N , N ) )
-allocate( temp_Lv  ( N , N ) )
-allocate( MO_ovlp  ( N , N ) )
-allocate( Energies ( N     ) )
-allocate( ind      ( N     ) )
-
-old_Rv = CR
-
-! MO overlap
-CALL gemm(Lv,old_Rv,MO_ovlp,'T','N',D_one,D_zero)
-
-! correction of crossing states ...
-temp_Lv  = Lv
-Energies = Erg
-
-ind = maxloc( abs(transpose(MO_ovlp)) , dim=1 )
-
-forall(i=1:N)
-    Lv(:,i) = temp_Lv(:,ind(i))
-    Erg(i)  = Energies(ind(i))
-end forall
-
-deallocate( temp_Lv , Energies , MO_ovlp , ind )
-
-! correction of the phases ...
-do i = 1 , N
-    if( dot_product(Lv(:,i),old_Rv(:,i)) < D_zero ) then
-        Lv(:,i) = - Lv(:,i)
-    end if
-end do
-
-deallocate( old_Rv )
-
-end subroutine phase_locking
 !
 !
 !

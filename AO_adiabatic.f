@@ -13,7 +13,8 @@ module AO_adiabatic_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step , preview ,  &
                                              hole_state , initial_state ,   &
-                                             DensityMatrix , AutoCorrelation
+                                             DensityMatrix, AutoCorrelation,&
+                                             driver
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj ,                          &
                                              MD_dt
@@ -45,6 +46,7 @@ module AO_adiabatic_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
+    use FSSH                        , only : PSE_forces
     use Auto_Correlation_m          , only : MO_Occupation
 
     public :: AO_adiabatic
@@ -108,7 +110,8 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+!        CALL PSE_forces     ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
@@ -120,9 +123,15 @@ do frame = frame_init , frame_final , frame_step
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
 
-    ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+! DUAL representation for efficient calculation of survival probabilities ...
+select case (driver)
+case("slice_FSSH")
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+    DUAL_bra = conjg(DUAL_ket)
+case default
+    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+end select
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
     If( nn == 1) then
@@ -180,16 +189,22 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_field_ )           CALL DP_stuff ( t , "DP_field"   )
 
-    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
+!    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ )  CALL DP_stuff ( t , "Induced_DP" )
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
 
     ! project back to MO_basis with UNI(t + t_rate)
+select case (driver)
+case("slice_FSSH")
+    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    MO_bra = conjg(MO_ket)
+case default
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-
+end select
 !============================================================================
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
@@ -199,7 +214,7 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    print*, frame 
+    Print*, frame 
 
 end do
 
@@ -256,7 +271,8 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
     hole_save  = hole_state
@@ -270,11 +286,11 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-CALL EigenSystem        ( Extended_Cell , ExCell_basis , UNI , flag2=it )
+CALL EigenSystem  ( Extended_Cell , ExCell_basis , UNI )
 
-CALL FMO_analysis       ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
+CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
 If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
@@ -319,11 +335,11 @@ end do
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
-UNI% Fermi_state = Extended_Cell% N_of_Electrons/two + mod( Extended_Cell% N_of_Electrons , 2 )
+UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_Electrons , 2 )
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+DUAL_bra = conjg(DUAL_ket)
 
 ! save populations ...
 If( nn == 1) then
@@ -334,18 +350,19 @@ end If
 
 CALL dump_Qdyn( Qdyn , it )
 
-If( GaussianCube       ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
 
-If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_matrix"  )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
 
-If( DP_Moment          ) CALL DP_stuff ( t_i , "DP_moment"  )
+If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
     If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
 End If
 
-If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 !..........................................................................
 

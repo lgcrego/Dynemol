@@ -124,7 +124,7 @@ forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 
 ! Run, Forrest, Run ...
 select case( driver )
-    case( "slice_AO" )
+    case( "slice_AO" , "slice_FSSH")
 
         do i = 1 , system% atoms
             If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle

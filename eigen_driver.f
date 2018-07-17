@@ -35,17 +35,11 @@ end If
 
 select case ( DRIVER )
 
-    case( "slice_MO0" )
-
-
-    case( "slice_MOt" )
-
-
     case( "slice_ElHl" )
 
         CALL ElHl_adiabatic ( QDyn , it )
 
-    case( "slice_AO" )
+    case( "slice_AO" , "slice_FSSH" )
 
         CALL AO_adiabatic ( QDyn , it )
 
