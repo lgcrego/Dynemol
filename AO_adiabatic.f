@@ -125,10 +125,10 @@ do frame = frame_init , frame_final , frame_step
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 select case (driver)
-case("slice_FSSH")
+case("slice_FSSH") ! <== Lowdin orthogonalization ...
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
     DUAL_bra = conjg(DUAL_ket)
-case default
+case default       ! <== asymmetrical orthogonalization ...
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 end select
@@ -198,10 +198,10 @@ end select
 
     ! project back to MO_basis with UNI(t + t_rate)
 select case (driver)
-case("slice_FSSH")
+case("slice_FSSH") ! <== Lowdin orthogonalization ...
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
     MO_bra = conjg(MO_ket)
-case default
+case default       ! <== asymmetrical orthogonalization ...
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 end select
