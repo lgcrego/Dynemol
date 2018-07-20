@@ -46,7 +46,7 @@ module AO_adiabatic_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
-    use FSSH                        , only : PSE_forces
+!    use FSSH                        , only : PSE_forces
     use Auto_Correlation_m          , only : MO_Occupation
 
     public :: AO_adiabatic
@@ -123,15 +123,15 @@ do frame = frame_init , frame_final , frame_step
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
 
-! DUAL representation for efficient calculation of survival probabilities ...
-select case (driver)
-case("slice_FSSH") ! <== Lowdin orthogonalization ...
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-    DUAL_bra = conjg(DUAL_ket)
-case default       ! <== asymmetrical orthogonalization ...
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-end select
+    ! DUAL representation for efficient calculation of survival probabilities ...
+    select case (driver)
+    case("slice_FSSH") ! <== Lowdin orthogonalization ...
+        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+        DUAL_bra = conjg(DUAL_ket)
+    case default       ! <== asymmetrical orthogonalization ...
+        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+    end select
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
     If( nn == 1) then
@@ -185,26 +185,26 @@ end select
 
     CALL Generate_Structure ( frame )
 
-    CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )           CALL DP_stuff ( t , "DP_field"   )
+    If( DP_field_ ) CALL DP_stuff ( t , "DP_field" )
 
 !    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
     If( Induced_ )  CALL DP_stuff ( t , "Induced_DP" )
 
-    Deallocate                ( UNI%R , UNI%L , UNI%erg )
+    Deallocate ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
+    CALL EigenSystem ( Extended_Cell , ExCell_basis , UNI )
 
     ! project back to MO_basis with UNI(t + t_rate)
-select case (driver)
-case("slice_FSSH") ! <== Lowdin orthogonalization ...
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-    MO_bra = conjg(MO_ket)
-case default       ! <== asymmetrical orthogonalization ...
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-end select
+    select case (driver)
+    case("slice_FSSH") ! <== Lowdin orthogonalization ...
+        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+        MO_bra = conjg(MO_ket)
+    case default       ! <== asymmetrical orthogonalization ...
+        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+    end select
 !============================================================================
 
     CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
@@ -328,7 +328,6 @@ do n = 1 , n_part
 
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) print*,'>>> warning: hole state above the Fermi level <<<'
-
 
         end select
 end do
