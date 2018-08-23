@@ -1,0 +1,80 @@
+
+# temp files
+/src/Security_copy.dat
+/src/Security_copy_MM.dat
+/src/el_FMO-ergs.dat
+/src/hl_FMO-ergs.dat
+/src/system-ergs.dat
+/src/a
+/src/el_survival.dat
+/src/hl_survival.dat
+/src/tmp_data
+
+# outputs
+/src/fort.13
+/src/fort.16
+/src/frames-MM.pdb
+/src/velocity_MM.out
+
+
+# Created by https://www.gitignore.io/api/c++,cuda,fortran
+
+### C++ ###
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+### CUDA ###
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+### Fortran ###
+# Prerequisites
+
+# Compiled Object files
+
+# Precompiled Headers
+
+# Compiled Dynamic libraries
+
+# Fortran module files
+
+# Compiled Static libraries
+
+# Executables
+
+
+# End of https://www.gitignore.io/api/c++,cuda,fortran
