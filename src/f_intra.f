@@ -168,7 +168,6 @@ subroutine FORCEINTRA()
 
     time_end = omp_get_wtime()
 
-    print*, 'time==>', time_end - time_start
 end subroutine FORCEINTRA
 
 
@@ -957,7 +956,7 @@ function GMX(kdihed0, dihedral_type, phi, rsinphi, pterm, rijkj, rjkkl) result(g
 
         case ('harm')   ! V = 1/2.k( xi - xi_0 )² Eq. 4.59 (GMX 5.0.5 manual)
                dtheta = phi - kdihed0(1)
-               dtheta = dtheta - DNINT( dtheta * 1 / TWOPI ) * TWOPI
+               dtheta = dtheta - DNINT(dtheta * 1 / TWOPI) * TWOPI
 
                term  = kdihed0(2) * dtheta
                pterm = 0.5 * term * dtheta
@@ -977,13 +976,12 @@ function GMX(kdihed0, dihedral_type, phi, rsinphi, pterm, rijkj, rjkkl) result(g
 
             ryck_dih = ryck_dih + pterm
 
-            gamma = -SIN(psi)
-            gamma = gamma + 1 * kdihed0(2) * cos_Psi ** 0
-            gamma = gamma + 2 * kdihed0(3) * cos_Psi ** 1
-            gamma = gamma + 3 * kdihed0(4) * cos_Psi ** 2
-            gamma = gamma + 4 * kdihed0(5) * cos_Psi ** 3
-            gamma = gamma + 5 * kdihed0(6) * cos_Psi ** 4
-            gamma = gamma * rsinphi * rijkj * rjkkl
+            gamma = - SIN(psi) * ( &
+                1 * kdihed0(2) * cos_Psi ** 0 + &
+                2 * kdihed0(3) * cos_Psi ** 1 + &
+                3 * kdihed0(4) * cos_Psi ** 2 + &
+                4 * kdihed0(5) * cos_Psi ** 3 + &
+                5 * kdihed0(6) * cos_Psi ** 4 ) * rsinphi * rijkj * rjkkl
 
         case ('imp')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (improper) Eq. 4.60 (GMX 5.0.5 manual)
             term  = INT(kdihed0(3)) * phi - kdihed0(1)
