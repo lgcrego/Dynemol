@@ -13,8 +13,6 @@ module F_intra_m
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex   , only : SpecialPairs , SpecialPairs14 , SpecialMorse
 
-    use omp_lib
-
     public :: FORCEINTRA, pot_INTRA
 
     ! module variables ...
@@ -33,11 +31,6 @@ subroutine FORCEINTRA()
 
     ! loop indexes
     integer :: i, j
-
-    real*8 :: time_start
-    real*8 :: time_end
-
-    time_start = omp_get_wtime()
 
     do i = 1, MM%N_of_atoms
         atom(i)%fnonbd14(:) = 0         ! Non-bonded 1-4
@@ -165,9 +158,6 @@ subroutine FORCEINTRA()
             atom(i)%ftotal(:) = atom(i)%ftotal(:) + atom(i)%Ehrenfest(:)
         end if
     end do
-
-    time_end = omp_get_wtime()
-
 end subroutine FORCEINTRA
 
 
