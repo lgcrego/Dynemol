@@ -22,7 +22,7 @@ module DP_main_m
 
     Real*8 , allocatable , public :: DP_matrix_AO(:,:,:)
 
-    public :: Dipole_Matrix 
+    public :: Dipole_Matrix
     public :: Dipole_Moment
 
     private
@@ -45,7 +45,7 @@ implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
 real*8          , optional  , intent(in)    :: L_vec(:,:) , R_vec(:,:)
-real*8          , optional  , intent(out)   :: Total_DP(3) 
+real*8          , optional  , intent(out)   :: Total_DP(3)
 
 ! local variables ...
 real*8  :: Sparsity(3)
@@ -69,10 +69,10 @@ forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:,i) /= D_zero)
 
 Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
-If( verbose ) Print 73, Sparsity  
+If( verbose ) Print 73, Sparsity
 
 ! execute only for static calculations ...
-if ( DP_Moment .AND. static ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP ) 
+if ( DP_Moment .AND. static ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP )
 
 !----------------------------------------------------------
 If( verbose ) then
@@ -92,12 +92,12 @@ end subroutine Dipole_Matrix
 implicit none
 type(structure)             , intent(inout) :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-real*8                      , intent(in)    :: L_vec    (:,:) 
+real*8                      , intent(in)    :: L_vec    (:,:)
 real*8                      , intent(in)    :: R_vec    (:,:)
-complex*16      , optional  , intent(in)    :: AO_bra   (:,:) 
-complex*16      , optional  , intent(in)    :: AO_ket   (:,:) 
+complex*16      , optional  , intent(in)    :: AO_bra   (:,:)
+complex*16      , optional  , intent(in)    :: AO_ket   (:,:)
 complex*16      , optional  , intent(in)    :: Dual_ket (:,:)
-real*8          , optional  , intent(out)   :: DP_total (3) 
+real*8          , optional  , intent(out)   :: DP_total (3)
 
 ! local variables ...
 integer                       :: xyz, Fermi_state
@@ -115,7 +115,7 @@ AO_mask = merge( basis%DPF , AO_mask , any(basis%DPF) )
 ! if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
 CALL Center_of_Charge( system , R_vector )
 
-Nuclear_DP = D_zero 
+Nuclear_DP = D_zero
 
 ! set MO occupancy ...
 Fermi_state = sum( system%Nvalen )/two + mod( sum( system%Nvalen ) , 2 )
@@ -134,7 +134,7 @@ end do
 ! Build DP_Moment ...
 !--------------------------------------------------------------------------------------
 
-! contribution from the hole and electronic-wavepackets ... 
+! contribution from the hole and electronic-wavepackets ...
 ! excited-state case: hole_state /= 0 ...
 If( hole_state /= I_zero ) then
 
@@ -184,14 +184,14 @@ type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 
 ! local variables
-real*8  :: expa, expb, Rab 
-integer :: a , b , ia , ib , ja , jb 
-integer :: na , la , ma 
+real*8  :: expa, expb, Rab
+integer :: a , b , ia , ib , ja , jb
+integer :: na , la , ma
 integer :: nb , lb , mb
 integer :: lmult , i , j , k
 logical :: atom_not_moved
 
-real*8  , parameter :: tol = 1.d-10 
+real*8  , parameter :: tol = 1.d-10
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
 real*8  , parameter :: cutoff_Angs = 10.d0
 
@@ -205,16 +205,16 @@ DP_matrix_AO = D_zero
 !$omp parallel do schedule(dynamic,100) default(shared)&
 !$omp private(ib,ia,atom_not_moved,Rab,jb,ja,b,a,k,nb,na,lb,la,mb,ma,j,i,expb,expa,rl,rl2,qlm)
 do ib = 1 , system%atoms
-do ia = 1 , system%atoms  
+do ia = 1 , system%atoms
 
     if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle
 
     ! if atoms ia and ib remaing fixed => recover DP_matrix_AO ...
     If( ready ) then
 
-        atom_not_moved = all(system%coord(ia,:)==xyz(ia,:)) .AND. all(system%coord(ib,:)==xyz(ib,:)) 
+        atom_not_moved = all(system%coord(ia,:)==xyz(ia,:)) .AND. all(system%coord(ib,:)==xyz(ib,:))
 
-        Rab = sqrt(sum( (system%coord(ia,:)-system%coord(ib,:)) * (system%coord(ia,:)-system%coord(ib,:)) ) )  
+        Rab = sqrt(sum( (system%coord(ia,:)-system%coord(ib,:)) * (system%coord(ia,:)-system%coord(ib,:)) ) )
 
         If(Rab > cutoff_Angs) goto 10
 
@@ -248,11 +248,11 @@ do ia = 1 , system%atoms
 
         CALL Multipole_Messages(na,nb,la,lb)
 
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
 !       sum over zeta coefficients
         do i = 1 , basis(a)%Nzeta
         do j = 1 , basis(b)%Nzeta
-   
+
             expa = basis(a)%zeta(i)
             expb = basis(b)%zeta(j)
 
@@ -260,21 +260,21 @@ do ia = 1 , system%atoms
 
 !               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF ONE-CENTER DISTRIBUTIONS
 
-                qlm = 0.d0  
+                qlm = 0.d0
 
                 call multipoles1c(na, la, expa, nb, lb, expb, lmult, qlm)
 
-            else 
+            else
 
 !               CALLS THE SUBROUTINE FOR THE MULTIPOLES OF TWO-CENTER DISTRIBUTIONS
 
-                qlm = 0.d0 
+                qlm = 0.d0
 
                 call multipoles2c(na, la, expa, nb, lb, expb, Rab, lmult, rl, qlm)
 
             end if
 
-!           p_x(a,b) 
+!           p_x(a,b)
             DP_matrix_AO(a,b,1) = DP_matrix_AO(a,b,1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
 !           p_y(a,b)
             DP_matrix_AO(a,b,2) = DP_matrix_AO(a,b,2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
@@ -283,7 +283,7 @@ do ia = 1 , system%atoms
 
         end do
         end do
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
 
     enddo
     enddo
@@ -308,12 +308,12 @@ end subroutine Build_DIPOLE_Matrix
 !
 !
 !=================================================================================================
-pure function DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state)
+function DP_Moment_component( xyz , basis , L_vec , R_vec , R_vector , AO_mask , Fermi_state)
 !=================================================================================================
 implicit none
 integer                  , intent(in) :: xyz
 type(STO_basis)          , intent(in) :: basis    (:)
-real*8                   , intent(in) :: L_vec    (:,:) 
+real*8                   , intent(in) :: L_vec    (:,:)
 real*8                   , intent(in) :: R_vec    (:,:)
 real*8                   , intent(in) :: R_vector (:,:)
 logical                  , intent(in) :: AO_mask  (:)
@@ -327,9 +327,9 @@ real*8     , allocatable :: origin_Dependent   (:)
 real*8     , allocatable :: origin_Independent (:)
 integer                  :: i , states , n_basis
 
-! Electronic dipole 
+! Electronic dipole
 n_basis = size(basis)
- 
+
 allocate( a(n_basis,n_basis)              , source = D_zero )
 allocate( b(n_basis,n_basis)              , source = D_zero )
 allocate( origin_Dependent  (Fermi_state) )
@@ -339,23 +339,23 @@ allocate( origin_Independent(Fermi_state) )
 
 !$OMP parallel
     !$OMP single
-    do states = 1 , Fermi_state 
+    do states = 1 , Fermi_state
         !$OMP task untied
-        do i = 1 , n_basis  
+        do i = 1 , n_basis
             a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
         end do
 
         origin_Dependent(states) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
         !$OMP end task
     end do
-    !$OMP end single    
+    !$OMP end single
 !$OMP end parallel
 
 ! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
 
 b = DP_matrix_AO(:,:,xyz)
 
-CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )    
+CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )
 
 forall( states=1:Fermi_state ) origin_Independent(states) = occupancy(states) * sum( a(states,:)*L_vec(states,:) , AO_mask )
 
@@ -377,8 +377,8 @@ implicit none
 type(STO_basis) , intent(in)    :: basis(:)
 logical         , intent(in)    :: mask(:)
 real*8          , intent(in)    :: R_vector(:,:)
-complex*16      , intent(in)    :: bra(:) 
-complex*16      , intent(in)    :: ket(:) 
+complex*16      , intent(in)    :: bra(:)
+complex*16      , intent(in)    :: ket(:)
 complex*16      , intent(in)    :: Dual_ket(:)
 real*8                          :: wavepacket_DP(3)
 
@@ -388,7 +388,7 @@ complex*16      , allocatable   :: a(:), b(:,:)
 type(R3_vector)                 :: origin_Dependent, origin_Independent
 
 n_basis = size(basis)
- 
+
 allocate( a(n_basis)         , source = C_zero )
 allocate( b(n_basis,n_basis) , source = C_zero )
 
@@ -404,13 +404,13 @@ do xyz = 1 , 3
 
         b = DP_matrix_AO(:,:,xyz)
 
-        CALL gemv( b , ket , a , C_one , C_zero )    
+        CALL gemv( b , ket , a , C_one , C_zero )
 
         origin_Independent%DP(xyz) = real( sum( bra(:)*a(:) , mask ) )
 
 end do
 
-wavepacket_DP = origin_Dependent%DP + origin_Independent%DP 
+wavepacket_DP = origin_Dependent%DP + origin_Independent%DP
 
 deallocate( a , b )
 
@@ -428,7 +428,7 @@ real*8          , allocatable   , intent(out)   :: R_vector(:,:)
 ! local variables ...
 integer               :: i , j
 real*8                :: total_valence
-real*8  , allocatable :: Qi_Ri(:,:) 
+real*8  , allocatable :: Qi_Ri(:,:)
 logical , allocatable :: mask(:)
 
 ! define system for DP_Moment calculation ...
@@ -462,11 +462,11 @@ implicit none
 real*8 , intent(in) :: DP_Matrix_AO(:,:,:)
 
 !=====================================================================
-! converts a matrix a(1:n,1:n,1:3) with physical dimension np into 
-! row-indexed sparse storage mode. Only elements of a with magnitude >= 
-! thresh are retained. Output is in two linear arrays with physical 
-! dimension nmax (an input parameter): sa(1:) contains array lines, 
-! indexed by ija(1:). The logical sizes of sa and ija on output are 
+! converts a matrix a(1:n,1:n,1:3) with physical dimension np into
+! row-indexed sparse storage mode. Only elements of a with magnitude >=
+! thresh are retained. Output is in two linear arrays with physical
+! dimension nmax (an input parameter): sa(1:) contains array lines,
+! indexed by ija(1:). The logical sizes of sa and ija on output are
 ! both  ija(ija(1)-1)-1
 !=====================================================================
 
@@ -486,7 +486,7 @@ allocate( tmp_DP(nmax,3) , source=D_zero )
 
       DO 11 j = 1 , n
          tmp_DP(j,:) = DP_Matrix_AO(j,j,:)
-11    END DO 
+11    END DO
       tmp_ij(1) = n + 2
       k = n + 1
       DO 13 i = 1 , n
@@ -499,15 +499,15 @@ allocate( tmp_DP(nmax,3) , source=D_zero )
                 tmp_ij(k) = j
               END IF
             END IF
-12       END DO 
+12       END DO
          tmp_ij(i+1) = k + 1
-13    END DO  
+13    END DO
 
 length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of DP_pack and ija
 nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
 
 allocate( DP_pack(length,3) , source = tmp_DP  )
-allocate( ija    (length  ) , source = tmp_ij  ) 
+allocate( ija    (length  ) , source = tmp_ij  )
 
 deallocate( tmp_DP , tmp_IJ )
 
