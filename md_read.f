@@ -3,6 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                
+    use MPI_definitions_m       , only : master
     use parameters_m            , only : restart , ad_hoc , driver , preview
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -297,6 +298,8 @@ end do
 !call debug_MM( atom )
 !========================================================================================= 
 
+If( master ) CALL MM_diagnosis( )
+
 end subroutine Build_MM_Environment
 !
 !
@@ -579,6 +582,191 @@ END DO
 a % Symbol = adjustl(a % Symbol)
 
 end subroutine MMSymbol_2_Symbol
+!
+!
+!
+!
+!==========================
+ subroutine MM_diagnosis( ) 
+!==========================
+implicit none
+
+! local variabbles ...
+integer                         :: i , at1 , at2 , at3 , at4 , funct_dih
+real*8                          :: factor , factor_1 , factor_2 , dumb
+character(3)                    :: funct_type , flag
+character(len=:) , allocatable  :: string(:)
+
+ open( unit = 51 , file = "MM_parms_log.out" , status = "replace", action = "write" , position = "append" )
+
+ !========================================================================================================
+ write(51, *) " "
+ do i = 1 , MM % N_of_species
+ ! Print # of atoms
+     write (51, 201) species(i) % residue, species(i) % N_of_atoms
+ ! Print # of bonds
+     write(51,202 ), species(i) % residue, species(i) % Nbonds
+ ! Print # of angles
+     write(51, 203) species(i) % residue, species(i) % Nangs
+ ! Print # of dihedrals
+     write(51, 204) species(i) % residue, species(i) % Ndiheds
+ end do
+ write(51, *) " "
+
+ !========================================================================================================
+ ! bond parms saving ...
+ write(51,"(A)") "[ bondtypes ]"               
+ write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
+
+ allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nbonds) )
+ do i = 1 , molecule(1)%Nbonds
+
+    at1 = molecule(1)%bonds(i,1)
+    at2 = molecule(1)%bonds(i,2)
+
+    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol
+
+    if( .NOT. any(string(1:i-1) == string(i)) ) then 
+
+        ! warns if paramater was not assigned to this bond ...
+        flag = merge( "<==" , "   " , sum(molecule(1)%kbond0(i,:)) == 0 )
+
+        funct_type = molecule(1) % funct_bond(i) 
+ 
+        factor = factor2 * imol  
+        if( funct_type == "3" ) factor = factor1 * imol
+
+        write(51,'(3A4,F15.5,2F15.3,A3)')  atom(at1)%MMSymbol                      , &
+                                           atom(at2)%MMSymbol                      , &
+                                           funct_type                              , &
+                                           molecule(1)%kbond0(i,2) / nano_2_angs   , &
+                                           molecule(1)%kbond0(i,1) / factor        , &
+                                           molecule(1)%kbond0(i,3) * nano_2_angs   , &
+                                           flag
+    end if
+ end do
+ deallocate(string)
+ !========================================================================================================
+ ! angle parms saving ...
+ write(51,*) " "
+ write(51,"(A)") "[ angletypes ]"
+ write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
+
+ allocate( character(len=3*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nangs) )
+ do i = 1 , molecule(1)%Nangs
+
+    at1 = molecule(1)%angs(i,1)
+    at2 = molecule(1)%angs(i,2)
+    at3 = molecule(1)%angs(i,3)
+
+    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol
+
+    if( .NOT. any(string(1:i-1) == string(i)) ) then 
+
+        ! warns if paramater was not assigned to this angle ...
+        flag = merge( "<==" , "   " , sum(molecule(1)%kang0(i,:)) == 0 )
+
+        funct_type = molecule(1) % funct_angle(i)
+
+        factor_1 = factor1 * imol
+        factor_2 = factor2 * imol
+
+        write(51,'(4A4,2F15.3)',advance="no") atom(at1)%MMSymbol  , &
+                                              atom(at2)%MMSymbol  , &
+                                              atom(at3)%MMSymbol  , &
+                                              funct_type       
+
+        select case( adjustl(molecule(1) % Angle_Type(i)) )
+
+            case ('harm') 
+
+                write(51,'(2F15.3,A3)') molecule(1)%kang0(i,2) / deg_2_rad   , &
+                                        molecule(1)%kang0(i,1) / factor_1    , &
+                                        flag 
+
+            case('urba')
+
+                write(51,'(4F15.3,A3)') molecule(1)%kang0(i,2) / deg_2_rad   , &
+                                        molecule(1)%kang0(i,1) / factor_1    , &
+                                        molecule(1)%kang0(i,4) / nano_2_angs , &
+                                        molecule(1)%kang0(i,3) / factor_2    , &
+                                        flag
+
+            case default
+
+                write(*,'(A5)',advance="no") adjustl(molecule(1) % Angle_Type(i))
+                stop " <== angle FF not supported in FF_OPT_class%output"
+
+        end select
+    end if
+ end do
+ deallocate(string)
+ !========================================================================================================
+ ! dihedral parms saving ...
+ write(51,*) " "
+ write(51,"(A)") "[ dihedraltypes ]"
+ write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
+
+ allocate( character(len=4*len(atom(at1)%MMSymbol)+len(molecule(1)%Dihedral_Type)) :: string(molecule(1)%Ndiheds) )
+ do i = 1 , molecule(1)%Ndiheds
+
+    at1 = molecule(1)%diheds(i,1)
+    at2 = molecule(1)%diheds(i,2)
+    at3 = molecule(1)%diheds(i,3)
+    at4 = molecule(1)%diheds(i,4)
+
+    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol//molecule(1)%Dihedral_Type(i)
+
+    if( .NOT. any(string(1:i-1) == string(i)) ) then 
+
+        ! warns if paramater was not assigned to this dihedral ...
+        flag = merge( "<==" , "   " , sum(abs(molecule(1)%kdihed0(i,:))) == 0 )
+
+        funct_dih = molecule(1) % funct_dihed(i)
+
+        factor = factor1 * imol
+
+        write(51,'(4A4,I5)',advance="no") atom(at1)%MMSymbol                  , &
+                                          atom(at2)%MMSymbol                  , &
+                                          atom(at3)%MMSymbol                  , &
+                                          atom(at4)%MMSymbol                  , &
+                                          funct_dih      
+
+        select case( adjustl(molecule(1) % Dihedral_Type(i)) )
+
+            case ('cos' , 'imp')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
+
+                write(51,'(3F12.5,A3)') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
+                                        molecule(1)%kdihed0(i,2) / factor     , &  
+                                        molecule(1)%kdihed0(i,3)              , &
+                                        flag
+
+            case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
+                          ! Eq. 4.61 (GMX 5.0.5 manual)
+
+                write(51,'(6F12.5,A3)') molecule(1)%kdihed0(i,1) / factor     , &
+                                        molecule(1)%kdihed0(i,2) / factor     , &  
+                                        molecule(1)%kdihed0(i,3) / factor     , &
+                                        molecule(1)%kdihed0(i,4) / factor     , & 
+                                        molecule(1)%kdihed0(i,5) / factor     , &
+                                        molecule(1)%kdihed0(i,6) / factor     , &
+                                        flag
+            case default
+
+                write(*,'(A5)',advance="no") adjustl(molecule(1) % Dihedral_Type(i))
+                stop " <== dihedral FF not supported in FF_OPT_class%output"
+
+        end select
+    end if
+ end  do
+ deallocate(string)
+!========================================================================================================
+
+ close(51)
+
+include 'formats.h'
+
+end subroutine MM_diagnosis
 !
 !
 !

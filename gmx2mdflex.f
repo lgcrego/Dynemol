@@ -111,8 +111,10 @@ do a = 1 , MM % N_of_species
 
         N_of_atoms = species(a) % N_of_atoms
 
+        ! convert MMSymbol to upper case ...
+        forall( i=1:N_of_atoms ) species(a)% atom(i)% MMSymbol = TO_UPPER_CASE( species(a)% atom(i)% MMSymbol )
         ! convert residues to upper case ...
-        forall( i=1:N_of_atoms ) species(a)% atom(i)% residue = TO_UPPER_CASE( species(a)% atom(i)% residue )
+        forall( i=1:N_of_atoms ) species(a)% atom(i)% residue  = TO_UPPER_CASE( species(a)% atom(i)% residue )
 
         i = 1
         do
@@ -403,6 +405,9 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr /= 0 ) cycle read_loop1
         read(line,*,iostat=ioerr) InputChars(i,1) , (InputReals(i,j) , j=1,2) , InputChars(i,2) , (InputReals(i,j) , j=3,4)
 
+        ! convert MMSymbol to upper case ...
+        InputChars(i,1) = TO_UPPER_CASE( InputChars(i,1) )
+
         i = i + 1
     end do read_loop1
     InputChars = adjustl(InputChars) 
@@ -508,6 +513,9 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr /= 0 ) cycle read_loop2
         read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1), (InputReals(i,j) , j=1,2)
 
+        ! convert MMSymbol to upper case ...
+        forall( k=1:2 ) InputChars(i,k) = TO_UPPER_CASE( InputChars(i,k) )
+
         backspace(33)
 
         select case ( InputIntegers(i,1) )
@@ -568,6 +576,10 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop3
         read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,3) , InputIntegers(i,1), (InputReals(i,j) , j=1,2 )
+
+        ! convert MMSymbol to upper case ...
+        forall( k=1:3 ) InputChars(i,k) = TO_UPPER_CASE( InputChars(i,k) )
+
         backspace(33) 
 
         select case( InputIntegers(i,1) )
@@ -630,6 +642,9 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop4
         read(line,*,iostat=ioerr) (InputChars(i,k) , k=1,4) , InputIntegers(i,1)
+
+        ! convert MMSymbol to upper case ...
+        forall( k=1:4 ) InputChars(i,k) = TO_UPPER_CASE( InputChars(i,k) )
 
         backspace(33)
 

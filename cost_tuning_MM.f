@@ -3,7 +3,7 @@ module cost_MM
     use type_m
     use constants_m
     use parameters_m  , only: T_ , F_
-    use MM_input      , only: N_of_CGSteps , nmd_window
+    use MM_input      , only: nmd_window
     use MM_types      , only: MMOPT_Control, LogicalKey
 
     public :: evaluate_cost , nmd_REF_erg , nmd_NOPT_ERG , SetKeys , KeyHolder , overweight , chi
@@ -11,16 +11,43 @@ module cost_MM
     private 
 
     ! module variables ...
-    integer                        :: AStep = 0
     integer          , allocatable :: nmd_sorted_indx(:) , nmd_deg_indx(:,:)
-    real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , AdiabaticStep(:) , overweight(:)
+    real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , overweight(:)
     real*8                         :: chi(100) = D_zero 
     type(LogicalKey) , allocatable :: KeyHolder(:)
 
-
 contains
 !
+!==================================================================================================================================
+! BONDS
+! case ('harm' , 1 )                                        case ('Mors' , 3 )
+! V = 0.5*k_1*( rijsq - k_2) )^2                            V = k_1*[ 1.0 - ( rijsq - k_2)*exp(-k_3) ]^2
 !
+! ANGLES
+! case ('harm' , 1 )                                        case ('urba' , 5 )
+! V = 0.5*k_1*( phi - k_2 )^2                               V = V_harm + 0.5*k_3*( riksq - k_4)^2
+!
+! DIHEDRALS
+! case ('cos' , 1 )    
+! V = k_phi * [ 1 + cos( n * phi - phi_s ) ]                                ! Eq. 4.60 (GMX 5.0.5 manual)
+! V = k_2 * (1.0 + cos[ int(k_3)*phi - k_1 ]  )
+!
+! case ('harm' , 2 )   
+! V = 1/2.k( xi - xi_0 )²                                                   ! Eq. 4.59 (GMX 5.0.5 manual)
+! V = 0.5 * k_2 * ( phi - k_1 )^2
+!
+! case ('cos3' , 3 )    
+! V = C0 + C1*cos(phi - 180) + C2*cos^2(phi - 180) + C3*cos^3(phi - 180) + C4*cos^4(phi - 180) + C5*cos(phi - 180)
+! psi = phi-180                                                             ! Eq. 4.61 (GMX 5.0.5 manual)
+! V = k_1 + k_2*cos(psi) + k_3*cos(psi)^2 + k_4*cos(psi)^3 + k_5*cos(psi)^4 + k_6*cos(psi)^5
+!
+! case ('imp' ,  4 )    
+! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (improper)                     ! Eq. 4.60 (GMX 5.0.5 manual)
+! V = k_2 * ( 1.0 + cos [ int(k_3)*phi - k_1 ] )
+!
+! case ('chrm' , 9 )   
+! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple)                     ! Eq. 4.60 (GMX 5.0.5 manual)
+!==================================================================================================================================
 !
 !==================
  subroutine SetKeys
@@ -29,13 +56,14 @@ implicit none
 
 If( .not. allocated(KeyHolder) ) allocate( KeyHolder(1) )
 
-
     KeyHolder(1)%comment = "==> optimize all"
-    KeyHolder(1)%bonds   = [T_,F_,F_]
-    KeyHolder(1)%angs    = [T_,F_,T_,F_]
-    KeyHolder(1)%diheds  = [F_,F_,T_,F_,F_,F_,F_]
+    KeyHolder(1)%bonds        = [T_,F_,F_]
+    KeyHolder(1)%angs         = [T_,F_,F_,F_]
+    KeyHolder(1)%diheds(1:7)  = [F_,F_,T_,F_,F_,F_,F_]
+    KeyHolder(1)%dihedtype    = 3 
 
-
+! NOTICE: KeyHolder is defined as a VECTOR to allow for sequential optimization routines with different keys ...
+! however, this feature is not implemented and KeyHolder behaves as a SCALAR ...
 end subroutine SetKeys
 !
 !
@@ -54,12 +82,6 @@ integer      :: i
 real*8       :: weight(100) = D_zero
 real*8       :: order_cost, split_cost
 character(6) :: prepare_environment
-
-If( control% new_adiabat ) then
-    AStep = AStep + 1 
-    evaluate_cost = real_large
-    return
-end If
 
 If( control% preprocess ) then
 
@@ -86,7 +108,7 @@ If( control% preprocess ) then
 
          case( "newOPT" )
 
-         allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,24,16,15,17,18,23,21,22,25,30,26,27,28,29,36,34,35,31,32,33] )
+         allocate( nmd_indx , source = [7,8,9,10,12,11,13,14,19,20,23,15,16,17,18,24,21,22,25,30,26,27,28,29,31,34,35,32,33,36] )
 
          case default 
               pause "Quit and choose option: newOPT , repeat , resume." 
@@ -98,7 +120,7 @@ end If
 
 !------------------------
 ! NMD frequencies (cm-1})
-! ascending energy order
+! ASCENDING energy order
 !------------------------
 
 chi(1) = Hesse_erg(nmd_indx(1))  - 395.d0                             ; weight(1) = 1.0d0
@@ -159,11 +181,9 @@ If( control% preprocess ) then
     allocate( nmd_NOPT_erg    , source = Hesse_erg(nmd_indx)                               )
     allocate( nmd_deg_indx    , source = IdentifyDegenerates( Hesse_erg , chi , nmd_indx ) )
     allocate( nmd_sorted_indx , source = sort( nmd_indx )                                  )
-    allocate( AdiabaticStep   , source = chi/float(N_of_CGSteps)                           )
 
     allocate( overweight(size(nmd_REF_erg)) , source = D_zero )
-    If( any(prepare_environment == ["repeat","resume"]) ) &
-    forall(i=1:size(nmd_REF_erg)) overweight(i) = overweight(i) + abs(chi(i)/nmd_REF_erg(i))
+    forall(i=1:size(nmd_REF_erg)) overweight(i) = abs(chi(i)/nmd_REF_erg(i))   
 
 end If
 
@@ -171,13 +191,12 @@ end If
 order_cost = D_zero
 If( control% LineUpCost ) order_cost = sum([( FOUR*abs(nmd_indx(i)-nmd_sorted_indx(i)) , i=1,size(nmd_indx) )]) 
 
-! include degenerate splitting cost ...
+! include splitting cost, for modes that should be degenerate but are not ...
 split_cost = TWO*sum(abs(chi(nmd_deg_indx(:,1))-chi(nmd_deg_indx(:,2))))
 
 ! finally apply weight on chi and evaluate cost ...
 If( control% use_no_weights) weight = D_one
 If( control% use_overweight) forall(i=1:size(overweight)) weight(i) = weight(i) + overweight(i)
-If( control% adiabatic_OPT ) chi = chi - AdiabaticStep*(N_of_CGSteps - AStep)
 
 If( nmd_window% inicio/=0 .AND. nmd_window% fim/=0) then
     weight(:nmd_window%inicio-1 ) = D_zero
@@ -207,6 +226,7 @@ allocate( tmp(size(nmd_indx),2) )
 k = 1
 do i = 1 , size(nmd_indx)
     do j = i+1 , size(nmd_indx)
+         ! identifies (i,j) <== (nmd_REF_erg(i) = nmd_REF_erg(j)) ...
          If( abs(chi(i)-Hesse_erg(nmd_indx(i))) == abs(chi(j)-Hesse_erg(nmd_indx(j))) ) then
 
               tmp(k,1) = i

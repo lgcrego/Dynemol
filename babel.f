@@ -204,6 +204,7 @@ do
     read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
     if ( keyword == "MASTER" ) exit
     N_of_atoms = N_of_atoms + 1
+    if ( N_of_atoms > 20000 ) stop " *** reading of input.pdb halted forcibly ; ckeck input.pdb file format *** "
 end do
 system%N_of_atoms = N_of_atoms
 

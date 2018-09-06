@@ -16,8 +16,8 @@ module good_vibrations_m
     use MM_ERG_class_m          , only : MM_OPT
     use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
-    use GA_m                    , only : Genetic_Algorithm
-    use MM_CG_driver_m          , only : justCG , CGAd , CGRc
+    use GA_m                    , only : Genetic_Algorithm   !  <== avatar for Genetic_Algorithm_MM
+    use MM_CG_driver_m          , only : justCG 
 
     public :: Optimize_Structure , Normal_Modes , Optimize_Parameters_Driver
 
@@ -43,26 +43,44 @@ real*8           , allocatable :: GA_Selection(:,:)
 logical                        :: F_ = .false. , T_ = .true. 
 type(LogicalKey)               :: key
 
+!====================================================================================================
+! Start FF-optimization by minimizing the MM energy ...
+
 print*, "==> kernel = energy"
-! instantiating MM ...
-key%bonds  = [T_,T_,F_]
-key%angs   = [F_,T_,F_,T_]
+! instantiating MM ; refer to cost_MM_tuning.f for details on KeyHolder components...
+key%bonds  = [T_,F_,F_]
+key%angs   = [T_,F_,F_,F_]
 key%diheds = F_
+key%dihedtype = 0
 
 MM_parms = FF_OPT( key , kernel = "energy" )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_parms , MM_parms%N_of_Freedom , local_minimum )
 
-! preprocess with GA method ...
-CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = "use_no_weights" )
+If( OPT_driver == "Just_Erg" ) stop
+!====================================================================================================
 
-CALL CG_driver( GA_Selection ) 
+!====================================================================================================
+! Continue FF-optimization by tuning the vibrational nomal modes ...
+!
+! directive options for evaluating  COST  function are:  
+!
+! "use_weights     ; weight = weight(:)
+! "use_no_weights" : weight = D_one
+! "use_overweight" : weight = weight + |W - W_REF|/W_REF
+! "LineUpCost"     : weight = weight + extra cost assigned for normal_modes that are out of place 
+
+! preprocess with GA method ...
+CALL Genetic_Algorithm( MM_parms , GA_Selection , directives = OPT_driver )
+
+CALL CG_driver( GA_Selection , directives = OPT_driver ) 
 
 CALL MM_parms % output( 0 ) 
 
 atom = atom0
 
 call normal_modes( )
+!====================================================================================================
 
 stop
 
@@ -70,11 +88,12 @@ end subroutine Optimize_Parameters_Driver
 !
 !
 !
-!====================================
- subroutine CG_Driver( GA_Selection )
-!====================================
+!=================================================
+ subroutine CG_Driver( GA_Selection , directives )
+!=================================================
 implicit none
-real*8           , allocatable , intent(inout) :: GA_Selection(:,:)
+real*8       , allocatable , intent(inout) :: GA_Selection(:,:)
+character(*)               , intent(in)    :: directives
 
 ! local variables ...
 integer                          :: i , GlobalMinimum , Top_Selection 
@@ -86,29 +105,7 @@ Top_Selection = size(GA_Selection(1,:))
 allocate( local_minimum(Top_Selection) , source = real_large )
 allocate( InitialCost  (Top_Selection)                       )
 
-select case( OPT_driver )
-
-    case( "justCG" , "GACG" )
-
-        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
-
-    case( "GACGRc" )
-
-        CALL CGRc  ( MM_parms , GA_Selection )
-
-!        nmd_window = integer_interval(0,0)
-
-        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
-        
-    case( "GACGAd" ) 
-        
-        CALL CGAd  ( MM_parms , GA_Selection )
-
-        CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost )
-
-    case default    
-        
-end select
+CALL justCG( MM_parms , GA_Selection , local_minimum , InitialCost , directives )
 
 Print 191, ( InitialCost(i) , local_minimum(i) , i = 1 , Top_Selection )
 
@@ -119,7 +116,7 @@ key           = KeyHolder( size(KeyHolder) )
 MM_parms      = FF_OPT( key , kernel = "NormalModes" , directives = "use_no_weights" )
 MM_parms % p  = GA_Selection(:,GlobalMinimum)
 
-Print 192, GlobalMinimum , MM_parms%cost() , RMSD()
+Print 192, GlobalMinimum , MM_parms%cost()
 Print 193, MM_parms%nmd_OPT_indx
 
 include 'formats.h'
@@ -139,6 +136,7 @@ type(MM_atomic) , allocatable :: equilibrium(:) , atom_fwd(:) , atom_bwd(:)
 real*8          , allocatable :: Hessian(:,:)
 real*8                        :: symmetric 
 type(R_eigen)                 :: Hesse
+logical                       :: exist
 
 !local parameters ...
 real*8 , parameter :: delta         = 1.d-8             ! <== displacement in Angs.
@@ -256,7 +254,8 @@ If( MM_parms%driver == "Parametrize" ) then
                   (nmd_NOPT_erg(i)                     - nmd_REF_erg ( i )) / nmd_REF_erg(i) * 100.0 
     end do
 
-    CALL system( "mv OPT_nmd_indx.inpt OPT_nmd_indx.old" )
+    INQUIRE( file ="OPT_nmd_indx.inpt" , EXIST=exist )
+    If( exist ) CALL system( "mv OPT_nmd_indx.inpt OPT_nmd_indx.old" )
 
     OPEN( unit=14 , file='OPT_nmd_indx.out' )
         write(14,*) size(MM_parms%nmd_OPT_indx)

@@ -18,7 +18,7 @@ module FF_OPT_class_m
     private
 
     type, extends(OPT_Parent)   :: FF_OPT
-        integer                 :: ITMAX_FF = 45!0           ! <== 100-300 is a good compromise of accuracy and safety
+        integer                 :: ITMAX_FF = 100           ! <== 100-300 is a good compromise of accuracy and safety
         real*8                  :: BracketSize_FF = 1.d-4   ! <== this value may vary between 1.0d-3 and 1.0d-4
         logical                 :: profiling_FF = .FALSE.
         character(len=30)       :: directives
@@ -30,13 +30,16 @@ module FF_OPT_class_m
         procedure :: output => dump_parameters
     end type FF_OPT
 
+
     interface FF_OPT
         module procedure  constructor
     end interface
 
+
     ! module variables ...
     character(len=11)                           :: method
     integer                                     :: bonds , angs , diheds
+    integer             , allocatable           :: flag(:)
     integer             , allocatable , target  :: nmd_list(:) , nmd_ref(:) 
     real*8              , allocatable , target  :: bond_target(:,:) , ang_target(:,:) , dihed_target(:,:)
     real*8              , allocatable           :: nmd_mtx(:,:)
@@ -49,6 +52,11 @@ module FF_OPT_class_m
 
     ! module parameters ...
     logical , parameter :: F_ = .false. , T_ = .true.
+
+    interface Select_Different
+        module procedure Select_Different_Default
+        module procedure Select_Different_Dihedrals
+    end interface
 
 contains
 !
@@ -64,7 +72,7 @@ character(*)      , optional , intent(in) :: directives
 type(FF_OPT) :: me 
 
 !local variable ...
-integer :: j 
+integer :: i , j 
 real*8  :: Just_do_it
 
 method = kernel
@@ -93,7 +101,7 @@ If( .NOT. done ) then
     allocate( ang         , source=Define_Pointer  ( molecule(1)%kang0   , ang_target   ) )
 
     where( abs(molecule(1)%kdihed0) < high_prec ) molecule(1)%kdihed0 = D_zero
-    allocate( dihed_target, source=Select_Different( molecule(1)%kdihed0                ) )
+    allocate( dihed_target, source=Select_Different( molecule(1)%kdihed0 , molecule(1)%funct_dihed ) )
     allocate( dihed       , source=Define_Pointer  ( molecule(1)%kdihed0 , dihed_target ) )
 
     ! the parameters = zero are not optimized ...
@@ -107,7 +115,13 @@ end if
 ! logical key to set the optimization routine ...
 forall( j=1:size(bonds_mask  (1,:)) )  bonds_mask(:,j)  = ( abs(bond_target (:,j)) > low_prec ) .AND. key%bonds(j)
 forall( j=1:size(angs_mask   (1,:)) )  angs_mask(:,j)   = ( abs(ang_target  (:,j)) > low_prec ) .AND. key%angs(j)
-forall( j=1:size(diheds_mask (1,:)) )  diheds_mask(:,j) = ( abs(dihed_target(:,j)) > low_prec ) .AND. key%diheds(j)
+do j = 1 , size(diheds_mask (1,:))
+do i = 1 , size(diheds_mask (:,1))
+ 
+    diheds_mask(i,j) = ( abs(dihed_target(i,j)) > low_prec ) .AND. key%diheds(j) .AND. (flag(i) == key%dihedtype)
+
+end do
+end do
 
 ! number of degrees of freedom in optimization space ...
 bonds  = count( bonds_mask  ) 
@@ -158,7 +172,7 @@ class(FF_OPT) , intent(inout)  :: me
 real*8                         :: cost
 
 ! local variables ...
-integer         :: i , j , info
+integer         :: i , j , info = 0
 real*8          :: energy 
     
 ! reset forces ...
@@ -175,7 +189,7 @@ forall( i=1:molecule(1)%nangs   , j=1:size(molecule(1)%kang0  (1,:)) ) molecule(
 forall( i=1:molecule(1)%ndiheds , j=1:size(molecule(1)%kdihed0(1,:)) ) molecule(1)%kdihed0(i,j) =  dihed(i,j)%PTR
 
 ! tracking the correct normal mode order ...
-CALL normal_modes( info )
+If( method == "NormalModes" ) CALL normal_modes( info )
 
 If( info /= 0 ) then ; cost = real_large ; return ; end If
 
@@ -253,7 +267,7 @@ integer         , optional , intent(in) :: iter
 ! local variables ...
 integer                         :: i , at1 , at2 , at3 , at4 , funct_dih
 character(3)                    :: funct_type
-real*8                          :: factor , dumb
+real*8                          :: factor , factor_1 , factor_2 , dumb
 character(len=:) , allocatable  :: string(:)
 
  open( unit = 51 , file = "topol-OPT.top" , status = "replace", action = "write" , position = "append" )
@@ -306,14 +320,34 @@ character(len=:) , allocatable  :: string(:)
 
         funct_type = molecule(1) % funct_angle(i)
 
-        factor = factor1 * imol
+        factor_1 = factor1 * imol
+        factor_2 = factor2 * imol
 
-        write(51,'(4A4,2F15.3)') atom(at1)%MMSymbol                 , &
-                                atom(at2)%MMSymbol                  , &
-                                atom(at3)%MMSymbol                  , &
-                                funct_type                          , &
-                                molecule(1)%kang0(i,2) / deg_2_rad  , &
-                                molecule(1)%kang0(i,1) / factor      
+        write(51,'(4A4,2F15.3)',advance="no") atom(at1)%MMSymbol  , &
+                                              atom(at2)%MMSymbol  , &
+                                              atom(at3)%MMSymbol  , &
+                                              funct_type       
+
+        select case( adjustl(molecule(1) % Angle_Type(i)) )
+
+            case ('harm') 
+
+                write(51,'(2F15.3)') molecule(1)%kang0(i,2) / deg_2_rad  , &
+                                     molecule(1)%kang0(i,1) / factor_1
+
+            case('urba')
+
+                write(51,'(4F15.3)') molecule(1)%kang0(i,2) / deg_2_rad   , &
+                                     molecule(1)%kang0(i,1) / factor_1    , &
+                                     molecule(1)%kang0(i,4) / nano_2_angs , &
+                                     molecule(1)%kang0(i,3) / factor_2   
+
+            case default
+
+                write(*,'(A5)',advance="no") adjustl(molecule(1) % Angle_Type(i))
+                stop " <== angle FF not supported in FF_OPT_class%output"
+
+        end select
     end if
  end do
  deallocate(string)
@@ -349,9 +383,9 @@ character(len=:) , allocatable  :: string(:)
 
             case ('cos')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
 
-                write(51,'(2F12.5,I8)') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
+                write(51,'(3F12.5)')    molecule(1)%kdihed0(i,1) / deg_2_rad  , &
                                         molecule(1)%kdihed0(i,2) / factor     , &  
-                                        molecule(1)%harm(i)
+                                        molecule(1)%kdihed0(i,3)
 
             case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
                           ! Eq. 4.61 (GMX 5.0.5 manual)
@@ -364,7 +398,8 @@ character(len=:) , allocatable  :: string(:)
                                      molecule(1)%kdihed0(i,6) / factor  
             case default
 
-                Print*, "dihedral FF not supported in FF_OPT_class%output"
+                write(*,'(A5)',advance="no") adjustl(molecule(1) % Dihedral_Type(i))
+                stop " <== dihedral FF not supported in FF_OPT_class%output"
 
         end select
     end if
@@ -381,12 +416,12 @@ end subroutine dump_parameters
 !
 !
 !
-!==========================================
- function Select_Different( a ) result( b )
-!==========================================
+!==================================================
+ function Select_Different_Default( a ) result( b )
+!==================================================
 implicit none
-real*8        , intent(in)  :: a(:,:)
-real*8        , allocatable :: b(:,:)
+real*8 , intent(in)  :: a(:,:)
+real*8 , allocatable :: b(:,:)
 
 ! local variables ...
 integer                 :: j , k , diff_size
@@ -416,7 +451,58 @@ allocate( b , source=tmp(1:diff_size,:) )
 
 deallocate( tmp )
 
-end function Select_Different
+end function Select_Different_Default
+!
+!
+!
+!=======================================================================
+ function Select_Different_Dihedrals( a , funct ) result( b )
+!=======================================================================
+implicit none
+real*8  , intent(in)  :: a(:,:)
+integer , intent(in)  :: funct(:)
+real*8  , allocatable :: b(:,:)
+
+! local variables ...
+integer                 :: j , k , diff_size
+integer , allocatable   ::  aux(:)
+real*8  , allocatable   ::  tmp(:,:) 
+
+!================================================================================
+! select different elements of a(:,:) which satisfy dihedral type selection ...
+!================================================================================
+
+allocate( tmp (size(a(:,1)),size(a(1,:))), source=D_zero )
+allocate( aux (size(a(:,1))) )
+
+! select different elements of a ...
+diff_size = 1
+tmp(1,:) = a(1,:)
+aux(1)   = funct(1)
+
+do j = 2 , size(a(:,1))
+    
+    do k = 1 , diff_size
+        if( all(tmp(k,:) == a(j,:)) )  exit
+    end do
+
+    ! there's some difference between a(j,:) and any of the other tmp(diff_size,:) ...
+    if( k > diff_size ) then
+        tmp(k,:)  = a(j,:)
+        aux(k)    = funct(j)
+        diff_size = k
+    end if
+
+end do
+
+allocate( b    , source=tmp(1:diff_size,:) )
+allocate( flag , source=aux(1:diff_size)   )
+
+deallocate( tmp , aux )
+
+end function Select_Different_Dihedrals
+!
+!
 !
 !
 !
@@ -435,7 +521,7 @@ allocate( c(size(a(:,1)),size(a(1,:))) )
 
 ! creates a copy of a that points to b, i.e., c=a and c => b ...
 do i = 1 , size(b(:,1))
-    do j = 1  , size( a(:,1) )
+    do j = 1  , size(a(:,1))
         if( all(a(j,:) == b(i,:)) ) forall( k=1:size(a(1,:)) ) c(j,k)%PTR => b(i,k)
     end do
 end do
@@ -554,17 +640,15 @@ end subroutine normal_modes
 !
 !
 !
-!===========================================
+!=============================================
  function set_to( directives ) result(control)
-!===========================================
+!=============================================
 implicit none
 character(*) , intent(in) :: directives
 type(MMOPT_Control)       :: control
 
 control% preprocess     = merge( T_ , F_ , verify("initial_preprocess"   ,directives) == 0 ) 
-control% adiabatic_OPT  = merge( T_ , F_ , verify("adiabatic_OPT"        ,directives) == 0 ) 
 control% use_no_weights = merge( T_ , F_ , verify("no_weight"            ,directives) == 0 ) 
-control% new_adiabat    = merge( T_ , F_ , verify("preprocess_adiabatic" ,directives) == 0 ) 
 control% LineUpCost     = merge( T_ , F_ , verify("LineUp"               ,directives) == 0 )
 control% use_overweight = merge( T_ , F_ , verify("overweight"           ,directives) == 0 )
 

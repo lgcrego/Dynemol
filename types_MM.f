@@ -66,7 +66,6 @@ public :: MMOPT_Control, Logicalkey
         character(4)        , allocatable   :: angle_type(:)
         character(4)        , allocatable   :: dihedral_type(:)
         integer                             :: Nharm
-        integer             , allocatable   :: harm(:)
         integer                             :: Nbonds14
         integer             , allocatable   :: bonds14(:,:)
         integer                             :: NintraLJ
@@ -110,8 +109,9 @@ public :: MMOPT_Control, Logicalkey
     type LogicalKey
         logical       :: bonds(3)    = .false.
         logical       :: angs(4)     = .false.
-        logical       :: diheds(7)   = .false.
+        logical       :: diheds(15)  = .false.
         logical       :: adiabatic   = .false.
+        integer       :: dihedtype   
         character(20) :: comment
     end type LogicalKey
 

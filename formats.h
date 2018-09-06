@@ -138,7 +138,7 @@
 
 191   FORMAT(2F32.6/)
 
-192   FORMAT(1x,'Global Minimun = ',I2,'    /    Cost = ',F12.6,'   /    Geometry RMSD = ',F10.6)  
+192   FORMAT(1x,'Global Minimun = ',I2,'    /    Cost(w/out overweight) = ',F12.6)  
 
 193   FORMAT(/,1x,"OPT_nmd_indx",/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I,/,6I)  
 
@@ -146,3 +146,10 @@
 
 200   FORMAT(1x,'Center of Mass Force (MO = ',I3,') = ',F10.7,'   eV/Angs')     
 
+201 format(1x,'Number of atoms in     ' , a3' = ',I6)
+
+202 format(1x,'Number of bonds in     ' ,a3 ' = ',I6)
+
+203 format(1x,'Number of angles in    ' ,a3 ' = ',I6)
+
+204 format(1x,'Number of dihedrals in ' ,a3 ' = ',I6)
