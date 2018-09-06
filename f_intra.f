@@ -300,8 +300,8 @@ do i = 1 , MM % N_of_molecules
                     sr2 = ( ( atom(ati) % sig14 * atom(atj) % sig14 ) * ( atom(ati) % sig14 * atom(atj) % sig14 ) ) / rklq
 
             end select
-            eps   =  atom(ati) % eps14 * atom(atj) % eps14 
-     
+            eps   =  atom(ati) % eps14 * atom(atj) % eps14
+
             ! Nbond_parms directive on ...
             read_loop1: do  n = 1, size(SpecialPairs14)
                 flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
@@ -364,98 +364,8 @@ do i = 1 , MM % N_of_molecules
 end do
 
 !====================================================================
-! Lennard-Jones intramolecular interactions ...
-do i = 1 , MM % N_of_molecules
-    do j   = 1 , molecule(i) % NintraLJ
-        ati  = molecule(i) % IntraLJ(j,1) 
-        ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
-        atj  = molecule(i) % IntraLJ(j,2) 
-        atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
-        
-        if ( atom(atj) % flex .OR. atom(ati) % flex ) then
-            chrgi  = atom(ati) % charge
-            chrgj  = atom(atj) % charge
-            rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
-            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-            rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
-            if ( rklq < rcutsq ) then
+call LENNARD_JONES()
 
-            ! Lennard Jones ...
-            select case ( MM % CombinationRule )
-
-                case (2)
-                    ! AMBER FF :: GMX COMB-RULE 2
-                    sr2 = ( ( atom(ati) % sig + atom(atj) % sig ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
-
-                case (3)
-                    ! OPLS  FF :: GMX COMB-RULE 3
-                    sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
-
-            end select
-            eps   =  atom(ati) % eps * atom(atj) % eps
-
-            ! Nbond_parms directive on ...
-            read_loop: do  n = 1, size(SpecialPairs)
-                flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
-               
-                if ( flag1 .OR. flag2 ) then
-                    select case ( MM % CombinationRule )
-
-                       case (2)
-                          ! AMBER FF :: GMX COMB-RULE 2
-                          sr2 = ( (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) ) / rklq
-
-                       case (3)
-                          ! OPLS  FF :: GMX COMB-RULE 3
-                          sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
-
-                    end select
-                    eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
-                    exit read_loop
-
-                end if
-                cycle  read_loop
-            end do read_loop
-
-            rklsq = SQRT(rklq)
-            sr6   = sr2 * sr2 * sr2
-            sr12  = sr6 * sr6
-            fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            ! with force cut-off ...
-            fs    = (fs / rklq) - fscut(ati1,atj1) / rklsq     
-            atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
-            atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
-            ! factor used to compensate factor1 ...
-            ! factor3 = 1.0d-20
-            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 )
-            ! alternative formula with cutoff ...
-            sterm  = sterm - vscut(ati1,atj1) + fscut(ati1,atj1) * ( rklsq - rcut ) 
-
-            !  Real part (Number of charges equal to the number of sites)
-            sr2   = 1.d0 / rklq
-            KRIJ  = KAPPA * rklsq
-            expar = EXP( -(KRIJ*KRIJ) )
-            freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar )
-            ! with force cut-off ...
-            freal = freal - frecut / rklsq * chrgi * chrgj   
-            atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
-            atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
-            ! factor used to compensate factor1 ...
-            ! factor3 = 1.0d-20
-            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
-            ! alternative formula with cutoff ...
-            tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
-            LJ_intra   = LJ_intra   + sterm
-            Coul_intra = Coul_intra + tterm
-
-            end if
-        end if
-    end do
-end do
 
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
@@ -692,24 +602,35 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
 end select
 
 end subroutine not_gmx
+
+! Error function.
 !
+! Used to approximate values in statistics.
+! For more info, see:
+!   https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
 !
+! @param X[in]
 !
+! @return ERFC
 !===================
  function ERFC ( X )
-!===================
+!==================
  real*8 :: ERFC
- real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
- parameter ( A1 = 0.254829592, A2 = -0.284496736 ) 
- parameter ( A3 = 1.421413741, A4 = -1.453122027 ) 
- parameter ( A5 = 1.061405429, P  =  0.3275911   ) 
+ real*8, intent(in) :: X
+ real*8 :: A1, A2, A3, A4, A5, P, T, TP
+ ! Values taken from the wikipedia article
+    parameter (A1 =  0.254829592)
+    parameter (A2 = -0.284496736)
+    parameter (A3 =  1.421413741)
+    parameter (A4 = -1.453122027)
+    parameter (A5 =  1.061405429)
+    parameter (P  =  0.3275911)
 
- T    = 1.0 / ( 1.0 + P * X )
- XSQ  = X * X
- TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
- ERFC = TP * EXP ( -XSQ )
-
+    T = 1.0 / (1.0 + P * X)
+    TP = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
+    ERFC = TP * EXP(-(X ** 2))
 end function ERFC
+
 !
 !
 !
@@ -726,6 +647,160 @@ end function ERFC
  end if
 
 end function DEL
+!
+!
+!
+! Get the flags status based on the current pair number and analysed atoms
+!
+! @param[in] pair_number
+! @param[in] ati
+! @param[in] atj
+! @param[out] flag1
+! @param[out] flag2
+subroutine GET_FLAGS(flag1, flag2, pair_number, ati, atj)
+    implicit none
+    logical, intent(out) :: flag1, flag2
+    integer, intent(in) :: pair_number, ati, atj
+    character(4) :: mm_symbols1, mm_symbols2, symbol_i, symbol_j
+
+    symbol_i = atom(ati) % MMSymbol
+    symbol_j = atom(atj) % MMSymbol
+    mm_symbols1 = SpecialPairs(pair_number)%MMSymbols(1)
+    mm_symbols2 = SpecialPairs(pair_number)%MMSymbols(2)
+
+    flag1 = adjustl(mm_symbols1) == adjustl(symbol_i)
+    flag1 = flag1 .AND. (adjustl(mm_symbols2) == adjustl(symbol_j))
+    flag2 = adjustl(mm_symbols2) == adjustl(symbol_i)
+    flag2 = flag2 .AND. (adjustl(mm_symbols1) == adjustl(symbol_j))
+end subroutine GET_FLAGS
+!
+!
+!
+!
+!==========================
+ subroutine LENNARD_JONES()
+!==========================
+    implicit none
+    real*8 :: local_fnonbd(size(atom), 3)
+    real*8 :: local_fnonch(size(atom), 3)
+
+    local_fnonbd = 0
+    local_fnonch = 0
+    !$OMP parallel &
+    !$OMP   default(shared) &
+    !$OMP   private(i) &
+    !$OMP   reduction(+ : LJ_intra, Coul_intra, local_fnonbd, local_fnonch)
+    do i = 1 , MM % N_of_molecules
+        !$OMP do &
+        !$OMP   schedule(static) &
+        !$OMP   private(j, n, ati, ati1, atj, atj1, chrgi, chrgj, rij, rklq, rklsq, sr2, sr6, sr12, &
+        !$OMP           eps, flag1, flag2, fs, sterm, tterm, expar, freal, KRIJ)
+        do j   = 1 , molecule(i) % NintraLJ
+            ati  = molecule(i) % IntraLJ(j,1)
+            ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+            atj  = molecule(i) % IntraLJ(j,2)
+            atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
+
+            if (.NOT. (atom(atj)%flex .OR. atom(ati)%flex)) then
+                cycle
+            end if
+
+            chrgi = atom(ati)%charge
+            chrgj = atom(atj)%charge
+            rij(:) = atom(ati)%xyz(:) - atom(atj)%xyz(:)
+            rij(:) = rij(:) - MM%box(:) * DNINT(rij(:)*MM % ibox(:)) * PBC(:)
+            rklq = SUM(rij(:) ** 2)
+
+            if (.NOT. (rklq < rcutsq)) then
+                cycle
+            end if
+
+            ! Lennard Jones ...
+            ! AMBER FF :: GMX COMB-RULE 2
+            if (MM%CombinationRule == 2) then
+                sr2 = (atom(ati)%sig + atom(atj)%sig) ** 2 / rklq
+            ! OPLS  FF :: GMX COMB-RULE 3
+            else if (MM%CombinationRule == 3) then
+                sr2 = (atom(ati)%sig ** 2) * (atom(atj)%sig ** 2) / rklq
+            end if
+
+            eps = atom(ati)%eps * atom(atj)%eps
+
+            ! Nbond_parms directive on ...
+            do  n = 1, SIZE(SpecialPairs)
+                call GET_FLAGS(flag1, flag2, n, ati, atj)
+
+                if (.NOT. (flag1 .OR. flag2)) then
+                    cycle
+                end if
+
+                ! AMBER FF :: GMX COMB-RULE 2
+                if (MM % CombinationRule == 2) then
+                    sr2 = (SpecialPairs(n)%Parms(1) * 2) ** 2 / rklq
+                ! OPLS  FF :: GMX COMB-RULE 3
+                else if (MM % CombinationRule == 3) then
+                    sr2 = SpecialPairs(n)%Parms(1) ** 4 / rklq
+                end if
+
+                eps = SpecialPairs(n)%Parms(2) ** 2
+                exit
+            end do
+
+            rklsq = SQRT(rklq)
+            fs = 24.0 * eps * (2.0 * sr2 ** 6.0 - sr2 ** 3.0)
+            ! with force cut-off ...
+            fs = (fs / rklq) - fscut(ati1, atj1) / rklsq
+
+            ! factor3 used to compensate factor1 ...
+            sterm = 4.0 * eps * factor3 * (sr2 ** 6.0 - sr2 ** 3.0)
+            ! alternative formula with cutoff ...
+            sterm = sterm - vscut(ati1, atj1) + fscut(ati1, atj1) * (rklsq - rcut)
+
+
+            !  Real part (Number of charges equal to the number of sites)
+            sr2 = 1.0 / rklq
+            KRIJ  = KAPPA * rklsq
+            expar = EXP(-(KRIJ ** 2.0))
+            freal = coulomb * chrgi * chrgj * (sr2 / rklsq)
+            freal = freal * (ERFC(KRIJ) + 2.0 * rsqpi * KAPPA * rklsq * expar)
+            ! with force cut-off ...
+            freal = freal - frecut / rklsq * chrgi * chrgj
+
+            ! factor used to compensate factor1 ...
+            ! factor3 = 1.0d-20
+            tterm = (coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)) / rklsq
+            ! alternative formula with cutoff ...
+            tterm = tterm - vrecut * chrgi * chrgj
+            tterm = tterm + frecut * chrgi * chrgj * (rklsq - rcut) * factor3
+
+            ! atom(ati)%fnonbd(:) = atom(ati)%fnonbd(:) + fs * rij(:)
+            ! atom(atj)%fnonbd(:) = atom(atj)%fnonbd(:) - fs * rij(:)
+            ! atom(ati)%fnonch(:) = atom(ati)%fnonch(:) + freal * rij(:)
+            ! atom(atj)%fnonch(:) = atom(atj)%fnonch(:) - freal * rij(:)
+
+            local_fnonbd(ati,:) = local_fnonbd(ati,:) + fs * rij(:)
+            local_fnonbd(atj,:) = local_fnonbd(atj,:) - fs * rij(:)
+            local_fnonch(ati,:) = local_fnonch(ati,:) + freal * rij(:)
+            local_fnonch(atj,:) = local_fnonch(atj,:) - freal * rij(:)
+
+            LJ_intra   = LJ_intra   + sterm
+            Coul_intra = Coul_intra + tterm
+        end do
+        !$OMP end do
+
+    end do
+    !$OMP end parallel
+
+    !$OMP parallel do schedule(static) default(shared)
+    do n = 1, size(atom)
+        atom(n)%fnonbd(:) = atom(n)%fnonbd(:) + local_fnonbd(n,:)
+        atom(n)%fnonch(:) = atom(n)%fnonch(:) + local_fnonch(n,:)
+    end do
+    !$OMP end parallel do
+
+end subroutine LENNARD_JONES
+
+
 !
 !
 end module F_intra_m
