@@ -130,7 +130,7 @@ else
     If( DensityMatrix ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI_el, UNI_hl )
 
 !   save the initial GaussianCube file ...
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
+    If( GaussianCube ) == 0 ) then
 
         ! LOCAL representation for film STO production ...
         AO_bra = DUAL_bra

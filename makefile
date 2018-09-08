@@ -45,8 +45,6 @@ CC_FLAGS = -O2 $(CC_PARALLEL)
 #######################
 # CUDA CONFIGURATIONS #
 #######################
-# This configurations were not changed
-ifneq (,$(findstring USE_GPU, $(GPU_DEFS)))
 # Uncomment the lines below when compiling for GPUs
 # GPU_DEFS options:
 #   -DGPU_TIMING       : Print timings (CPU/GPU)
@@ -58,6 +56,7 @@ ifneq (,$(findstring USE_GPU, $(GPU_DEFS)))
 #   -DGPU_PIN_MEM_WORK : Use pinned memory for work spaces (in C code)
 #GPU_DEFS  = -DUSE_GPU
 #
+ifneq (,$(findstring USE_GPU, $(GPU_DEFS)))
 # CUDA compiler
 NVCC = nvcc
 # compute capality (depends on your GPU, check!)
