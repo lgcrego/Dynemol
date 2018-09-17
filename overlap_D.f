@@ -346,15 +346,32 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
     real*8 :: rl(-mxl:mxl,-mxl:mxl,0:mxl)
     real*8 :: rl2(-mxl:mxl,-mxl:mxl,0:mxl)
 
-    !$OMP parallel do schedule(static) default(shared) private(i)
-    do i = 1, size(S_matrix, 1)
-        S_matrix(i,:) = 0
+    ib = site
+
+    !$OMP parallel do schedule(static) &
+    !$OMP   default(shared) private(ia, jb, ja, a, b)
+    do ia = ib + 1, a_system%atoms
+        do jb = 1, atom(b_system%AtNo(ib))%DOS
+            do ja = 1, atom(a_system%AtNo(ia))%DOS
+                b = b_system%BasisPointer(ib) + jb
+                a = a_system%BasisPointer(ia) + ja
+                a = a - a_basis(a)%copy_No * size(b_basis)
+                S_matrix(a,b) = 0
+            end do
+        end do
     end do
     !$OMP end parallel do
 
-    ib = site
+    ! The parallel region below is a very complicated one. It takes many public
+    ! matrices, for reading, and performs lots of writes in a single, shared,
+    ! matrix based on the values read from the other matrices. The order of
+    ! these writes is very confusing and hard to predict.
+    ! This causes race conditions when not using dynamic(1) schedule.
+    ! The use of ATOMIC operations fixes the problem. But it is not a solution
+    ! for concurrency problems that we face. And it makes the code slower.
 
-    !$OMP parallel do schedule(dynamic,1) default(shared) &
+    !$OMP parallel do &
+    !$OMP default(shared) schedule(dynamic,1) &
     !$OMP private(ia, atom_not_moved, Rab, jb, ja, b, a, k, nb, na, lb, la, &
     !$OMP         mb, ma, aux, msup, solnorm, j, i, expb, expa, solvec, anor, &
     !$OMP         m, sol_partial, sux, rl, rl2)
@@ -426,20 +443,20 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
                 forall(k=1:msup) sux(k) = solnorm(k) * (rl(ma,-k,la) * rl(mb,-k,lb) + rl(ma,k,la) * rl(mb,k,lb))
 
                 a = a - a_basis(a)%copy_No * size(b_basis)
+                !$OMP atomic
                 S_matrix(a,b) = S_matrix(a,b) + SUM(sux(0:msup))
+                !$OMP atomic
+                S_matrix(b,a) = S_matrix(b,a) + SUM(sux(0:msup))
             end do
         end do
     end do
     !$OMP end parallel do
 
     ! symmetric overlap matrix
-    !$OMP parallel do &
-    !$OMP   default(shared) &
-    !$OMP   private(i) &
-    !$OMP   schedule(static)
-    do i = 1, size(b_basis)
+    b = size(b_basis)
+    !$OMP parallel do private(i) shared(S_matrix, b)
+    do i = 1, b
         S_matrix(i,i) = 1
-        S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
     end do
     !$OMP end parallel do
 end subroutine PULAY_OVERLAP
