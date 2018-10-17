@@ -336,6 +336,8 @@ CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_rest
 
 CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
+CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
+
 If( QMMM ) then 
 
     allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
@@ -345,6 +347,8 @@ If( QMMM ) then
     CALL DP_stuff ( "Induced_DP" )
 
 end If
+
+Allocate( past_AO_bra (size(ExCell_basis),n_part) , past_AO_ket (size(ExCell_basis),n_part))
 
 end subroutine Restart_stuff
 !
