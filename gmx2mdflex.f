@@ -330,6 +330,9 @@ FF % residue  = adjustl(FF % residue)
 FF % Symbol   = adjustl(FF % Symbol)
 FF % MMSymbol = adjustl(FF % MMSymbol)
 
+! convert MMSymbol to upper case ...
+forall( i=1:size(FF) ) FF(i)% MMSymbol = TO_UPPER_CASE( FF(i)% MMSymbol )
+
 deallocate( InputChars , InputIntegers )
 
 100 format(a18)

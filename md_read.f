@@ -601,6 +601,11 @@ character(len=:) , allocatable  :: string(:)
 
  !========================================================================================================
  write(51, *) " "
+ ! Print # of atoms-types
+ write (51, 205) MM % N_of_AtomTypes , &
+                 count( [ ( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) , i=1,size(FF)) ] ) 
+
+ write(51, *) " "
  do i = 1 , MM % N_of_species
  ! Print # of atoms
      write (51, 201) species(i) % residue, species(i) % N_of_atoms
@@ -611,12 +616,31 @@ character(len=:) , allocatable  :: string(:)
  ! Print # of dihedrals
      write(51, 204) species(i) % residue, species(i) % Ndiheds
  end do
+ !========================================================================================================
+ ! atom types saving ...
  write(51, *) " "
+ write(51,"(A)") "[ atomtypes ]"               
 
+ do i = 1 , size(FF)
+
+    if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
+
+        ! warns if paramater was not assigned to this bond ...
+        flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
+
+        write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
+                                      FF(i)% MMSymbol                        , & 
+                                      FF(i)% sig                             , &
+                                      FF(i)% eps                             , &
+                                      flag
+
+    end if
+
+ end do
  !========================================================================================================
  ! bond parms saving ...
+ write(51, *) " "
  write(51,"(A)") "[ bondtypes ]"               
- write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
 
  allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nbonds) )
  do i = 1 , molecule(1)%Nbonds
@@ -650,7 +674,6 @@ character(len=:) , allocatable  :: string(:)
  ! angle parms saving ...
  write(51,*) " "
  write(51,"(A)") "[ angletypes ]"
- write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
 
  allocate( character(len=3*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nangs) )
  do i = 1 , molecule(1)%Nangs
@@ -705,7 +728,6 @@ character(len=:) , allocatable  :: string(:)
  ! dihedral parms saving ...
  write(51,*) " "
  write(51,"(A)") "[ dihedraltypes ]"
- write(51,"(A)") "; Optimized by OOP: flexible inheritance of objects for nonlinear optimization"
 
  allocate( character(len=4*len(atom(at1)%MMSymbol)+len(molecule(1)%Dihedral_Type)) :: string(molecule(1)%Ndiheds) )
  do i = 1 , molecule(1)%Ndiheds
