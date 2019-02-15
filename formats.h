@@ -151,3 +151,5 @@
 203 format(1x,'Number of angles in    ' ,a3 ' = ',I6)
 
 204 format(1x,'Number of dihedrals in ' ,a3 ' = ',I6)
+
+205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
