@@ -153,3 +153,11 @@
 204 format(1x,'Number of dihedrals in ' ,a3 ' = ',I6)
 
 205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
+
+206 format(1x,'NonBonded FF type       = ' , I6)
+
+207 format(1x,'Combination Rule        = ',I6)
+
+208 format(1x,'Coulomb 1-4 scale       = ',F6.4)
+
+209 format(1x,'van der Walls 1-4 scale = ',F6.4)

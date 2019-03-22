@@ -367,7 +367,7 @@ allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
 allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
-forcefield = 2
+forcefield = 2           ! 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
   
 open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 

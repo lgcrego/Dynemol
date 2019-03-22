@@ -118,12 +118,11 @@ do a = 1 , MM % N_of_species
 
         end do
         rewind 33
-
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
           read(33,100) keyword
-          if( verify( "!NBOND:" , keyword ) == 0 ) exit
+          if( verify( "!NBOND" , keyword ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nbonds
@@ -151,7 +150,7 @@ do a = 1 , MM % N_of_species
         ! Angle parameters :: reading ...
         do
           read(33,100) keyword
-          if( verify( "!NTHETA:" , keyword ) == 0 ) exit
+          if( verify( "!NTHETA" , keyword ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nangs
@@ -166,8 +165,8 @@ do a = 1 , MM % N_of_species
         species(a) % Nangs = Nangs
 
         allocate( species(a) % angs        ( Nangs , 3 ) )
-         allocate( species(a) % funct_angle ( Nangs     ) )
-         allocate( species(a) % angle_type  ( Nangs     ) )
+        allocate( species(a) % funct_angle ( Nangs     ) )
+        allocate( species(a) % angle_type  ( Nangs     ) )
 
         forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
 
@@ -183,7 +182,7 @@ do a = 1 , MM % N_of_species
         !reading normal dihedrals ...
         do
           read(33,100,iostat=ioerr) keyword
-          if( verify( "!NPHI:" , keyword ) == 0 ) exit
+          if( verify( "!NPHI" , keyword ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Ndiheds
@@ -200,7 +199,7 @@ do a = 1 , MM % N_of_species
         !reading improper dihedrals ...
         do
           read(33,100,iostat=ioerr) keyword
-          if( verify( "!NIMPHI:" , keyword ) == 0 ) exit
+          if( verify( "!NIMPHI" , keyword ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nimpropers
@@ -290,6 +289,8 @@ integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes 
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NImproperTypes, NBondParms 
+real*8                          :: SCEE , SCNB
+character(3)                    :: dummy_char
 character(18)                   :: keyword
 character(200)                  :: line
 logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6
@@ -301,15 +302,28 @@ allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! NAMD FF definitions ... 
-forcefield = 2
-MM % fudgeQQ = 1.0
-MM % fudgeLJ = 1.0
-MM % CombinationRule = 2
+forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
   
 open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"input.prm" file not found; terminating execution'
+
+!=====================================================================================
+!  reading  FF DEFAULTS ...
+    do
+        read(33,100) keyword
+        if( verify( "GAFF" , keyword ) == 0 ) exit
+    end do
+
+    read(33,*) dummy_char
+    read(33,*) MM% CombinationRule, SCNB, SCEE 
+
+    MM % fudgeQQ = 1.d0 / SCEE
+    MM % fudgeLJ = 1.d0 / SCNB
+
+!=====================================================================================
+!  reading  ATOMS ...
 
     ! reading the number of ATOMS ...
     do
@@ -409,7 +423,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
    
     do i = 1 , NangsTypes
         ! Harmonic potential ...
-        ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+        ! factor1 = 1.0d26      <== Factor used to correct the unis read fom Gromacs
         if( AngleParameters(i,3) == D_zero ) then 
            Angle_Type(i) = 1 
            funct_angle(i) = "harm"
@@ -485,7 +499,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
     Dihed_Type(:NdihedTypes)                             = 9 
     Dihed_Type(NdihedTypes+1:NdihedTypes+NImproperTypes) = 2 
     NdihedTypes = NdihedTypes + NImproperTypes
-    
+
     forall(k=1:4) DihedSymbols(:NdihedTypes,k)    = InputChars(:NdihedTypes,k)
     forall(k=1:3) DihedParameters(:NdihedTypes,k) = InputReals(:NdihedTypes,k)
 
@@ -493,10 +507,10 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
         select case( Dihed_Type(i) )
            case( 9 )
                 ! V = k[1 + cos(n.phi - theta)] (charmm; multiple)
-                ! factor1 = 1.0d26      <== Factor used to correct the unis readed from Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kcal.mol⁻¹) * factor1 * imol * cal_2_J
-                ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
+                ! kdihed0(:,3) = n       ==> multiplicity 
                 DihedParameters(i,1) = InputReals(i,3) * deg_2_rad
                 DihedParameters(i,2) = InputReals(i,1) * factor1 * imol * cal_2_J
                 DihedParameters(i,3) = InputReals(i,2) 
@@ -511,6 +525,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
         end select 
     end do
+
 !=====================================================================================
 !  NonBonding parameters :: reading ...
     do
@@ -539,7 +554,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
     NBondParms = i - 1
 
     do i = 1 , NBondParms
-        where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( FF % MMSymbol(1:2) // "*" )  == InputChars(i,1) ) )
+        where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( adjustR(FF % MMSymbol(1:2)) // "*" )  == InputChars(i,1) ) )
             FF % sig = InputReals(i,3)
             FF % eps = abs(InputReals(i,2))
         end where
@@ -550,7 +565,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
     do i = 1 , NBondParms
         if( InputReals(i,5) /= D_zero ) then
-            where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( FF % MMSymbol(1:2) // "*" ) == InputChars(i,1) ) )
+            where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( adjustR(FF % MMSymbol(1:2)) // "*" ) == InputChars(i,1) ) )
                 FF % sig14 = InputReals(i,6)
                 FF % eps14 = abs(InputReals(i,5)) 
             end where 
@@ -562,7 +577,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
     FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
-    FF % sig14 = ( FF % sig14 * TWO ) / (2**(1.d0/6.d0))  ! amber_LJ
+    FF % sig14 = ( FF % sig14 * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
 
     select case( MM % CombinationRule )
 
@@ -642,7 +657,7 @@ do a = 1 , MM % N_of_species
     read_loop0: do n = 1 , species(a) % Ndiheds
         ! control variables to multiple dihs ...
         j = 0 ; l = 0 ; l1 = 0 ; j1 = 0 
-        
+
         read_loop7: do k = 1 , NdihedTypes 
 
             ! if funct = 9 (chrm) (multiple) 
@@ -676,13 +691,25 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 9 )
 
-                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+!                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+!                        ( Dihed_Type(k) == 9 )
+
+!                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &   ######## something strange here
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+!                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. & ######## and here
+!                        ( Dihed_Type(k) == 9 )
+
+                flag5 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        (                                                             'X' == adjustl(DihedSymbols(k,4)) ) .AND. &
                         ( Dihed_Type(k) == 9 )
 
-                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &
+                flag6 = (                                                             'X' == adjustl(DihedSymbols(k,1)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &

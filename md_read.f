@@ -6,7 +6,7 @@ module MD_read_m
     use parameters_m            , only : restart , ad_hoc , driver , preview
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
-    use for_force               , only : KAPPA, Dihedral_potential_type, rcut
+    use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
     use gmx2mdflex              , only : itp2mdflex, top2mdflex
     use namd2mdflex             , only : psf2mdflex, prm2mdflex, convert_NAMD_velocities
@@ -591,7 +591,7 @@ end subroutine MMSymbol_2_Symbol
 implicit none
 
 ! local variabbles ...
-integer                         :: i , at1 , at2 , at3 , at4 , funct_dih
+integer                         :: i , at1 , at2 , at3 , at4 , funct_dih , multiples
 real*8                          :: factor , factor_1 , factor_2 , dumb
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
@@ -609,12 +609,22 @@ character(len=:) , allocatable  :: string(:)
  ! Print # of atoms
      write (51, 201) species(i) % residue, species(i) % N_of_atoms
  ! Print # of bonds
-     write(51,202 ), species(i) % residue, species(i) % Nbonds
+     write(51,202 )  species(i) % residue, species(i) % Nbonds
  ! Print # of angles
      write(51, 203) species(i) % residue, species(i) % Nangs
  ! Print # of dihedrals
      write(51, 204) species(i) % residue, species(i) % Ndiheds
  end do
+ !========================================================================================================
+ ! Force Field Parameters ...
+ write(51, *) " "
+ write(51,"(A)") "Force Field Parameters:"               
+
+ write(51, 206) forcefield
+ write(51, 207) MM % CombinationRule
+ write(51, 208) MM % fudgeQQ
+ write(51, 209) MM % fudgeLJ
+
  !========================================================================================================
  ! atom types saving ...
  write(51, *) " "
@@ -636,6 +646,12 @@ character(len=:) , allocatable  :: string(:)
     end if
 
  end do
+ !========================================================================================================
+ ! bond parms saving ...
+ write(51, *) " "
+ write(51,"(A)") "[ charges ]"               
+
+ write(51,"(A5,F8.4,A5)") (atom(i)% MMSymbol , atom(i) % MM_Charge , merge("<==" , "   " , atom(i) % MM_Charge == 0), i = 1,size(atom))
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
@@ -752,7 +768,7 @@ character(len=:) , allocatable  :: string(:)
                                           atom(at3)%MMSymbol                  , &
                                           atom(at4)%MMSymbol                  , &
                                           funct_dih      
-
+                                      
         select case( adjustl(molecule(1) % Dihedral_Type(i)) )
 
             case ('cos' , 'imp')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
@@ -772,6 +788,40 @@ character(len=:) , allocatable  :: string(:)
                                         molecule(1)%kdihed0(i,5) / factor     , &
                                         molecule(1)%kdihed0(i,6) / factor     , &
                                         flag
+
+            case ('harm') ! V = 1/2.k[cos(phi) - cos(phi0)]²
+                     ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+                     ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
+                     ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
+
+                write(51,'(6F12.5,A3)') molecule(1)%kdihed0(i,1) / factor     , &
+                                        molecule(1)%kdihed0(i,2) / factor     , &  
+                                        molecule(1)%kdihed0(i,3) / factor     , &
+                                        flag
+
+            case ('chrm')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) ; Eq. 4.60 (GMX 5.0.5 manual)
+
+
+                multiples = count(molecule(1)%kdihed0(i,:) /= 0) 
+
+                    If( multiples <= 9 ) then   
+
+                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
+                                                           molecule(1)%kdihed0(i,2) / factor     , &  
+                                                           molecule(1)%kdihed0(i,3)              
+                    if( multiples >= 4 ) then    
+
+                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,4) / deg_2_rad  , &
+                                                           molecule(1)%kdihed0(i,5) / factor     , &  
+                                                           molecule(1)%kdihed0(i,6)              
+                    if( multiples >= 7 ) then    
+
+                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,7) / deg_2_rad  , &
+                                                           molecule(1)%kdihed0(i,8) / factor     , &  
+                                                           molecule(1)%kdihed0(i,9)              
+                    endif; endif; EndIf
+                write(51,'(A3)') flag
+
             case default
 
                 write(*,'(A5)',advance="no") adjustl(molecule(1) % Dihedral_Type(i))

@@ -181,6 +181,7 @@ end do
 
 !====================================================================
 ! Dihedral Potential Angle ... 
+! USING IUPAC first convention for dihedral definitions: trans = 180 deg ...
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Ndiheds
         ati = molecule(i) % diheds(j,1)
@@ -188,7 +189,7 @@ do i = 1 , MM % N_of_molecules
         atk = molecule(i) % diheds(j,3)
         atl = molecule(i) % diheds(j,4)
         if ( atom(atj) % flex .OR. atom(ati) % flex .OR. atom(atk) % flex .OR. atom(atl) % flex ) then
-            ! Definition of vector rij = rj - ri
+            ! Definition of vector rij = ri - rj
             rij(:)  = atom(ati) % xyz(1:3) - atom(atj) % xyz(1:3)
             rij(:)  = rij(1:3) - MM % box(1:3) * DNINT( rij(1:3) * MM % ibox(1:3) ) * PBC(1:3)
             ! Definition of vector rjk = rj - rk
@@ -197,7 +198,7 @@ do i = 1 , MM % N_of_molecules
             rjkq    = rjk(1)*rjk(1) + rjk(2)*rjk(2) + rjk(3)*rjk(3)
             rjksq   = 1.d0 / SQRT(rjkq)
             rjksq2  = rjksq * rjksq
-            ! Definition of vector rkl = rl - rk
+            ! Definition of vector rkl = rk - rl
             rkl(:)  = atom(atk) % xyz(1:3) - atom(atl) % xyz(1:3)
             rkl(:)  = rkl(1:3) - MM % box(1:3) * DNINT( rkl(1:3) * MM % ibox(1:3) ) * PBC(1:3)
             ! Cross Product M = | rij X rjk | :: First dihedral vector ...
@@ -280,6 +281,7 @@ do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % Nbonds14
         ati    = molecule(i) % bonds14(j,1)
         atj    = molecule(i) % bonds14(j,2)
+
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
             chrgi  = atom(ati) % charge
@@ -371,7 +373,7 @@ do i = 1 , MM % N_of_molecules
         ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
         atj  = molecule(i) % IntraLJ(j,2) 
         atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
-        
+
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
             chrgi  = atom(ati) % charge
             chrgj  = atom(atj) % charge
@@ -456,7 +458,6 @@ do i = 1 , MM % N_of_molecules
         end if
     end do
 end do
-
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
 do k = 1 , MM % N_of_atoms - 1
