@@ -10,7 +10,7 @@
 
 44    FORMAT(/,">>>  Reading Optmized EHT Parameters")
 
-445   FORMAT(/,">>>  Started with Optmized EHT Parameters")
+445   FORMAT(/,">>>  Started with Optmized EHT Parameters: ")
 
 45    FORMAT(A4)
 
