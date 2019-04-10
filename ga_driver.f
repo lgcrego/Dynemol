@@ -2,11 +2,12 @@ module GA_driver_m
 
  use type_m
  use constants_m
- use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor
+ use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
  use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
  use DOS_m 
+ use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use Oscillator_m               , only : Optical_Transitions
@@ -27,14 +28,15 @@ module GA_driver_m
 implicit none 
 
 ! local variables ...
- integer                        :: nr , N_of_residues
+ integer                        :: i , nr , N_of_residues , MO_total
+ integer         , allocatable  :: MOnum(:)
  real*8                         :: DP(3) , Alpha_ii(3)
+ character(6)                   :: MOstr
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: OPT_basis(:)
-
  
 ! preprocessing stuff ...................................
 
@@ -46,6 +48,13 @@ CALL DeAllocate_SPEC( SPEC , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
+! reading command line arguments for plotting MO cube files ...
+MO_total  = COMMAND_ARGUMENT_COUNT()
+allocate( MOnum(MO_total) )
+do i = 1 , MO_total
+    CALL GET_COMMAND_ARGUMENT(i, MOstr)
+    read( MOstr,*) MOnum(i)
+end do
 !.........................................................
 
 ! setting up the system ...
@@ -89,19 +98,24 @@ Print*, "dE1 = ",UNI%erg(56) - UNI%erg(55) , 3.49
 Print*, "dE2 = ",UNI%erg(55) - UNI%erg(54) , 1.16
 Print*, "dE3 = ",UNI%erg(57) - UNI%erg(56) , 1.7
 Print*, "dE4 = ",UNI%erg(58) - UNI%erg(56) , 2.62
-Print*, "dE5 = ",UNI%erg(58) - UNI%erg(57) , 0.92
-Print*, " "
-Print*, "dE1 = ",UNI%erg(166) - UNI%erg(165) , 2.16
-Print*, "dE2 = ",UNI%erg(165) - UNI%erg(164) , 1.49
-Print*, "dE3 = ",UNI%erg(167) - UNI%erg(166) , 1.94
-Print*, "dE4 = ",UNI%erg(168) - UNI%erg(166) , 3.22
-Print*, "dE5 = ",UNI%erg(168) - UNI%erg(167) , 1.28
 
 
 ! Population analysis ...
-! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 
+print*,  "45  = " , Mulliken(UNI,OPT_basis,MO=29,atom=[4,5]   ) 
 
-!If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(6,:) , UNI%R(:,6) , 6 , 0.d0 )
+If( GaussianCube ) then
+    do i = 1 , MO_total
+        CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
+    end do
+    Print*, '>> Gaussian Cube done <<',MOnum(:)
+end if
+
+If( OPT_parms ) then    
+     Print 445
+     Print 45 , EH_atom%EHSymbol
+else 
+     Print*, ">> OPT_parms were not used <<"
+end if
 
 !----------------------------------------------
 

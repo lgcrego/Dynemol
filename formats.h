@@ -10,13 +10,15 @@
 
 44    FORMAT(/,">>>  Reading Optmized EHT Parameters")
 
+445   FORMAT(/,">>>  Started with Optmized EHT Parameters")
+
 45    FORMAT(A4)
 
 46    FORMAT(/,">>>  Using Ad Hoc tuning ")
 
 47    FORMAT(/,">>>  Saving structure.log ",/)
 
-48    FORMAT("Symbol  |  MMsymbol  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH")
+48    FORMAT("Symbol  |  EHsymbol  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH")
 
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
