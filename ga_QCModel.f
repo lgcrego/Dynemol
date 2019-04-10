@@ -38,12 +38,13 @@ implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom
+integer         , optional  , intent(in) :: atom(:)
 integer         , optional  , intent(in) :: AO_ang
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
+integer               :: i
 real*8                :: R_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
 
@@ -57,7 +58,9 @@ allocate( mask_4(size(basis)) , source=.false. )
 IF( .NOT. present(atom) ) then
     mask_1 = .true.
 else
-    where( basis%atom == atom ) mask_1 = .true.
+    do i = 1 , size(atom) 
+        where( basis%atom == atom(i) ) mask_1 = .true.
+    end do
 end IF
 !====================================================
 IF( .NOT. present(AO_ang) ) then
@@ -83,7 +86,7 @@ end IF
 mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 
 ! perform the population analysis ...
-R_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
+R_Mulliken = real( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
 deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
 
@@ -104,7 +107,7 @@ character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
-real*8                :: C_Mulliken
+complex*16            :: C_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:)
 
 allocate( mask  (size(basis)) , source=.false. )

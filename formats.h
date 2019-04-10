@@ -158,6 +158,6 @@
 
 207 format(1x,'Combination Rule        = ',I6)
 
-208 format(1x,'Coulomb 1-4 scale       = ',F6.4)
+208 format(1x,'Coulomb 1-4 scale       = ',F7.4)
 
-209 format(1x,'van der Walls 1-4 scale = ',F6.4)
+209 format(1x,'van der Walls 1-4 scale = ',F7.4)

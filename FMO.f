@@ -102,11 +102,6 @@
     ! wv_FMO needed only for time-propagation of wv_FMO state ...
     CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
 
-    select case(instance)
-        case ("E","D")
-        write(15,'(6F12.4)') FMO%erg(54),FMO%erg(55),FMO%erg(56),FMO%erg(57),FMO%erg(58),FMO%erg(59)
-    end select
-
  end IF
 
  DeAllocate( FMO_basis , wv_FMO )
