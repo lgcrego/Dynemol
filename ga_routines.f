@@ -101,7 +101,7 @@ do generation = 1 , N_generations
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
 !       gather data and evaluate population cost ...
-        custo(i) =  evaluate_cost( GA_UNI , GA_basis , GA_DP , Alpha_ii )
+        custo(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 

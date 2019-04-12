@@ -5,7 +5,7 @@ module GA_driver_m
  use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
- use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
+ use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar !, Bond_Type
  use DOS_m 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
@@ -13,6 +13,7 @@ module GA_driver_m
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
+ use cost_EH                    , only : evaluate_cost
 
  public :: GA_driver
 
@@ -30,14 +31,14 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues , MO_total
  integer         , allocatable  :: MOnum(:)
- real*8                         :: DP(3) , Alpha_ii(3)
+ real*8                         :: first_cost , DP(3) , Alpha_ii(3)
  character(6)                   :: MOstr
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: OPT_basis(:)
- 
+
 ! preprocessing stuff ...................................
 
 DIPOLE_ = ( spectrum .OR. DP_Moment )
@@ -66,6 +67,9 @@ CALL Basis_Builder( Extended_Cell, ExCell_basis )
 ! setting up constraints ...
 CALL GA_eigen( Extended_Cell, ExCell_basis, UNI )
 
+! calculates the cost on input, for future comparison ...
+first_cost = evaluate_cost(Extended_Cell, UNI, ExCell_basis)
+
 If( DIPOLE_ ) CALL Util_multipoles
 
 ! Optimization of Huckel parameters ... 
@@ -87,26 +91,33 @@ If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, OPT_basis , A
 If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 !----------------------------------------------
-! print zone ...
+! printing zone ...
+
+! compare costs to evalualte otimization ...
+Print*, " " 
+Print 210 , evaluate_cost(Extended_Cell, UNI, OPT_basis) , first_cost 
+
+!Print 154, DP, sqrt( dot_product(DP,DP) )
+!Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
+
+!do i = 1 , size(OPT_basis)
+!write(*,'(I4,A2,A4,2I4,F14.6)') OPT_basis(i)% atom , "  ",OPT_basis(i)% EHSymbol , OPT_basis(i)% l , OPT_basis(i)% m , UNI%L(29,i)
+!end do 
+!print*, Bond_Type(Extended_Cell, UNI, 29, 10, 11, 'Pz', '+')
 
 Print*, " " 
-Print 154, DP, sqrt( dot_product(DP,DP) )
-Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
-
-Print*, " " 
-Print*, "dE1 = ",UNI%erg(56) - UNI%erg(55) , 3.49
-Print*, "dE2 = ",UNI%erg(55) - UNI%erg(54) , 1.16
-Print*, "dE3 = ",UNI%erg(57) - UNI%erg(56) , 1.7
-Print*, "dE4 = ",UNI%erg(58) - UNI%erg(56) , 2.62
+Print*, "dE1 = ",UNI%erg(29) - UNI%erg(28) , 5.5190d0
+Print*, "dE2 = ",UNI%erg(30) - UNI%erg(28) , 5.7242d0
+Print*, "dE3 = ",UNI%erg(30) - UNI%erg(29) , 0.2050d0
+Print*, "dE4 = ",UNI%erg(30) - UNI%erg(27) , 6.9960d0
 
 
 ! Population analysis ...
-print*,  "45  = " , Mulliken(UNI,OPT_basis,MO=29,atom=[4,5]   ) 
-
 If( GaussianCube ) then
     do i = 1 , MO_total
         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
     end do
+    Print*, " " 
     Print*, '>> Gaussian Cube done <<',MOnum(:)
 end if
 
