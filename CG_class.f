@@ -91,7 +91,7 @@ If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , me%basis , CG_UNI%L ,CG_UNI
 
 If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , me%basis , CG_Alpha_ii )
 
-cost = evaluate_cost( CG_UNI , me%basis , CG_DP , CG_Alpha_ii )
+cost = evaluate_cost( Extended_Cell , CG_UNI , me%basis , CG_DP , CG_Alpha_ii )
 
 end function cost
 !

@@ -14,7 +14,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar
+    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type
 
     private 
 
@@ -31,6 +31,94 @@ module GA_QCModel_m
 contains
 !
 !
+!
+!======================================================================
+ function Bond_Type( system , GA , MO , atom1 , atom2 , AO , instance )
+!======================================================================
+implicit none
+type(structure)  , intent(in) :: system
+type(R_eigen)    , intent(in) :: GA
+integer          , intent(in) :: MO
+integer          , intent(in) :: atom1
+integer          , intent(in) :: atom2
+character(*)     , intent(in) :: AO
+character(len=1) , intent(in) :: instance
+
+! local variables ...
+integer :: indx1 , indx2
+real*8  :: bond_type , bond_signal
+
+select case( AO ) 
+
+    case( 's', 'S' )
+
+        indx1 = system% BasisPointer(atom1) + 1
+        indx2 = system% BasisPointer(atom2) + 1
+
+    case( 'py', 'Py' , 'PY' )
+
+        indx1 = system% BasisPointer(atom1) + 2
+        indx2 = system% BasisPointer(atom2) + 2
+
+    case( 'pz', 'Pz' , 'PZ' )
+
+        indx1 = system% BasisPointer(atom1) + 3
+        indx2 = system% BasisPointer(atom2) + 3
+
+    case( 'px', 'Px' , 'PX' )
+
+        indx1 = system% BasisPointer(atom1) + 4
+        indx2 = system% BasisPointer(atom2) + 4
+
+    case( 'dxy', 'Dxy' , 'DXY' )
+
+        indx1 = system% BasisPointer(atom1) + 5
+        indx2 = system% BasisPointer(atom2) + 5
+
+    case( 'dyz', 'Dyz' , 'DYZ' )
+
+        indx1 = system% BasisPointer(atom1) + 6
+        indx2 = system% BasisPointer(atom2) + 6
+
+    case( 'dz2', 'Dz2' , 'DZ2' )
+
+        indx1 = system% BasisPointer(atom1) + 7
+        indx2 = system% BasisPointer(atom2) + 7
+
+    case( 'dxz', 'Dxz' , 'DXZ' )
+
+        indx1 = system% BasisPointer(atom1) + 8
+        indx2 = system% BasisPointer(atom2) + 8
+
+    case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+
+        indx1 = system% BasisPointer(atom1) + 9
+        indx2 = system% BasisPointer(atom2) + 9
+
+    case default
+
+        stop " >> error in [bond] subroutine check input arguments <<"
+
+end select
+
+bond_signal = sign(1.d0,GA%L(MO,indx1)*GA%L(MO,indx2))
+
+select case ( instance )
+
+    case( '+' )  ! <== Bonding ...
+
+        bond_type = merge( D_zero , real_large , bond_signal > D_zero )
+
+    case( '-' )  ! <== Anti-Bonding ...
+
+        bond_type = merge( D_zero , real_large , bond_signal < D_zero )
+
+end select
+
+end function
+!
+!
+!
 !================================================================================
  pure function R_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
 !================================================================================
@@ -38,12 +126,13 @@ implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom
+integer         , optional  , intent(in) :: atom(:)
 integer         , optional  , intent(in) :: AO_ang
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
+integer               :: i
 real*8                :: R_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
 
@@ -57,7 +146,9 @@ allocate( mask_4(size(basis)) , source=.false. )
 IF( .NOT. present(atom) ) then
     mask_1 = .true.
 else
-    where( basis%atom == atom ) mask_1 = .true.
+    do i = 1 , size(atom) 
+        where( basis%atom == atom(i) ) mask_1 = .true.
+    end do
 end IF
 !====================================================
 IF( .NOT. present(AO_ang) ) then
@@ -83,7 +174,7 @@ end IF
 mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 
 ! perform the population analysis ...
-R_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
+R_Mulliken = real( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
 deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
 
@@ -104,7 +195,7 @@ character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
-real*8                :: C_Mulliken
+complex*16            :: C_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:)
 
 allocate( mask  (size(basis)) , source=.false. )

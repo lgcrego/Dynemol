@@ -348,23 +348,27 @@ implicit none
 
 ! local variables ... 
  real*8  :: Huckel
- real*8  :: k_eff , k_WH , c1 , c2 , c3
+ real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
- 
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+ if (i == j) then
+    huckel = basis(i)%IP + basis(i)%V_shift
+ else
+    c1 = basis(i)%IP - basis(j)%IP
+    c2 = basis(i)%IP + basis(j)%IP
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+    c3 = (c1/c2)*(c1/c2)
 
- k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+    c4 = (basis(i)%V_shift + basis(j)%V_shift)*HALF
 
- huckel = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / two
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
 
- IF(i == j) huckel = basis(i)%IP
+    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+
+    huckel = k_eff*S_ij*c2/two + c4*S_ij
+ endif
 
  end function Huckel
 !

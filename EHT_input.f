@@ -5,13 +5,11 @@ module Semi_Empirical_Parms
     use MPI_definitions_m           , only : master
 
     type(EHT) , public , protected :: atom(300) 
+    type(EHT) , allocatable , save :: EH_atom(:)
 
-    public :: read_EHT_parameters , Include_OPT_parameters
-
+    public :: read_EHT_parameters , Include_OPT_parameters, EH_atom
 
     private
-
-    type(EHT)   , allocatable   , save :: EH_atom(:)
 
     interface Include_OPT_parameters 
         module procedure Basis_OPT_parameters

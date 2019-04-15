@@ -3,11 +3,12 @@ module GA_driver_m
  use type_m
  use constants_m
  use MPI_definitions_m          , only : slave
- use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor
+ use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
  use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
- use cost_EH                    , only : REF_DP , REF_Alpha
+ use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
+ use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use Oscillator_m               , only : Optical_Transitions
@@ -29,8 +30,10 @@ module GA_driver_m
 implicit none 
 
 ! local variables ...
- integer                        :: nr , N_of_residues
- real*8                         :: DP(3) , Alpha_ii(3)
+ integer                        :: i , nr , N_of_residues , MO_total
+ integer         , allocatable  :: MOnum(:)
+ real*8                         :: first_cost , DP(3) , Alpha_ii(3)
+ character(6)                   :: MOstr
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
@@ -48,6 +51,13 @@ CALL DeAllocate_SPEC( SPEC , flag="alloc" )
 
 N_of_residues = size( Unit_Cell%list_of_residues )
 
+! reading command line arguments for plotting MO cube files ...
+MO_total  = COMMAND_ARGUMENT_COUNT()
+allocate( MOnum(MO_total) )
+do i = 1 , MO_total
+    CALL GET_COMMAND_ARGUMENT(i, MOstr)
+    read( MOstr,*) MOnum(i)
+end do
 !.........................................................
 
 ! setting up the system ...
@@ -58,6 +68,9 @@ CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
 ! setting up constraints ...
 CALL GA_eigen( Extended_Cell, ExCell_basis, UNI )
+
+! calculates the cost on input, for future comparison ...
+first_cost = evaluate_cost(Extended_Cell, UNI, ExCell_basis)
 
 If( DIPOLE_ ) CALL Util_multipoles
 
@@ -81,30 +94,37 @@ If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, OPT_basis , A
 If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 !----------------------------------------------
-! print zone ...
+! printing zone ...
 
+! compare costs to evalualte otimization ...
 Print*, " " 
-Print 154, DP, sqrt( dot_product(DP,DP) )
-Print 152, REF_DP, sqrt( dot_product(REF_DP,REF_DP) )
+Print 210 , evaluate_cost(Extended_Cell, UNI, OPT_basis) , first_cost 
+
+!Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
-Print*, " "
-Print*, "dE1 = ",UNI%erg(121) - UNI%erg(120) , 2.016d0
-Print*, "dE2 = ",UNI%erg(120) - UNI%erg(119) , 0.842d0
-Print*, "dE3 = ",UNI%erg(122) - UNI%erg(121) , 1.625d0
-Print*, "dE4 = ",UNI%erg(123) - UNI%erg(121) , 2.359d0
-Print*, "dE5 = ",UNI%erg(123) - UNI%erg(122) , 0.734d0
-Print*, " "
-Print*, "dE1 = ",UNI%erg(345) - UNI%erg(344) , 2.000d0
-Print*, "dE2 = ",UNI%erg(344) - UNI%erg(343) , 0.102d0
-Print*, "dE3 = ",UNI%erg(346) - UNI%erg(345) , 1.730d0
-Print*, "dE4 = ",UNI%erg(347) - UNI%erg(345) , 3.429d0
-Print*, "dE5 = ",UNI%erg(347) - UNI%erg(346) , 1.700d0
+Print*, " " 
+Print*, "dE1 = ",UNI%erg(29) - UNI%erg(28) , 5.5190d0
+Print*, "dE2 = ",UNI%erg(30) - UNI%erg(28) , 5.7242d0
+Print*, "dE3 = ",UNI%erg(30) - UNI%erg(29) , 0.2050d0
+Print*, "dE4 = ",UNI%erg(30) - UNI%erg(27) , 6.9960d0
+
 
 ! Population analysis ...
-! print*,  Mulliken(UNI,ExCell_basis,MO=87,residue="TRI") 
+If( GaussianCube ) then
+    do i = 1 , MO_total
+        CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
+    end do
+    Print*, " " 
+    Print*, '>> Gaussian Cube done <<',MOnum(:)
+end if
 
-!If( GaussianCube ) CALL Gaussian_Cube_Format( UNI%L(2,:) , UNI%R(:,2) , 2 , 0.d0 )
+If( OPT_parms ) then    
+     Print 445
+     Print 45 , EH_atom%EHSymbol
+else 
+     Print*, ">> OPT_parms were not used <<"
+end if
 
 !----------------------------------------------
 
