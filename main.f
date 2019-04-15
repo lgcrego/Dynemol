@@ -3,7 +3,7 @@ Program qdynamo
 use MPI
 use type_m
 use constants_m
-use MPI_definitions_m       , only : launch_MPI , master
+use MPI_definitions_m       , only : launch_MPI , master , world
 use parameters_m            , only : Define_Environment , driver , nuclear_matter              
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -90,6 +90,7 @@ end select
 include 'formats.h'
 
 ! Finalize MPI if necessary 
+Call mpi_barrier( world , err )
 call MPI_FINALIZE(err)
 
 ! Finalize GPU if necessary 
