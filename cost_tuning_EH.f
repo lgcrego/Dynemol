@@ -35,19 +35,26 @@ real*8   :: REF_DP(3) , REF_Alpha(3)
 !--------------------
 chi(1) = ( OPT_UNI%erg(29) - OPT_UNI%erg(28) )  - 5.5190d0                         ; weight(1) = 1.0d0
 chi(2) = ( OPT_UNI%erg(30) - OPT_UNI%erg(28) )  - 5.7242d0                         ; weight(2) = 1.0d0
-chi(3) = ( OPT_UNI%erg(30) - OPT_UNI%erg(29) )  - 0.2050d0                         ; weight(3) = 1.0d0
+chi(3) = ( OPT_UNI%erg(30) - OPT_UNI%erg(29) )  - 0.2050d0                         ; weight(3) = 2.0d0
 chi(4) = ( OPT_UNI%erg(30) - OPT_UNI%erg(27) )  - 6.9960d0                         ; weight(4) = 1.0d0
+chi(5) = ( OPT_UNI%erg(28) - OPT_UNI%erg(27) )  - 1.2720d0                         ; weight(5) = 1.0d0
 
 !-------------------------------------------------------------------------
 ! Population analysis ...
 ! Mulliken( GA , basis , MO , atom=[.,.,.] , AO_ang , EHSymbol , residue )
 !-------------------------------------------------------------------------
 ! NO charge in these atoms ...
+chi(6)  =  Mulliken(OPT_UNI, basis, MO=28, atom=[7,5])    
 
+chi(7)  =  Mulliken(OPT_UNI, basis, MO=29, atom=[8,3])    
+
+chi(8)  =  Mulliken(OPT_UNI, basis, MO=30, atom=[5])      
 
 ! missing charge on these atoms ...
-!chi(7)  =  Mulliken(OPT_UNI,basis,MO=29,residue="NH2")   - 1.00d0               ; weight(7)  =  5.0d0
-!chi(8)  =  Mulliken(OPT_UNI,basis,MO=29,atom=[8]     )   - 1.00d0               ; weight(8)  =  3.0d0
+chi(10) =  Mulliken(OPT_UNI, basis, MO=29, atom=[6,5]) - 0.4   
+
+chi(11) =  Mulliken(OPT_UNI, basis, MO=30, atom=[8,9]) - 0.4   
+
 
 !-------------------------------------------------------------------------
 ! Bond Type analysis ...
@@ -55,12 +62,16 @@ chi(4) = ( OPT_UNI%erg(30) - OPT_UNI%erg(27) )  - 6.9960d0                      
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
 !-------------------------------------------------------------------------
-chi(31) =  Bond_Type(system, OPT_UNI, 29, 4 , 5 , 'Pz', '+')                       ! ; weight(31) = 1.0d0          
-chi(32) =  Bond_Type(system, OPT_UNI, 29, 10, 11, 'Pz', '+')                       ! ; weight(32) = 1.0d0          
-chi(33) =  Bond_Type(system, OPT_UNI, 29, 4 , 11, 'Pz', '-')                       ! ; weight(33) = 1.0d0          
-                                                                                               
-chi(35) =  Bond_Type(system, OPT_UNI, 30, 8 , 7 , 'Pz', '+')                       ! ; weight(35) = 1.0d0         
-chi(36) =  Bond_Type(system, OPT_UNI, 30, 1 , 11, 'Pz', '+')                       ! ; weight(36) = 1.0d0         
+chi(25) =  Bond_Type(system, OPT_UNI, 28, 3 , 2 , 'Pz', '+')                                 
+chi(26) =  Bond_Type(system, OPT_UNI, 28, 4 , 11, 'Pz', '+')                                 
+chi(27) =  Bond_Type(system, OPT_UNI, 28, 8 , 10, 'Pz', '+')                                 
+
+chi(31) =  Bond_Type(system, OPT_UNI, 29, 4 , 5 , 'Pz', '+')                                 
+chi(32) =  Bond_Type(system, OPT_UNI, 29, 10, 11, 'Pz', '+')                                 
+chi(33) =  Bond_Type(system, OPT_UNI, 29, 4 , 11, 'Pz', '-')                                 
+                                                                                   
+chi(35) =  Bond_Type(system, OPT_UNI, 30, 8 , 7 , 'Pz', '+')                                
+chi(36) =  Bond_Type(system, OPT_UNI, 30, 1 , 11, 'Pz', '+')                                
                                                                                     
 !-------------------------                                                         
 ! Total DIPOLE moment ...
