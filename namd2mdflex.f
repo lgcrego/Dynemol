@@ -293,7 +293,7 @@ real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
 character(18)                   :: keyword
 character(200)                  :: line
-logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6
+logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 , flag7 , flag8
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( Input2Chars   ( 10000 , 10 )                   )
@@ -691,18 +691,6 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 9 )
 
-!                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
-!                        ( Dihed_Type(k) == 9 )
-
-!                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &   ######## something strange here
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. & ######## and here
-!                        ( Dihed_Type(k) == 9 )
-
                 flag5 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
@@ -713,6 +701,18 @@ do a = 1 , MM % N_of_species
                         ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                flag7 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,2)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,3)) == 'X' ) .AND. & 
+                        ( Dihed_Type(k) == 9 ) 
+
+                flag8 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,2)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,3)) == 'X' ) .AND. &
                         ( Dihed_Type(k) == 9 )
 
                 if( flag1 .OR. flag2 ) then
@@ -728,7 +728,7 @@ do a = 1 , MM % N_of_species
                     cycle read_loop7
                 end if
 
-                if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
+                if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 .OR. flag7 .OR. flag8) then
                     ! kdihed0(:,1) = phi_s (deg)
                     ! kdihed0(:,2) = k_phi (kJ/mol)
                     ! kdihed0(:,3) = n 

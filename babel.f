@@ -105,6 +105,9 @@ end select
 ! sort the nr indices ...
 if( MM_input_format == "GMX" ) CALL Sort_nr( unit_cell )
 
+! nr indices must start with 1 ...
+if( any(unit_cell % nr == 0) ) stop ">> halted: check input.pdb, nr indice = 0 found <<"
+
 ! unit_cell dimensions ...
 unit_cell % T_xyz =  System % box
 
