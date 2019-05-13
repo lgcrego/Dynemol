@@ -37,8 +37,7 @@ contains
  implicit none
 
 ! local variables ...
- integer :: err , my_color
- logical :: drafted = .false.
+ integer :: err 
 
 ! define MPI_COMM_WORLD ...
  world = MPI_COMM_WORLD

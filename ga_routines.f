@@ -17,14 +17,13 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar ,                   &
-                                         Mulliken
+                                         AlphaPolar 
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
 
 
-    public :: Genetic_Algorithm , Mulliken 
+    public :: Genetic_Algorithm 
 
     interface Genetic_Algorithm
         module procedure Genetic_Algorithm_EH
@@ -47,7 +46,7 @@ type(STO_basis)                 , intent(in)  :: basis(:)
 type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(:)
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(:) , PopStar(:)
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: mpi_D_R = mpi_double_precision
@@ -71,9 +70,12 @@ Pop_start = 1
 
 ! only master handles this stuff ...
 If( master ) then
+
+    open( unit=23, file='opt_trunk/GA_cost.dat', status='unknown' )
+
     allocate( Old_Pop (Pop_Size , GeneSize)     )
     allocate( indx    (Pop_Size)                )
-!    allocate( cost    (Pop_size), source=D_zero ) 
+    allocate( PopStar (GeneSize)                ) 
 
     CALL random_seed
 
@@ -93,10 +95,12 @@ allocate( snd_cost(Pop_size) )
 do generation = 1 , N_generations
 
 99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
-    If( done ) return
+    If( done ) then ! <== slaves pack and leave ...
+        deallocate( GA_basis , cost , snd_cost , Pop )
+        return
+    End If
 
     CALL MPI_BCAST( Pop       , Pop_Size*GeneSize , mpi_D_R     , 0 , world , err )
-    CALL MPI_BCAST( Pop_start , 1                 , mpi_integer , 0 , world , err )
 
     snd_cost = D_zero
 
@@ -124,6 +128,9 @@ do generation = 1 , N_generations
 
     ! gather data ...
     CALL MPI_reduce( snd_cost(Pop_start:) , cost(Pop_start:) , (Pop_size-Pop_start+1) , MPI_D_R , mpi_SUM , 0 , world , err )
+
+    Pop_start = Top_Selection + 1
+
     If ( slave ) goto 99
 
 !   evolve populations ...    
@@ -132,7 +139,7 @@ do generation = 1 , N_generations
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
 
-    Pop_start = Top_Selection + 1
+    PopStar(:) = Pop(1,:)
 
 !   Mutation_&_Crossing preserves the top-selections ...
     If( Mutate_Cross) then
@@ -144,6 +151,8 @@ do generation = 1 , N_generations
     indx = [ ( i , i=1,Pop_Size ) ]
 
     Print 160 , generation , N_generations
+    Print*, cost(1)
+    write(23,*) generation , cost(1)
 
     If( generation == N_generations ) then
          done = .true.
@@ -151,6 +160,9 @@ do generation = 1 , N_generations
     end If
 
 end do
+
+close(23)
+deallocate( cost , snd_cost , indx , Old_Pop ) 
 
 !----------------------------------------------------------------
 ! Prepare grid of parameters for CG fine tuning optimization ...
@@ -177,7 +189,7 @@ If( CG_ ) then
 else
 
     ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
+    CALL modify_EHT_parameters( basis , GA_basis , PopStar )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
@@ -191,7 +203,7 @@ end if
 CALL Dump_OPT_parameters( OPT_basis )
 
 deallocate( GA_UNI%L , GA_UNI%R , GA_UNI%erg )
-deallocate( Pop , indx , Old_Pop ) 
+deallocate( Pop ) 
 
 include 'formats.h'
 

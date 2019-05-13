@@ -140,7 +140,7 @@ type(R_eigen)                               , intent(inout) :: QM
 ! local variables ...
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
 real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
-real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
+real*8  , ALLOCATABLE :: dumb_S(:,:) 
 integer               :: i , j , N , info 
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

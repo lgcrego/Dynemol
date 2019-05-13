@@ -44,7 +44,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz , err , request_H_prime
+ integer :: i , N , xyz , err , request_H_prime
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex

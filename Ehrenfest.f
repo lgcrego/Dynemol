@@ -48,7 +48,6 @@ contains
  integer :: mpi_status(mpi_status_size) , request
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
- real*8  :: start , endtime
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 

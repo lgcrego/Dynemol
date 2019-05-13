@@ -106,7 +106,7 @@
 
 158   FORMAT(/,1x,'N_of_Solute_Molecules in DP_field = ',I4/)
 
-160   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4)
+160   FORMAT(/,1x,'Custo_GA : ',I5,' /',I5)
 
 161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
 

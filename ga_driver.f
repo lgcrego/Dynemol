@@ -6,7 +6,7 @@ module GA_driver_m
  use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
- use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar
+ use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar 
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
@@ -40,7 +40,6 @@ implicit none
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: OPT_basis(:)
 
- 
 ! preprocessing stuff ...................................
 
 DIPOLE_ = ( spectrum .OR. DP_Moment )
@@ -98,17 +97,17 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , evaluate_cost(Extended_Cell, UNI, OPT_basis) , first_cost 
+Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost 
 
 !Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(29) - UNI%erg(28) , 5.5190d0
-Print*, "dE2 = ",UNI%erg(30) - UNI%erg(28) , 5.7242d0
-Print*, "dE3 = ",UNI%erg(30) - UNI%erg(29) , 0.2050d0
-Print*, "dE4 = ",UNI%erg(30) - UNI%erg(27) , 6.9960d0
-
+Print*, "dE1 = ", UNI%erg(22) - UNI%erg(21) ,   5.3780d0
+Print*, "dE2 = ", UNI%erg(23) - UNI%erg(21) ,   6.8730d0
+Print*, "dE3 = ", UNI%erg(23) - UNI%erg(22) ,   1.4950d0
+Print*, "dE4 = ", UNI%erg(23) - UNI%erg(20) ,   7.3805d0
+Print*, "dE5 = ", UNI%erg(21) - UNI%erg(20) ,   0.5075d0
 
 ! Population analysis ...
 If( GaussianCube ) then

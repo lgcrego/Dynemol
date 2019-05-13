@@ -593,7 +593,7 @@ implicit none
 
 ! local variabbles ...
 integer                         :: i , at1 , at2 , at3 , at4 , funct_dih , multiples
-real*8                          :: factor , factor_1 , factor_2 , dumb
+real*8                          :: factor , factor_1 , factor_2 
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
 

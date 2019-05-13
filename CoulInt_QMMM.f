@@ -33,7 +33,7 @@ real*8  , intent(in) :: NetCharge(:)
 
 ! local variables ...
 real*8  :: FourVector(4) , U_Coul
-integer :: i , j , ati , atj 
+integer :: i , ati , atj 
 
 return
 
