@@ -57,6 +57,8 @@ public :: MMOPT_Control, Logicalkey
         integer             , allocatable   :: angs(:,:)
         real*8              , allocatable   :: kang0(:,:)
         integer                             :: Ndiheds
+        integer                             :: NTorsions
+        integer                             :: NImpropers
         integer             , allocatable   :: diheds(:,:)
         character(3)        , allocatable   :: funct_bond(:)
         character(3)        , allocatable   :: funct_angle(:)

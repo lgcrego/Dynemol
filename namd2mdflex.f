@@ -2,6 +2,7 @@
 
 module namd2mdflex
 
+use MM_input               , only : MM_input_format
 use constants_m
 use for_force
 use MPI_definitions_m      , only : master
@@ -10,13 +11,14 @@ use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
 
-private
- 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities
 
+private
+ 
     ! module variables ...
     character(4)      , allocatable  , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
     real*8            , allocatable  , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
+    integer                                  :: GAFF_order(4) = [3,2,1,4] 
 
 contains
 !
@@ -119,7 +121,6 @@ do a = 1 , MM % N_of_species
 
         end do
         rewind 33
-
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -207,11 +208,27 @@ do a = 1 , MM % N_of_species
         read(33,*) Nimpropers
    
         do k = 1 , ceiling(Nimpropers/two)-1
-          read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,j) , j=1,4 ) , n=1,2 )
+            select case ( MM_input_format )
+                case( "GAFF" )
+                read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,2 )
+                case default
+                read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,2 )
+            end select
         end do 
-        read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,j) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) )
+
+        select case ( MM_input_format )
+            case( "GAFF" )
+            read(33 , * , iostat=ioerr )  &
+            ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
+            case default
+            read(33 , * , iostat=ioerr )  &
+            ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
+        end select
 
         !=========================================================================
+
+        species(a)% NTorsions  = Ndiheds
+        species(a)% NImpropers = NImpropers
 
         species(a)% Ndiheds = Ndiheds + Nimpropers
 
@@ -224,7 +241,13 @@ do a = 1 , MM % N_of_species
 
         ! store improper dihedrals ...
         forall(i=1:4) species(a)% diheds( Ndiheds+1:Ndiheds+Nimpropers , i ) = InputIntegers( Ndiheds+1:Ndiheds+Nimpropers , i )
-        species(a)% funct_dihed( Ndiheds+1:Ndiheds+Nimpropers ) = 2
+
+        select case ( MM_input_format )
+            case( "GAFF" , "NAMD" )   
+                species(a)% funct_dihed( Ndiheds+1:Ndiheds+Nimpropers ) = 9
+            case( "CHMM" )
+                species(a)% funct_dihed( Ndiheds+1:Ndiheds+Nimpropers ) = 2
+        end select
 
         ! define species(a) % dihedral_type ...
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
@@ -290,12 +313,12 @@ real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NImproperTypes, NBondParms 
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms 
 real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
 character(18)                   :: keyword
 character(200)                  :: line
-logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6
+logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( Input2Chars   ( 10000 , 10 )                   )
@@ -315,7 +338,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 !  reading  FF DEFAULTS ...
     do
         read(33,100) keyword
-        if( verify( "GAFF" , keyword ) == 0 ) exit
+        if( verify( "FF-sets" , keyword ) == 0 ) exit
     end do
 
     read(33,*) dummy_char
@@ -323,6 +346,9 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
     MM % fudgeQQ = 1.d0 / SCEE
     MM % fudgeLJ = 1.d0 / SCNB
+
+! checking input data ...
+If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposedely SCNB = 1 for GAFF MM_input_format "
 
 !=====================================================================================
 !  reading  ATOMS ...
@@ -467,13 +493,14 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
     end do read_loop3
     backspace(33)
 
-    NdihedTypes = i - 1
+    NdihedTypes   = i - 1
+    NTorsionTypes = NdihedTypes
 
 !=====================================================================================
-!  reads IMPROPER ... 
+!  reads IMPROPERS ... 
     do
         read(33,100) keyword
-        if( trim(keyword) == "IMPROPER" ) exit
+        if( trim(keyword) == "IMPROPERS" ) exit
     end do
 
     i = 1
@@ -486,7 +513,13 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
         if( trim(Input2Chars(i,1)) == "NONB" ) exit
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop4
-        read(line,*,iostat=ioerr) (InputChars(Ndihedtypes+i,k) , k=1,4) , (InputReals(Ndihedtypes+i,j) , j=1,3)
+
+        select case (MM_input_format) 
+            case( "GAFF" ) 
+            read(line,*,iostat=ioerr) (InputChars(Ndihedtypes+i,GAFF_order(k)) , k=1,4) , (InputReals(Ndihedtypes+i,j) , j=1,3)
+            case default
+            read(line,*,iostat=ioerr) (InputChars(Ndihedtypes+i,k            ) , k=1,4) , (InputReals(Ndihedtypes+i,j) , j=1,3)
+        end select 
 
         i = i + 1
     end do read_loop4
@@ -498,8 +531,16 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
     allocate( DihedSymbols       ( NdihedTypes+NImproperTypes , 4 )                   )
     allocate( DihedParameters    ( NdihedTypes+NImproperTypes , 3 ) , source = D_zero )
 
-    Dihed_Type(:NdihedTypes)                             = 9 
-    Dihed_Type(NdihedTypes+1:NdihedTypes+NImproperTypes) = 2 
+    ! Torsion ...
+    Dihed_Type(:NdihedTypes) = 9 
+    ! Improper
+    select case ( MM_input_format )
+        case( "GAFF" , "NAMD" )   
+            Dihed_Type(NdihedTypes+1:NdihedTypes+NImproperTypes) = 9         
+        case( "CHMM" )
+            Dihed_Type(NdihedTypes+1:NdihedTypes+NImproperTypes) = 2        
+    end select
+
     NdihedTypes = NdihedTypes + NImproperTypes
 
     forall(k=1:4) DihedSymbols(:NdihedTypes,k)    = InputChars(:NdihedTypes,k)
@@ -527,6 +568,7 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
         end select 
     end do
+
 !=====================================================================================
 !  NonBonding parameters :: reading ...
     do
@@ -596,7 +638,6 @@ open(33, file='input.prm', status='old', iostat=ioerr, err=10)
  
 !=====================================================================================
 !
-
 close(33)
 
 deallocate( InputChars , InputReals , InputIntegers )
@@ -653,13 +694,13 @@ do a = 1 , MM % N_of_species
 
     !=============================================================================
     ! Dihedral parameters ...
-    allocate( species(a) % kdihed0 ( species(a) % Ndiheds , 15 ) , source = D_zero )
+    allocate( species(a)% kdihed0 ( species(a) % Ndiheds , 15 ) , source = D_zero )
 
-    read_loop0: do n = 1 , species(a) % Ndiheds
+    read_loop0: do n = 1 , species(a)% NTorsions ! <== Mind that some impropers may be included here ...
         ! control variables to multiple dihs ...
         j = 0 ; l = 0 ; l1 = 0 ; j1 = 0 
 
-        read_loop7: do k = 1 , NdihedTypes 
+        read_loop7: do k = 1 , NTorsionTypes 
 
             ! if funct = 9 (chrm) (multiple) 
             ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple)       
@@ -691,18 +732,6 @@ do a = 1 , MM % N_of_species
                         ( adjustl(DihedSymbols(k,1)) == 'X' )                                                             .AND. & 
                         ( adjustl(DihedSymbols(k,4)) == 'X' )                                                             .AND. &
                         ( Dihed_Type(k) == 9 )
-
-!                flag5 = ( adjustl(DihedSymbols(k,1)) == 'X' ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
-!                        ( Dihed_Type(k) == 9 )
-
-!                flag6 = ( adjustl(DihedSymbols(k,4)) == 'X' ) .AND. &   ######## something strange here
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
-!                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. & ######## and here
-!                        ( Dihed_Type(k) == 9 )
 
                 flag5 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
                         ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
@@ -739,6 +768,76 @@ do a = 1 , MM % N_of_species
                     species(a) % kdihed0(n,3*j1+3) = DihedParameters(k,3)
                     j1= j1+ 1 
                     cycle read_loop7
+                end if
+
+            end if
+
+        end do read_loop7
+    end do read_loop0
+
+    !=============================================================================
+    ! Improper parameters ...
+
+    read_loop6: do n = species(a)% NTorsions + 1 , species(a)% Ndiheds
+
+        ! control variables to multiple dihs ...
+        j = 0 ; l = 0 ; l1 = 0 ; j1 = 0 
+
+        read_loop8: do k = NTorsionTypes + 1 , NdihedTypes   
+
+            ! if funct = 9 (chrm) (multiple) 
+            ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple)       
+            ! Eq. 4.60 (GMX manual 5.0.5)
+
+            if( species(a) % funct_dihed(n) == 9 ) then
+
+                flag1 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                flag2 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,2)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,3)) == 'X' ) .AND. & 
+                        ( Dihed_Type(k) == 9 ) 
+                
+                flag3 = ( adjustl(species(a) % atom(species(a) % diheds(n,4)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( adjustl(DihedSymbols(k,2)) == 'X' ) .AND. &
+                        ( adjustl(DihedSymbols(k,3)) == 'X' ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                flag4 = ( adjustl(species(a) % atom(species(a) % diheds(n,1)) % MMSymbol) == adjustl(DihedSymbols(k,1)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,2)) % MMSymbol) == adjustl(DihedSymbols(k,2)) ) .AND. &
+                        ( adjustl(species(a) % atom(species(a) % diheds(n,3)) % MMSymbol) == adjustl(DihedSymbols(k,3)) ) .AND. &
+                        (                                                             'X' == adjustl(DihedSymbols(k,4)) ) .AND. &
+                        ( Dihed_Type(k) == 9 )
+
+                if( flag1 ) then
+                    ! kdihed0(:,1) = phi_s (deg)
+                    ! kdihed0(:,2) = k_phi (kJ/mol)
+                    ! kdihed0(:,3) = n
+                    if( j1 > 0 ) species(a) % kdihed0(n,:) = D_zero 
+                    if( j1 > 0 ) j1 = 0 
+                    species(a) % kdihed0(n,3*(j+j1)+1) = DihedParameters(k,1) 
+                    species(a) % kdihed0(n,3*(j+j1)+2) = DihedParameters(k,2) 
+                    species(a) % kdihed0(n,3*(j+j1)+3) = DihedParameters(k,3) 
+                    j = j + 1
+                    cycle read_loop8
+                end if
+
+                if( flag2 .OR. flag3 .OR. flag4 ) then
+                    ! kdihed0(:,1) = phi_s (deg)
+                    ! kdihed0(:,2) = k_phi (kJ/mol)
+                    ! kdihed0(:,3) = n 
+                    if( j > 0 ) cycle read_loop8
+                    species(a) % kdihed0(n,3*j1+1) = DihedParameters(k,1)
+                    species(a) % kdihed0(n,3*j1+2) = DihedParameters(k,2)
+                    species(a) % kdihed0(n,3*j1+3) = DihedParameters(k,3)
+                    j1= j1+ 1 
+                    cycle read_loop8
                 end if
 
             end if
@@ -793,25 +892,24 @@ do a = 1 , MM % N_of_species
                     species(a) % kdihed0(n,2*l+1) = DihedParameters(k,1)
                     species(a) % kdihed0(n,2*l+2) = DihedParameters(k,2) 
                     l = l + 1
-                    cycle read_loop7
+                    cycle read_loop8
                 end if
 
              if( flag3 .OR. flag4 .OR. flag5 .OR. flag6 ) then
                     ! kdihed0(:,1) = xi_0 (deg)
                     ! kdihed0(:,2) = k_xi [ kJ/(mol.rad²) ] 
-                    if( l > 1 ) cycle read_loop7
+                    if( l > 1 ) cycle read_loop8
                     species(a) % kdihed0(n,2*l1+1) = DihedParameters(k,1)
                     species(a) % kdihed0(n,2*l1+2) = DihedParameters(k,2)
                     l1 = l1 + 1
-                    cycle read_loop7
+                    cycle read_loop8
                 end if
 
             end if
 
-        end do read_loop7
-    end do read_loop0
+        end do read_loop8
+    end do read_loop6
     !=============================================================================
-
 end do
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
