@@ -592,7 +592,7 @@ implicit none
 
 ! local variabbles ...
 integer                         :: i , at1 , at2 , at3 , at4 , funct_dih , multiples
-real*8                          :: factor , factor_1 , factor_2 , dumb
+real*8                          :: factor , factor_1 , factor_2 
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
 
@@ -776,7 +776,7 @@ character(len=:) , allocatable  :: string(:)
                                           atom(at3)%MMSymbol                  , &
                                           atom(at4)%MMSymbol                  , &
                                           funct_dih      
-                                      
+
         select case( adjustl(molecule(1) % Dihedral_Type(i)) )
 
             case ('cos' , 'imp')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)

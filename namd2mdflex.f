@@ -317,7 +317,7 @@ real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
 character(18)                   :: keyword
 character(200)                  :: line
-logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 , flag7 , flag8
+logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( Input2Chars   ( 10000 , 10 )                   )
