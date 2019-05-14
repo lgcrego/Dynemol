@@ -2,7 +2,7 @@ module MD_read_m
  
     use constants_m
     use atomicmass
-    use MM_input                
+    use MM_input       
     use parameters_m            , only : restart , ad_hoc , driver , preview
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -137,7 +137,7 @@ select case ( MM_input_format )
              end do
          end do
 
-    case( "NAMD" )  ! <== reads FF data in NAMD format ... 
+    case( "NAMD" , "GAFF" )  ! <== reads FF data in NAMD format ... 
 
          If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
   
@@ -600,6 +600,10 @@ character(len=:) , allocatable  :: string(:)
 
  !========================================================================================================
  write(51, *) " "
+ ! Print MM_input_format
+ write (51, 215) MM_input_format
+                
+ write(51, *) " "
  ! Print # of atoms-types
  write (51, 205) MM % N_of_AtomTypes , &
                  count( [ ( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) , i=1,size(FF)) ] ) 
@@ -614,6 +618,10 @@ character(len=:) , allocatable  :: string(:)
      write(51, 203) species(i) % residue, species(i) % Nangs
  ! Print # of dihedrals
      write(51, 204) species(i) % residue, species(i) % Ndiheds
+ ! Print # of Torsion DHDs
+     write(51, 214) species(i) % residue, species(i) % NTorsions
+ ! Print # of Improper DHSs
+     write(51, 224) species(i) % residue, species(i) % NImpropers
  end do
  !========================================================================================================
  ! Force Field Parameters ...

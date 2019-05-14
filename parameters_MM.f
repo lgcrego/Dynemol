@@ -38,9 +38,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "BZN"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "CYT"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 12         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 13         ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
@@ -50,6 +50,7 @@ implicit none
 !
 
   thermostat                = "Microcanonical"  ! <== Berendsen, Nose_Hoover, Microcanonical
+!  thermostat                = "Berendsen"       ! <== Berendsen, Nose_Hoover, Microcanonical
 
   temperature               = 300.d0            ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
@@ -66,18 +67,15 @@ implicit none
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-
-!  driver_MM              = "NormalModes"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-!  driver_MM              = "MM_Optimize"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-!  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-  driver_MM              = "Parametrize"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
-  MM_input_format        = "GMX"                ! <== GMX, NAMD
+
+  MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
 
 
-  MM_log_step            =  20                  ! <== step for saving MM results & parameters
-  MM_frame_step          =  20                  ! <== step for saving MM results & parameters
+  MM_log_step            =  1000                  ! <== step for saving MM results & parameters
+  MM_frame_step          =  300                   ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

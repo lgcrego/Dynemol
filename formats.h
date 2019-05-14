@@ -146,15 +146,21 @@
 
 200   FORMAT(1x,'Center of Mass Force (MO = ',I3,') = ',F10.7,'   eV/Angs')     
 
-201 format(1x,'Number of atoms in     ' , a3' = ',I6)
+201 format(1x,'Number of atoms in         ' , a3' = ',I6)
+                                          
+202 format(1x,'Number of bonds in         ' ,a3 ' = ',I6)
+                                          
+203 format(1x,'Number of angles in        ' ,a3 ' = ',I6)
+                                          
+204 format(1x,'Number of dihedrals in     ' ,a3 ' = ',I6)
 
-202 format(1x,'Number of bonds in     ' ,a3 ' = ',I6)
+214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
 
-203 format(1x,'Number of angles in    ' ,a3 ' = ',I6)
-
-204 format(1x,'Number of dihedrals in ' ,a3 ' = ',I6)
+224 format(1x,'Number of Improper DHDs in ' ,a3 ' = ',I6)
 
 205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
+
+215 format(1x,'MM input format >>> ', A6 , '   <<<')
 
 206 format(1x,'NonBonded FF type       = ' , I6)
 
