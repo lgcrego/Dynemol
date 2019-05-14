@@ -14,7 +14,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type
+    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type , MO_character
 
     private 
 
@@ -32,6 +32,78 @@ contains
 !
 !
 !
+!=============================================
+ function MO_character( GA , basis , MO , AO )
+!=============================================
+implicit none
+type(R_eigen)               , intent(in) :: GA
+type(STO_basis)             , intent(in) :: basis(:)
+integer                     , intent(in) :: MO
+character(len=*), optional  , intent(in) :: AO
+
+! local variables ...
+integer               :: l , m
+real*8                :: MO_character , population
+logical , allocatable :: mask(:) 
+
+ allocate( mask  (size(basis)) , source=.false. )
+
+ select case( AO ) 
+      
+    case( 's', 'S' )  
+
+        l = 0 ; m = 0
+
+    case( 'py', 'Py' , 'PY' )
+
+        l = 1 ; m = -1
+
+    case( 'pz', 'Pz' , 'PZ' )
+
+        l = 1 ; m = 0
+        
+    case( 'px', 'Px' , 'PX' )
+
+        l = 1 ; m = +1
+        
+    case( 'dxy', 'Dxy' , 'DXY' )
+
+        l = 2 ; m = -2
+        
+    case( 'dyz', 'Dyz' , 'DYZ' )
+
+        l = 2 ; m = -1
+        
+    case( 'dz2', 'Dz2' , 'DZ2' )
+
+        l = 2 ; m = 0 
+        
+    case( 'dxz', 'Dxz' , 'DXZ' )
+
+        l = 2 ; m = +1
+
+    case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+
+        l = 2 ; m = +2 
+  
+    case default
+
+        stop " >> error in [MO_character] subroutine check input arguments <<"
+
+ end select
+
+ where( (basis%l == l) .AND. (basis%m == m) ) mask = .true.
+
+ population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+
+ MO_character = merge( D_zero , large , population> HALF )
+
+deallocate( mask )
+
+end function MO_character
+!
+!
+!
 !======================================================================
  function Bond_Type( system , GA , MO , atom1 , atom2 , AO , instance )
 !======================================================================
@@ -44,9 +116,11 @@ integer          , intent(in) :: atom2
 character(*)     , intent(in) :: AO
 character(len=1) , intent(in) :: instance
 
+real*8 :: bond_type 
+
 ! local variables ...
 integer :: indx1 , indx2
-real*8  :: bond_type , bond_signal
+real*8  :: bond_signal
 
 select case( AO ) 
 
@@ -101,17 +175,26 @@ select case( AO )
 
 end select
 
-bond_signal = sign(1.d0,GA%L(MO,indx1)*GA%L(MO,indx2))
+! pre-processing ...
+bond_type = D_zero
+If( dabs(GA%R(indx1,MO)) < mid_prec .OR. dabs(GA%R(indx2,MO)) < mid_prec ) return
+
+! actual calculations start here ...
+bond_signal = sign( 1.d0 , GA%R(indx1,MO) * GA%R(indx2,MO) )
 
 select case ( instance )
 
     case( '+' )  ! <== Bonding ...
 
-        bond_type = merge( D_zero , real_large , bond_signal > D_zero )
+        bond_type = merge( D_zero , large , bond_signal > D_zero )
 
     case( '-' )  ! <== Anti-Bonding ...
 
-        bond_type = merge( D_zero , real_large , bond_signal < D_zero )
+        bond_type = merge( D_zero , large , bond_signal < D_zero )
+
+    case default
+
+        stop " >> error in [Bond_Type] subroutine check input arguments <<"
 
 end select
 
@@ -119,20 +202,20 @@ end function
 !
 !
 !
-!================================================================================
- pure function R_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
-!================================================================================
+!=======================================================================
+ function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue )
+!=======================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
 integer         , optional  , intent(in) :: atom(:)
-integer         , optional  , intent(in) :: AO_ang
+character(len=*), optional  , intent(in) :: AO
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 
 ! local variables ...
-integer               :: i
+integer               :: i , l , m
 real*8                :: R_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
 
@@ -151,10 +234,55 @@ else
     end do
 end IF
 !====================================================
-IF( .NOT. present(AO_ang) ) then
+IF( .NOT. present(AO) ) then
     mask_2 = .true.
 else
-    where( basis%l == AO_ang ) mask_2 = .true.
+    select case( AO ) 
+     
+       case( 's', 'S' )
+     
+           l = 0 ; m = 0
+     
+       case( 'py', 'Py' , 'PY' )
+     
+           l = 1 ; m = -1
+
+       case( 'pz', 'Pz' , 'PZ' )
+     
+           l = 1 ; m = 0
+           
+       case( 'px', 'Px' , 'PX' )
+     
+           l = 1 ; m = +1
+           
+       case( 'dxy', 'Dxy' , 'DXY' )
+     
+           l = 2 ; m = -2
+           
+       case( 'dyz', 'Dyz' , 'DYZ' )
+     
+           l = 2 ; m = -1
+           
+       case( 'dz2', 'Dz2' , 'DZ2' )
+     
+           l = 2 ; m = 0 
+           
+       case( 'dxz', 'Dxz' , 'DXZ' )
+     
+           l = 2 ; m = +1
+     
+       case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+     
+           l = 2 ; m = +2 
+     
+       case default
+     
+           stop " >> error in [Mulliken] subroutine check input arguments <<"
+
+    end select
+
+    where( (basis%l == l) .AND. (basis%m == m) ) mask_2 = .true.
+
 end IF
 !====================================================
 IF( .NOT. present(EHSymbol) ) then
@@ -252,11 +380,16 @@ end function C_Mulliken
  integer         , optional   , intent(inout) :: flag 
 
 ! local variables ... 
- integer               :: i , j , info
+ integer               :: i , j , N , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
+
+ real*8  , ALLOCATABLE :: S_eigen(:) , tool(:,:)
+
 
 ! local parameters ... 
  real*8  , parameter   :: one = 1.d0 , zero = 0.d0
+
+ N = size(basis)
 
  ALLOCATE( s_FMO   (size(basis),size(basis)) )
  ALLOCATE( h_FMO   (size(basis),size(basis)) )
@@ -280,49 +413,52 @@ end function C_Mulliken
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
- CALL SYGVD(h_FMO,dumb_S,FMO%erg,1,'V','U',info)
+ CALL SYGVD( h_FMO , dumb_S , FMO%erg , 1 , 'V' , 'U' , info )
 
- If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
+ If (info /= 0) write(*,*) 'info = ',info,' in GA_Eigen '
  If ( present(flag) ) flag = info
 
- DEALLOCATE(dumb_S)
+ !--------------------------------------------------------
+ ! Overlap Matrix Factorization: S^(1/2) ...
+ Allocate( S_eigen(N) )
 
-!     ---------------------------------------------------
-!   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-!
-!   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-!
-!   Rv = <AO|MO> coefficients
-!     ---------------------------------------------------
+ dumb_s = S_FMO
 
- ALLOCATE(Lv(size(basis),size(basis)))
+ CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
 
-    Lv = h_FMO
+ Allocate( tool(N,N) , source = transpose(dumb_S) )
 
- DEALLOCATE(h_FMO)
+ forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
- ALLOCATE(Rv(size(basis),size(basis)))
+ !now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
+ CALL gemm(dumb_S , tool , S_FMO , 'N' , 'N')
 
-    CALL gemm(S_FMO,Lv,Rv,'N','N',one,zero)  
+ DEALLOCATE( S_eigen , dumb_S , tool )
 
- DEALLOCATE( S_FMO )
+ !---------------------------------------------------
+ !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
+ !
+ !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+ !---------------------------------------------------
 
-!----------------------------------------------------------
-!  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+ Allocate( Lv(N,N) )
+ Allocate( Rv(N,N) )
 
- ALLOCATE(FMO%L(size(basis),size(basis))) 
-! eigenvectors in the rows of QM%L
-    FMO%L = transpose(Lv)                 
- DEALLOCATE( Lv )
+ Lv = h_FMO
+ Deallocate( h_FMO )
 
- ALLOCATE(FMO%R(size(basis),size(basis)))
-! eigenvectors in the columns of QM%R
-    FMO%R = Rv             
- DEALLOCATE( Rv )
+ ! Rv = S^(1/2) * Lv ...
+ CALL symm( S_FMO , Lv , Rv )
 
-!  the order of storage is the ascending order of eigenvalues
-!----------------------------------------------------------
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ ALLOCATE(FMO%R(N,N))
+ ! eigenvectors in the columns of QM%R
+ FMO%R = Rv
+
+ ALLOCATE(FMO%L(N,N))
+ ! eigenvectors in the rows of QM%L
+ FMO%L = transpose(FMO%R)
+
+ Deallocate( Lv , Rv , S_FMO )
 
  end subroutine GA_eigen
 !

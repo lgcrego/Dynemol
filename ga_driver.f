@@ -5,15 +5,15 @@ module GA_driver_m
  use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm 
- use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar !, Bond_Type
- use DOS_m 
+ use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar 
+ use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
- use cost_EH                    , only : evaluate_cost
+ use DOS_m 
 
  public :: GA_driver
 
@@ -95,15 +95,10 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , evaluate_cost(Extended_Cell, UNI, OPT_basis) , first_cost 
+Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost 
 
 !Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
-
-!do i = 1 , size(OPT_basis)
-!write(*,'(I4,A2,A4,2I4,F14.6)') OPT_basis(i)% atom , "  ",OPT_basis(i)% EHSymbol , OPT_basis(i)% l , OPT_basis(i)% m , UNI%L(29,i)
-!end do 
-!print*, Bond_Type(Extended_Cell, UNI, 29, 10, 11, 'Pz', '+')
 
 Print*, " " 
 Print*, "dE1 = ",UNI%erg(29) - UNI%erg(28) , 5.5190d0

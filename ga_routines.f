@@ -15,14 +15,13 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar ,                   &
-                                         Mulliken
+                                         AlphaPolar 
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
 
 
-    public :: Genetic_Algorithm , Mulliken 
+    public :: Genetic_Algorithm 
 
     interface Genetic_Algorithm
         module procedure Genetic_Algorithm_EH
@@ -123,6 +122,8 @@ do generation = 1 , N_generations
     indx = [ ( i , i=1,Pop_Size ) ]
 
     Print 160 , generation , N_generations
+    Print*, custo(1)
+    write(23,*) generation , custo(1)
 
 end do
 
@@ -377,7 +378,7 @@ end subroutine modify_EHT_parameters
 implicit none
 
 ! local variables ...
-integer :: i , j , ioerr , nr , N_of_EHSymbol
+integer :: i , j , ioerr , err , nr , N_of_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
