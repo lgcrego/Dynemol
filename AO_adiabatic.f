@@ -540,9 +540,10 @@ If( QMMM ) then
 
     allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    CALL Build_Induced_DP( instance = "allocate" )
-
-    CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ ) then 
+         CALL Build_Induced_DP( instance = "allocate" )
+         CALL DP_stuff ( t , "Induced_DP" )
+    end If
 
 end If
 
