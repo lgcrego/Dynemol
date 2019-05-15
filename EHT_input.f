@@ -97,6 +97,7 @@ module Semi_Empirical_Parms
  character(8)   :: Symbol_char
  character(11)  :: residue_char
  character(12)  :: EHSymbol_char 
+ logical        :: flag1 , flag2 , flag3 , flag4
 
 OPEN(unit=3,file='OPT_eht_parameters.input.dat',status='old')
 
@@ -150,6 +151,16 @@ do i = 1 , size(EH_atom)
     EH_atom(i) % DOS      =  atom( EH_atom(i)%AtNo ) % DOS
     EH_atom(i) % AngMax   =  atom( EH_atom(i)%AtNo ) % AngMax
 
+    ! input-error checking ...
+    ! "Happy families are all alike; every unhappy family is unhappy in its own way"
+    flag1 = ( (EH_atom(i)% zeta(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
+    flag2 = ( (EH_atom(i)% zeta(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
+
+    flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
+    flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
+
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in OPT_eht_parameters_input.dat ; check Nzeta parameter <<<"
+ 
 end do
 
 close(3)
@@ -157,8 +168,8 @@ close(3)
 Print 44
 Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
- ! transform zetas to units of Angs^{-1} ...
- forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
+! transform zetas to units of Angs^{-1} ...
+forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
 
 include 'formats.h'
 
