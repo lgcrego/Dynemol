@@ -74,8 +74,9 @@ implicit none
 
   driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
-  read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
-  MM_input_format        = "GMX"                ! <== GMX, NAMD
+  read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
+
+  MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
 
 
   MM_log_step            =  100                 ! <== step for saving MM results & parameters
