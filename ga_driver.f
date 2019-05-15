@@ -118,7 +118,7 @@ end if
 
 If( OPT_parms ) then    
      Print 445
-     Print 45 , EH_atom%EHSymbol
+     Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 else 
      Print*, ">> OPT_parms were not used <<"
 end if

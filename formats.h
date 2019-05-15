@@ -12,7 +12,7 @@
 
 445   FORMAT(/,">>>  Started with Optmized EHT Parameters: ")
 
-45    FORMAT(A4)
+45    FORMAT(A6,A6)
 
 46    FORMAT(/,">>>  Using Ad Hoc tuning ")
 

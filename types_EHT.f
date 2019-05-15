@@ -104,6 +104,7 @@ module type_m
     type EHT
         character(len=2) :: Symbol
         character(len=4) :: EHSymbol
+        character(len=3) :: residue 
         integer          :: AtNo
         integer          :: Nvalen
         integer          :: Nzeta(0:3)
