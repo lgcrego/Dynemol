@@ -12,13 +12,13 @@
 
 445   FORMAT(/,">>>  Started with Optmized EHT Parameters: ")
 
-45    FORMAT(A4)
+45    FORMAT(A6,A6)
 
 46    FORMAT(/,">>>  Using Ad Hoc tuning ")
 
 47    FORMAT(/,">>>  Saving structure.log ",/)
 
-48    FORMAT("Symbol  |  EHsymbol  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH")
+48    FORMAT("Symbol  |  EHsymbol  |  residue  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH")
 
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &
@@ -146,15 +146,21 @@
 
 200   FORMAT(1x,'Center of Mass Force (MO = ',I3,') = ',F10.7,'   eV/Angs')     
 
-201 format(1x,'Number of atoms in     ' , a3' = ',I6)
+201 format(1x,'Number of atoms in         ' , a3' = ',I6)
+                                          
+202 format(1x,'Number of bonds in         ' ,a3 ' = ',I6)
+                                          
+203 format(1x,'Number of angles in        ' ,a3 ' = ',I6)
+                                          
+204 format(1x,'Number of dihedrals in     ' ,a3 ' = ',I6)
 
-202 format(1x,'Number of bonds in     ' ,a3 ' = ',I6)
+214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
 
-203 format(1x,'Number of angles in    ' ,a3 ' = ',I6)
-
-204 format(1x,'Number of dihedrals in ' ,a3 ' = ',I6)
+224 format(1x,'Number of Improper DHDs in ' ,a3 ' = ',I6)
 
 205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
+
+215 format(1x,'MM input format >>> ', A6 , '   <<<')
 
 206 format(1x,'NonBonded FF type       = ' , I6)
 

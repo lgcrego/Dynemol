@@ -93,10 +93,12 @@ module Semi_Empirical_Parms
 
 ! local variables ... 
  integer        :: ioerr , nr , i 
- character(4)   :: spdf
+ character(6)   :: spdf
  character(2)   :: dumb 
  character(8)   :: Symbol_char
- character(12)  :: EHSymbol_char
+ character(11)  :: residue_char
+ character(12)  :: EHSymbol_char 
+ logical        :: flag1 , flag2 , flag3 , flag4
 
 OPEN(unit=3,file='OPT_eht_parameters.input.dat',status='old')
 
@@ -120,6 +122,7 @@ do i = 1 , size(EH_atom)
 
     read(3,17)  Symbol_char             ,   &
                 EHSymbol_char           ,   &
+                residue_char            ,   &
                 EH_atom(i)%AtNo         ,   &
                 EH_atom(i)%Nvalen       ,   &
                 EH_atom(i)%Nzeta(0)     ,   &
@@ -145,22 +148,33 @@ do i = 1 , size(EH_atom)
 
     EH_atom(i) % Symbol   =  adjustl( Symbol_char   )
     EH_atom(i) % EHSymbol =  adjustl( EHSymbol_char )
+    EH_atom(i) % residue  =  adjustl( residue_char  )
     EH_atom(i) % DOS      =  atom( EH_atom(i)%AtNo ) % DOS
     EH_atom(i) % AngMax   =  atom( EH_atom(i)%AtNo ) % AngMax
 
+    ! input-error checking ...
+    ! "Happy families are all alike; every unhappy family is unhappy in its own way"
+    flag1 = ( (EH_atom(i)% zeta(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
+    flag2 = ( (EH_atom(i)% zeta(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
+
+    flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
+    flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
+
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in OPT_eht_parameters_input.dat ; check Nzeta parameter <<<"
+ 
 end do
 
 close(3)
 
 If( master ) Print 44
-If( master ) Print 45 , EH_atom%EHSymbol
+If( master ) Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
- ! transform zetas to units of Angs^{-1} ...
- forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
+! transform zetas to units of Angs^{-1} ...
+forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
 
 include 'formats.h'
 
-17 format(A8,t10,A12,t24,I7,t32,I10,t43,I9,t53,I5,t61,A4,t68,F9.6,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
+17 format(A8,t10,A12,t23,A11,t35,I7,t44,I10,t55,I9,t65,I5,t71,A6,t80,F9.6,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
 end subroutine read_OPT_parameters
 ! 
@@ -177,7 +191,9 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) .AND. (basis%l == EH_atom(i)%l) ) 
+    where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) &
+    .AND.  (adjustl(basis%residue ) == EH_atom(i)%residue)  &
+    .AND. (basis%l == EH_atom(i)%l) ) 
         
         basis%IP        =  EH_atom(i)%IP    (0)
         basis%Nzeta     =  EH_atom(i)%Nzeta (0)
@@ -206,7 +222,7 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol) ) 
+    where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol) .AND. (adjustl(system%residue) == EH_atom(i)%residue)) 
         
         system%Nvalen = EH_atom(i)%Nvalen
 

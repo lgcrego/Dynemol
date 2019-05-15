@@ -42,8 +42,8 @@ contains
 subroutine Genetic_Algorithm_EH( basis, OPT_basis)
 !=================================================	
 implicit none
-type(STO_basis)                 , intent(in)  :: basis(:)
-type(STO_basis) , allocatable   , intent(out) :: OPT_basis(:)
+type(STO_basis)                 , intent(inout) :: basis(:)
+type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 
 ! local variables ...
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(:) , PopStar(:)
@@ -56,7 +56,7 @@ type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
 ! reading input-GA key ...
-CALL Read_GA_key
+CALL Read_GA_key( basis )
 
 !-----------------------------------------------
 !        SETTING-UP initial populations
@@ -409,10 +409,11 @@ end subroutine modify_EHT_parameters
 !
 !
 !
-!======================
- subroutine Read_GA_key
-!======================
+!===============================
+ subroutine Read_GA_key( basis )
+!===============================
 implicit none
+type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
 integer :: i , j , ioerr , nr , N_of_EHSymbol , err , size_EHSymbol
@@ -458,6 +459,19 @@ CALL MPI_BCAST( GA%EHSymbol , size_EHSymbol   , mpi_CHARACTER , 0 , world , err 
 CALL MPI_BCAST( GA%key      , 7*N_of_EHSymbol , mpi_INTEGER   , 0 , world , err )
 
 GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N_of_EHSymbol ) ] )
+
+do j = 1 , N_of_EHSymbol
+
+    If( GA%key(1,j) /= 0 ) &   ! <== optimizing s orbital ...
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 0 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+
+    If( GA%key(2,j) /= 0 ) &   ! <== optimizing p orbital ...
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 1 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+
+    If( GA%key(3,j) /= 0 ) &   ! <== optimizing d orbital ...
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 2 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+
+end do
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
@@ -506,6 +520,7 @@ do n_EHS = 1 , N_of_EHSymbol
     
         write(13,17)    OPT_basis(j)%Symbol          ,   &
                         OPT_basis(j)%EHSymbol        ,   &
+                        OPT_basis(j)%residue         ,   &
                         OPT_basis(j)%AtNo            ,   &
                    atom(OPT_basis(j)%AtNo)%Nvalen    ,   &
                         OPT_basis(j)%Nzeta           ,   &
@@ -522,7 +537,7 @@ do n_EHS = 1 , N_of_EHSymbol
 enddo
 close(13)
 
-17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
+17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
 include 'formats.h'
 
