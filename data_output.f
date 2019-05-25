@@ -155,11 +155,11 @@ type(f_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
 integer         :: i , nr , nf , np , N_of_residues , N_of_fragments
-character(12)   :: string
+character(22)   :: string
 
 ! save TDOS ...
 If( present(TDOS) ) then
-    OPEN( unit=3 , file='TDOS.dat' , status='unknown' )
+    OPEN( unit=3 , file='dos_trunk/TDOS.dat' , status='unknown' )
         do i = 1 , size(TDOS%func)
             write(3,10) TDOS%grid(i) , TDOS%average(i) , TDOS%peaks(i) , TDOS%occupation(i)
         end do
@@ -170,7 +170,7 @@ end if
 If( present(PDOS) ) then
     N_of_residues = size( PDOS )
     do nr = 1 , N_of_residues
-        string = "PDOS-"//PDOS(nr)%residue//".dat" 
+        string = "dos_trunk/PDOS-"//PDOS(nr)%residue//".dat"
         OPEN( unit=3 , file=string , status='unknown' )
             do i = 1 , size(PDOS(nr)%func)
                 write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i) , PDOS(nr)%peaks(i) , PDOS(nr)%occupation(i)

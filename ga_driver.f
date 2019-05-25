@@ -97,17 +97,18 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost 
+Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )) , sqrt(first_cost) 
 
 !Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ", UNI%erg(22) - UNI%erg(21) ,   5.3780d0
-Print*, "dE2 = ", UNI%erg(23) - UNI%erg(21) ,   6.8730d0
-Print*, "dE3 = ", UNI%erg(23) - UNI%erg(22) ,   1.4950d0
-Print*, "dE4 = ", UNI%erg(23) - UNI%erg(20) ,   7.3805d0
-Print*, "dE5 = ", UNI%erg(21) - UNI%erg(20) ,   0.5075d0
+Print*, "dE1 = ", UNI%erg(50) - UNI%erg(49) ,   6.5413d0
+Print*, "dE2 = ", UNI%erg(49) - UNI%erg(48) ,   1.8716d0
+Print*, "dE3 = ", UNI%erg(51) - UNI%erg(50) ,   1.4348d0
+Print*, "dE4 = ", UNI%erg(48) - UNI%erg(47) ,   0.0419d0
+Print*, "dE5 = ", UNI%erg(52) - UNI%erg(51) ,   0.1540d0
+Print*, "dE6 = ", UNI%erg(47) - UNI%erg(46) ,   0.1809d0
 
 ! Population analysis ...
 If( GaussianCube ) then

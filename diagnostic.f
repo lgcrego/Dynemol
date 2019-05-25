@@ -104,6 +104,13 @@ end do
          CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
      end do
  end if
+!call debug_EH(ExCell_basis)
+Print*, "dE1 = ", UNI%erg(50) - UNI%erg(49) ,   6.5413d0
+Print*, "dE2 = ", UNI%erg(49) - UNI%erg(48) ,   1.8716d0
+Print*, "dE3 = ", UNI%erg(51) - UNI%erg(50) ,   1.4348d0
+Print*, "dE4 = ", UNI%erg(48) - UNI%erg(47) ,   0.0419d0
+Print*, "dE5 = ", UNI%erg(52) - UNI%erg(51) ,   0.1540d0
+Print*, "dE6 = ", UNI%erg(47) - UNI%erg(46) ,   0.1809d0
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )
 

@@ -658,7 +658,7 @@ character(len=:) , allocatable  :: string(:)
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
- write(51,"(A)") "[ charges ]"               
+ write(51,"(A,F9.4)") "[ charges ]: total charge = ", sum( atom%MM_Charge )
 
  write(51,"(A5,F8.4,A5)") (atom(i)% MMSymbol , atom(i) % MM_Charge , merge("<==" , "   " , atom(i) % MM_Charge == 0), i = 1,size(atom))
  !========================================================================================================
