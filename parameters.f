@@ -32,18 +32,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
-!  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
-
+  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+!  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
-  QMMM           = T_
+  QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -62,11 +61,11 @@ logical :: dynamic
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
   EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
-  GaussianCube      = F_                       
-  GaussianCube_step = 500                     ! <== time step for saving Gaussian Cube files
+  GaussianCube      = T_                       
+  GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
-  CH_and_DP_step    = 10000000                ! <== time step for saving charge and Induced DP values
+  CH_and_DP_step    = 1000000                 ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
   DensityMatrix     = F_                      ! <== generates data for postprocessing 
@@ -76,7 +75,7 @@ logical :: dynamic
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 1                           ! <== step for saving backup files
+  step_security = 1000                        ! <== step for saving backup files
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -93,19 +92,16 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  0.5d0                               ! <== final time in PICOseconds
-  n_t  =  100000                              ! <== number of time steps
-
-!  t_f  =  1.0d-1                              ! <== final time in PICOseconds
-!  n_t  =  400                                 ! <== number of time steps
+  t_f  =  6.0d0                               ! <== final time in PICOseconds
+  n_t  =  1800000                             ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 116                         ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 23                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 118                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 25                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -136,12 +132,12 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  50  
-  N_generations  =  10    
-  Top_Selection  =  20                     ! <== top selection < Pop_Size
-  Pop_range      =  0.05d0                 ! <== range of variation of parameters
-  Mutation_rate  =  0.5           
-  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Pop_Size       =  4000  
+  N_generations  =  20!00  
+  Top_Selection  =  100                    ! <== top selection < Pop_Size
+  Pop_range      =  0.5d0                  ! <== range of variation of parameters
+  Mutation_rate  =  0.2           
+  Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
@@ -151,7 +147,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_M0" , "slice_MOt" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_M0" )
         
         dynamic = T_ .OR. Survival 
 
