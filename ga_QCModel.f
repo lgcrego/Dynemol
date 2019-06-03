@@ -14,7 +14,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type , MO_character
+    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type , MO_character , Localize , Exclude
 
     private 
 
@@ -29,6 +29,110 @@ module GA_QCModel_m
     integer , allocatable :: occupancy(:)
 
 contains
+!
+!
+!
+!===============================================================
+ function Exclude( GA , basis , MO , atom , residue , threshold)
+!===============================================================
+implicit none
+type(R_eigen)               , intent(in) :: GA
+type(STO_basis)             , intent(in) :: basis(:)
+integer                     , intent(in) :: MO
+integer         , optional  , intent(in) :: atom(:)
+character(len=*), optional  , intent(in) :: residue
+real*8          , optional  , intent(in) :: threshold
+
+! local variables ...
+integer               :: i
+real*8                :: exclude , population
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:)
+
+allocate( mask  (size(basis)) , source=.false. )
+allocate( mask_1(size(basis)) , source=.false. )
+allocate( mask_2(size(basis)) , source=.false. )
+
+!====================================================
+IF( .NOT. present(atom) ) then
+    mask_1 = .true.
+else
+    do i = 1 , size(atom) 
+        where( basis%atom == atom(i) ) mask_1 = .true.
+    end do
+end IF
+!====================================================
+IF( .NOT. present(residue) ) then
+    mask_2 = .true.
+else
+    where( basis%residue == residue ) mask_2 = .true.
+end IF
+!====================================================
+
+! the total mask ...
+mask = ( mask_1 .AND. mask_2 )
+
+population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+
+If( present(threshold) ) then
+    exclude = merge( D_zero , large , population < threshold )
+else
+    ! default value is assumed ...
+    exclude = merge( D_zero , large , population < 1.0d-3 )
+end if
+
+deallocate( mask )
+
+end function exclude
+!
+!
+!
+!
+!======================================================
+ function Localize( GA , basis , MO , atom , residue )
+!======================================================
+implicit none
+type(R_eigen)               , intent(in) :: GA
+type(STO_basis)             , intent(in) :: basis(:)
+integer                     , intent(in) :: MO
+integer         , optional  , intent(in) :: atom(:)
+character(len=*), optional  , intent(in) :: residue
+
+! local variables ...
+integer               :: i
+real*8                :: Localize , population
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:)
+
+allocate( mask  (size(basis)) , source=.false. )
+allocate( mask_1(size(basis)) , source=.false. )
+allocate( mask_2(size(basis)) , source=.false. )
+
+!====================================================
+IF( .NOT. present(atom) ) then
+    mask_1 = .true.
+else
+    do i = 1 , size(atom) 
+        where( basis%atom == atom(i) ) mask_1 = .true.
+    end do
+end IF
+!====================================================
+IF( .NOT. present(residue) ) then
+    mask_2 = .true.
+else
+    where( basis%residue == residue ) mask_2 = .true.
+end IF
+!====================================================
+
+! the total mask ...
+mask = ( mask_1 .AND. mask_2 )
+
+population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+
+! 85% of localization is assumed ...
+localize = merge( D_zero , large , population > 8.5d-1 )
+
+deallocate( mask )
+
+end function Localize
 !
 !
 !

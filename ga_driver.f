@@ -95,7 +95,7 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost 
+Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )) , sqrt(first_cost) 
 
 !Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 

@@ -279,15 +279,7 @@ system% BasisPointer = 0
     end do
  end do
 
-! use this only if you know what you're doing ...
-! where( basis % symbol == "Ti" .AND. basis % l == 2 .AND. basis % m == -2 ) basis % fragment = "5"  !<== dxy
-! where( basis % symbol == "Ti" .AND. basis % l == 2 .AND. basis % m == -1 ) basis % fragment = "6"  !<== dyz
-! where( basis % symbol == "Ti" .AND. basis % l == 2 .AND. basis % m ==  0 ) basis % fragment = "7"  !<== dz2
-! where( basis % symbol == "Ti" .AND. basis % l == 2 .AND. basis % m == +1 ) basis % fragment = "8"  !<== dxz
-! where( basis % symbol == "Ti" .AND. basis % l == 2 .AND. basis % m == +2 ) basis % fragment = "9"  !<== dx2y2
-! CALL Identify_Fragments( system , basis )    
-
-! during GACG cannot use OPT_eht_paremeters ...
+! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
 
 ! STO paramaters for generating Gaussian Cube Files (must be in a.u.) ... 
