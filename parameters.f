@@ -32,16 +32,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_FSSH"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+!  DRIVER         = "diagnostic"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+  DRIVER         = "MM_Dynamics"               ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
 
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = F_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -75,7 +76,8 @@ logical :: dynamic
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 1                           ! <== step for saving backup files
+  step_security = 1000                        ! <== step for saving backup files
+                                              ! <== (default = 1000)
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -92,8 +94,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  0.6d0                               ! <== final time in PICOseconds
-  n_t  =  60000                               ! <== number of time steps
+  t_f  =  2.0d0                               ! <== final time in PICOseconds
+  n_t  =  20000                               ! <== number of time steps
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -117,9 +119,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DOS parameters
 !
-  sigma     =  0.080d0                                     !
+  sigma     =  0.040d0                                     !
 
-  DOS_range = real_interval( -16.d0 , -4.d0 )            
+  DOS_range = real_interval( -14.d0 , 0.d00 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
