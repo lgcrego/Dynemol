@@ -33,12 +33,6 @@ type(universe) , intent(inout) :: univ
 !      define %atom
 !-----------------------------------
 
-!Carbono
-univ%atom(4666)%MMSymbol = "GH"
-
-!Nitrogênio 
-univ%atom(4761)%MMSymbol = "GH"
-
 !-----------------------------------
 !      define %residue
 !-----------------------------------
@@ -47,35 +41,24 @@ univ%atom(4761)%MMSymbol = "GH"
 !      define %nr
 !-----------------------------------
 
-!------------------------------------
-!      define %DPF (Dipole Fragment) 
-!------------------------------------
+!---------------------------------------------------
+!      define %DPF     (Dipole Fragment) 
+!      define %V_shift (FMO offset shift)
+!---------------------------------------------------
+
 
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
 
-univ % atom(1:4665) % QMMM = "MM" !AMI
-!4666 : Carbono "trocado" pelo hidrogênio
-univ % atom(4667) % QMMM = "MM" !AMI
-! 4668 - 4760 : RET+LYS+THR+SER
-!4761 : Nitrogênio "trocado" por hidrogênio 
-univ % atom(4762:7950) % QMMM = "MM" !AMI
-
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
 
-univ % atom(4666) % El = .true. !Carbono
-univ % atom(4668:4761) % El = .true. !RET+LYS+THR+SER+nitrogenio
-
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
-univ % atom(4666) % Hl = .true.
-univ % atom(4668:4761) % Hl = .true.
 
 !----------------------------------------------------
 !      define %fragment 
@@ -86,10 +69,6 @@ If( any(univ % atom%El) ) then
 else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
-
-univ % atom(4668:4687) % fragment = 'L'
-univ % atom(4736:4749) % fragment = 'T'
-univ % atom(4750:4760) % fragment = 'S'
 
 !......................................................................
 
@@ -168,10 +147,6 @@ select case ( instance )
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
-
-atom(4666) % mass = 12.01078
-atom(4761) % mass = 14.00672
-
 
 
     case( 'SpecialBonds' )
