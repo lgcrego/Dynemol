@@ -103,14 +103,14 @@ Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ", UNI%erg(50) - UNI%erg(49) ,   7.6121d0
-Print*, "dE2 = ", UNI%erg(51) - UNI%erg(49) ,   8.1395d0
-Print*, "dE3 = ", UNI%erg(50) - UNI%erg(48) ,   8.3182d0
-Print*, "dE4 = ", UNI%erg(49) - UNI%erg(48) ,   0.7061d0
-Print*, "dE5 = ", UNI%erg(51) - UNI%erg(50) ,   0.5273d0
-Print*, "dE6 = ", UNI%erg(48) - UNI%erg(47) ,   0.5143d0
-Print*, "dE7 = ", UNI%erg(47) - UNI%erg(46) ,   0.2713d0
-Print*, "dE8 = ", UNI%erg(52) - UNI%erg(51) ,   0.6835d0
+Print*, "dE1 = ", UNI%erg(50) - UNI%erg(49) ,   6.4937d0
+Print*, "dE2 = ", UNI%erg(51) - UNI%erg(49) ,   7.9044d0
+Print*, "dE3 = ", UNI%erg(50) - UNI%erg(48) ,   8.3523d0
+Print*, "dE4 = ", UNI%erg(49) - UNI%erg(48) ,   1.8585d0
+Print*, "dE5 = ", UNI%erg(51) - UNI%erg(50) ,   1.4106d0
+Print*, "dE6 = ", UNI%erg(48) - UNI%erg(47) ,   0.0552d0
+Print*, "dE7 = ", UNI%erg(47) - UNI%erg(46) ,   0.1978d0
+Print*, "dE8 = ", UNI%erg(52) - UNI%erg(51) ,   0.1260d0
 
 ! Population analysis ...
 If( GaussianCube ) then

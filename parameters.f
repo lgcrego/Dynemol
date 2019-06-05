@@ -41,7 +41,7 @@ logical :: dynamic
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -76,6 +76,7 @@ logical :: dynamic
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
   step_security = 1000                        ! <== step for saving backup files
+                                              ! <== (default = 1000)
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -133,10 +134,10 @@ logical :: dynamic
 !
 
   Pop_Size       =  4000  
-  N_generations  =  20!00  
-  Top_Selection  =  100                    ! <== top selection < Pop_Size
-  Pop_range      =  0.5d0                  ! <== range of variation of parameters
-  Mutation_rate  =  0.2           
+  N_generations  =  4000    
+  Top_Selection  =  1000                    ! <== top selection < Pop_Size
+  Pop_range      =  0.10d0                  ! <== range of variation of parameters
+  Mutation_rate  =  0.5           
   Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
