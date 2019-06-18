@@ -31,6 +31,11 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
+!P(350), O(31), O(253), P(210)
+!univ% atom(350)% MMSymbol = "GH"
+!univ% atom( 31)% MMSymbol = "GH"
+!univ% atom(253)% MMSymbol = "GH"
+!univ% atom(128)% MMSymbol = "GH"
 
 !-----------------------------------
 !      define %residue
@@ -40,9 +45,17 @@ type(universe) , intent(inout) :: univ
 !      define %nr
 !-----------------------------------
 
-!------------------------------------
-!      define %DPF (Dipole Fragment) 
-!------------------------------------
+!---------------------------------------------------
+!      define %DPF     (Dipole Fragment) 
+!      define %V_shift (FMO offset shift)
+!---------------------------------------------------
+where( univ% atom% residue == "ADN" .OR. univ% atom% residue == "THY") univ% atom% V_shift = -0.3d0
+where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% atom% V_shift = +0.3d0
+
+univ % atom (108:121) % residue  = "DA1"
+univ % atom ( 44: 57) % residue  = "DA6"
+univ % atom (140:151) % residue  = "DC3"
+univ % atom (298:311) % residue  = "DA0"
 
 !---------------------------------------------------
 !      define %QMMM  
@@ -52,23 +65,30 @@ type(universe) , intent(inout) :: univ
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where( univ % atom % residue == "LYR" ) univ % atom % El = .true.
+univ % atom (108:121) % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
+univ % atom (108:121) % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
 
+!univ % atom  % fragment = "Y"
+where( univ% atom% residue == "BKB" ) univ% atom% fragment = "Y"
+
+univ % atom ( 11: 25) % fragment = "1"
+univ % atom ( 44: 57) % fragment = "2"
+univ % atom (140:151) % fragment = "4"
+univ % atom (298:311) % fragment = "5"
+
+!......................................................................
 !default: %El => DONOR
 If( any(univ % atom%El) ) then
     where( univ % atom % El ) univ % atom % fragment = "D"
 else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
-
-!......................................................................
 
 If( ad_hoc_verbose_ ) then
     Print 46
@@ -120,6 +140,10 @@ select case ( instance )
 !----------------------------------
 
 !----------------------------------
+!      define flex
+!----------------------------------
+
+!----------------------------------
 !      define MM atom types 
 !----------------------------------
 
@@ -135,45 +159,25 @@ select case ( instance )
 !      define nr
 !----------------------------------
 
-!atom(:)% nr = 1
-
-
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------
 
 
     case ("MegaMass")
-
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
 
 
     case( 'SpecialBonds' )
-
 !----------------------------------
 !      define SPECIAL bonds
 !----------------------------------
-! allocate(SpecialBonds(2))
-! SpecialBonds(1) % label     = 'bond_gb16'
-! SpecialBonds(1) % kbond0(1) = 392459.2
-! SpecialBonds(1) % kbond0(2) = 0.14010
 
-! SpecialBonds(2) % label     = 'bond_gb53'
-! SpecialBonds(2) % kbond0(1) = 392459.2
-! SpecialBonds(2) % kbond0(2) = 0.14580
 !----------------------------------
 !      define SPECIAL angles 
 !----------------------------------
-! allocate(SpecialAngs(2))
-! SpecialAngs(1) % label    = 'angle_ga07'
-! SpecialAngs(1) % kang0(1) = 527.184
-! SpecialAngs(1) % kang0(2) = 108.000
-
-! SpecialAngs(2) % label    = 'angle_ga27'
-! SpecialAngs(2) % kang0(1) = 527.184
-! SpecialAngs(2) % kang0(2) = 120.000
 
 !=====================================
 

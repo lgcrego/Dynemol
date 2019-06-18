@@ -197,6 +197,7 @@ If( survival ) then
 
             OPEN( unit=3 , file=eh_tag(np)//"_survival.dat" , status="unknown" )
 
+            write(3,14) "#" ,( nf+1 , nf=0,N_of_fragments+1 )  ! <== number the columns for the eye sake ...
             write(3,12) "#" , QDyn%fragments , "total"
             do i = 1 , size( QDyn%dyn(:,1,1) )
                 write(3,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
@@ -209,8 +210,9 @@ end if
 
 10   FORMAT(4F12.5)
 11   FORMAT(3F13.9)
-12   FORMAT(10A10)
+12   FORMAT(/10A10)
 13   FORMAT(F11.6,9F10.5)
+14   FORMAT(A,I9,9I10)
 
 end subroutine Dump_stuff
 !
