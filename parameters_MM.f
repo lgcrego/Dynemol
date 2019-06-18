@@ -38,9 +38,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "ADN"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "DNA"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 15         ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 380        ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
@@ -66,15 +66,15 @@ implicit none
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-
   driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
-  MM_input_format        = "NAMD"               ! <== GMX, NAMD
+
+  MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
 
 
-  MM_log_step            =  20000               ! <== step for saving MM results & parameters
-  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
+  MM_log_step            =  100                   ! <== step for saving MM results & parameters
+  MM_frame_step          =  600                   ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

@@ -2,8 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m       , only : T_ , F_ , static
-    use MPI_definitions_m  , only : master
+    use parameters_m    , only  : T_ , F_ , static
 
     public :: ad_hoc_tuning
 
@@ -32,6 +31,11 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
+!P(350), O(31), O(253), P(210)
+!univ% atom(350)% MMSymbol = "GH"
+!univ% atom( 31)% MMSymbol = "GH"
+!univ% atom(253)% MMSymbol = "GH"
+!univ% atom(128)% MMSymbol = "GH"
 
 !-----------------------------------
 !      define %residue
@@ -45,7 +49,8 @@ type(universe) , intent(inout) :: univ
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-
+where( univ% atom% residue == "ADN" .OR. univ% atom% residue == "THY") univ% atom% V_shift = -0.3d0
+where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% atom% V_shift = +0.3d0
 
 !---------------------------------------------------
 !      define %QMMM  
@@ -55,24 +60,27 @@ type(universe) , intent(inout) :: univ
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-
+univ % atom (108:121) % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
+univ % atom (108:121) % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
-!default: %El => DONOR
 !----------------------------------------------------
+univ % atom ( 76: 89) % fragment = "A"
+univ % atom (140:151) % fragment = "B"
+univ % atom (266:279) % fragment = "C"
+
+!......................................................................
+!default: %El => DONOR
 If( any(univ % atom%El) ) then
     where( univ % atom % El ) univ % atom % fragment = "D"
 else
     if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
 
-!......................................................................
-
-If( ad_hoc_verbose_ .and. master ) then
+If( ad_hoc_verbose_ ) then
     Print 46
     ad_hoc_verbose_ = F_
 end If
@@ -122,6 +130,10 @@ select case ( instance )
 !----------------------------------
 
 !----------------------------------
+!      define flex
+!----------------------------------
+
+!----------------------------------
 !      define MM atom types 
 !----------------------------------
 
@@ -143,36 +155,19 @@ select case ( instance )
 
 
     case ("MegaMass")
-
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
 
 
     case( 'SpecialBonds' )
-
 !----------------------------------
 !      define SPECIAL bonds
 !----------------------------------
-! allocate(SpecialBonds(2))
-! SpecialBonds(1) % label     = 'bond_gb16'
-! SpecialBonds(1) % kbond0(1) = 392459.2
-! SpecialBonds(1) % kbond0(2) = 0.14010
 
-! SpecialBonds(2) % label     = 'bond_gb53'
-! SpecialBonds(2) % kbond0(1) = 392459.2
-! SpecialBonds(2) % kbond0(2) = 0.14580
 !----------------------------------
 !      define SPECIAL angles 
 !----------------------------------
-! allocate(SpecialAngs(2))
-! SpecialAngs(1) % label    = 'angle_ga07'
-! SpecialAngs(1) % kang0(1) = 527.184
-! SpecialAngs(1) % kang0(2) = 108.000
-
-! SpecialAngs(2) % label    = 'angle_ga27'
-! SpecialAngs(2) % kang0(1) = 527.184
-! SpecialAngs(2) % kang0(2) = 120.000
 
 !=====================================
 
