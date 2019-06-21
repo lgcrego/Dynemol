@@ -4,7 +4,7 @@ use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size 
+integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step 
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
@@ -76,8 +76,8 @@ logical :: dynamic
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 1000                        ! <== step for saving backup files
-                                              ! <== (default = 1000)
+  step_security = 100                         ! <== step for saving backup files
+                                              ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
@@ -94,8 +94,10 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  2.0d0                               ! <== final time in PICOseconds
-  n_t  =  20000                               ! <== number of time steps
+  t_f  =  1.0d0                               ! <== final time in PICOseconds
+  n_t  =  1000000                             ! <== number of time steps
+
+  CT_dump_step = 10                           ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
@@ -114,7 +116,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

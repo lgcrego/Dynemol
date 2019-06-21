@@ -6,7 +6,7 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
                                          GaussianCube_step ,  DP_Moment , initial_state ,   &
-                                         Coulomb_ , restart , DensityMatrix
+                                         Coulomb_ , restart , DensityMatrix , CT_dump_step
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -194,7 +194,7 @@ DO it = it_init , n_t
     Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
     QDyn%dyn(it,:,:) = Pops(it,:,:)
-    CALL dump_QDyn( QDyn , it )
+    if( mod(it,CT_dump_step) == 0 ) CALL dump_QDyn( QDyn , it )
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
@@ -387,7 +387,7 @@ end do
 12 FORMAT(/15A10)
 13 FORMAT(F11.6,14F10.5)
 14 FORMAT(3F12.6)
-15 FORMAT(A,I9,9I10)
+15 FORMAT(A,I9,14I10)
 
 end subroutine dump_Qdyn
 !

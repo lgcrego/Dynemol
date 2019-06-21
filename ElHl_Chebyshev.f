@@ -5,7 +5,7 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use parameters_m        , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM
+    use parameters_m        , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM , CT_dump_step
     use Structure_Builder   , only : Unit_Cell 
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag    
@@ -86,7 +86,7 @@ If( driver == 'q_dynamics' ) necessary_ = .false.
 ! prepare electron state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the electron state in Structure's hilbert space ...
+! place the electron state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
 N  = size(wv_FMO)
 allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
@@ -97,7 +97,7 @@ deallocate( wv_FMO )
 ! prepare hole state ...
 CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
-! place the hole state in Structure's hilbert space ...
+! place the hole state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
 N  = size(wv_FMO)
 ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
@@ -276,7 +276,7 @@ CALL store_Hprime( N , H_prime )
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
-CALL dump_Qdyn( Qdyn , it )
+if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 
 ! clean and exit ...
 If( driver /= 'q_dynamics' ) then
@@ -305,7 +305,7 @@ real*8                        , intent(in)  :: S_matrix(:,:)
 real*8          , allocatable , intent(out) :: h0(:,:)
 
 ! local variables ... 
-real*8  :: k_eff , k_WH , c1 , c2 , c3
+real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
 integer :: i , j
 
 !----------------------------------------------------------
@@ -317,20 +317,22 @@ do j = 1 , size(basis)
 
     do i = 1 , j - 1
 
-        c1 = basis(i)%IP - basis(j)%IP
-        c2 = basis(i)%IP + basis(j)%IP
-
-        c3 = (c1/c2)*(c1/c2)
-
-        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-        h0(i,j) = k_eff * S_matrix(i,j) * c2 / two
+       c1 = basis(i)%IP - basis(j)%IP
+       c2 = basis(i)%IP + basis(j)%IP
+    
+       c3 = (c1/c2)*(c1/c2)
+    
+       c4 = (basis(i)%V_shift + basis(j)%V_shift) * HALF
+    
+       k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
+    
+       k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+    
+       h0(i,j) = (k_eff*c2*HALF + c4) * S_matrix(i,j)
 
     end do
 
-    h0(j,j) = basis(j)%IP
+    h0(j,j) = basis(j)%IP + basis(j)%V_shift
 
 end do
 

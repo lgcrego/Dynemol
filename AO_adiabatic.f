@@ -6,44 +6,44 @@ module AO_adiabatic_m
     use type_m
     use constants_m
     use blas95
-    use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
-                                             frame_step , nuclear_matter ,  &
-                                             DP_Field_ , DP_Moment ,        &
-                                             Induced_ , QMMM , restart ,    &
-                                             GaussianCube , static ,        &
-                                             GaussianCube_step , preview ,  &
-                                             hole_state , initial_state ,   &
-                                             DensityMatrix, AutoCorrelation,&
-                                             driver
-    use Babel_m                     , only : Coords_from_Universe ,         &
-                                             trj ,                          &
-                                             MD_dt
-    use Allocation_m                , only : Allocate_UnitCell ,            &
-                                             DeAllocate_UnitCell ,          &
-                                             DeAllocate_Structures ,        &
-                                             Allocate_Brackets 
-    use Structure_Builder           , only : Unit_Cell ,                    &
-                                             Extended_Cell ,                &
-                                             Generate_Structure ,           &
-                                             Basis_Builder ,                &
-                                             ExCell_basis
-    use FMO_m                       , only : FMO_analysis ,                 &
-                                             orbital , eh_tag
-    use DP_main_m                   , only : Dipole_Matrix ,                &
-                                             Dipole_Moment
-    use TD_Dipole_m                 , only : wavepacket_DP                                        
-    use DP_potential_m              , only : Molecular_DPs                                              
-    use Polarizability_m            , only : Build_Induced_DP
-    use Solvated_M                  , only : Prepare_Solvated_System 
-    use QCModel_Huckel              , only : EigenSystem                                                 
-    use Schroedinger_m              , only : DeAllocate_QDyn
-    use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations ,                  &
-                                             Net_Charge
-    use Backup_m                    , only : Security_Copy ,                &
-                                             Restart_state ,                &
-                                             Restart_Sys
-    use MM_dynamics_m               , only : MolecularMechanics ,           &
+    use parameters_m                , only : t_i , n_t , t_f , n_part ,       &
+                                             frame_step , nuclear_matter ,    &
+                                             DP_Field_ , DP_Moment ,          &
+                                             Induced_ , QMMM , restart ,      &
+                                             GaussianCube , static ,          &
+                                             GaussianCube_step , preview ,    &
+                                             hole_state , initial_state ,     &
+                                             DensityMatrix, AutoCorrelation,  &
+                                             driver, CT_dump_step
+    use Babel_m                     , only : Coords_from_Universe ,           &
+                                             trj ,                            &
+                                             MD_dt                            
+    use Allocation_m                , only : Allocate_UnitCell ,              &
+                                             DeAllocate_UnitCell ,            &
+                                             DeAllocate_Structures ,          &
+                                             Allocate_Brackets                
+    use Structure_Builder           , only : Unit_Cell ,                      &
+                                             Extended_Cell ,                  &
+                                             Generate_Structure ,             &
+                                             Basis_Builder ,                  &
+                                             ExCell_basis                     
+    use FMO_m                       , only : FMO_analysis ,                   &
+                                             orbital , eh_tag                 
+    use DP_main_m                   , only : Dipole_Matrix ,                  &
+                                             Dipole_Moment                    
+    use TD_Dipole_m                 , only : wavepacket_DP                                          
+    use DP_potential_m              , only : Molecular_DPs                                                
+    use Polarizability_m            , only : Build_Induced_DP                 
+    use Solvated_M                  , only : Prepare_Solvated_System          
+    use QCModel_Huckel              , only : EigenSystem                                                   
+    use Schroedinger_m              , only : DeAllocate_QDyn                  
+    use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format             
+    use Data_Output                 , only : Populations ,                    &
+                                             Net_Charge                       
+    use Backup_m                    , only : Security_Copy ,                  &
+                                             Restart_state ,                  &
+                                             Restart_Sys                      
+    use MM_dynamics_m               , only : MolecularMechanics ,             &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
 !    use FSSH                        , only : PSE_forces
@@ -140,7 +140,7 @@ do frame = frame_init , frame_final , frame_step
         QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
     end If
 
-    CALL dump_Qdyn( Qdyn , it )
+    if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
 
