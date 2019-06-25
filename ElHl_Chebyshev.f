@@ -5,7 +5,7 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use parameters_m        , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM , CT_dump_step
+    use parameters_m        , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM , CT_dump_step , HFP_Forces
     use Structure_Builder   , only : Unit_Cell 
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag    
@@ -403,7 +403,7 @@ CALL Huckel( basis , S_matrix , h0 )
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
 
 ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
+QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
 end subroutine preprocess_from_restart
 !

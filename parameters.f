@@ -15,7 +15,7 @@ character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , EHM_Forces 
+logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -32,14 +32,14 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-!  DRIVER         = "diagnostic"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
-  DRIVER         = "MM_Dynamics"               ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+!  DRIVER         = "slice_Cheb"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
 
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
@@ -57,12 +57,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
+  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
   
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
-  EHM_Forces        = F_                      ! <== for diagnostic only: Hellman-Feynman-Pulay forces for Ext. Huckel 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -97,15 +97,15 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000000                             ! <== number of time steps
 
-  CT_dump_step = 10                           ! <== step for saving El&Hl survival charge density  
+  CT_dump_step = 15                           ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 15                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 24                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 16                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 25                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -116,14 +116,14 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
 !
   sigma     =  0.040d0                                     !
 
-  DOS_range = real_interval( -14.d0 , 0.d00 )            
+  DOS_range = real_interval( -15.d0 , 0.d00 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

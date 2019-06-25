@@ -106,9 +106,9 @@ contains
  end do
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-OPEN( unit=3 , file='EHM_forces.nmd' , status='unknown' )
+OPEN( unit=3 , file='HFP_forces.nmd' , status='unknown' )
 
-write(3,*) "EHM Force Analysis"
+write(3,*) "HFP Force Analysis"
 
 write( 3 , '(A6 ,1000A3)'   ) "names "         , (system % Symbol(i)   , i = 1 , system% atoms)
 write( 3 , '(A9 ,1000A4)'   ) "resnames "      , (system % residue(i)  , i = 1 , system% atoms)

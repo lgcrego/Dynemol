@@ -14,7 +14,7 @@ module AO_adiabatic_m
                                              GaussianCube_step , preview ,    &
                                              hole_state , initial_state ,     &
                                              DensityMatrix, AutoCorrelation,  &
-                                             driver, CT_dump_step
+                                             driver, CT_dump_step, HFP_Forces
     use Babel_m                     , only : Coords_from_Universe ,           &
                                              trj ,                            &
                                              MD_dt                            
@@ -174,7 +174,7 @@ do frame = frame_init , frame_final , frame_step
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = .NOT. (Unit_Cell% QM_erg < D_zero) 
+            QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
         case default
 

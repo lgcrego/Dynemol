@@ -8,7 +8,7 @@ module Chebyshev_driver_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , restart ,         &
-                                             step_security
+                                             step_security, HFP_Forces 
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj , MD_dt
     use Allocation_m                , only : DeAllocate_UnitCell ,          &
@@ -143,7 +143,7 @@ do frame = frame_init , frame_final , frame_step
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
+            QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
         case default
 
@@ -158,7 +158,8 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-    If( Induced_ .OR. QMMM ) CALL DP_stuff ( "Induced_DP" )
+!    If( Induced_ .OR. QMMM )  CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ )  CALL DP_stuff ( "Induced_DP" )
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
 
