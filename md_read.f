@@ -591,7 +591,7 @@ end subroutine MMSymbol_2_Symbol
 implicit none
 
 ! local variabbles ...
-integer                         :: i , at1 , at2 , at3 , at4 , funct_dih , multiples
+integer                         :: i , j , at1 , at2 , at3 , at4 , funct_dih , multiples
 real*8                          :: factor , factor_1 , factor_2 
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
@@ -639,27 +639,33 @@ character(len=:) , allocatable  :: string(:)
  write(51,"(A)") "[ atomtypes ]"               
 
  do i = 1 , size(FF)
-
+ 
     if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
-
+ 
         ! warns if paramater was not assigned to this bond ...
         flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
-
+ 
         write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
                                       FF(i)% MMSymbol                        , & 
                                       FF(i)% sig                             , &
                                       FF(i)% eps                             , &
                                       flag
-
+ 
     end if
-
+ 
  end do
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
  write(51,"(A)") "[ charges ]"               
 
- write(51,"(A5,F8.4,A5)") (atom(i)% MMSymbol , atom(i) % MM_Charge , merge("<==" , "   " , atom(i) % MM_Charge == 0), i = 1,size(atom))
+ do j = 1 , size(species)
+    
+    write(51,"(3A)") "( ",species(j)%residue," )"               
+    write(51,"(A5,F8.4,A5)") (species(j)% atom(i)% MMSymbol , species(j)% atom(i) % MM_Charge , &
+                              merge("<==" , "   " , species(j)% atom(i) % MM_Charge == 0), i = 1,species(j)% N_of_atoms)
+ end do
+
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
