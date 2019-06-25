@@ -8,7 +8,7 @@ module diagnostic_m
                                          survival , DP_Field_ , &
                                          Alpha_Tensor ,         &
                                          GaussianCube ,         &
-                                         EHM_Forces
+                                         HFP_Forces
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
@@ -97,7 +97,7 @@ end do
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( EHM_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
+ If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
  If( GaussianCube ) then
      do i = 1 , MO_total

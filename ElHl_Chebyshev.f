@@ -7,7 +7,7 @@ module ElHl_Chebyshev_m
     use constants_m
     use ifport
     use MPI_definitions_m         , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master, myid
-    use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM
+    use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
     use Structure_Builder         , only : Unit_Cell 
     use Overlap_Builder           , only : Overlap_Matrix
     use FMO_m                     , only : FMO_analysis , eh_tag    
@@ -31,7 +31,7 @@ module ElHl_Chebyshev_m
     real*8, target, allocatable   :: h0(:,:)
     real*8      ,   allocatable   :: S_matrix(:,:)
     complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
-    
+
     interface preprocess_ElHl_Chebyshev
         module procedure preprocess_ElHl_Chebyshev
         module procedure preprocess_from_restart
@@ -252,7 +252,7 @@ CALL QuasiParticleEnergies( AO_bra , AO_ket , H )
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
-CALL dump_Qdyn( Qdyn , it )
+if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 
 nullify( h )
 
@@ -273,7 +273,7 @@ real*8                        , intent(in)  :: S_matrix(:,:)
 real*8          , allocatable , intent(out) :: h0(:,:)
 
 ! local variables ... 
-real*8  :: k_eff , k_WH , c1 , c2 , c3
+real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
 integer :: i , j
 
 !----------------------------------------------------------
@@ -285,20 +285,22 @@ do j = 1 , size(basis)
 
     do i = 1 , j - 1
 
-        c1 = basis(i)%IP - basis(j)%IP
-        c2 = basis(i)%IP + basis(j)%IP
-
-        c3 = (c1/c2)*(c1/c2)
-
-        k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-        h0(i,j) = k_eff * S_matrix(i,j) * c2 / two
+       c1 = basis(i)%IP - basis(j)%IP
+       c2 = basis(i)%IP + basis(j)%IP
+    
+       c3 = (c1/c2)*(c1/c2)
+    
+       c4 = (basis(i)%V_shift + basis(j)%V_shift) * HALF
+    
+       k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
+    
+       k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
+    
+       h0(i,j) = (k_eff*c2*HALF + c4) * S_matrix(i,j)
 
     end do
 
-    h0(j,j) = basis(j)%IP
+    h0(j,j) = basis(j)%IP + basis(j)%V_shift
 
 end do
 
@@ -369,7 +371,7 @@ CALL Huckel( basis , S_matrix , h0 )
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
 
 ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
+QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
 end subroutine preprocess_from_restart
 !
