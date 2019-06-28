@@ -181,7 +181,7 @@ end if
 
 ! save peak and broadened specs ...
 If( spectrum ) then
-    OPEN( unit=3 , file='spectrum.dat' , status='unknown' )
+    OPEN( unit=3 , file='dos_trunk/spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
             write(3,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
         end do
@@ -197,6 +197,7 @@ If( survival ) then
 
             OPEN( unit=3 , file=eh_tag(np)//"_survival.dat" , status="unknown" )
 
+            write(3,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
             write(3,12) "#" , QDyn%fragments , "total"
             do i = 1 , size( QDyn%dyn(:,1,1) )
                 write(3,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
@@ -209,8 +210,9 @@ end if
 
 10   FORMAT(4F12.5)
 11   FORMAT(3F13.9)
-12   FORMAT(10A10)
-13   FORMAT(F11.6,9F10.5)
+12   FORMAT(/15A10)
+13   FORMAT(F11.6,14F10.5)
+14 FORMAT(A,I9,14I10)
 
 end subroutine Dump_stuff
 !

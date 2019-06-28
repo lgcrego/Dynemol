@@ -360,6 +360,7 @@ do n = 1 , n_part
     If( it == 1 ) then
 
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
@@ -382,9 +383,10 @@ do n = 1 , n_part
 
 end do
 
-12 FORMAT(15A10)
+12 FORMAT(/15A10)
 13 FORMAT(F11.6,14F10.5)
 14 FORMAT(3F12.6)
+15 FORMAT(A,I9,14I10)
 
 end subroutine dump_Qdyn
 !

@@ -31,11 +31,6 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
-!P(350), O(31), O(253), P(210)
-!univ% atom(350)% MMSymbol = "GH"
-!univ% atom( 31)% MMSymbol = "GH"
-!univ% atom(253)% MMSymbol = "GH"
-!univ% atom(128)% MMSymbol = "GH"
 
 !-----------------------------------
 !      define %residue
@@ -60,17 +55,22 @@ where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% ato
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-univ % atom (108:121) % El = .true.
+univ % atom (138:151) % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-univ % atom (108:121) % Hl = .true.
+univ % atom (138:151) % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-univ % atom ( 76: 89) % fragment = "A"
-univ % atom (140:151) % fragment = "B"
-univ % atom (266:279) % fragment = "C"
+where( univ% atom% residue == "BKB" ) univ% atom% fragment = "Y"
+univ % atom (359:372) % fragment = "1"
+univ % atom (170:183) % fragment = "2"
+univ % atom (327:340) % fragment = "3"
+univ % atom (391:404) % fragment = "4"
+univ % atom (106:119) % fragment = "5"
+univ % atom (423:436) % fragment = "6"
+univ % atom ( 74: 87) % fragment = "7"
 
 !......................................................................
 !default: %El => DONOR

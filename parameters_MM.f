@@ -40,7 +40,7 @@ implicit none
 !
   species(1) % residue         = "DNA"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 380        ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 506        ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms

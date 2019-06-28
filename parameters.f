@@ -55,7 +55,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
+  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
   
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
@@ -73,7 +73,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
-  restart       = F_                          ! <== TRUE for restarting dynamics
+  restart       = T_                          ! <== TRUE for restarting dynamics
   step_security = 100                         ! <== step for saving backup files
                                               ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
@@ -95,15 +95,15 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000000                             ! <== number of time steps
 
-  CT_dump_step = 10                           ! <== step for saving El&Hl survival charge density  
+  CT_dump_step = 15                           ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 25                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 24                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 25                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
