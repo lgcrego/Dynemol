@@ -9,6 +9,7 @@ real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
+character (len=2)       :: solvent_type
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
@@ -32,14 +33,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-!  DRIVER         = "slice_Cheb"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
-  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+!  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+  DRIVER         = "diagnostic"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
 
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+!  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
@@ -62,7 +64,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = T_                       
+  GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -81,7 +83,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  Solvent_Type =  "QM"                        ! <== QM = quantum , MM = classical ...
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
@@ -101,11 +104,11 @@ logical :: dynamic
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 24                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 25                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 25                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -116,7 +119,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

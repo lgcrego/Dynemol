@@ -740,8 +740,8 @@ end forall
 
 a % atom % mass               = 0.d0
 a % atom % charge             = 0.d0
-a % atom % solvation_hardcore = 2.5d0
-a % atom % hardcore           = 2.5d0
+a % atom % solvation_hardcore = 3.0d0
+a % atom % hardcore           = 3.0d0
 a % atom % V_shift            = 0.d0   
 a % atom % AtNo               = 0
 a % atom % nr                 = 0
@@ -777,8 +777,8 @@ forall( i=1:3 )
     a % coord(:,i)  = 0.d0
 end forall
 
-a % solvation_hardcore        = 2.5d0
-a % hardcore                  = 2.5d0
+a % solvation_hardcore        = 3.0d0
+a % hardcore                  = 3.0d0
 a % V_shift                   = 0.0d0
 a % AtNo                      = 0
 a % nr                        = 1

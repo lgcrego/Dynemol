@@ -12,7 +12,7 @@ module Chebyshev_m
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag                  
     use QCmodel_Huckel      , only : Huckel ,                       &
-                                     Huckel_with_FIELDS
+                                     even_more_extended_Huckel
     use Data_Output         , only : Populations
     use Matrix_Math
 
@@ -371,11 +371,7 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 If( DP_field_ ) then
  
-    do j = 1 , n
-    do i = 1 , j
-        H(i,j) = huckel_with_FIELDS(i,j,S_matrix(i,j),basis)
-    end do
-    end do  
+    H(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
 
 else
 

@@ -20,6 +20,9 @@ module tuning_m
 implicit none
 type(universe) , intent(inout) :: univ
 
+!local variables ...
+integer :: i
+
 ! edit structure  ...
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -31,11 +34,6 @@ type(universe) , intent(inout) :: univ
 !-----------------------------------
 !      define %atom
 !-----------------------------------
-!P(350), O(31), O(253), P(210)
-!univ% atom(350)% MMSymbol = "GH"
-!univ% atom( 31)% MMSymbol = "GH"
-!univ% atom(253)% MMSymbol = "GH"
-!univ% atom(128)% MMSymbol = "GH"
 
 !-----------------------------------
 !      define %residue
@@ -52,35 +50,32 @@ type(universe) , intent(inout) :: univ
 where( univ% atom% residue == "ADN" .OR. univ% atom% residue == "THY") univ% atom% V_shift = -0.3d0
 where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% atom% V_shift = +0.3d0
 
-univ % atom (108:121) % residue  = "DA1"
-univ % atom ( 44: 57) % residue  = "DA6"
-univ % atom (140:151) % residue  = "DC3"
-univ % atom (298:311) % residue  = "DA0"
-
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
+where( univ% atom% residue == "Na+" ) univ% atom% QMMM = "MM"
+where( univ% atom% residue == "H2O" ) univ% atom% QMMM = "MM"
 
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-univ % atom (108:121) % El = .true.
+univ % atom (359:372) % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-univ % atom (108:121) % Hl = .true.
+univ % atom (359:372) % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-
-!univ % atom  % fragment = "Y"
 where( univ% atom% residue == "BKB" ) univ% atom% fragment = "Y"
-
-univ % atom ( 11: 25) % fragment = "1"
-univ % atom ( 44: 57) % fragment = "2"
-univ % atom (140:151) % fragment = "4"
-univ % atom (298:311) % fragment = "5"
+univ % atom (138:151) % fragment = "1"
+univ % atom (170:183) % fragment = "2"
+univ % atom (327:340) % fragment = "3"
+univ % atom (391:404) % fragment = "4"
+univ % atom (106:119) % fragment = "5"
+univ % atom (423:436) % fragment = "6"
+univ % atom ( 74: 87) % fragment = "7"
 
 !......................................................................
 !default: %El => DONOR
@@ -94,6 +89,29 @@ If( ad_hoc_verbose_ ) then
     Print 46
     ad_hoc_verbose_ = F_
 end If
+
+! ---------- Table of fragments -------------
+!   Acceptor    =   A       
+!   Donor       =   D 
+!   Molecule    =   M
+!   Solvent     =   S
+!   Solute      =   R
+!   Cluster     =   C 
+!   Passivator  =   P 
+!   ghost       =   #
+!--------------------------------------------
+
+DO i = 1 , size(univ%atom)
+
+    select case(univ%atom(i)%residue)
+
+        case( 'H2O' , 'WAT' , 'TIP' )
+            univ%atom(i)%fragment = 'S'
+            univ%atom(i)%solvation_hardcore = 3.d0
+
+    end select
+
+END DO
 
 ! just touching univ ...
 univ = univ

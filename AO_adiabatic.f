@@ -271,7 +271,6 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
@@ -286,7 +285,7 @@ If( DP_field_ ) then
     static     = .false.
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
 
 CALL EigenSystem  ( Extended_Cell , ExCell_basis , UNI )
 
@@ -360,7 +359,6 @@ If( DensityMatrix ) then
     If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
 End If
 
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 !..........................................................................
