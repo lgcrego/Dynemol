@@ -4,7 +4,7 @@ module DP_potential_m
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , solvent_type
+    use parameters_m            , only : PBC , solvent_type , verbose
     use Structure_Builder       , only : Extended_Cell
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
@@ -117,7 +117,7 @@ select case( instance )
         a%N_of_Solvent_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        Print 157 , a%N_of_Solvent_Molecules
+        If( verbose ) Print 157 , a%N_of_Solvent_Molecules
 
     case( "solute" )
 

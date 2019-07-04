@@ -124,7 +124,7 @@ SOURCE2 = constants_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-          IdentifyNonBonded.o \
+                  IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
@@ -155,11 +155,11 @@ SOURCE2 = constants_m.o \
 		  QCModel_ElHl.o \
 		  AlphaPolar.o \
 		  data_output.o \
-          backup_MM.o \
+                  backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-          NVE.o \
+                  NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \

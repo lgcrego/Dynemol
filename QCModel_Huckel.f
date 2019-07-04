@@ -11,14 +11,16 @@
     use parameters_m                , only : DP_Field_  ,       &
                                              Induced_ ,         &
                                              driver ,           &
-                                             verbose
+                                             verbose ,          &
+                                             solvent_step
     use Overlap_Builder             , only : Overlap_Matrix
     use DP_potential_m              , only : DP_phi
     use DP_main_m                   , only : DP_matrix_AO
     use polarizability_m            , only : Induced_DP_phi
     use Semi_Empirical_Parms        , only : atom
 
-    public :: EigenSystem , Huckel , even_more_extended_Huckel
+
+    public :: EigenSystem , Huckel , even_more_extended_Huckel 
 
     private
 
@@ -28,19 +30,24 @@
     end interface
 
     ! module variables ...
+    real*8 , allocatable :: DP_4_matrix(:,:,:)
+    logical              :: done     = .false.
+    logical              :: flag_DP4 = .true.
 
  contains
 !
 !
 !
-!=============================================
- subroutine EigenSystem( system , basis , QM )
-!=============================================
+!==================================================
+ subroutine EigenSystem( system , basis , QM , it )
+!==================================================
 use Matrix_math
 implicit none
-type(structure)                             , intent(in)    :: system
-type(STO_basis)                             , intent(in)    :: basis(:)
-type(R_eigen)                               , intent(inout) :: QM
+type(structure)  , intent(in)    :: system
+type(STO_basis)  , intent(in)    :: basis(:)
+type(R_eigen)    , intent(inout) :: QM
+integer          , optional , intent(in) :: it
+
 
 ! local variables ...
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
@@ -61,28 +68,33 @@ Allocate( dumb_S(N,N) )
 ! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
 call start_clock
-
 If( DP_field_ .OR. Induced_ ) then
+
+    If( .not. present(it) ) then
+       flag_DP4 = .true.
+    else If( mod(it-1,solvent_step) == 0 ) then
+       flag_DP4 = .true.
+    else
+       flag_DP4 = .false.
+    end if
 
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix ) 
 
 else
 
     do j = 1 , N
-        do i = j , N
+      do i = j , N
 
-            h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
+        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
 
-        end do
+      end do
     end do
 
 end If
-
-
 call stop_clock
 
-write(35,*) h
-stop
+!write(35,*) h
+!stop
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 
@@ -199,6 +211,12 @@ integer               :: i , j , ia , ib , ja , jb , N
 real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) 
 
+! instantiating DP_$_matrix ...
+if( .not. done ) CALL allocate_DP4_matrix
+
+! resetting DP_$_matrix before fresh calculation ...
+if( flag_DP4 ) DP_4_matrix = D_zero
+
 N = size(basis)
 Allocate( h(N,N) , source = D_zero )
 
@@ -219,7 +237,12 @@ do ib = 1, system%atoms
            cycle
         end if
 
-        DP_4_vector = DP_phi( system , ia , ib )
+        If( flag_DP4) then
+           DP_4_vector = DP_phi( system , ia , ib )
+           DP_4_matrix(ia,ib,:) = DP_4_vector
+        else
+           DP_4_vector = DP_4_matrix(ia,ib,:)
+        end if
 
         do jb = 1, atom(system%AtNo(ib))% DOS
             do ja = 1, atom(system%AtNo(ia))% DOS
@@ -365,39 +388,8 @@ end function Huckel_with_FIELDS
  ALLOCATE( h(N,N) )
 
  If( DP_field_ ) then
-    !$OMP parallel do &
-    !$OMP   default(shared) &
-    !$OMP   schedule(dynamic, 1) &
-    !$OMP   private(ib, ia, Rab, jb, ja, j, i, DP_4_vector)
-    do ib = 1, system%atoms
-        do ia = ib+1, system%atoms
 
-            if ((system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM")) then
-                cycle
-            end if
-
-            Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
-            if (Rab > cutoff_Angs) then
-               cycle
-            end if
-
-            DP_4_vector = DP_phi( system , ia , ib )
-
-            do jb = 1, atom(system%AtNo(ib))% DOS
-                do ja = 1, atom(system%AtNo(ia))% DOS
-
-                    j = system% BasisPointer(ib) + jb
-                    i = system% BasisPointer(ia) + ja
-    
-                    h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
-
-                end do
-            end do
-
-        end do
-    end do  
-    !$OMP END PARALLEL DO
-    forall( i=1:N ) h(i,i) = huckel( i , i , S_matrix(i,i) , basis ) 
+    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix ) 
 
  else
 
@@ -424,18 +416,41 @@ end function Huckel_with_FIELDS
 !==================================================
 pure function GET_RAB(a_coord, b_coord) result(rab)
 !==================================================
-    implicit none
+ implicit none
 
-    ! args
-    real*8, intent(in) :: a_coord(:)
-    real*8, intent(in) :: b_coord(:)
+ ! args
+ real*8, intent(in) :: a_coord(:)
+ real*8, intent(in) :: b_coord(:)
 
-    ! result
-    real*8 :: rab
+ ! result
+ real*8 :: rab
 
-    rab = SUM((a_coord - b_coord) ** 2)
-    rab = SQRT(rab)
+ rab = SUM((a_coord - b_coord) ** 2)
+ rab = SQRT(rab)
 end function GET_RAB
+!
+!
+!
+!===============================
+ subroutine allocate_DP4_matrix
+!===============================
+ use Structure_Builder , only : a => Extended_Cell 
+ implicit none
+
+! local variables ...
+ integer :: N_of_QM
+
+ N_of_QM = count(a%QMMM == "QM")
+
+ If( minloc( a%QMMM , dim=1 , mask = a%QMMM == "MM" ) < N_of_QM ) then
+    stop ">> halting: block of QM atoms must precede solvent atoms if DP_field_ = T_ ; check input data <<"
+ end if
+
+ allocate( DP_4_matrix( N_of_QM , N_of_QM , 4 ) , source = D_zero ) 
+
+ done = .true.
+
+end subroutine allocate_DP4_matrix
 !
 !
 !

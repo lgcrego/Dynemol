@@ -144,11 +144,11 @@ allocate( pbc_nr_MOL ( N_of_pbc_mols )     )
 
 ! original DPs cell ...
 do j = 1 , 3  
-    pbc_CC_MOL(:,j) = CC_MOL(:,j)
-    pbc_DP_MOL(:,j) = DP_Mol(:,j)
+    pbc_CC_MOL(1:N_of_DP_MOLs,j) = CC_MOL(:,j)
+    pbc_DP_MOL(1:N_of_DP_MOLs,j) = DP_Mol(:,j)
 end do
 
-pbc_nr_MOL = nr_Mol 
+pbc_nr_MOL(1:N_of_DP_MOLs) = nr_Mol 
 
 ! include the replicas        
 k = N_of_DP_MOLs

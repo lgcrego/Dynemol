@@ -14,7 +14,8 @@ module AO_adiabatic_m
                                              GaussianCube_step , preview ,    &
                                              hole_state , initial_state ,     &
                                              DensityMatrix, AutoCorrelation,  &
-                                             driver, CT_dump_step, HFP_Forces
+                                             CT_dump_step, solvent_step,      &
+                                             driver, HFP_Forces
     use Babel_m                     , only : Coords_from_Universe ,           &
                                              trj ,                            &
                                              MD_dt                            
@@ -58,18 +59,19 @@ module AO_adiabatic_m
     Complex*16      , allocatable , dimension(:)    :: phase
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
     type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
-    integer                                         :: mm , nn
+    real*8                                          :: t
+    integer                                         :: it , mm , nn
 
 contains
 !
 !
 !
-!====================================
- subroutine AO_adiabatic( Qdyn , it )
-!====================================
+!==========================================
+ subroutine AO_adiabatic( Qdyn , final_it )
+!==========================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(out)   :: it
+integer         , intent(out)   :: final_it
 
 ! local variables ...
 real*8          :: t , t_rate 
@@ -92,9 +94,9 @@ else
 end If
 
 If( restart ) then
-    CALL Restart_stuff( QDyn , t , it , frame_restart )
+    CALL Restart_stuff( QDyn , frame_restart )
 else
-    CALL Preprocess( QDyn , it )
+    CALL Preprocess( QDyn )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -140,11 +142,11 @@ do frame = frame_init , frame_final , frame_step
         QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
     end If
 
-    if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
+    if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn )
 
-    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame )
 
-    If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
+    If( DP_Moment ) CALL DP_stuff( "DP_moment" )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -187,14 +189,13 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL DP_stuff ( t , "DP_field" )
+    If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-!    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
-    If( Induced_ )  CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ )  CALL DP_stuff ( "Induced_DP" )
 
     Deallocate ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem ( Extended_Cell , ExCell_basis , UNI )
+    CALL EigenSystem ( Extended_Cell , ExCell_basis , UNI , it )
 
     ! project back to MO_basis with UNI(t + t_rate)
     select case (driver)
@@ -220,18 +221,19 @@ end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
+final_it = it
+
 include 'formats.h'
 
 end subroutine AO_adiabatic
 !
 !
 !
-!==================================
- subroutine Preprocess( QDyn , it )
-!==================================
+!=============================
+ subroutine Preprocess( QDyn )
+!=============================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(in)    :: it
 
 ! local variables
 integer         :: hole_save , n 
@@ -287,7 +289,7 @@ end If
 
 CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
 
-CALL EigenSystem  ( Extended_Cell , ExCell_basis , UNI )
+CALL EigenSystem  ( Extended_Cell , ExCell_basis , UNI , it )
 
 CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
@@ -346,13 +348,13 @@ else
     QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 end If
 
-CALL dump_Qdyn( Qdyn , it )
+CALL dump_Qdyn( Qdyn )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube( it )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
+If( DP_Moment    ) CALL DP_stuff ( "DP_matrix" )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
+If( DP_Moment    ) CALL DP_stuff ( "DP_moment" )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -370,12 +372,11 @@ end subroutine Preprocess
 !
 !
 ! 
-!=========================================
- subroutine Send_to_GaussianCube( it , t )
-!=========================================
+!========================================
+ subroutine Send_to_GaussianCube( frame )
+!========================================
 implicit none
-integer     , intent(in)    :: it
-real*8      , intent(in)    :: t
+integer , intent(in) :: frame
 
 ! local variables ...
 integer :: n
@@ -389,7 +390,7 @@ AO_bra = DUAL_bra
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
 do n = 1 , n_part
-    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 
 !----------------------------------------------------------
@@ -399,11 +400,10 @@ end subroutine Send_to_GaussianCube
 !
 !
 !
-!===================================
- subroutine DP_stuff( t , instance )
-!===================================
+!===============================
+ subroutine DP_stuff( instance )
+!===============================
 implicit none
-real*8        , intent(in)    :: t
 character(*)  , intent(in)    :: instance
 
 !local variables ...
@@ -430,9 +430,10 @@ select case( instance )
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         ! wavepacket component of the dipole vector ...
-        CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+        ! decide what to do with this ############ 
+        !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        CALL Molecular_DPs( Extended_Cell )
+        If( mod(it-1,solvent_step) == 0 ) CALL Molecular_DPs( Extended_Cell )
 
     case( "DP_moment" )
 
@@ -461,12 +462,11 @@ end subroutine DP_stuff
 !
 !
 !
-!=================================
- subroutine dump_Qdyn( Qdyn , it )
-!=================================
+!============================
+ subroutine dump_Qdyn( Qdyn )
+!============================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-integer         , intent(in) :: it 
 
 ! local variables ...
 integer    :: nf , n
@@ -514,13 +514,11 @@ end subroutine dump_Qdyn
 !
 !
 !
-!========================================================
-subroutine Restart_stuff( QDyn , t , it , frame_restart )
-!========================================================
+!===============================================
+subroutine Restart_stuff( QDyn , frame_restart )
+!===============================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-real*8          , intent(inout) :: t
-integer         , intent(inout) :: it
 integer         , intent(inout) :: frame_restart
 
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
@@ -540,7 +538,7 @@ If( QMMM ) then
 
     If( Induced_ ) then 
          CALL Build_Induced_DP( instance = "allocate" )
-         CALL DP_stuff ( t , "Induced_DP" )
+         CALL DP_stuff ( "Induced_DP" )
     end If
 
 end If

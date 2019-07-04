@@ -264,7 +264,7 @@ If( excited_DPF ) then
         forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
         ! adding (subtracting) DP moment contribution from el(hl)_wavepacket ...
-        Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:) 
+        Electronic_DP = Electronic_DP !+ wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:) 
 
     else
 
@@ -291,7 +291,7 @@ If( .not. excited_DPF ) then
     forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
     ! including DP moment contribution from el-hl wavepackets to non FMO molecules ...
-    If( .not. static ) Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:)
+    If( .not. static ) Electronic_DP = Electronic_DP !+ wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:)
 
 end If
 
