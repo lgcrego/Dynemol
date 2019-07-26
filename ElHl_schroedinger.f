@@ -79,7 +79,7 @@ if( restart .AND. Coulomb_ ) then
     Deallocate ( UNI_el%R , UNI_el%L , UNI_el%erg )
     Deallocate ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
-    CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl )
+    CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl , 1 )
 
     it_init = it
 
@@ -218,7 +218,7 @@ DO it = it_init , n_t
         Deallocate ( UNI_el%R , UNI_el%L , UNI_el%erg )
         Deallocate ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
-        CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl )
+        CALL EigenSystem_ElHl( system , basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
 
         ! project back to MO_basis with UNI(t + t_rate)
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , Dual_bra(:,1) , mm , C_zero , MO_bra(:,1) , mm )

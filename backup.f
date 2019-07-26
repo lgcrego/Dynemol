@@ -108,7 +108,7 @@ end If
 
 if( driver == "slice_ElHl") then
 
-    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
+    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
 
 else
 

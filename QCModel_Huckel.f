@@ -31,8 +31,7 @@
 
     ! module variables ...
     real*8 , allocatable :: DP_4_matrix(:,:,:)
-    logical              :: done     = .false.
-    logical              :: flag_DP4 = .true.
+    logical              :: done = .false.
 
  contains
 !
@@ -70,15 +69,7 @@ dumb_s = S_matrix
 call start_clock
 If( DP_field_ .OR. Induced_ ) then
 
-    If( .not. present(it) ) then
-       flag_DP4 = .true.
-    else If( mod(it-1,solvent_step) == 0 ) then
-       flag_DP4 = .true.
-    else
-       flag_DP4 = .false.
-    end if
-
-    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix ) 
+    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 
 else
 
@@ -198,24 +189,35 @@ end subroutine EigenSystem
 !
 !
 !
-!=========================================================================
- function even_more_extended_huckel( system , basis , S_matrix ) result(h)
-!=========================================================================
+!==============================================================================
+ function even_more_extended_huckel( system , basis , S_matrix , it ) result(h)
+!==============================================================================
 implicit none
-type(structure) , intent(in) :: system
-type(STO_basis) , intent(in) :: basis(:)
-real*8          , intent(in) :: S_matrix(:,:)
+type(structure)            , intent(in) :: system
+type(STO_basis)            , intent(in) :: basis(:)
+real*8                     , intent(in) :: S_matrix(:,:)
+integer         , optional , intent(in) :: it
 
 ! local variables ...
 integer               :: i , j , ia , ib , ja , jb , N
 real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) 
+logical               :: evaluate
 
 ! instantiating DP_$_matrix ...
 if( .not. done ) CALL allocate_DP4_matrix
 
+! evaluate or not evaluate DP_phi this time...
+If( .not. present(it) ) then
+   evaluate = .true.
+else If( mod(it-1,solvent_step) == 0 ) then
+   evaluate = .true.
+else
+   evaluate = .false.
+end if
+
 ! resetting DP_$_matrix before fresh calculation ...
-if( flag_DP4 ) DP_4_matrix = D_zero
+if( evaluate ) DP_4_matrix = D_zero
 
 N = size(basis)
 Allocate( h(N,N) , source = D_zero )
@@ -237,10 +239,10 @@ do ib = 1, system%atoms
            cycle
         end if
 
-        If( flag_DP4) then
+        If( evaluate ) then 
            DP_4_vector = DP_phi( system , ia , ib )
            DP_4_matrix(ia,ib,:) = DP_4_vector
-        else
+        else 
            DP_4_vector = DP_4_matrix(ia,ib,:)
         end if
 

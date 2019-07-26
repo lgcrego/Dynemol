@@ -34,9 +34,9 @@ contains
 !
 !
 !
-!==============================================================================================
-subroutine EigenSystem_ElHl( system , basis , AO_bra , AO_ket , QM_el , QM_hl , flag1 , flag2 )
-!==============================================================================================
+!===========================================================================================
+subroutine EigenSystem_ElHl( system , basis , AO_bra , AO_ket , QM_el , QM_hl , it , flag1 )
+!===========================================================================================
 implicit none
 type(structure)                            , intent(in)    :: system
 type(STO_basis)                            , intent(in)    :: basis(:)
@@ -44,8 +44,8 @@ complex*16      , optional                 , intent(in)    :: AO_bra(:,:)
 complex*16      , optional                 , intent(in)    :: AO_ket(:,:)
 type(R_eigen)                              , intent(inout) :: QM_el
 type(R_eigen)                              , intent(inout) :: QM_hl
+integer                                    , intent(in)    :: it
 integer         , optional                 , intent(inout) :: flag1
-integer         , optional                 , intent(in)    :: flag2
 
 ! local variables ...
 real*8  , ALLOCATABLE   :: V_coul_El(:) , V_coul_Hl(:) 
@@ -77,7 +77,7 @@ ALLOCATE( h (N,N) , source = Huckel( basis , S_matrix ) )
 if( DP_field_ .OR. Induced_ ) then
 
     allocate( H_DP(N,N) , source = D_zero )
-    H_DP = even_more_extended_Huckel( system , basis , S_matrix )
+    H_DP = even_more_extended_Huckel( system , basis , S_matrix , it )
 
     h = h + transpose(H_DP)
     if( PTheory ) then
@@ -93,7 +93,7 @@ else
 end if
 
 ! eigensystem for ELECTRON wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , flag2 , instance="el" )
+CALL Build_MO_basis( h , S_matrix , QM_el , AO_bra , AO_ket , flag1 , instance="el" )
 
 !-----------------------------------------------------------------------
 !            Hole Hamiltonian : lower triangle of V_coul ...
@@ -104,7 +104,7 @@ h = Huckel( basis , S_matrix )
 if( DP_field_ .OR. Induced_ ) then
 
     allocate( H_DP(N,N) , source = D_zero )
-    H_DP = even_more_extended_Huckel( system , basis , S_matrix )
+    H_DP = even_more_extended_Huckel( system , basis , S_matrix , it )
 
     h = h + H_DP
     if( PTheory ) then
@@ -122,7 +122,7 @@ end if
 deallocate( V_coul_El , V_coul_Hl )
 
 ! eigensystem for HOLE wavepacket ...
-CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , flag2 , instance="hl" )
+CALL Build_MO_basis( h , S_matrix , QM_hl , AO_bra , AO_ket , flag1 , instance="hl" )
 
 If( allocated(V_coul) ) deallocate( V_coul )
 
@@ -130,9 +130,9 @@ end subroutine EigenSystem_ElHl
 !
 !
 !
-!=================================================================================================
-subroutine Build_MO_basis( H_matrix , S_matrix , QM , AO_bra , AO_ket , flag1 , flag2 , instance )
-!=================================================================================================
+!=========================================================================================
+subroutine Build_MO_basis( H_matrix , S_matrix , QM , AO_bra , AO_ket , flag1 , instance )
+!=========================================================================================
 implicit none
 real*8                      ,  allocatable  , intent(inout) :: H_matrix(:,:)
 real*8                      ,  allocatable  , intent(inout) :: S_matrix(:,:)
@@ -140,7 +140,6 @@ type(R_eigen)                               , intent(inout) :: QM
 complex*16      , optional                  , intent(in)    :: AO_bra(:,:)
 complex*16      , optional                  , intent(in)    :: AO_ket(:,:)
 integer         , optional                  , intent(inout) :: flag1
-integer         , optional                  , intent(in)    :: flag2
 character(*)                                , intent(in)    :: instance
 
 ! local variables ...

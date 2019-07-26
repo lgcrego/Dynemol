@@ -211,7 +211,7 @@ do frame = frame_init , frame_final , frame_step
     Deallocate              ( UNI_el%R , UNI_el%L , UNI_el%erg )
     Deallocate              ( UNI_hl%R , UNI_hl%L , UNI_hl%erg )
 
-    CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
+    CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
 
     ! project back to MO_basis with UNI(t + t_rate)
     CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%R , mm , Dual_bra(:,1) , mm , C_zero , MO_bra(:,1) , mm )
@@ -296,7 +296,7 @@ end If
 
 If( DP_Field_ .OR. Induced_ .OR. QMMM ) CALL Dipole_Matrix ( Extended_Cell , ExCell_basis )
 
-CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , flag2=it )
+CALL EigenSystem_ElHl   ( Extended_Cell , ExCell_basis , QM_el=UNI_el , QM_hl=UNI_hl , it = it )
 
 ! build the initial electron-hole wavepacket ...
 CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI_el%R , el_FMO , instance="E" )

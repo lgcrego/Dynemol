@@ -479,6 +479,7 @@ do n = 1 , n_part
     If( it == 1 ) then
 
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,11) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
@@ -505,8 +506,9 @@ end do
 ! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
 Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
-12 FORMAT(10A10)
-13 FORMAT(F11.6,9F10.5)
+11 FORMAT(A,I9,14I10)
+12 FORMAT(/15A10)
+13 FORMAT(F11.6,14F10.5)
 14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
