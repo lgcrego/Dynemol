@@ -185,8 +185,8 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-		  Chebyshev.o \
                   Taylor.o \
+		  Chebyshev.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \
@@ -214,7 +214,7 @@ a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	$(FC) $(FC_ALL) $(INCLUDES) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIBS)
 	-rm -f *.log
 
-# Program run very slowly with this
+# Program runs very slowly with this
 safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens
 safe: CC_ALL += -traceback -fstack-protector
 safe: a

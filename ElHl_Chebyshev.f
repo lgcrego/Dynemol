@@ -237,23 +237,20 @@ CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max
 !            Hole Hamiltonian : lower triangle of V_coul ...
 !=======================================================================
 
-if( Coulomb_ ) forall(j=1:N) h(j,j) = h0(j,j) + V_coul_Hl(j)
-
-#ifdef USE_GPU
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-#endif
-
 if( Coulomb_ ) then
+    forall(j=1:N) h(j,j) = h0(j,j) + V_coul_Hl(j)
 #ifndef USE_GPU
     call syMultiply( S_inv , h , H_prime )
 #endif
     deallocate( h, V_coul_El, V_coul_Hl)
 end if
 
-#ifndef USE_GPU
 ! proceed evolution of HOLE wapacket with best tau ...
+#ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#else
 CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
 #endif
 

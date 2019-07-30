@@ -73,13 +73,7 @@ If( DP_field_ .OR. Induced_ ) then
 
 else
 
-    do j = 1 , N
-      do i = j , N
-
-        h(i,j) = huckel(i,j,S_matrix(i,j),basis) 
-
-      end do
-    end do
+    h(:,:) = Build_Huckel( basis , S_matrix ) 
 
 end If
 call stop_clock
@@ -263,6 +257,35 @@ end do
 forall( i=1:N ) h(i,i) = huckel( i , i , S_matrix(i,i) , basis ) 
 
 end function even_more_extended_huckel
+!
+!
+!
+!===================================================
+ function Build_Huckel( basis , S_matrix ) result(h)
+!===================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
+
+! local variables ... 
+integer :: i , j , N
+real*8  , allocatable   :: h(:,:)
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+
+N = size(basis)
+ALLOCATE( h(N,N) , source = D_zero )
+
+do j = 1 , N
+  do i = j , N
+
+        h(i,j) = huckel( i , j , S_matrix(i,j) , basis )
+
+    end do
+end do
+
+end function Build_Huckel
 !
 !
 !
