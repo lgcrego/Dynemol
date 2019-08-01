@@ -7,7 +7,7 @@
     use constants_m
     use parameters_m                , only : DP_Field_, Induced_ , verbose
     use Overlap_Builder             , only : Overlap_Matrix
-    use QCModel_Huckel              , only : Huckel , even_more_extended_Huckel
+    use QCModel_Huckel              , only : X_ij , even_more_extended_Huckel
     use DP_main_m                   , only : DP_matrix_AO , Dipole_Moment
 
     public :: AlphaPolar
@@ -126,7 +126,7 @@ else
     do j = 1 , size(basis)
         do i = 1 , j
      
-            H0(i,j) = Huckel( i , j , S(i,j) , basis )
+            H0(i,j) = X_ij( i , j , basis ) * S(i,j) 
 
         end do
     end do  

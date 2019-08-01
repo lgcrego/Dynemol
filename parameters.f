@@ -33,8 +33,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
-!  DRIVER         = "diagnostic"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+  DRIVER         = "slice_Cheb"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
+!  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl, FSSH] , MM_Dynamics
 
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
@@ -101,7 +101,7 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000000                             ! <== number of time steps
 
-  CT_dump_step = 15                           ! <== step for saving El&Hl survival charge density  
+  CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 

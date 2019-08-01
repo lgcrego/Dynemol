@@ -21,6 +21,7 @@ module Ehrenfest_Builder
     end interface EhrenfestForce 
 
     !module variables ...
+    integer                     :: mm 
     integer     , allocatable   :: BasisPointer(:) , DOS(:)
     real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , aux(:,:) 
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , H_prime(:,:)
@@ -47,7 +48,7 @@ contains
  character(len=*)           , intent(in)    :: representation
 
 ! local variables ... 
- integer                  :: i , j , mm , nn
+ integer                  :: i , j , nn
  real*8     , allocatable :: X_ij(:,:) 
  complex*16 , allocatable :: AO_bra(:,:) , AO_ket(:,:)
 
@@ -64,12 +65,12 @@ nn = n_part
 If( .NOT. allocated(F_mtx ) ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
 If( .NOT. allocated(F_vec ) ) allocate( F_vec   (system%atoms)                , source=D_zero )
 If( .NOT. allocated(rho_eh) ) then
-    allocate( grad_S  (size(basis), 10        ))
-    allocate( rho_eh  (size(basis),size(basis)))
-    allocate( A_ad_nd (size(basis),size(basis)))
-    allocate( B_ad_nd (size(basis),size(basis)))
-    allocate( aux     (size(basis),size(basis)))
-    allocate( Kernel  (size(basis),size(basis)))
+    allocate( grad_S  (mm,10) )
+    allocate( rho_eh  (mm,mm) )
+    allocate( A_ad_nd (mm,mm) )
+    allocate( B_ad_nd (mm,mm) )
+    allocate( aux     (mm,mm) )
+    allocate( Kernel  (mm,mm) )
 end if
 
 ! preprocess overlap matrix for Pulay calculations ...
@@ -80,14 +81,14 @@ select case( representation )
 
     case( "MO" )
          ! build up electron-hole density matrix ...
-         forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+         forall( i=1:mm , j=1:mm ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
          aux   = transpose(rho_eh)
          rho_eh = ( rho_eh + aux ) / two 
         
          CALL symm( rho_eh , QM%L , aux )
          CALL gemm( QM%L , aux , A_ad_nd , 'T' , 'N' )
         
-         forall( j=1:size(basis) ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
+         forall( j=1:mm ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
          CALL gemm( rho_eh , QM%L , aux )
          CALL gemm( aux , QM%L  , B_ad_nd , 'T' , 'N' )
 
@@ -95,8 +96,8 @@ select case( representation )
 
     case( "AO" )
          If( .NOT. allocated(AO_bra) ) then
-              allocate( AO_bra  (size(basis),n_part) )
-              allocate( AO_ket  (size(basis),n_part) )
+              allocate( AO_bra  (mm,n_part) )
+              allocate( AO_ket  (mm,n_part) )
          end If
          ! coefs of <k(t)| in AO basis 
          CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , QM%L , mm , MO_bra , mm , C_zero , AO_bra , mm )
@@ -104,7 +105,7 @@ select case( representation )
          CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , QM%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
          ! build up electron-hole density matrix ...
-         forall( i=1:size(basis) , j=1:size(basis) ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) - AO_ket(j,2)*AO_bra(i,2) )
+         forall( i=1:mm , j=1:mm ) rho_eh(i,j) = real( AO_ket(j,1)*AO_bra(i,1) - AO_ket(j,2)*AO_bra(i,2) )
          aux     = transpose(rho_eh)
          A_ad_nd = ( rho_eh + aux ) / two 
 
@@ -155,7 +156,7 @@ end subroutine Ehrenfest_Adiabatic
  complex*16      , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer               :: i , j , mm , nn
+ integer               :: i , j , nn
  real*8  , allocatable :: X_ij(:,:) 
 
 ! local parameters ...
@@ -172,11 +173,11 @@ nn = n_part
 If( .NOT. allocated(F_mtx ) ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
 If( .NOT. allocated(F_vec ) ) allocate( F_vec   (system%atoms)                , source=D_zero )
 If( .NOT. allocated(rho_eh) ) then
-    allocate( grad_S  (size(basis), 10        ))
-    allocate( rho_eh  (size(basis),size(basis)))
-    allocate( A_ad_nd (size(basis),size(basis)))
-    allocate( B_ad_nd (size(basis),size(basis)))
-    allocate( Kernel  (size(basis),size(basis)))
+    allocate( grad_S  (mm,10) )
+    allocate( rho_eh  (mm,mm) )
+    allocate( A_ad_nd (mm,mm) )
+    allocate( B_ad_nd (mm,mm) )
+    allocate( Kernel  (mm,mm) )
 end if
 
 ! preprocess overlap matrix for Pulay calculations ...
@@ -223,7 +224,7 @@ type(STO_basis)  , intent(in)    :: basis(:)
 integer          , intent(in)    :: site 
 
 ! local variables ...
-integer :: i , j , xyz , size_basis , jL , L , indx
+integer :: i , j , xyz , jL , L , indx
 integer :: k , ik , DOS_atom_k , BasisPointer_k 
 
 ! local arrays ...
@@ -232,7 +233,6 @@ real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:)
 real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
 
 verbose    = .false.
-size_basis = size(basis)
 grad_S     = D_zero
 
 !force on atom site ...
@@ -310,21 +310,18 @@ type(STO_basis)     , intent(in)  :: basis(:)
 real*8              , intent(in)  :: X_ij(:,:)
 
 ! local variables...
-integer :: n
 real*8 , allocatable :: H(:,:) , S(:,:) , S_inv(:,:) 
-
-n = size(basis)
 
 CALL Overlap_Matrix( system , basis , S )
 
-allocate( H(n,n) , source = X_ij*S )
+allocate( H(mm,mm) , source = X_ij*S )
 
 ! compute S_inverse...
-call Invertion_Matrix( S , S_inv )
+call Inversion_Matrix( S , S_inv )
 deallocate( S )
 
 ! allocate and compute H' = S_inv * H ...
-If( .not. allocated(H_prime) ) allocate( H_prime ( size(basis) , size(basis) ) )
+If( .not. allocated(H_prime) ) allocate( H_prime (mm,mm) )
 
 CALL symm( S_inv , H , H_prime )
 
@@ -338,6 +335,7 @@ end subroutine S_invH
 !=====================================
  subroutine Huckel_stuff( basis , Xi ) 
 !=====================================
+use QCModel_Huckel , only : X_ij
 implicit none
 type(STO_basis) , intent(in) :: basis(:)
 real*8          , allocatable , intent(out) :: Xi(:,:)
@@ -346,34 +344,17 @@ real*8          , allocatable , intent(out) :: Xi(:,:)
 integer :: i , j
 real*8  :: k_eff , k_WH , c1 , c2 , c3
 
-allocate ( Xi( size(basis) , size(basis) ) )
+allocate ( Xi(mm,mm) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-do j = 1 , size(basis)
-do i = j , size(basis)
+do j = 1 , mm
+do i = j , mm
 
-    if (i == j) then
-
-         Xi(i,i) = basis(i)%IP
-
-    else
-
-         c1 = basis(i)%IP - basis(j)%IP
-         c2 = basis(i)%IP + basis(j)%IP
- 
-         c3 = (c1/c2)*(c1/c2)
-
-         k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-         Xi(i,j) = k_eff * c2 * HALF
+         Xi(i,j) = X_ij( i , j , basis )
 
          Xi(j,i) = Xi(i,j) 
-
-    end if 
 
 end do
 end do    
@@ -422,7 +403,7 @@ end subroutine Preprocess
 !
 !
 !=================================================
-subroutine Invertion_Matrix( matrix , matrix_inv )
+subroutine Inversion_Matrix( matrix , matrix_inv )
 !=================================================
 implicit none
 real*8                  , intent(in)  :: matrix(:,:)
@@ -462,7 +443,7 @@ do i = 2 , N
     end do
 end do
 
-end subroutine Invertion_Matrix
+end subroutine Inversion_Matrix
 !
 !
 !

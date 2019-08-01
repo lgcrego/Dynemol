@@ -15,7 +15,8 @@ module AO_adiabatic_m
                                              hole_state , initial_state ,     &
                                              DensityMatrix, AutoCorrelation,  &
                                              CT_dump_step, solvent_step,      &
-                                             driver, HFP_Forces
+                                             driver, HFP_Forces ,             &
+                                             step_security
     use Babel_m                     , only : Coords_from_Universe ,           &
                                              trj ,                            &
                                              MD_dt                            
@@ -74,7 +75,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-real*8          :: t , t_rate 
+real*8          :: t_rate 
 integer         :: j , frame , frame_init , frame_final , frame_restart
 type(universe)  :: Solvated_System
 
@@ -120,6 +121,7 @@ do frame = frame_init , frame_final , frame_step
     !============================================================================
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
+    ! U_AD(dt) : adiabatic component of the propagation ; 1 of 2 ... 
     forall( j=1:n_part )   
         MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
@@ -208,7 +210,7 @@ do frame = frame_init , frame_final , frame_step
     end select
 !============================================================================
 
-    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+    if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
     If( DensityMatrix ) then
         If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
@@ -276,6 +278,7 @@ CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
+
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
@@ -285,6 +288,7 @@ If( DP_field_ ) then
 
     hole_state = hole_save
     static     = .false.
+
 end If
 
 CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   

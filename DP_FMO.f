@@ -324,11 +324,11 @@ end subroutine Dipole_Moment
 
  c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+ huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) * HALF
 
  IF(i == j) huckel_Molecule = basis(i)%IP
 

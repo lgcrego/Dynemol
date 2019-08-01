@@ -11,8 +11,6 @@ module Taylor_m
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis, eh_tag                  
-    use QCmodel_Huckel      , only : Huckel,                        &
-                                     even_more_extended_Huckel
     use Data_Output         , only : Populations
     use Matrix_Math
 

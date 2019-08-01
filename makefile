@@ -18,7 +18,7 @@ FC = ifort
 FC_ALL = -xHost -ip -align
 
 # Parallelization flags
-FC_PARALLEL = -openmp -parallel
+FC_PARALLEL = -qopenmp -parallel
 
 # Others flags for each file type *.f, *.F and *.F90
 F_FLAGS =  -O3
@@ -137,7 +137,6 @@ SOURCE2 = constants_m.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
-		  Ehrenfest.o \
 		  HuckelForces.o \
 		  STO.o \
 		  multip_routines.o \
@@ -153,6 +152,7 @@ SOURCE2 = constants_m.o \
 		  CoulInt_QMMM.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
+		  Ehrenfest.o \
 		  AlphaPolar.o \
 		  data_output.o \
                   backup_MM.o \

@@ -5,14 +5,12 @@ module Chebyshev_m
     use blas95
     use lapack95
     use ifport
-    use parameters_m        , only : t_i , frame_step ,             &
-                                     DP_Field_ , driver ,           &
+    use parameters_m        , only : t_i , frame_step , DP_Field_ , driver ,  &
                                      n_part , restart , CT_dump_step                 
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag                  
-    use QCmodel_Huckel      , only : Huckel ,                       &
-                                     even_more_extended_Huckel
+    use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
     use Data_Output         , only : Populations
     use Taylor_m            , only : Propagation, dump_Qdyn
     use Ehrenfest_Builder   , only : store_Hprime
@@ -255,7 +253,7 @@ ALLOCATE( h(N,N) , source = D_zero )
 do j = 1 , N
   do i = j , N
 
-        h(i,j) = huckel( i , j , S_matrix(i,j) , basis )
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
     end do
 end do

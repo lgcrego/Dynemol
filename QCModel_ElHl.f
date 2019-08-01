@@ -18,8 +18,7 @@
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
     use DP_main_m                   , only : DP_matrix_AO
     use Polarizability_m            , only : Induced_DP_phi
-    use QCModel_Huckel              , only : h0 => Huckel,      &
-                                             even_more_extended_Huckel
+    use QCModel_Huckel              , only : X_ij , even_more_extended_Huckel
 
     public :: EigenSystem_ElHl 
 
@@ -249,7 +248,7 @@ ALLOCATE( Huckel(N,N) , source = D_zero )
 do j = 1 , N
     do i = 1 , j
 
-        Huckel(i,j) = h0( i , j , S_matrix(i,j) , basis )
+        Huckel(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
         Huckel(j,i) = Huckel(i,j)
 

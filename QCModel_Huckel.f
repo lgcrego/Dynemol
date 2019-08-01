@@ -20,7 +20,7 @@
     use Semi_Empirical_Parms        , only : atom
 
 
-    public :: EigenSystem , Huckel , even_more_extended_Huckel 
+    public :: EigenSystem , X_ij , even_more_extended_Huckel 
 
     private
 
@@ -248,13 +248,15 @@ do ib = 1, system%atoms
 
                 h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
 
+                h(j,i) = h(i,j)
+
             end do
         end do
 
     end do
 end do  
 !$OMP END PARALLEL DO
-forall( i=1:N ) h(i,i) = huckel( i , i , S_matrix(i,i) , basis ) 
+forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
 
 end function even_more_extended_huckel
 !
@@ -280,7 +282,7 @@ ALLOCATE( h(N,N) , source = D_zero )
 do j = 1 , N
   do i = j , N
 
-        h(i,j) = huckel( i , j , S_matrix(i,j) , basis )
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
 
     end do
 end do
@@ -290,39 +292,38 @@ end function Build_Huckel
 !
 !
 !
-!============================================
- pure function Huckel( i , j , S_ij , basis )
-!============================================
+!===================================
+ pure function X_ij( i , j , basis )
+!===================================
  implicit none
  integer         , intent(in) :: i , j
- real*8          , intent(in) :: S_ij
  type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
- real*8  :: Huckel
+ real*8  :: X_ij
  real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
  
  if (i == j) then
-    huckel = basis(i)%IP + basis(i)%V_shift
+    X_ij = basis(i)%IP + basis(i)%V_shift
  else
     c1 = basis(i)%IP - basis(j)%IP
     c2 = basis(i)%IP + basis(j)%IP
 
     c3 = (c1/c2)*(c1/c2)
 
-    c4 = (basis(i)%V_shift + basis(j)%V_shift)*HALF
+    c4 = (basis(i)%V_shift + basis(j)%V_shift) * HALF
 
-    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
 
     k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
-    huckel = k_eff*S_ij*c2/two + c4*S_ij
+    X_ij = (k_eff*c2*HALF + c4) 
  endif
 
- end function Huckel
+ end function X_ij
 !
 !
 !
@@ -421,7 +422,7 @@ end function Huckel_with_FIELDS
     do j = 1 , N
         do i = 1 , j
      
-            h(i,j) = huckel(i,j,S_matrix(i,j),basis)
+            h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
         end do
     end do  

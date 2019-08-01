@@ -51,9 +51,12 @@ real*8          , optional  , intent(out)   :: Total_DP(3)
 real*8  :: Sparsity(3)
 integer :: NonZero(3) , M_size , i
 
-If( verbose ) Print 153
 !----------------------------------------------------------
 !       initialize DIPOLE MATRIX M(i,j)[x,y,z]
+!       only for QM atoms ...
+!----------------------------------------------------------
+
+If( verbose ) Print 153
 
 CALL Util_Multipoles
 
@@ -80,7 +83,7 @@ If( verbose ) then
     Print 155
 end If
 
- include 'formats.h'
+include 'formats.h'
 
 end subroutine Dipole_Matrix
 !
