@@ -23,7 +23,7 @@ module Ehrenfest_Builder
     !module variables ...
     integer                     :: mm 
     integer     , allocatable   :: BasisPointer(:) , DOS(:)
-    real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , aux(:,:) 
+    real*8      , allocatable   :: A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , rho_eh(:,:) , aux(:,:) 
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , H_prime(:,:)
     logical     , allocatable   :: mask(:,:)
 

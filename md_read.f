@@ -639,23 +639,23 @@ character(len=:) , allocatable  :: string(:)
  write(51,"(A)") "[ atomtypes ]"               
 
  do i = 1 , size(FF)
- 
+
     if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
- 
+
         ! warns if paramater was not assigned to this bond ...
         flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
- 
+
         write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
                                       FF(i)% MMSymbol                        , & 
                                       FF(i)% sig                             , &
                                       FF(i)% eps                             , &
                                       flag
- 
+
     end if
- 
+
  end do
  !========================================================================================================
- ! bond parms saving ...
+ ! charge parms saving ...
  write(51, *) " "
  write(51,"(A)") "[ charges ]"               
 

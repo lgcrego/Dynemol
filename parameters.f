@@ -44,7 +44,7 @@ logical :: dynamic
   Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "OPT_eht_parameters.input.dat"
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -127,7 +127,7 @@ logical :: dynamic
 !
   sigma     =  0.040d0                                     !
 
-  DOS_range = real_interval( -15.d0 , 0.d00 )            
+  DOS_range = real_interval( -15.d0 , 0.d0 )            
 
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters

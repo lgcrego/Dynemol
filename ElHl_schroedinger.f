@@ -15,7 +15,6 @@
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations , Net_Charge
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
- use PDOS_tool_m                , only : Partial_DOS
  use Backup_m                   , only : Security_Copy , Restart_state
  use Auto_Correlation_m         , only : MO_Occupation
 

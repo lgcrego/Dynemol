@@ -53,6 +53,7 @@ real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)
 real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
 integer               :: i , j , N , info 
+
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 N = size(basis)
@@ -66,7 +67,7 @@ Allocate( dumb_S(N,N) )
 
 ! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
-call start_clock
+
 If( DP_field_ .OR. Induced_ ) then
 
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
@@ -76,10 +77,6 @@ else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
 
 end If
-call stop_clock
-
-!write(35,*) h
-!stop
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 

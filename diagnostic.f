@@ -3,6 +3,7 @@ module diagnostic_m
  use type_m
  use omp_lib
  use constants_m
+ use DOS_m
  use parameters_m               , only : spectrum , DP_Moment , &
                                          survival , DP_Field_ , &
                                          Alpha_Tensor ,         &
@@ -12,7 +13,6 @@ module diagnostic_m
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
  use QCModel_Huckel             , only : EigenSystem
- use DOS_m
  use Structure_Builder          , only : Unit_Cell ,            &
                                          Extended_Cell ,        &
                                          Generate_Structure ,   &

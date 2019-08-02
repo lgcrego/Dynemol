@@ -63,8 +63,8 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-real*8          :: t_rate 
 integer         :: frame , frame_init , frame_final , frame_restart
+real*8          :: t_rate 
 type(universe)  :: Solvated_System
 
 it = 1
@@ -149,7 +149,7 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-    If( Induced_ )  CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
 
     ! propagate the wavepackets to the next time-slice ...
     If( nn == 1) then
@@ -220,7 +220,7 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-If( Induced_  ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
 
@@ -344,9 +344,10 @@ If( QMMM ) then
 
     allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
-
-    CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ ) then
+          CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+          CALL DP_stuff ( "Induced_DP" )
+    end If
 
 end If
 

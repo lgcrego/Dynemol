@@ -319,15 +319,16 @@ real*8  , allocatable :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+!----------------------------------------------------------
 
 N = size(basis)
 ALLOCATE( h(N,N) , source = D_zero )
 
 do j = 1 , N
-  do i = 1 , j 
+  do i = 1 , j
 
         h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
- 
+
         h(j,i) = h(i,j)
 
     end do

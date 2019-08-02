@@ -89,12 +89,11 @@ select case ( nuclear_matter )
 
 end select
 
-CALL Generate_Structure ( frame )
+CALL Generate_Structure( frame )
 
-CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-if( DP_Moment ) &
-CALL Dipole_Matrix      ( Extended_Cell , ExCell_basis )
+if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
 if( DP_field_ ) then
 
