@@ -8,11 +8,11 @@ module ElHl_Chebyshev_m
     use parameters_m        , only : t_i , frame_step , Coulomb_ , DP_Field_ , n_part, driver , QMMM , CT_dump_step , HFP_Forces
     use Structure_Builder   , only : Unit_Cell 
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis , eh_tag    
-    use Data_Output         , only : Populations 
+    use FMO_m               , only : FMO_analysis , eh_tag  
+    use Data_Output         , only : Populations
     use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
     use Taylor_m            , only : Propagation, dump_Qdyn
-    use Ehrenfest_Builder   , only : store_Hprime                               
+    use Ehrenfest_Builder   , only : store_Hprime
     use Matrix_Math
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
@@ -25,13 +25,13 @@ module ElHl_Chebyshev_m
     real*8      , parameter :: norm_error   = 1.0d-12
 
 ! module variables ...
-    real*8      ,   save          :: save_tau(2)
-    logical     ,   save          :: necessary_  = .true.
-    logical     ,   save          :: first_call_ = .true.
-    real*8      ,   pointer       :: h(:,:)
+    real*8        ,   save          :: save_tau(2)
+    logical       ,   save          :: necessary_  = .true.
+    logical       ,   save          :: first_call_ = .true.
+    real*8        ,   pointer       :: h(:,:)
     real*8, target, allocatable   :: h0(:,:)
-    real*8      ,   allocatable   :: S_matrix(:,:) , H_prime(:,:)
-    complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
+    real*8        ,   allocatable   :: S_matrix(:,:) , H_prime(:,:)
+    complex*16    ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
     interface preprocess_ElHl_Chebyshev
         module procedure preprocess_ElHl_Chebyshev

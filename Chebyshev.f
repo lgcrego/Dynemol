@@ -9,9 +9,9 @@ module Chebyshev_m
                                      n_part , restart , CT_dump_step                 
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis , eh_tag                  
-    use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
+    use FMO_m               , only : FMO_analysis , eh_tag  
     use Data_Output         , only : Populations
+    use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
     use Taylor_m            , only : Propagation, dump_Qdyn
     use Ehrenfest_Builder   , only : store_Hprime
     use Matrix_Math
@@ -62,16 +62,24 @@ real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: Psi(:)
 type(R_eigen)                   :: FMO
 
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 allocate( S_matrix(size(basis),size(basis)) )
 call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
-#endif
 !GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#endif
 
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
-h0(:,:) = Build_Huckel( basis , S_matrix )
+
+allocate( h0(N,N) , source = D_zero )
+
+If( DP_field_ ) then
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+else
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+end If
+
 ! for a rigid structure once is enough ...
 If( driver == 'q_dynamics' ) necessary_ = .false.
 
