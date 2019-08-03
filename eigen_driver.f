@@ -35,12 +35,6 @@ end If
 
 select case ( DRIVER )
 
-    case( "slice_MO0" )
-
-
-    case( "slice_MOt" )
-
-
     case( "slice_ElHl" )
 
         CALL ElHl_adiabatic ( QDyn , it )

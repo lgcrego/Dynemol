@@ -1,19 +1,19 @@
 module ElHl_Chebyshev_m
 
     use MPI
-    use type_m              , g_time => f_time  
+    use type_m             , g_time => f_time  
     use blas95
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m         , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master, myid
-    use parameters_m              , only : t_i , frame_step , Coulomb_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
-    use Structure_Builder         , only : Unit_Cell 
-    use Overlap_Builder           , only : Overlap_Matrix
-    use FMO_m                     , only : FMO_analysis , eh_tag    
-    use Data_Output               , only : Populations 
-!    use Chebyshev_m               , only : Propagation, dump_Qdyn
-    use Taylor_m                  , only : Propagation, dump_Qdyn
+    use MPI_definitions_m  , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master, myid
+    use parameters_m       , only : t_i , frame_step , Coulomb_ , DP_Field_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
+    use Structure_Builder  , only : Unit_Cell 
+    use Overlap_Builder    , only : Overlap_Matrix
+    use FMO_m              , only : FMO_analysis , eh_tag    
+    use Data_Output        , only : Populations 
+    use Hamiltonians       , only : X_ij , even_more_extended_Huckel
+    use Taylor_m           , only : Propagation, dump_Qdyn
     use Matrix_Math
 
     public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
@@ -55,7 +55,7 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , N 
+integer                         :: li , M , N
 real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
@@ -63,7 +63,14 @@ type(R_eigen)                   :: FMO
 
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
-CALL Huckel( basis , S_matrix , h0 )
+
+allocate( h0(N,N) , source = D_zero )
+
+If( DP_field_ ) then
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+else
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+end If
 
 ! After instantiating Overlap_matrix, processes wait outside ...
 If( .not. ChebyCrew ) return
@@ -74,9 +81,9 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
 ! place the electron state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-N  = size(wv_FMO)
-allocate( ElHl_Psi( size(basis) , n_part ) , source=C_zero )
-ElHl_Psi(li:li+N-1,1) = dcmplx( wv_FMO(:) )
+M  = size(wv_FMO)
+allocate( ElHl_Psi( N , n_part ) , source=C_zero )
+ElHl_Psi(li:li+M-1,1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 
 !========================================================================
@@ -85,8 +92,8 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
 ! place the hole state in Structure's Hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
-N  = size(wv_FMO)
-ElHl_Psi(li:li+N-1,2) = dcmplx( wv_FMO(:) )
+M  = size(wv_FMO)
+ElHl_Psi(li:li+M-1,2) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 !========================================================================
 
@@ -100,8 +107,8 @@ call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
 !==============================================
 !vector states to be propagated ...
 !Psi_bra = C^T*S       ;      Psi_ket = C ...
-allocate( Psi_t_bra(size(basis),n_part) )
-allocate( Psi_t_ket(size(basis),n_part) )
+allocate( Psi_t_bra(N,n_part) )
+allocate( Psi_t_ket(N,n_part) )
 call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
 Psi_t_ket = ElHl_Psi
 !==============================================
@@ -170,7 +177,14 @@ If( master ) then
 
     ! compute S  and H0 ...
     CALL Overlap_Matrix( system , basis , S_matrix )
-    CALL Huckel( basis , S_matrix , h0 )
+
+    allocate( h0(N,N) , source = D_zero )
+
+    If( DP_field_ ) then
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+    else
+        h0(:,:) = Build_Huckel( basis , S_matrix )
+    end If
 
     h => h0
 
@@ -264,49 +278,36 @@ end subroutine ElHl_Chebyshev
 !
 !
 !
-!=========================================
-subroutine Huckel( basis , S_matrix , h0 )
-!=========================================
+!===================================================
+ function Build_Huckel( basis , S_matrix ) result(h)
+!===================================================
 implicit none
-type(STO_basis)               , intent(in)  :: basis(:)
-real*8                        , intent(in)  :: S_matrix(:,:)
-real*8          , allocatable , intent(out) :: h0(:,:)
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
 
 ! local variables ... 
-real*8  :: k_eff , k_WH , c1 , c2 , c3 , c4
-integer :: i , j
+integer               :: i , j , N
+real*8  , allocatable :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+!----------------------------------------------------------
 
-ALLOCATE( h0(size(basis),size(basis)) )
+N = size(basis)
+ALLOCATE( h(N,N) , source = D_zero )
 
-do j = 1 , size(basis)
+do j = 1 , N
+  do i = 1 , j
 
-    do i = 1 , j - 1
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
-       c1 = basis(i)%IP - basis(j)%IP
-       c2 = basis(i)%IP + basis(j)%IP
-    
-       c3 = (c1/c2)*(c1/c2)
-    
-       c4 = (basis(i)%V_shift + basis(j)%V_shift) * HALF
-    
-       k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
-    
-       k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-    
-       h0(i,j) = (k_eff*c2*HALF + c4) * S_matrix(i,j)
+        h(j,i) = h(i,j)
 
     end do
-
-    h0(j,j) = basis(j)%IP + basis(j)%V_shift
-
 end do
 
-call Matrix_Symmetrize( h0, 'U' )
-
-end subroutine Huckel
+end function Build_Huckel
+!
 !
 !
 !
@@ -348,25 +349,41 @@ end subroutine QuasiParticleEnergies
 !
 !
 !
-!=================================================================================
- subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket )
-!=================================================================================
+!======================================================================================
+ subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket , it )
+!======================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
 complex*16      , intent(in)    :: DUAL_ket (:,:)
 complex*16      , intent(in)    :: AO_bra   (:,:)
 complex*16      , intent(in)    :: AO_ket   (:,:)
+integer         , intent(in)    :: it
+
+!local variables ...
+integer :: N
+
+N = size(basis)
 
 !vector states to be propagated ...
-allocate( Psi_t_bra(size(basis),n_part) )
-allocate( Psi_t_ket(size(basis),n_part) )
+allocate( Psi_t_bra(N,n_part) )
+allocate( Psi_t_ket(N,n_part) )
 
 Psi_t_bra = DUAL_ket
 Psi_t_ket = AO_ket
 
 CALL Overlap_Matrix( system , basis , S_matrix )
-CALL Huckel( basis , S_matrix , h0 )
+
+allocate( h0(N,N) , source = D_zero )
+If( DP_field_ ) then
+
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+
+else
+
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+
+end If
 
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
 

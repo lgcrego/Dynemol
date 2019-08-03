@@ -96,17 +96,17 @@ if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
 if( DP_field_ ) then
 
-    CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+    CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs( Extended_Cell )
+    CALL Molecular_DPs  ( Extended_Cell )
 
 end If
 
 if( driver == "slice_ElHl") then
 
-    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , flag2=it )
+    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
 
 else
 

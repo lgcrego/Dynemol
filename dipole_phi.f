@@ -4,9 +4,9 @@ module DP_potential_m
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC
+    use parameters_m            , only : PBC , solvent_type , verbose
     use Structure_Builder       , only : Extended_Cell
-    use Semi_Empirical_Parms    , only : atom
+    use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
     use PBC_m                   , only : Generate_Periodic_DPs
@@ -19,7 +19,7 @@ module DP_potential_m
     type(dipoles) , save  :: DP_mols_pbc  
 
 ! module parameters ...       
-    real*8  , parameter   :: DP_potential_factor = 2.9979255d0  ! <== e*p(Debye)/(4*Pi*epsilon_0) : eV * Angs^2
+    real*8  , parameter   :: DP_potential_factor = 2.9979255d0  ! <== e*p(Debye)/(4*Pi*epsilon_0) : eV * Angs^2; checked twice!
 
 contains
 !
@@ -32,7 +32,7 @@ implicit none
 type(structure) , intent(inout) :: a
 
 ! local variables ...
-integer       :: N_of_DP_mols 
+integer       :: N_of_DP_mols
 type(dipoles) :: solvent , solute , DP_mols
 
 ! initialize multipole routines ...
@@ -68,7 +68,7 @@ If( any(a%solute) ) then
     CALL DeAllocate_DPs( solute  , flag = "dealloc" )
 
 else
- 
+
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
 
     CALL DeAllocate_DPs( DP_mols , a%N_of_Solvent_Molecules , flag = "alloc" )
@@ -99,9 +99,12 @@ character(*)    , intent(in)    :: instance
 
 
 ! local variables ...
-integer                :: i , j , i1 , i2 , nr , last_nr , first_nr , nr_atoms
-real*8                 :: total_valence 
-real*8 , allocatable   :: Q_center(:,:) , DP_FMO(:,:) , Qi_Ri(:,:) 
+integer                :: i , j , i1 , i2 , nr , last_nr , first_nr , nr_atoms , xyz
+real*8                 :: total_valence , Nuclear_DP(3) , Electronic_DP(3)
+real*8 , allocatable   :: Q_center(:,:) , DP_FMO(:,:) , Qi_Ri(:,:) , nr_vector(:,:)
+
+! local parameters ...
+real*8 , parameter     :: Debye_unit = 4.803204d0
 
 select case( instance )
 
@@ -114,7 +117,7 @@ select case( instance )
         a%N_of_Solvent_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        Print 157 , a%N_of_Solvent_Molecules
+        If( verbose ) Print 157 , a%N_of_Solvent_Molecules
 
     case( "solute" )
 
@@ -153,9 +156,29 @@ do nr = first_nr , last_nr
 
     !-----------------------------------------------------------------------------------------------
     ! calculate the dipole vector ...
+ 
+    select case( solvent_type )
+   
+        case( "QM" )
+        CALL DP_FMO_analysis( a , Q_center(nr,:) , DP_FMO(nr,:) , nr ) 
 
-    CALL DP_FMO_analysis( a , Q_center(nr,:) , DP_FMO(nr,:) , nr ) 
+        case( "MM" ) 
 
+        ! atomic positions measured from the Center of Charge ...
+        allocate(nr_vector(nr_atoms,3))
+        forall(xyz=1:3) nr_vector(:,xyz) = a%coord(i1:i2,xyz) - Q_center(nr,xyz)
+
+        ! if origin = Center_of_Charge ==> Nuclear_DP = (0,0,0)
+        Nuclear_DP = D_zero
+
+        ! classical electronic_DP ...
+        forall(xyz=1:3) Electronic_DP(xyz) = sum( atom(i1:i2)%MM_charge*nr_vector(:,xyz) )
+
+        DP_FMO(nr,:) = ( Nuclear_DP - Electronic_DP ) * Debye_unit
+
+        deallocate( nr_vector )
+
+    end select
     !-----------------------------------------------------------------------------------------------
 
 end do
@@ -179,30 +202,31 @@ end subroutine Build_DP_mols
 !
 !
 !
-!=====================================
- pure function DP_phi( a , b , basis )
-!=====================================
+!===================================
+ pure function DP_phi( sys , a , b )
+!===================================
 implicit none
+type(structure) , intent(in) :: sys
 integer         , intent(in) :: a , b
-type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ...
 integer                 :: i , j , N_of_DP 
 integer , allocatable   :: nr_Mols(:)
-real*8                  :: hard_core , cut_off_radius 
-real*8                  :: midpoint_ab(3)
+real*8                  :: hard_core , cut_off_radius , decay_cube
+real*8                  :: midpoint_ab(3) , aux(3)
 real*8                  :: DP_phi(4)
 real*8  , allocatable   :: distance(:) , distance_ALL(:) , mol_phi(:) 
-real*8  , allocatable   :: vector(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(:,:) , mol_phi2(:,:)
+real*8  , allocatable   :: vector(:,:) , versor(:,:) , vector_ALL(:,:) , decay(:,:) , DP_Mols(:,:) , mol_phi2(:,:)
 logical , allocatable   :: mask(:)
 
+! local parameters ...
+real*8  , parameter     :: refractive_index = 1.33d0       ! <== refractive index of the solvent ...
+
 ! combination rule for solvation hardcore shell ...
-hard_core = ( basis(a)%solvation_hardcore + basis(b)%solvation_hardcore ) / two
+hard_core = ( sys%solvation_hardcore(a) + sys%solvation_hardcore(b) ) / TWO
 
 ! midpoint between atoms a & b ...
-midpoint_ab(1) = ( basis(a)%x + basis(b)%x ) / two
-midpoint_ab(2) = ( basis(a)%y + basis(b)%y ) / two
-midpoint_ab(3) = ( basis(a)%z + basis(b)%z ) / two
+midpoint_ab(:) = ( sys% coord(a,:) + sys% coord(b,:) ) / TWO
 
 ! total number of dipoles in PBC ...
 N_of_DP = size( DP_mols_pbc%DP(:,1) )
@@ -214,6 +238,7 @@ N_of_DP = size( DP_mols_pbc%DP(:,1) )
 If( sum(PBC) == 0) then
 
     allocate( vector  ( N_of_DP , 3 ) , source = D_zero )
+    allocate( versor  ( N_of_DP , 3 ) , source = D_zero )
     allocate( DP_Mols ( N_of_DP , 3 ) , source = D_zero )
     allocate( decay   ( N_of_DP , 3 ) , source = D_zero )
     allocate( distance( N_of_DP     ) , source = D_zero )
@@ -224,6 +249,7 @@ If( sum(PBC) == 0) then
 
         vector(i,:) = midpoint_ab(:) - DP_mols_pbc%CC(i,:)
         distance(i) = sqrt( sum( vector(i,:)*vector(i,:) ) )
+        versor(i,:) = vector(i,:) / distance(i) 
 
     end do
 
@@ -233,17 +259,15 @@ If( sum(PBC) == 0) then
 else
 
     ! maximum distance from midpoint a-b ...
-    cut_off_radius = minval(Extended_Cell%T_xyz) * two / three
+    cut_off_radius = minval(Extended_Cell%T_xyz) / TWO
 
     allocate( vector_ALL   ( N_of_DP , 3 ) , source = D_zero  )
     allocate( distance_ALL ( N_of_DP     ) , source = D_zero  )
     allocate( mask         ( N_of_DP     ) , source = .false. )
 
     do i = 1 , N_of_DP
-
         vector_ALL(i,:) = midpoint_ab(:) - DP_mols_pbc%CC(i,:)
-        distance_ALL(i) = sqrt( sum( vector_ALL(i,:)*vector_ALL(i,:) ) )
-
+        distance_ALL(i) = sqrt( dot_product( vector_ALL(i,:),vector_ALL(i,:) ) )
     end do
 
     mask = ( (distance_ALL > hard_core) .AND. (distance_ALL < cut_off_radius) )
@@ -252,6 +276,7 @@ else
     N_of_DP = count( mask ) 
 
     allocate( vector  ( N_of_DP , 3 ) , source = D_zero )
+    allocate( versor  ( N_of_DP , 3 ) , source = D_zero )
     allocate( DP_Mols ( N_of_DP , 3 ) , source = D_zero )
     allocate( decay   ( N_of_DP , 3 ) , source = D_zero )
     allocate( distance( N_of_DP     ) , source = D_zero )
@@ -266,6 +291,8 @@ else
     nr_Mols  = pack( DP_mols_pbc%nr , mask , nr_Mols  )
     distance = pack( distance_ALL   , mask , distance )
 
+    forall( i=1:N_of_DP ) versor(i,:) = vector(i,:) / distance(i)
+
     deallocate( vector_ALL , distance_ALL , mask )
 
 end if
@@ -276,21 +303,25 @@ end if
 
 allocate( mol_phi2( N_of_DP , 3 ) , source = D_zero )
 
-forall( i=1:N_of_DP )  
+do i = 1 , N_of_DP   
 
-!   first order ...
-    decay(i,:)  =  vector(i,:) / (distance(i)*distance(i)*distance(i))
+    decay_cube = D_one / (distance(i)*distance(i)*distance(i))
+
+    ! first order ...
+    decay(i,:) = vector(i,:) * decay_cube
 
     ! DP_potential due to dipole i ...
-    mol_phi(i)  = - dot_product( DP_Mols(i,:),decay(i,:) )
+    mol_phi(i) = dot_product( DP_Mols(i,:),decay(i,:) )
 
-! second order ...
-    mol_phi2(i,:) = 2.0d0 * DP_Mols(i,:) / (distance(i)*distance(i)*distance(i))
+    ! second order ...
+    aux(:) = DP_Mols(i,:) - THREE * dot_product(DP_Mols(i,:),versor(i,:)) * versor(i,:)
 
-end forall
+    mol_phi2(i,:) = aux(:) * decay_cube
+
+end do
 
 ! excluding self-interaction ...
-where( (nr_Mols == basis(a)%nr) .OR. (nr_Mols == basis(b)%nr) ) 
+where( (nr_Mols == sys%nr(a)) .OR. (nr_Mols == sys%nr(b)) ) 
     mol_phi = 0.d0
     mol_phi2(:,1) = 0.d0
     mol_phi2(:,2) = 0.d0
@@ -302,6 +333,9 @@ DP_phi(1) = sum( mol_phi )
 
 ! second order ...
 forall( j=1:3 ) DP_phi(j+1) = sum( mol_phi2(:,j) )
+
+! applying optical dielectric screening ...
+DP_phi = DP_phi / (refractive_index)**2
 
 deallocate( vector , decay , distance , DP_Mols , nr_Mols , mol_phi , mol_phi2 )
 

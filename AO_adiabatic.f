@@ -17,8 +17,10 @@ module AO_adiabatic_m
                                              GaussianCube , static ,          &
                                              GaussianCube_step , preview ,    &
                                              hole_state , initial_state ,     &
-                                             DensityMatrix , AutoCorrelation, &
-                                             CT_dump_step , HFP_Forces
+                                             DensityMatrix, AutoCorrelation,  &
+                                             CT_dump_step, solvent_step,      &
+                                             driver, HFP_Forces ,             &
+                                             step_security
     use Babel_m                     , only : Coords_from_Universe ,           &
                                              trj ,                            &
                                              MD_dt                            
@@ -57,22 +59,23 @@ module AO_adiabatic_m
     private
 
     ! module variables ...
+    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
     Complex*16      , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16      , allocatable , dimension(:)    :: phase
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
-    integer                                         :: mm , nn
+    real*8                                          :: t
+    integer                                         :: it , mm , nn
 
 contains
 !
 !
 !
-!====================================
- subroutine AO_adiabatic( Qdyn , it )
-!====================================
+!==========================================
+ subroutine AO_adiabatic( Qdyn , final_it )
+!==========================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(out)   :: it
+integer         , intent(out)   :: final_it
 
 ! local variables ...
 integer         :: j , frame , frame_init , frame_final , frame_restart , err
@@ -97,9 +100,9 @@ else
 end If
 
 If( restart ) then
-    CALL Restart_stuff( QDyn , t , it , frame_restart )
+    CALL Restart_stuff( QDyn , frame_restart )
 else
-    CALL Preprocess( QDyn , it )
+    CALL Preprocess( QDyn )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -129,6 +132,7 @@ do frame = frame_init , frame_final , frame_step
     !============================================================================
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
+    ! U_AD(dt) : adiabatic component of the propagation ; 1 of 2 ... 
     forall( j=1:n_part )   
         MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
@@ -145,11 +149,11 @@ do frame = frame_init , frame_final , frame_step
         QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
     end If
 
-    if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
+    if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn )
 
-    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame )
 
-    If( DP_Moment ) CALL DP_stuff( t , "DP_moment" )
+    If( DP_Moment ) CALL DP_stuff( "DP_moment" )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -193,12 +197,11 @@ do frame = frame_init , frame_final , frame_step
     ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
     If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
-    CALL Basis_Builder        ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ )           CALL DP_stuff ( t , "DP_field"   )
+    If( DP_field_ ) CALL DP_stuff ( "DP_field"   )
 
-!    If( Induced_ .OR. QMMM )  CALL DP_stuff ( t , "Induced_DP" )
-    If( Induced_ )  CALL DP_stuff ( t , "Induced_DP" )
+    If( Induced_ )  CALL DP_stuff ( "Induced_DP" )
 
     Deallocate                ( UNI%R , UNI%L , UNI%erg )
 
@@ -210,7 +213,7 @@ do frame = frame_init , frame_final , frame_step
 
 !============================================================================
 
-    CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+    if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
     If( DensityMatrix ) then
         If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
@@ -223,18 +226,19 @@ end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
+final_it = it
+
 include 'formats.h'
 
 end subroutine AO_adiabatic
 !
 !
 !
-!==================================
- subroutine Preprocess( QDyn , it )
-!==================================
+!=============================
+ subroutine Preprocess( QDyn )
+!=============================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(in)    :: it
 
 ! local variables
 integer         :: hole_save , n , err
@@ -275,13 +279,10 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-mm = size(ExCell_basis)                          
-nn = n_part
-
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
+
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
@@ -291,15 +292,19 @@ If( DP_field_ ) then
 
     hole_state = hole_save
     static     = .false.
+
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
 
 ! SLAVES only calculate S_matrix and return ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
+
+mm = size(ExCell_basis)
+nn = n_part
 
 If( KernelCrew ) then
         allocate( UNI%erg (mm)    )
@@ -369,20 +374,19 @@ else
     QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 end If
 
-CALL dump_Qdyn( Qdyn , it )
+CALL dump_Qdyn( Qdyn )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube( it )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_matrix"  )
+If( DP_Moment    ) CALL DP_stuff ( "DP_matrix" )
 
-If( DP_Moment    ) CALL DP_stuff ( t_i , "DP_moment"  )
+If( DP_Moment    ) CALL DP_stuff ( "DP_moment" )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
     If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
 End If
 
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 ! ForceCrew is on stand-by for this ...
@@ -396,12 +400,11 @@ end subroutine Preprocess
 !
 !
 ! 
-!=========================================
- subroutine Send_to_GaussianCube( it , t )
-!=========================================
+!========================================
+ subroutine Send_to_GaussianCube( frame )
+!========================================
 implicit none
-integer     , intent(in)    :: it
-real*8      , intent(in)    :: t
+integer , intent(in) :: frame
 
 ! local variables ...
 integer :: n
@@ -415,7 +418,7 @@ AO_bra = DUAL_bra
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
 do n = 1 , n_part
-    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 
 !----------------------------------------------------------
@@ -425,11 +428,10 @@ end subroutine Send_to_GaussianCube
 !
 !
 !
-!===================================
- subroutine DP_stuff( t , instance )
-!===================================
+!===============================
+ subroutine DP_stuff( instance )
+!===============================
 implicit none
-real*8        , intent(in)    :: t
 character(*)  , intent(in)    :: instance
 
 !local variables ...
@@ -456,9 +458,10 @@ select case( instance )
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         ! wavepacket component of the dipole vector ...
-        CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+        ! decide what to do with this ############ 
+        !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        CALL Molecular_DPs( Extended_Cell )
+        If( mod(it-1,solvent_step) == 0 ) CALL Molecular_DPs( Extended_Cell )
 
     case( "DP_moment" )
 
@@ -487,12 +490,11 @@ end subroutine DP_stuff
 !
 !
 !
-!=================================
- subroutine dump_Qdyn( Qdyn , it )
-!=================================
+!============================
+ subroutine dump_Qdyn( Qdyn )
+!============================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-integer         , intent(in) :: it 
 
 ! local variables ...
 integer    :: nf , n
@@ -505,6 +507,7 @@ do n = 1 , n_part
     If( it == 1 ) then
 
         open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        write(52,11) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
@@ -531,8 +534,9 @@ end do
 ! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
 Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
-12 FORMAT(10A10)
-13 FORMAT(F11.6,9F10.5)
+11 FORMAT(A,I9,14I10)
+12 FORMAT(/15A10)
+13 FORMAT(F11.6,14F10.5)
 14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
@@ -540,13 +544,11 @@ end subroutine dump_Qdyn
 !
 !
 !
-!========================================================
-subroutine Restart_stuff( QDyn , t , it , frame_restart )
-!========================================================
+!===============================================
+subroutine Restart_stuff( QDyn , frame_restart )
+!===============================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-real*8          , intent(inout) :: t
-integer         , intent(inout) :: it
 integer         , intent(inout) :: frame_restart
 
 integer :: err
@@ -587,8 +589,8 @@ If( QMMM ) then
 
     If( Induced_ ) then
          CALL Build_Induced_DP( instance = "allocate" )
-         CALL DP_stuff ( t , "Induced_DP" )
-    end if
+         CALL DP_stuff ( "Induced_DP" )
+    end If
 
 end If
 

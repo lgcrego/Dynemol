@@ -170,8 +170,10 @@ end If
 chi = chi * weight
 evaluate_cost = dot_product(chi,chi) 
 
-! just touching basis ...
+! just touching variables ...
 dumb = basis(1)%indx
+dumb = DP(1)
+dumb = Alpha_ii(1)
 
 end function evaluate_cost
 !

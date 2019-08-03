@@ -14,7 +14,8 @@ module Chebyshev_driver_m
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , restart ,         &
-                                             step_security, HFP_Forces 
+                                             step_security, HFP_Forces ,    &
+                                             preview , solvent_step
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj , MD_dt
     use Allocation_m                , only : DeAllocate_UnitCell ,          &
@@ -49,7 +50,7 @@ module Chebyshev_driver_m
 #warning "Compiling Chebyshev for GPU. Subroutine calls redirected to GPU ones"
 #else
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
-                                             preprocess_ElHl_Chebyshev 
+                                             preprocess_ElHl_Chebyshev
 #endif
 
     public :: Chebyshev_driver
@@ -59,23 +60,24 @@ module Chebyshev_driver_m
     ! module variables ...
     Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra 
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    integer                                         :: N 
+    real*8                                          :: t
+    integer                                         :: N , it
 
 contains
 !
 !
 !
-!========================================
- subroutine Chebyshev_driver( Qdyn , it )
-!========================================
+!==============================================
+ subroutine Chebyshev_driver( Qdyn , final_it )
+!==============================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(out)   :: it
+integer         , intent(out)   :: final_it
 
 ! local variables ...
 integer         :: mpi_D_R = mpi_double_precision , err
 integer         :: frame , frame_init , frame_final , frame_restart
-real*8          :: t , t_rate 
+real*8          :: t_rate 
 type(universe)  :: Solvated_System
 
 it = 1
@@ -94,9 +96,9 @@ else
 end If
 
 If( restart ) then
-    CALL Restart_stuff( QDyn , t , it , frame_restart )  
+    CALL Restart_stuff( QDyn , frame_restart )  
 else
-    CALL Preprocess( QDyn , it )
+    CALL Preprocess( QDyn )
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -119,7 +121,7 @@ do frame = frame_init , frame_final , frame_step
         CALL EhrenfestForce( Extended_Cell , ExCell_basis )
     end If
 
-    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame , t )
+    If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame )
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
@@ -167,7 +169,6 @@ do frame = frame_init , frame_final , frame_step
 
     If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
-!    If( Induced_ .OR. QMMM ) CALL DP_stuff ( "Induced_DP" )
     If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
@@ -180,18 +181,19 @@ call GPU_unpin( AO_bra )
 call GPU_unpin( AO_ket )
 deallocate( AO_bra , AO_ket , DUAL_bra , DUAL_ket )
 
+final_it = it
+
 include 'formats.h'
 
 end subroutine Chebyshev_driver
 !
 !
 !
-!==================================
- subroutine Preprocess( QDyn , it )
-!==================================
+!=============================
+ subroutine Preprocess( QDyn )
+!=============================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
-integer         , intent(in)    :: it
 
 ! local variables
 integer         :: hole_save , err
@@ -232,7 +234,6 @@ CALL Generate_Structure ( 1 )
 
 CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
@@ -247,7 +248,10 @@ If( DP_field_ ) then
     hole_state = hole_save
     static     = .false.
 
+    CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
 end If
+
 N = size(ExCell_basis)
 CALL Allocate_Brackets( N , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
 
@@ -262,9 +266,8 @@ If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_
 
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-If( GaussianCube ) CALL Send_to_GaussianCube  ( it , t_i )
+If( GaussianCube ) CALL Send_to_GaussianCube  ( it )
 
-!If( Induced_ .OR. QMMM ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 ! export new coordinates for ForceCrew on stand-by ...
@@ -277,19 +280,18 @@ end subroutine Preprocess
 !
 !
 ! 
-!=========================================
- subroutine Send_to_GaussianCube( it , t )
-!=========================================
+!========================================
+ subroutine Send_to_GaussianCube( frame )
+!========================================
 implicit none
-integer     , intent(in)    :: it
-real*8      , intent(in)    :: t
+integer , intent(in) :: frame
 
 ! local variables ...
 integer :: n
 
 ! LOCAL representation for film STO production ...
 do n = 1 , n_part
-    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+    CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 
 !----------------------------------------------------------
@@ -299,11 +301,11 @@ end subroutine Send_to_GaussianCube
 !
 !
 !
-!===================================
+!===============================
  subroutine DP_stuff( instance )
-!===================================
+!===============================
 implicit none
-character(*)  , intent(in)    :: instance
+character(*) , intent(in) :: instance
 
 !local variables ...
 
@@ -321,9 +323,10 @@ select case( instance )
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         ! wavepacket component of the dipole vector ...
-        CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+        ! decide what to do with this ############ 
+        !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        CALL Molecular_DPs( Extended_Cell )
+        If( mod(it-1,solvent_step) == 0 ) CALL Molecular_DPs( Extended_Cell )
 
     case( "Induced_DP" ) 
 
@@ -339,13 +342,11 @@ end subroutine DP_stuff
 !
 !
 !
-!=========================================================
- subroutine Restart_stuff( QDyn , t , it , frame_restart )
-!=========================================================
+!================================================
+ subroutine Restart_stuff( QDyn , frame_restart )
+!================================================
 implicit none
 type(f_time)    , intent(out) :: QDyn
-real*8          , intent(out) :: t
-integer         , intent(out) :: it
 integer         , intent(out) :: frame_restart
 
 !local variables ...
@@ -358,12 +359,7 @@ CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_rest
 
 CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
-If( ChebyCrew ) CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
-
-CALL mpi_barrier( world , err )
-
-! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
-If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
+CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket , it )
 
 If( QMMM ) then 
 

@@ -73,7 +73,11 @@ end do
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( DP_field_ )CALL Molecular_DPs( Extended_Cell )
+ If( any([DP_Moment,Spectrum,DP_Field_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
+
+ If( DP_field_ ) CALL Molecular_DPs( Extended_Cell )
+
+ If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
  ! this Eigen is MPI free ...
  CALL GA_Eigen( Extended_Cell, ExCell_basis, UNI )
@@ -90,10 +94,6 @@ end do
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
-
- If( DP_Moment .OR. Spectrum ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )  
-
- If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 

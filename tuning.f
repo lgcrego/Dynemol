@@ -20,6 +20,9 @@ module tuning_m
 implicit none
 type(universe) , intent(inout) :: univ
 
+!local variables ...
+integer :: i
+
 ! edit structure  ...
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -51,20 +54,22 @@ where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% ato
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
+where( univ% atom% residue == "Na+" ) univ% atom% QMMM = "MM"
+where( univ% atom% residue == "H2O" ) univ% atom% QMMM = "MM"
 
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-univ % atom (138:151) % El = .true.
+univ % atom (359:372) % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-univ % atom (138:151) % Hl = .true.
+univ % atom (359:372) % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
 where( univ% atom% residue == "BKB" ) univ% atom% fragment = "Y"
-univ % atom (359:372) % fragment = "1"
+univ % atom (138:151) % fragment = "1"
 univ % atom (170:183) % fragment = "2"
 univ % atom (327:340) % fragment = "3"
 univ % atom (391:404) % fragment = "4"
@@ -84,6 +89,29 @@ If( ad_hoc_verbose_ ) then
     Print 46
     ad_hoc_verbose_ = F_
 end If
+
+! ---------- Table of fragments -------------
+!   Acceptor    =   A       
+!   Donor       =   D 
+!   Molecule    =   M
+!   Solvent     =   S
+!   Solute      =   R
+!   Cluster     =   C 
+!   Passivator  =   P 
+!   ghost       =   #
+!--------------------------------------------
+
+DO i = 1 , size(univ%atom)
+
+    select case(univ%atom(i)%residue)
+
+        case( 'H2O' , 'WAT' , 'TIP' )
+            univ%atom(i)%fragment = 'S'
+            univ%atom(i)%solvation_hardcore = 3.d0
+
+    end select
+
+END DO
 
 ! just touching univ ...
 univ = univ
@@ -172,6 +200,9 @@ select case ( instance )
 !=====================================
 
 end select
+
+! just touching univ ...
+atom = atom
 
 end subroutine ad_hoc_MM_tuning
 

@@ -4,11 +4,12 @@ use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step 
+integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , solvent_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
+character (len=2)       :: solvent_type
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
@@ -55,12 +56,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
-  
+  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+                                              
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = T_                       
+  GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -73,13 +74,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
-  restart       = T_                          ! <== TRUE for restarting dynamics
+  restart       = F_                          ! <== TRUE for restarting dynamics
   step_security = 100                         ! <== step for saving backup files
                                               ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  Solvent_Type =  "QM"                        ! <== QM = quantum , MM = classical ...
+  Solvent_step =  10                          ! <== step for updating DP_field
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
@@ -95,15 +98,15 @@ logical :: dynamic
   t_f  =  1.0d0                               ! <== final time in PICOseconds
   n_t  =  1000000                             ! <== number of time steps
 
-  CT_dump_step = 15                           ! <== step for saving El&Hl survival charge density  
+  CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 24                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 25                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
 
-  initial_state = 25                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -114,7 +117,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -145,7 +148,7 @@ logical :: dynamic
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
-!  WARNINGS !!!
+!  hereafter only CHECKLIST and  WARNINGS !!!
 
 select case( DRIVER )
 
@@ -181,6 +184,12 @@ If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type==
     Print*,"     for slice use either file_type=trajectory or nuclear_matter=MDynamics <<<" 
     stop
 End If    
+
+If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
+    stop ">>> conflict between QMMM and HFP_Forces; execution halted, check parameters.f <<<"
+elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
+    stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
+end if
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 

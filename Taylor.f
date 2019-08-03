@@ -11,12 +11,10 @@ module Taylor_m
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis, eh_tag                  
-    use QCmodel_Huckel      , only : Huckel,                        &
-                                     Huckel_with_FIELDS
     use Data_Output         , only : Populations
     use Matrix_Math
 
-    public  :: Taylor, preprocess_Taylor, Propagation, dump_Qdyn
+    public  :: Propagation, dump_Qdyn
 
     private
 
@@ -32,137 +30,6 @@ module Taylor_m
     real*8  , allocatable , save :: H(:,:), H_prime(:,:), S_matrix(:,:)
 
 contains
-!
-!
-!
-!=====================================================================================================
- subroutine preprocess_Taylor( system , basis , Psi_bra , Psi_ket , Dual_bra , Dual_ket , QDyn , it )
-!! Excatly equal to preprocess_Chebyshev
-!=====================================================================================================
-implicit none
-type(structure) , intent(inout) :: system
-type(STO_basis) , intent(inout) :: basis(:)
-complex*16      , intent(out)   :: Psi_bra(:)
-complex*16      , intent(out)   :: Psi_ket(:)
-complex*16      , intent(out)   :: Dual_bra(:)
-complex*16      , intent(out)   :: Dual_ket(:)
-type(g_time)    , intent(inout) :: QDyn
-integer         , intent(in)    :: it
-
-!local variables ...
-integer                         :: li , N 
-real*8          , allocatable   :: wv_FMO(:)
-complex*16      , allocatable   :: Psi(:)
-type(R_eigen)                   :: FMO
-
-! prepare  DONOR  state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
-
-! place the  DONOR  state in Structure's hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-N  = size(wv_FMO)
-
-allocate( Psi(size(basis)) , source=C_zero )
-Psi(li:li+N-1) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
-
-#ifdef USE_GPU
-allocate( S_matrix(size(basis),size(basis)) )
-call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
-#endif
-
-! prepare DUAL basis for local properties ...
-CALL Overlap_Matrix( system , basis , S_matrix )
-DUAL_bra = dconjg( Psi )
-call op_x_ket( DUAL_ket, S_matrix , Psi )
-
-call bra_x_op( Psi_bra, Psi , S_matrix )
-Psi_ket = Psi
-
-If( .not. restart ) then
-    ! save populations(time=t_i) ...
-    QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-
-    CALL dump_Qdyn( Qdyn , it )
-end If
-
-! leaving S_matrix allocated
-
-end subroutine preprocess_Taylor
-!
-!
-!
-!==============================================================================================================
- subroutine Taylor( system , basis , Psi_t_bra , Psi_t_ket , Dual_bra , Dual_ket , QDyn , t , delta_t , it )
-!! Equal to Chebyshev
-!==============================================================================================================
-implicit none
-type(structure)  , intent(in)    :: system
-type(STO_basis)  , intent(in)    :: basis(:)
-complex*16       , intent(inout) :: Psi_t_bra(:)
-complex*16       , intent(inout) :: Psi_t_ket(:)
-complex*16       , intent(inout) :: Dual_bra(:)
-complex*16       , intent(inout) :: Dual_ket(:)
-type(g_time)     , intent(inout) :: QDyn
-real*8           , intent(inout) :: t
-real*8           , intent(in)    :: delta_t
-integer          , intent(in)    :: it
-
-! local variables... 
-integer                          :: N
-real*8                           :: tau , tau_max , t_init, t_max 
-
-t_init = t
-
-! max time inside slice ...
-t_max = delta_t*frame_step*(it-1)  
-! constants of evolution ...
-tau_max = delta_t / h_bar
-
-! trying to adapt time step for efficient propagation ...
-tau = merge( tau_max , save_tau * 1.15d0 , first_call_ )
-! but tau should be never bigger than tau_max ...
-tau = merge( tau_max , tau , tau > tau_max )
-
-N = size(basis)
-
-if(first_call_) then           ! allocate matrices
-    allocate( H(N,N) , H_prime(N,N) )
-end if
-
-If ( necessary_ ) then
-    
-    call Overlap_Matrix( system , basis , S_matrix )
-    call Huckelx( basis , S_matrix , H )
-    call syInvert( S_matrix )   ! S_matrix content is destroyed and S_inv is returned
-    call syMultiply( S_matrix , H , H_prime )
-
-    ! for a rigid structure once is enough ...
-    If( driver ==  "q_dynamics" ) necessary_ = .false.
-
-end If
-
-! Propagation(..., type=Taylor)? 
-call Propagation( N, H_prime, Psi_t_bra, Psi_t_ket, t_init, t_max, tau, save_tau )
-
-t = t_init + (delta_t*frame_step)
-
-! prepare DUAL basis for local properties ...
-DUAL_bra = dconjg(Psi_t_ket)
-DUAL_ket = Psi_t_bra
-
-! save populations(time) ...
-QDyn%dyn(it,:,1) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
-
-if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
-
-Print 186, t
-
-include 'formats.h'
-
-first_call_ = .false.
-
-end subroutine Taylor
 !
 !
 !
@@ -434,64 +301,6 @@ function isConverged( a, b, tol )
     end do
     isConverged = .true.
 end function isConverged
-!
-!
-!
-!=========================================
-subroutine Huckelx( basis , S_matrix , H )
-!=========================================
-implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(in)    :: S_matrix(:,:)
-real*8          , intent(out)   :: H(:,:)
-
-! local variables ... 
-real*8  :: k_eff , k_WH , c1 , c2 , c3
-real*8  :: basis_j_IP, basis_j_k_WH
-integer :: i, j, n
-
-n = size(basis)
-
-!----------------------------------------------------------
-!      building  the  HUCKEL  HAMILTONIAN
-
-!$omp parallel private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared)
-!$omp do schedule(dynamic,1)
-do j = 1, n
-
-    basis_j_IP   = basis(j)%IP
-    basis_j_k_WH = basis(j)%k_WH
-
-    do i = 1, j - 1
-
-        c1 = basis(i)%IP - basis_j_IP
-        c2 = basis(i)%IP + basis_j_IP
-        
-        c3 = (c1/c2)**2
-
-        k_WH = (basis(i)%k_WH + basis_j_k_WH) * half
-
-        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-        H(i,j) = k_eff * S_matrix(i,j) * c2 * half
-
-    end do
-
-    H(j,j) = basis_j_IP
-
-end do
-!$omp end do
-
-! call Matrix_Symmetrize( H, 'U' )
-!$omp do
-do i = 1, n
-    H( i+1:n, i ) = H( i, i+1:n )
-end do
-!$omp end do nowait
-!$omp end parallel
-
-end subroutine Huckelx
-
 
 end module Taylor_m
 

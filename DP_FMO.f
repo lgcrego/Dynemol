@@ -66,6 +66,8 @@
  FMO_system%DPF        =  pack( system%DPF       , system%nr == nr )
  FMO_system%El         =  pack( system%El        , system%nr == nr )
  FMO_system%Hl         =  pack( system%Hl        , system%nr == nr )
+! ad-hoc settings ...
+ FMO_system%QMMM       = "QM"
  FMO_system%copy_No    =  0
 
  FMO_system%N_of_electrons = sum( FMO_system%Nvalen )
@@ -262,7 +264,7 @@ If( excited_DPF ) then
         forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
         ! adding (subtracting) DP moment contribution from el(hl)_wavepacket ...
-        Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:) 
+        Electronic_DP = Electronic_DP !+ wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:) 
 
     else
 
@@ -289,7 +291,7 @@ If( .not. excited_DPF ) then
     forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
 
     ! including DP moment contribution from el-hl wavepackets to non FMO molecules ...
-    If( .not. static ) Electronic_DP = Electronic_DP + wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:)
+    If( .not. static ) Electronic_DP = Electronic_DP !+ wavepacket % el_DP(system%nr(1),:) - wavepacket % hl_DP(system%nr(1),:)
 
 end If
 
@@ -322,11 +324,11 @@ end subroutine Dipole_Moment
 
  c3 = (c1/c2)*(c1/c2)
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+ k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+ k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
 
- huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+ huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) * HALF
 
  IF(i == j) huckel_Molecule = basis(i)%IP
 

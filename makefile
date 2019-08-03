@@ -7,7 +7,7 @@ FC = mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-g -traceback #-check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = #-g -traceback -check all -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align 
 FFLAGS2 = -O2 -align -qopenmp -parallel $(FREE) $(SAFE)
@@ -101,7 +101,6 @@ SOURCE2 = constants_m.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
-		  Ehrenfest.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  STO.o \
@@ -116,8 +115,10 @@ SOURCE2 = constants_m.o \
 		  Coulomb.o \
 		  polarizability.o \
 		  CoulInt_QMMM.o \
+		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
+		  Ehrenfest.o \
 		  AlphaPolar.o \
 		  data_output.o \
           backup_MM.o \
@@ -150,8 +151,8 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
+                  Taylor.o \
 		  Chebyshev.o \
-		  Taylor.o \
 		  ElHl_Chebyshev_GPU.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \

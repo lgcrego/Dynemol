@@ -261,44 +261,29 @@ end subroutine Ehrenfest_AO
 !================================
  subroutine Huckel_stuff( basis ) 
 !================================
+use Hamiltonians , only : X => X_ij
 implicit none
 type(STO_basis) , intent(in) :: basis(:)
 
 !local variables ...
-integer :: i , j
-real*8  :: k_eff , k_WH , c1 , c2 , c3
+integer :: i , j , N
 
-allocate( X_ij( size(basis) , size(basis) ) )
+N = size(basis)
+
+allocate ( X_ij(N,N) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-do j = 1 , size(basis)
-do i = j , size(basis)
+do j = 1 , N
+do i = j , N
 
-    if (i == j) then
+         X_ij(i,j) = X( i , j , basis )
 
-         X_ij(i,i) = basis(i)%IP
-
-    else
-
-         c1 = basis(i)%IP - basis(j)%IP
-         c2 = basis(i)%IP + basis(j)%IP
- 
-         c3 = (c1/c2)*(c1/c2)
-
-         k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-         k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-         X_ij(i,j) = k_eff * c2 * HALF
-
-         X_ij(j,i) = X_ij(i,j) 
-
-    end if 
+         X_ij(j,i) = X_ij(i,j)
 
 end do
-end do    
+end do
 
 end subroutine Huckel_stuff
 !
