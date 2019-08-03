@@ -7,7 +7,7 @@
     use constants_m
     use parameters_m                , only : DP_Field_, Induced_ , verbose
     use Overlap_Builder             , only : Overlap_Matrix
-    use QCModel_Huckel              , only : X_ij , even_more_extended_Huckel
+    use Hamiltonians                , only : X_ij , even_more_extended_Huckel
     use DP_main_m                   , only : DP_matrix_AO , Dipole_Moment
 
     public :: AlphaPolar

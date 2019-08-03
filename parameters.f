@@ -38,7 +38,6 @@ logical :: dynamic
 
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
-!  nuclear_matter = "extended_sys"             ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
   Survival       = T_                       
@@ -59,8 +58,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces for Ext. Huckel 
-  
+  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+                                              
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
@@ -151,7 +150,7 @@ logical :: dynamic
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
-!  WARNINGS !!!
+!  hereafter only CHECKLIST and  WARNINGS !!!
 
 select case( DRIVER )
 
@@ -187,6 +186,12 @@ If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type==
     Print*,"     for slice use either file_type=trajectory or nuclear_matter=MDynamics <<<" 
     stop
 End If    
+
+If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
+    stop ">>> conflict between QMMM and HFP_Forces; execution halted, check parameters.f <<<"
+elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
+    stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
+end if
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 

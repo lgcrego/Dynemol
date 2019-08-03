@@ -5,13 +5,12 @@ module Chebyshev_m
     use blas95
     use lapack95
     use ifport
-    use parameters_m        , only : t_i , frame_step , DP_Field_ , driver ,  &
-                                     n_part , restart , CT_dump_step                 
+    use parameters_m        , only : t_i , frame_step , DP_Field_ , driver , QMMM , CT_dump_step , HFP_Forces
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag  
     use Data_Output         , only : Populations
-    use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
+    use Hamiltonians        , only : X_ij , even_more_extended_Huckel
     use Taylor_m            , only : Propagation, dump_Qdyn
     use Ehrenfest_Builder   , only : store_Hprime
     use Matrix_Math
@@ -28,7 +27,6 @@ module Chebyshev_m
 ! module variables ...
     logical       , save        :: necessary_  = .true.
     logical       , save        :: first_call_ = .true.
-    logical       , save        :: ready       = .false.
     real*8        , save        :: save_tau 
     real*8        , allocatable :: S_matrix(:,:)
     real*8, target, allocatable :: h0(:,:)
@@ -57,15 +55,17 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , N 
+integer                         :: li , M , N
 real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: Psi(:)
 type(R_eigen)                   :: FMO
 
+N = size(basis)
+
 #ifdef USE_GPU
 !GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-allocate( S_matrix(size(basis),size(basis)) )
-call GPU_Pin(S_matrix, size(basis)*size(basis)*8)
+    allocate( S_matrix(N,N) )
+    call GPU_Pin(S_matrix, N*N*8)
 !GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #endif
 
@@ -89,9 +89,9 @@ CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
 ! place the  DONOR  state in Structure's hilbert space ...
 li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-N  = size(wv_FMO)
-allocate( Psi(size(basis)) , source=C_zero )
-Psi(li:li+N-1) = dcmplx( wv_FMO(:) )
+M  = size(wv_FMO)
+allocate( Psi(N) , source=C_zero )
+Psi(li:li+M-1) = dcmplx( wv_FMO(:) )
 deallocate( wv_FMO )
 !======================================================================
 
@@ -105,8 +105,8 @@ call op_x_ket( DUAL_ket, S_matrix , Psi )
 !==============================================
 !vector states to be propagated ...
 !Psi_bra = C^T*S       ;      Psi_ket = C ...
-allocate( Psi_t_bra(size(basis)) )
-allocate( Psi_t_ket(size(basis)) )
+allocate( Psi_t_bra(N) )
+allocate( Psi_t_ket(N) )
 call bra_x_op( Psi_t_bra, Psi , S_matrix )
 Psi_t_ket = Psi
 !==============================================
@@ -164,7 +164,6 @@ N = size(basis)
 if(first_call_) then           ! allocate matrices
 #ifdef USE_GPU
 !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-
     allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
     call GPU_Pin( H, N*N*8 )
 !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
@@ -178,7 +177,15 @@ If ( necessary_ ) then ! <== not necessary for a rigid structures ...
     ! compute S and S_inverse ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
-    h0(:,:) = Build_Huckel( basis , S_matrix )
+    allocate( h0(N,N) , source = D_zero )
+
+    call start_clock
+    If( DP_field_ ) then
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+    else
+        h0(:,:) = Build_Huckel( basis , S_matrix )
+    end If
+    call stop_clock
 
     CALL syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
 #define S_inv S_matrix
@@ -230,8 +237,6 @@ deallocate( H_prime )
 #endif
 #undef S_inv
 
-Print 186, t
-
 first_call_ = .false.
 
 include 'formats.h'
@@ -249,19 +254,22 @@ type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
 
 ! local variables ... 
-integer :: i , j , N
-real*8  , allocatable   :: h(:,:)
+integer               :: i , j , N
+real*8  , allocatable :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+!----------------------------------------------------------
 
 N = size(basis)
 ALLOCATE( h(N,N) , source = D_zero )
 
 do j = 1 , N
-  do i = j , N
+  do i = 1 , j
 
         h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
+
+        h(j,i) = h(i,j)
 
     end do
 end do
@@ -271,25 +279,44 @@ end function Build_Huckel
 !
 !
 !
-!=================================================================================
- subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket)
-!=================================================================================
+!======================================================================================
+ subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket , it)
+!======================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
 complex*16      , intent(in)    :: DUAL_ket (:)
 complex*16      , intent(in)    :: AO_bra   (:)
 complex*16      , intent(in)    :: AO_ket   (:)
+integer         , intent(in)    :: it
+
+!local variables ...
+integer :: N
+
+N = size(basis)
 
 !vector states to be propagated ...
-allocate( Psi_t_bra(size(basis)) )
-allocate( Psi_t_ket(size(basis)) )
+allocate( Psi_t_bra(N) )
+allocate( Psi_t_ket(N) )
 
 Psi_t_bra = DUAL_ket
 Psi_t_ket = AO_ket
 
 CALL Overlap_Matrix( system , basis , S_matrix )
-h0(:,:) = Build_Huckel( basis , S_matrix )
+
+allocate( h0(N,N) , source = D_zero )
+If( DP_field_ ) then
+
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+
+else
+
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+
+end If
+
+! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
 end subroutine preprocess_from_restart
 !

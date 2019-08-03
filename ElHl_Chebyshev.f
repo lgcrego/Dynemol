@@ -10,7 +10,7 @@ module ElHl_Chebyshev_m
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : FMO_analysis , eh_tag  
     use Data_Output         , only : Populations
-    use QCmodel_Huckel      , only : X_ij , even_more_extended_Huckel
+    use Hamiltonians        , only : X_ij , even_more_extended_Huckel
     use Taylor_m            , only : Propagation, dump_Qdyn
     use Ehrenfest_Builder   , only : store_Hprime
     use Matrix_Math
@@ -20,18 +20,18 @@ module ElHl_Chebyshev_m
     private
 
 ! module parameters ...
-    integer     , parameter :: order        = 25
-    real*8      , parameter :: error        = 1.0d-12
-    real*8      , parameter :: norm_error   = 1.0d-12
+    integer       , parameter   :: order       = 25
+    real*8        , parameter   :: error       = 1.0d-12
+    real*8        , parameter   :: norm_error  = 1.0d-12
 
 ! module variables ...
-    real*8        ,   save          :: save_tau(2)
-    logical       ,   save          :: necessary_  = .true.
-    logical       ,   save          :: first_call_ = .true.
-    real*8        ,   pointer       :: h(:,:)
-    real*8, target, allocatable   :: h0(:,:)
-    real*8        ,   allocatable   :: S_matrix(:,:) , H_prime(:,:)
-    complex*16    ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
+    logical       , save        :: necessary_  = .true.
+    logical       , save        :: first_call_ = .true.
+    real*8        , save        :: save_tau(2)
+    real*8        , pointer     :: h(:,:)
+    real*8, target, allocatable :: h0(:,:)
+    real*8        , allocatable :: S_matrix(:,:) , H_prime(:,:)
+    complex*16    , allocatable :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
     interface preprocess_ElHl_Chebyshev
         module procedure preprocess_ElHl_Chebyshev
@@ -191,7 +191,7 @@ real*8  :: t_max , tau_max , tau(2) , t_init
 t_init = t
 
 ! max time inside slice ...
-t_max = delta_t*frame_step*(it-1)
+t_max = delta_t*frame_step*(it-1)  
 ! constants of evolution ...
 tau_max = delta_t / h_bar
 
@@ -220,13 +220,11 @@ If ( necessary_ ) then ! <== not necessary for a rigid structures ...
 
     allocate( h0(N,N) , source = D_zero )
 
-    call start_clock
     If( DP_field_ ) then
         h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
     else
         h0(:,:) = Build_Huckel( basis , S_matrix )
     end If
-    call stop_clock
 
     CALL syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
 #define S_inv S_matrix
@@ -277,7 +275,7 @@ DUAL_ket = Psi_t_bra
 
 ! prepare Slater basis for FORCE properties ...
 call op_x_ket( AO_bra, S_inv, Psi_t_bra )
-AO_bra = dconjg(AO_bra) 
+AO_bra = dconjg(AO_bra)
 AO_ket = Psi_t_ket
 
 CALL QuasiParticleEnergies( AO_bra , AO_ket , H )

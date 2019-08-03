@@ -150,6 +150,7 @@ SOURCE2 = constants_m.o \
 		  Coulomb.o \
 		  polarizability.o \
 		  CoulInt_QMMM.o \
+		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  QCModel_ElHl.o \
 		  Ehrenfest.o \

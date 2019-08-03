@@ -335,10 +335,10 @@ end subroutine S_invH
 !=====================================
  subroutine Huckel_stuff( basis , Xi ) 
 !=====================================
-use QCModel_Huckel , only : X_ij
+use Hamiltonians , only : X_ij
 implicit none
-type(STO_basis) , intent(in) :: basis(:)
-real*8          , allocatable , intent(out) :: Xi(:,:)
+type(STO_basis)  , intent(in) :: basis(:)
+real*8           , allocatable , intent(out) :: Xi(:,:)
 
 !local variables ...
 integer :: i , j

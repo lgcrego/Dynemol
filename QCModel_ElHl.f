@@ -18,7 +18,7 @@
     use Coulomb_SMILES_m            , only : Build_Coulomb_potential
     use DP_main_m                   , only : DP_matrix_AO
     use Polarizability_m            , only : Induced_DP_phi
-    use QCModel_Huckel              , only : X_ij , even_more_extended_Huckel
+    use Hamiltonians                , only : X_ij , even_more_extended_Huckel
 
     public :: EigenSystem_ElHl 
 
