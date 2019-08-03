@@ -8,13 +8,9 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m                , only : DP_Field_  ,       &
-                                             Induced_ ,         &
-                                             driver ,           &
-                                             verbose 
+    use parameters_m                , only : DP_Field_ , Induced_ , driver , verbose 
     use Overlap_Builder             , only : Overlap_Matrix
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
-
 
     public :: EigenSystem 
 
