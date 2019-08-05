@@ -100,8 +100,7 @@ DO i = 1 , size(univ%atom)
 
 END DO
 
-! just touching univ ...
-univ = univ
+call warnings( univ ) 
 
 include 'formats.h'
 
@@ -119,10 +118,12 @@ type(universe) , intent(inout) :: univ
 logical :: propagate_el , propagate_hl
 
 !default: %El => DONOR
-If( any(univ % atom%El) ) then
+If( any(univ % atom%El) ) then      ! <== first priority ...
     where( univ % atom % El ) univ % atom % fragment = "D"
+else If( any(univ % atom%Hl) ) then ! <== second priority, only for cationic systems ...
+    where( univ % atom % Hl ) univ % atom % fragment = "A"
 else
-    if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
+    if(.NOT. static .AND. electron_state /= 0 ) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
 end If
 
 propagate_el = any(univ % atom%El) .EQV. (electron_state /= 0)

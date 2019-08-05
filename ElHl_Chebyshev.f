@@ -8,7 +8,7 @@ module ElHl_Chebyshev_m
     use parameters_m        , only : t_i , frame_step , Coulomb_ , DP_Field_ , n_part, driver , QMMM , CT_dump_step , HFP_Forces
     use Structure_Builder   , only : Unit_Cell 
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis 
+    use FMO_m               , only : FMO_analysis , eh_tag , wavepacket
     use Data_Output         , only : Populations
     use Hamiltonians        , only : X_ij , even_more_extended_Huckel
     use Taylor_m            , only : Propagation, dump_Qdyn
@@ -44,7 +44,6 @@ module ElHl_Chebyshev_m
 #endif
 
 contains
-!
 !
 !
 !==========================================================================================================
@@ -89,50 +88,49 @@ end If
 ! for a rigid structure once is enough ...
 If( driver == 'q_dynamics' ) necessary_ = .false.
 
+allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
 ! prepare electron state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the electron state in Structure's Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-M  = size(wv_FMO)
-allocate( ElHl_Psi( N , n_part ) , source=C_zero )
-ElHl_Psi(li:li+M-1,1) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
-
+  ! place the electron state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,1) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(1) == "el" )
+  deallocate( wv_FMO )
 !========================================================================
 ! prepare hole state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
-
-! place the hole state in Structure's Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
-M  = size(wv_FMO)
-ElHl_Psi(li:li+M-1,2) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
+  
+  ! place the hole state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,2) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(2) == "hl" )
+  deallocate( wv_FMO )
 !========================================================================
 
 !==============================================
 ! prepare DUAL basis for local properties ...
 ! DUAL_bra = (C*)^T    ;    DUAL_ket = S*C ...
-DUAL_bra = dconjg( ElHl_Psi )
-call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
+  DUAL_bra = dconjg( ElHl_Psi )
+  call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
 !==============================================
 
 !==============================================
-!vector states to be propagated ...
-!Psi_bra = C^T*S       ;      Psi_ket = C ...
-allocate( Psi_t_bra(N,n_part) )
-allocate( Psi_t_ket(N,n_part) )
-call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
-Psi_t_ket = ElHl_Psi
+! vector states to be propagated ...
+! Psi_bra = C^T*S       ;      Psi_ket = C ...
+  allocate( Psi_t_bra(N,n_part) )
+  allocate( Psi_t_ket(N,n_part) )
+  call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
+  Psi_t_ket = ElHl_Psi
 !==============================================
 
 !==============================================
 ! preprocess stuff for EhrenfestForce ...
-AO_bra = ElHl_Psi 
-AO_ket = ElHl_Psi 
-CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
-
+  AO_bra = ElHl_Psi 
+  AO_ket = ElHl_Psi 
+  CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
+!==============================================
 
 CALL syInvert( S_matrix, return_full )   ! <== S_matrix content is destroyed and S_inv is returned
 #define S_inv S_matrix
@@ -243,27 +241,29 @@ If (.not. allocated(H_prime) ) allocate( H_prime(N,N) )
 call syMultiply( S_inv , h , H_prime )
 #endif
 
-! proceed evolution of ELECTRON wapacket with best tau ...
+If( eh_tag(1) == "el" ) then  ! <== proceed evolution of ELECTRON wapacket with best tau ...
 #ifdef USE_GPU
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv(1,1), h(1,1), Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv(1,1), h(1,1), Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #else
-CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
+    CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
 #endif
+End If
 
 !=======================================================================
 !            Hole Hamiltonian : lower triangle ...
 !=======================================================================
 
-! proceed evolution of HOLE wapacket with best tau ...
+If( eh_tag(2) == "hl" ) then  ! <==  proceed evolution of HOLE wapacket with best tau ...
 #ifdef USE_GPU
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
-!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
 #else
-CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
+    CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
 #endif
+End If
 
 !=======================================================================
 
@@ -353,16 +353,27 @@ mm = size(AO_bra(:,1))
 
 erg_el = (0.d0,0.d0)
 erg_hl = (0.d0,0.d0)
-!$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el , erg_hl)
-do j = 1 , mm
-    do i = 1 , mm
 
-        erg_el = erg_el + AO_bra(i,1)*H(i,j)*AO_ket(j,1)
-        erg_hl = erg_hl + AO_bra(i,2)*H(i,j)*AO_ket(j,2)
-
+If( eh_tag(1) == "el" ) then  
+    !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el )
+    do j = 1 , mm
+        do i = 1 , mm
+            erg_el = erg_el + AO_bra(i,1)*H(i,j)*AO_ket(j,1)
+        end do
     end do
-end do
-!$OMP end parallel do  
+    !$OMP end parallel do  
+End If
+
+
+If( eh_tag(2) == "hl" ) then  
+    !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_hl)
+    do j = 1 , mm
+        do i = 1 , mm
+            erg_hl = erg_hl + AO_bra(i,2)*H(i,j)*AO_ket(j,2)
+        end do
+    end do
+    !$OMP end parallel do  
+End If
 
 Unit_Cell% QM_wp_erg(1) = erg_el
 Unit_Cell% QM_wp_erg(2) = erg_hl

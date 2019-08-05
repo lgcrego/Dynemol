@@ -19,8 +19,9 @@
 
     integer      , allocatable :: orbital(:)
     character(2) , allocatable :: eh_tag(:) 
+    character(4)               :: wavepacket
 
-    public :: FMO_analysis , eh_tag , orbital
+    public :: FMO_analysis , eh_tag , orbital , wavepacket
 
     private
 
@@ -135,7 +136,7 @@ implicit none
  If( (.NOT. done) .AND. Survival ) then
 
     If( any(system%Hl)          .AND. n_part == 1 )  stop ">> n_part = 1 , but El/Hl is .true.   <<"
-    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
+!    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
 
     allocate( orbital(n_part) , source = 0    )
     allocate( eh_tag(n_part)  , source = "XX" )
@@ -144,8 +145,10 @@ implicit none
         orbital(1) = electron_state ; eh_tag(1) = "el"
     End If
     If( any(system%Hl) ) then
-        orbital(2) = hole_state    ; eh_tag(2) = "hl"  
+        orbital(2) = hole_state     ; eh_tag(2) = "hl"  
     End If
+
+    wavepacket = eh_tag(1)//eh_tag(2)
 
     done = .true.
 

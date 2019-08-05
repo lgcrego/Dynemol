@@ -121,8 +121,15 @@ do frame = frame_init , frame_final , frame_step
     !============================================================================
     phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
+print*, MO_bra(:,1)
+print*, " "
+pause
+print*, MO_bra(:,2)
+
+pause
+
     ! U_AD(dt) : adiabatic component of the propagation ; 1 of 2 ... 
-    forall( j=1:n_part )   
+    forall( j=1:n_part , eh_tag(j)/= "XX" )   
         MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
         MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
     end forall
