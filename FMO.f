@@ -17,10 +17,10 @@
     use Structure_Builder           , only : Basis_Builder
     use LCMO_m                      , only : LCMO_Builder
 
-    integer      , allocatable , public :: orbital(:)
-    character(2) , allocatable , public :: eh_tag(:) 
+    integer      , allocatable :: orbital(:)
+    character(2) , allocatable :: eh_tag(:) 
 
-    public :: FMO_analysis
+    public :: FMO_analysis , eh_tag , orbital
 
     private
 
@@ -137,7 +137,8 @@ implicit none
     If( any(system%Hl)          .AND. n_part == 1 )  stop ">> n_part = 1 , but El/Hl is .true.   <<"
     If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
 
-    allocate( orbital(n_part) , eh_tag(n_part) )
+    allocate( orbital(n_part) , source = 0    )
+    allocate( eh_tag(n_part)  , source = "XX" )
 
     orbital(1) = initial_state ; eh_tag(1) = "el"
     If( any(system%Hl) ) then

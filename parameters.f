@@ -106,7 +106,7 @@ logical :: dynamic
 
   hole_state    = 25                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
-                                              ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
+                                              ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
   initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
