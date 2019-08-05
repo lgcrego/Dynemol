@@ -2,7 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m    , only  : T_ , F_ , static
+    use parameters_m    , only  : T_ , F_ , static , electron_state , hole_state
 
     public :: ad_hoc_tuning
 
@@ -77,19 +77,6 @@ univ % atom (106:119) % fragment = "5"
 univ % atom (423:436) % fragment = "6"
 univ % atom ( 74: 87) % fragment = "7"
 
-!......................................................................
-!default: %El => DONOR
-If( any(univ % atom%El) ) then
-    where( univ % atom % El ) univ % atom % fragment = "D"
-else
-    if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
-end If
-
-If( ad_hoc_verbose_ ) then
-    Print 46
-    ad_hoc_verbose_ = F_
-end If
-
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
 !   Donor       =   D 
@@ -119,7 +106,42 @@ univ = univ
 include 'formats.h'
 
 end subroutine ad_hoc_tuning
+!
+!
+!
+!===========================
+ subroutine warnings( univ )
+!===========================
+implicit none
+type(universe) , intent(inout) :: univ
 
+!local variables ...
+logical :: propagate_el , propagate_hl
+
+!default: %El => DONOR
+If( any(univ % atom%El) ) then
+    where( univ % atom % El ) univ % atom % fragment = "D"
+else
+    if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
+end If
+
+propagate_el = any(univ % atom%El) .EQV. (electron_state /= 0)
+If( .not. propagate_el ) stop ">> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<"
+
+propagate_hl = any(univ % atom%Hl) .EQV. (hole_state /= 0)
+If( .not. propagate_hl ) stop ">> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<"
+
+If( ad_hoc_verbose_ ) then
+    Print 46
+    ad_hoc_verbose_ = F_
+end If
+
+include 'formats.h'
+
+end subroutine warnings
+!
+!
+!
 end module tuning_m
 !
 !

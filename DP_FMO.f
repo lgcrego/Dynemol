@@ -7,7 +7,7 @@
     use parameters_m            , only : OPT_parms ,                    &
                                          static ,                       &
                                          hole_state ,                   &
-                                         excited_state => initial_state
+                                         excited_state => electron_state
     use Semi_Empirical_Parms    , only : atom ,                         &
                                          Include_OPT_parameters
     use Multipole_Routines_m    , only : rotationmultipoles ,           &

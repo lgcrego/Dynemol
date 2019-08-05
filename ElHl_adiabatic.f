@@ -10,7 +10,7 @@ module ElHl_adiabatic_m
                                              Induced_ , QMMM ,              &
                                              GaussianCube , static ,        &
                                              GaussianCube_step , preview ,  &
-                                             hole_state , initial_state ,   &
+                                             hole_state , electron_state ,  &
                                              restart , Coulomb_ ,           &
                                              DensityMatrix
     use Babel_m                     , only : Coords_from_Universe ,         &
@@ -314,7 +314,7 @@ If( QMMM ) allocate( Net_Charge_MM(Extended_Cell%atoms) , source = D_zero )
 mm = size(ExCell_basis)                         
 
 ! initial state of the isolated molecule ...
-Print 56 , initial_state     
+Print 56 , electron_state     
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0 ...
 do n = 1 , n_part                         
@@ -392,6 +392,7 @@ CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_el%L , mm , MO_ket(:,1) , mm 
 CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
 
 do n = 1 , n_part
+    if( eh_tag(n) == "XX" ) cycle
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
 end do
 
@@ -477,6 +478,8 @@ integer     :: nf , n
 complex*16  :: wp_energy(n_part)
 
 do n = 1 , n_part
+  
+    if( eh_tag(n) == "XX" ) cycle
 
     wp_energy(n) = sum(MO_bra(:,n)*UNI_el%erg(:)*MO_ket(:,n))
 

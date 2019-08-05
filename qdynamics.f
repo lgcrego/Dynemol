@@ -8,8 +8,7 @@ module qdynamics_m
  use Solvated_M             , only : DeAllocate_TDOS ,      &
                                      DeAllocate_PDOS ,      &
                                      DeAllocate_SPEC 
- use FMO_m                  , only : FMO_analysis ,         &
-                                     eh_tag 
+ use FMO_m                  , only : FMO_analysis          
  use QCModel_Huckel         , only : EigenSystem
  use DOS_m                  , only : Total_DOS ,            &
                                      Partial_DOS

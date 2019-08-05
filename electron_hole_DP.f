@@ -6,7 +6,7 @@ module DP_excited_m
     use lapack95
     use parameters_m            , only : OPT_parms ,                    &
                                          hole_state ,                   &
-                                         excited_state => initial_state         
+                                         excited_state => electron_state         
     use Allocation_m            , only : Allocate_Structures
     use Semi_Empirical_Parms    , only : atom ,                         &
                                          Include_OPT_parameters

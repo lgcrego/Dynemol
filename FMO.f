@@ -4,7 +4,7 @@
     use parameters_m                , only : driver ,                   &
                                              n_part ,                   &
                                              Survival ,                 &
-                                             initial_state ,            &
+                                             electron_state ,           &
                                              hole_state ,               &
                                              LCMO
     use f95_precision
@@ -124,12 +124,12 @@
  subroutine preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
 !==============================================================================================
 implicit none
- type(structure)                            , intent(inout) :: system
- type(STO_basis)                            , intent(inout) :: basis(:)
- character(1)    , allocatable              , intent(out)   :: system_fragment(:) 
- character(1)    , allocatable              , intent(out)   :: basis_fragment(:)
- character(1)                               , intent(out)   :: fragment
- character(*)                   , optional  , intent(in)    :: instance
+ type(structure)                           , intent(inout) :: system
+ type(STO_basis)                           , intent(inout) :: basis(:)
+ character(1)    , allocatable             , intent(out)   :: system_fragment(:) 
+ character(1)    , allocatable             , intent(out)   :: basis_fragment(:)
+ character(1)                              , intent(out)   :: fragment
+ character(*)                  , optional  , intent(in)    :: instance
 
 ! orbitals to be propagated ...
  If( (.NOT. done) .AND. Survival ) then
@@ -140,9 +140,11 @@ implicit none
     allocate( orbital(n_part) , source = 0    )
     allocate( eh_tag(n_part)  , source = "XX" )
 
-    orbital(1) = initial_state ; eh_tag(1) = "el"
+    If( any(system%El) ) then
+        orbital(1) = electron_state ; eh_tag(1) = "el"
+    End If
     If( any(system%Hl) ) then
-    orbital(2) = hole_state    ; eh_tag(2) = "hl"  
+        orbital(2) = hole_state    ; eh_tag(2) = "hl"  
     End If
 
     done = .true.

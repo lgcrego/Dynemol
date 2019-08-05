@@ -3,7 +3,7 @@ MODULE parameters_m
 use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
-integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
+integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , solvent_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
@@ -108,7 +108,7 @@ logical :: dynamic
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 26                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)

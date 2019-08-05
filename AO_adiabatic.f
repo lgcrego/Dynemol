@@ -12,7 +12,7 @@ module AO_adiabatic_m
                                              Induced_ , QMMM , restart ,      &
                                              GaussianCube , static ,          &
                                              GaussianCube_step , preview ,    &
-                                             hole_state , initial_state ,     &
+                                             hole_state , electron_state ,    &
                                              DensityMatrix, AutoCorrelation,  &
                                              CT_dump_step, solvent_step,      &
                                              driver, HFP_Forces ,             &
@@ -311,7 +311,7 @@ mm = size(ExCell_basis)
 nn = n_part
 
 ! initial state of the isolated molecule ...
-Print 56 , initial_state     
+Print 56 , electron_state     
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 ! assuming non-interacting electrons ...
@@ -394,6 +394,7 @@ AO_bra = DUAL_bra
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
 do n = 1 , n_part
+    if( eh_tag(n) == "XX" ) cycle
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 
@@ -477,6 +478,8 @@ integer    :: nf , n
 complex*16 :: wp_energy(n_part)
 
 do n = 1 , n_part
+
+    if( eh_tag(n) == "XX" ) cycle
 
     wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
 

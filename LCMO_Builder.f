@@ -2,7 +2,7 @@
 
     use type_m
     use constants_m
-    use parameters_m                , only : initial_state , hole_state
+    use parameters_m                , only : electron_state , hole_state
                                              
     public :: LCMO_Builder
 
@@ -57,9 +57,9 @@ select case (instance)
             casida_el(i) = sum( coeff_el(:) * wv_FMO(:,i) )
         end do
 
-        wv_FMO(initial_state,:) = casida_el(:) 
+        wv_FMO(electron_state,:) = casida_el(:) 
 
-        FMO_erg(initial_state)  = sum( coeff_el*coeff_el * FMO_erg )
+        FMO_erg(electron_state)  = sum( coeff_el*coeff_el * FMO_erg )
 
         deallocate( coeff_el , casida_el , LCMO_states_el )
 

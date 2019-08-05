@@ -204,6 +204,8 @@ If( present(QDyn) ) then
 
         do np = 1 , n_part
 
+            if( eh_tag(n) == "XX" ) cycle
+
             OPEN( unit = 33 , file="tmp_data/"//eh_tag(n)//"_survival.dat" , status="unknown" )
 
             write(33,14) frame
@@ -281,6 +283,8 @@ If( present(QDyn) ) then
     N_of_fragments = size( QDyn%fragments )
 
         do np = 1 , n_part
+
+            if( eh_tag(n) == "XX" ) cycle
 
             OPEN( unit = 33 , file="tmp_data/"//eh_tag(n)//"_survival.dat" , status="unknown" )
 

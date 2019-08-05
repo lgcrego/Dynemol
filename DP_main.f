@@ -10,7 +10,7 @@ module DP_main_m
                                           DP_Moment ,                           &
                                           static ,                              &
                                           hole_state ,                          &
-                                          excited_state => initial_state        ! for static calculations initial state = excited state
+                                          excited_state => electron_state        ! for static calculations initial state = excited state
     use Multipole_Routines_m    , only  : rotationmultipoles ,                  &
                                           multipole_messages ,                  &
                                           multipoles1c ,                        &

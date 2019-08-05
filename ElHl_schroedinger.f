@@ -5,7 +5,7 @@
  use f95_precision
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
-                                         GaussianCube_step ,  DP_Moment , initial_state ,   &
+                                         GaussianCube_step ,  DP_Moment , electron_state ,  &
                                          Coulomb_ , restart , DensityMatrix , CT_dump_step
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
@@ -55,7 +55,7 @@ character(11)                       :: argument
 
 allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 , n_part ) )
 
-Print 56 , initial_state     ! <== initial state of the isolated molecule
+Print 56 , electron_state     ! <== initial state of the isolated molecule
 
 CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -138,6 +138,7 @@ else
         CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI_hl%L , mm , MO_ket(:,2) , mm , C_zero , AO_ket(:,2) , mm )
 
         do n = 1 , n_part
+            if( eh_tag(n) == "XX" ) cycle
             CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
         end do
 
@@ -204,6 +205,7 @@ DO it = it_init , n_t
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
         do n = 1 , n_part
+            if( eh_tag(n) == "XX" ) cycle
             CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
         end do
 
@@ -267,7 +269,7 @@ complex*16      , ALLOCATABLE       :: phase(:)
 
 allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 , n_part ) )
 
-Print 56 , initial_state     ! <== initial state of the isolated molecule
+Print 56 , electron_state     ! <== initial state of the isolated molecule
 
 CALL Allocate_Brackets( size(basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -306,6 +308,7 @@ DO it = 1 , n_t
 
     if( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
         do n = 1 , n_part
+            if( eh_tag(n) == "XX" ) cycle
             CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
         end do
     end if
@@ -346,6 +349,8 @@ integer     :: nf , n
 complex*16  :: wp_energy
 
 do n = 1 , n_part
+
+    if( eh_tag(n) == "XX" ) cycle
 
     select case( n_part )
 

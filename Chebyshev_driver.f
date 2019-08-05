@@ -274,6 +274,7 @@ integer :: n
 
 ! LOCAL representation for film STO production ...
 do n = 1 , n_part
+    if( eh_tag(n) == "XX" ) cycle
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 

@@ -4,7 +4,6 @@ module QMDynamicSlice_driver_m
     use type_m
     use constants_m
     use parameters_m                , only : survival , driver , n_part
-    use FMO_m                       , only : eh_tag 
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use AO_adiabatic_m              , only : AO_adiabatic
