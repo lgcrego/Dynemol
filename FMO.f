@@ -10,6 +10,7 @@
     use f95_precision
     use blas95
     use lapack95
+    use tuning_m                    , only : eh_tag , orbital 
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
     use Semi_Empirical_Parms        , only : atom
@@ -17,16 +18,9 @@
     use Structure_Builder           , only : Basis_Builder
     use LCMO_m                      , only : LCMO_Builder
 
-    integer      , allocatable :: orbital(:)
-    character(2) , allocatable :: eh_tag(:) 
-    character(4)               :: wavepacket
-
-    public :: FMO_analysis , eh_tag , orbital , wavepacket
+    public :: FMO_analysis , eh_tag , orbital 
 
     private
-
-    ! module variables ...
-    logical , save  :: done = .false.
 
  contains
 !
@@ -131,28 +125,6 @@ implicit none
  character(1)    , allocatable             , intent(out)   :: basis_fragment(:)
  character(1)                              , intent(out)   :: fragment
  character(*)                  , optional  , intent(in)    :: instance
-
-! orbitals to be propagated ...
- If( (.NOT. done) .AND. Survival ) then
-
-    If( any(system%Hl)          .AND. n_part == 1 )  stop ">> n_part = 1 , but El/Hl is .true.   <<"
-!    If( (.NOT. any(system%Hl))  .AND. n_part == 2 )  stop ">> n_part = 2 , but El/Hl is .false.  <<"
-
-    allocate( orbital(n_part) , source = 0    )
-    allocate( eh_tag(n_part)  , source = "XX" )
-
-    If( any(system%El) ) then
-        orbital(1) = electron_state ; eh_tag(1) = "el"
-    End If
-    If( any(system%Hl) ) then
-        orbital(2) = hole_state     ; eh_tag(2) = "hl"  
-    End If
-
-    wavepacket = eh_tag(1)//eh_tag(2)
-
-    done = .true.
-
- end If
 
 ! setting the fragment ...
  allocate(system_fragment (system%atoms) , source = system % fragment )

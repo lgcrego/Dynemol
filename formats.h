@@ -40,9 +40,9 @@
 
 58    FORMAT(1x,'Electrons in the Slater determinant = ',F9.3)
 
-591   FORMAT(/,1x,'Energy of El-packet state(',I3,') = ',F10.5)
+591   FORMAT(/,1x,'Energy of El-wavepacket state(',I3,') = ',F10.5,/)
 
-592   FORMAT(/,1x,'Energy of Hl-packet state(',I3,') = ',F10.5)
+592   FORMAT(/,1x,'Energy of Hl-wavepacket state(',I3,') = ',F10.5,/)
 
 60    FORMAT(1x,'norm of Psi(t) = ',F10.7)     
 

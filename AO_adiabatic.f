@@ -210,7 +210,6 @@ type(f_time)    , intent(out)   :: QDyn
 
 ! local variables
 integer         :: hole_save , n 
-logical         :: el_hl_
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -240,12 +239,14 @@ select case ( nuclear_matter )
 
 end select
 
-el_hl_ = any( Unit_Cell%Hl )
-
 CALL Generate_Structure ( 1 )
 
-CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
+mm = size(ExCell_basis) ; nn = n_part
+
+CALL Allocate_Brackets( size(ExCell_basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+                          
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( DP_field_ ) then
@@ -264,33 +265,15 @@ end If
 
 CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
 
-CALL EigenSystem  ( Extended_Cell , ExCell_basis , UNI , it )
-
-CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
-
-If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
-
-CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
-                          MO_bra   , MO_ket   ,       &
-                          AO_bra   , AO_ket   ,       &
-                          DUAL_bra , DUAL_ket ,       &
-                          phase )
-                          
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-mm = size(ExCell_basis)                          
-nn = n_part
-
-! initial state of the isolated molecule ...
-Print 56 , electron_state     
+CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
-! assuming non-interacting electrons ...
-
 do n = 1 , n_part                         
     select case( eh_tag(n) )
 
         case( "el" )
+
+            CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
             MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
@@ -298,6 +281,8 @@ do n = 1 , n_part
             Print 591, orbital(n) , el_FMO%erg(orbital(n))
        
         case( "hl" )
+
+            CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -322,9 +307,9 @@ CALL dump_Qdyn( Qdyn )
 
 If( GaussianCube ) CALL Send_to_GaussianCube( it )
 
-If( DP_Moment    ) CALL DP_stuff ( "DP_matrix" )
+If( DP_Moment    ) CALL DP_stuff( "DP_matrix" )
 
-If( DP_Moment    ) CALL DP_stuff ( "DP_moment" )
+If( DP_Moment    ) CALL DP_stuff( "DP_moment" )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -333,6 +318,7 @@ End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
+If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 !..........................................................................
 
 include 'formats.h'
