@@ -36,8 +36,6 @@ module Chebyshev_driver_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM 
     use Ehrenfest_Builder           , only : EhrenfestForce 
-    use Chebyshev_m                 , only : Chebyshev ,                    &
-                                             preprocess_Chebyshev
     use ElHl_Chebyshev_m            , only : ElHl_Chebyshev  ,              &
                                              preprocess_ElHl_Chebyshev
 
@@ -152,11 +150,7 @@ do frame = frame_init , frame_final , frame_step
     If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
 
     ! propagate the wavepackets to the next time-slice ...
-    If( nn == 1) then
-        CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
-    else
-        CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
-    end If    
+    CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -240,11 +234,7 @@ end If
 
 CALL Allocate_Brackets( size(ExCell_basis) , AO_bra , AO_ket , DUAL_bra , DUAL_ket , past_AO_bra , past_AO_ket )
 
-If( nn == 1) then
-    CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )
-else
-    CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
-end If
+CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
 
 ! stop here to preview and check input and system info ...
 If( preview ) stop

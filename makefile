@@ -187,7 +187,6 @@ SOURCE2 = constants_m.o \
 		  diagnostic.o \
 		  qdynamics.o \
                   Taylor.o \
-		  Chebyshev.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  ElHl_adiabatic.o \

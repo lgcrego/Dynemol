@@ -119,37 +119,10 @@ do frame = frame_init , frame_final , frame_step
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
-    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
-
-print*, MO_bra(:,1)
-print*, " "
-pause
-print*, MO_bra(:,2)
-
-pause
-
-    ! U_AD(dt) : adiabatic component of the propagation ; 1 of 2 ... 
-    forall( j=1:n_part , eh_tag(j)/= "XX" )   
-        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
-        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
-    end forall
-
-    ! DUAL representation for efficient calculation of survival probabilities ...
-    select case (driver)
-    case("slice_FSSH") ! <== Lowdin orthogonalization ...
-        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-        DUAL_bra = conjg(DUAL_ket)
-    case default       ! <== asymmetrical orthogonalization ...
-        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
-    end select
+    CALL U_ad(t_rate)  ! <== adiabatic component of the propagation ; 1 of 2 ... 
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
-    If( nn == 1) then
-        QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
-    else
-        QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
-    end If
+    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
     if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn )
 
@@ -206,16 +179,7 @@ pause
 
     CALL EigenSystem ( Extended_Cell , ExCell_basis , UNI , it )
 
-    ! project back to MO_basis with UNI(t + t_rate)
-    select case (driver)
-    case("slice_FSSH") ! <== Lowdin orthogonalization ...
-        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-        MO_bra = conjg(MO_ket)
-    case default       ! <== asymmetrical orthogonalization ...
-        CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-        CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-    end select
-!============================================================================
+    CALL U_nad  ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -350,15 +314,10 @@ UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_
 
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-DUAL_bra = conjg(DUAL_ket)
+CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 
 ! save populations ...
-If( nn == 1) then
-    QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t_i )
-else
-    QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
-end If
-
+QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn )
 
 If( GaussianCube ) CALL Send_to_GaussianCube( it )
@@ -379,10 +338,68 @@ If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 include 'formats.h'
 
 end subroutine Preprocess
-! 
 !
 !
-! 
+!
+!
+!=========================
+ subroutine U_ad( t_rate )
+!=========================
+implicit none
+real*8  , intent(in) :: t_rate 
+
+! local variables ...
+integer :: j
+
+phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
+
+! U_AD(dt) ; adiabatic component of the propagation ...
+forall( j=1:n_part )   
+    MO_bra(:,j) = merge( conjg(phase(:)) * MO_bra(:,j) , C_zero , eh_tag(j) /= "XX" )
+    MO_ket(:,j) = merge(       phase(:)  * MO_ket(:,j) , C_zero , eh_tag(j) /= "XX" )
+end forall
+
+! DUAL representation for efficient calculation of survival probabilities ...
+select case (driver)
+
+       case("slice_FSSH") ! <== Lowdin orthogonalization ...
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+           DUAL_bra = conjg(DUAL_ket)
+
+       case default       ! <== asymmetrical orthogonalization ...
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+
+end select
+
+end subroutine U_ad
+!
+!
+!=================
+ subroutine U_nad
+!=================
+implicit none
+
+
+! U_nad(dt) ; NON-adiabatic component of the propagation ...
+
+! project back to MO_basis with UNI(t + t_rate)
+select case (driver)
+
+       case("slice_FSSH") ! <== Lowdin orthogonalization ...
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+           MO_bra = conjg(MO_ket)
+
+       case default       ! <== asymmetrical orthogonalization ...
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+
+end select
+
+end subroutine U_nad
+!
+!
+!
 !========================================
  subroutine Send_to_GaussianCube( frame )
 !========================================
@@ -473,7 +490,6 @@ end subroutine DP_stuff
 !
 !
 !
-!
 !============================
  subroutine dump_Qdyn( Qdyn )
 !============================
@@ -497,7 +513,6 @@ do n = 1 , n_part
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
-        write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
 
     else
 
