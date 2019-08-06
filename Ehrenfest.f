@@ -342,7 +342,6 @@ real*8           , allocatable , intent(out) :: Xi(:,:)
 
 !local variables ...
 integer :: i , j
-real*8  :: k_eff , k_WH , c1 , c2 , c3
 
 allocate ( Xi(mm,mm) )
 
