@@ -1,19 +1,18 @@
  module FMO_m
 
     use type_m
+    use f95_precision
+    use blas95
+    use lapack95
     use parameters_m                , only : driver ,                   &
                                              n_part ,                   &
                                              Survival ,                 &
                                              electron_state ,           &
                                              hole_state ,               &
                                              LCMO
-    use f95_precision
-    use blas95
-    use lapack95
-    use tuning_m                    , only : eh_tag , orbital 
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
-    use Semi_Empirical_Parms        , only : atom
+    use tuning_m                    , only : eh_tag , orbital 
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
     use LCMO_m                      , only : LCMO_Builder

@@ -56,10 +56,10 @@ module AO_adiabatic_m
     private
 
     ! module variables ...
+    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
     Complex*16      , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16      , allocatable , dimension(:)    :: phase
     real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
     real*8                                          :: t
     integer                                         :: it , mm , nn
 
@@ -75,8 +75,8 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-real*8          :: t_rate 
 integer         :: j , frame , frame_init , frame_final , frame_restart
+real*8          :: t_rate 
 type(universe)  :: Solvated_System
 
 it = 1
@@ -239,13 +239,13 @@ select case ( nuclear_matter )
 
 end select
 
-CALL Generate_Structure ( 1 )
+CALL Generate_Structure( 1 )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 mm = size(ExCell_basis) ; nn = n_part
 
-CALL Allocate_Brackets( size(ExCell_basis) , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
                           
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
@@ -292,6 +292,7 @@ do n = 1 , n_part
 
         end select
 end do
+
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
@@ -544,7 +545,7 @@ CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket ,
 
 allocate( phase(size(MO_bra(:,1))) )
 
-CALL Restart_Sys     ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
+CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
 
 mm = size(ExCell_basis)
 nn = n_part

@@ -157,6 +157,7 @@ stop ">> execution stopped, HOLE wavepacket setup is not consistent: check hole_
 end subroutine warnings
 !
 !
+!
 end module tuning_m
 !
 !
@@ -237,6 +238,9 @@ select case ( instance )
 !=====================================
 
 end select
+
+! just touching univ ...
+atom = atom
 
 end subroutine ad_hoc_MM_tuning
 

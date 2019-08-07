@@ -130,22 +130,20 @@ allocate( ElHl_Psi( N , n_part ) , source=C_zero )
   AO_bra = ElHl_Psi 
   AO_ket = ElHl_Psi 
   CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
-!==============================================
 
-CALL syInvert( S_matrix, return_full )   ! <== S_matrix content is destroyed and S_inv is returned
+  CALL syInvert( S_matrix, return_full ) ! <== S_matrix content is destroyed and S_inv is returned
 #define S_inv S_matrix
 
-allocate( H(N,N) )
-h => h0
+  allocate( H(N,N) )
+  h => h0
 
 ! allocate and compute H' = S_inv * H ...
-allocate( H_prime(N,N) , source = D_zero )
-CALL syMultiply( S_inv , h , H_prime )
-
-CALL store_Hprime( N , H_prime )
+  allocate( H_prime(N,N) , source = D_zero )
+  CALL syMultiply( S_inv , h , H_prime )
+ 
+  CALL store_Hprime( N , H_prime )
 !==============================================
 
-!==============================================
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn , it )
@@ -162,6 +160,7 @@ deallocate( H_prime )
 #undef S_inv
 
 ! leaving S_matrix allocated ...
+!==============================================
 
 end subroutine preprocess_ElHl_Chebyshev
 !
