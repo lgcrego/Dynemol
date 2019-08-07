@@ -167,9 +167,9 @@ do frame = frame_init , frame_final , frame_step
 
     end select
 
-    CALL Generate_Structure ( frame )
-
-    CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+    CALL Generate_Structure( frame )
+    
+    CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
     If( DP_field_ ) CALL DP_stuff ( "DP_field" )
 
@@ -263,7 +263,7 @@ If( DP_field_ ) then
 
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
