@@ -132,8 +132,6 @@ select case( driver )
             atom(i)% Ehrenfest = Ehrenfest( system, basis, i ) * eVAngs_2_Newton 
         end do
 
-    case( "slice_ElHl" )
-
 end select
 
 deallocate( mask , X_ij , F_vec , F_mtx )

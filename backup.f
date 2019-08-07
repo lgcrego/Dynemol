@@ -17,7 +17,6 @@ module Backup_m
     use FMO_m               , only : orbital                    , &
                                      eh_tag    
     use QCModel_Huckel      , only : EigenSystem
-    use QCModel_Huckel_ElHl , only : EigenSystem_ElHl    
     use DP_potential_m      , only : Molecular_DPs
     use TD_Dipole_m         , only : wavepacket_DP
     use DP_main_m           , only : Dipole_Matrix   
@@ -105,15 +104,8 @@ if( DP_field_ ) then
 
 end If
 
-if( driver == "slice_ElHl") then
+CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
-    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
-
-else
-
-    CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
-
-end if
 
 end subroutine Restart_Sys_Eigen
 !

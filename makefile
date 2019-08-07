@@ -152,7 +152,6 @@ SOURCE2 = constants_m.o \
 		  CoulInt_QMMM.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
-		  QCModel_ElHl.o \
 		  Ehrenfest.o \
 		  AlphaPolar.o \
 		  data_output.o \
@@ -189,7 +188,6 @@ SOURCE2 = constants_m.o \
                   Taylor.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
-		  ElHl_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
