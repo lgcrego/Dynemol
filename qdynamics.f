@@ -2,27 +2,26 @@ module qdynamics_m
 
  use type_m
  use constants_m
- use parameters_m           , only : spectrum , DP_Moment , &
-                                     survival , DP_Field_ , &
-                                     NetCharge
- use Solvated_M             , only : DeAllocate_TDOS ,      &
-                                     DeAllocate_PDOS ,      &
-                                     DeAllocate_SPEC 
- use QCModel_Huckel         , only : EigenSystem
- use DOS_m                  , only : Total_DOS ,            &
-                                     Partial_DOS
- use Structure_Builder      , only : Generate_Structure ,   &
-                                     Basis_Builder ,        &
-                                     Unit_Cell ,            &
-                                     Extended_Cell ,        &
-                                     ExCell_Basis
- use DP_main_m              , only : Dipole_Matrix
- use DP_potential_m         , only : Molecular_DPs 
- use Oscillator_m           , only : Optical_Transitions
- use Schroedinger_m         , only : Simple_dynamics ,      &
-                                     DeAllocate_QDyn
- use Data_Output            , only : Dump_stuff ,           &
-                                     Net_Charge
+ use parameters_m      , only : spectrum , DP_Moment , &
+                                survival , DP_Field_ , &
+                                NetCharge
+ use Solvated_M        , only : DeAllocate_TDOS ,      &
+                                DeAllocate_PDOS ,      &
+                                DeAllocate_SPEC 
+ use QCModel_Huckel    , only : EigenSystem
+ use DOS_m             , only : Total_DOS ,            &
+                                Partial_DOS
+ use Structure_Builder , only : Generate_Structure ,   &
+                                Basis_Builder ,        &
+                                Unit_Cell ,            &
+                                Extended_Cell ,        &
+                                ExCell_Basis
+ use DP_main_m         , only : Dipole_Matrix
+ use DP_potential_m    , only : Molecular_DPs 
+ use Oscillator_m      , only : Optical_Transitions
+ use Schroedinger_m    , only : Simple_dynamics ,      &
+                                DeAllocate_QDyn
+ use Data_Output       , only : Dump_stuff , Net_Charge
 
  public :: qdynamics
 
@@ -41,7 +40,6 @@ implicit none
  integer                        :: nr , N_of_residues
  logical                        :: DIPOLE_ , el_hl_
  type(R_eigen)                  :: UNI
- type(R_eigen)                  :: el_FMO , hl_FMO
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(f_time)                   :: QDyn

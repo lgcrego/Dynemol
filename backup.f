@@ -46,9 +46,9 @@ contains
 !
 !
 !
-!====================================================================================================================================
- subroutine Restart_Sys_Eigen( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , it , UNI_el , UNI_hl )
-!====================================================================================================================================
+!======================================================================================================================
+ subroutine Restart_Sys_Eigen( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , UNI_el )
+!======================================================================================================================
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
@@ -57,9 +57,7 @@ complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
-integer                         , intent(in)    :: it
 type(R_eigen)                   , intent(out)   :: UNI_el
-type(R_eigen)   , optional      , intent(out)   :: UNI_hl
 
 ! local variables ...
 type(universe) :: Solvated_System

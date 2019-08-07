@@ -154,7 +154,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_M0" , "slice_FSSH" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
         
         dynamic = T_ .OR. Survival 
 

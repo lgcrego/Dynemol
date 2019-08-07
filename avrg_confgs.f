@@ -51,7 +51,7 @@ contains
 integer                         :: frame , frame_init , nr , N_of_residues
 real*8                          :: internal_sigma
 logical                         :: FMO_ , DIPOLE_
-type(R_eigen)                   :: UNI , FMO
+type(R_eigen)                   :: UNI 
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(f_time)                    :: QDyn
