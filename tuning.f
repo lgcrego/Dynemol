@@ -239,9 +239,6 @@ select case ( instance )
 
 end select
 
-! just touching univ ...
-atom = atom
-
 end subroutine ad_hoc_MM_tuning
 
 end module MM_tuning_routines
