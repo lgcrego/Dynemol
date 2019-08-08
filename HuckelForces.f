@@ -6,9 +6,10 @@ module HuckelForces_m
     use lapack95
     use type_m
     use constants_m
-    use parameters_m            , only  : verbose
-    use Overlap_Builder         , only  : Overlap_Matrix
-    use Allocation_m            , only  : DeAllocate_Structures    
+    use parameters_m            , only : verbose , DP_Field_
+    use Overlap_Builder         , only : Overlap_Matrix
+    use Allocation_m            , only : DeAllocate_Structures    
+    use Hamiltonians            , only : X_ij , even_more_extended_Huckel
 
     public :: HuckelForces
 
@@ -176,7 +177,7 @@ do xyz = 1 , 3
             i = system% BasisPointer(k) + ik
             do j = 1 , size(basis)
 
-                Force(xyz) = Force(xyz) - ( Huckel_stuff(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
+                Force(xyz) = Force(xyz) - ( X_ij(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
 
             end do
        end do
@@ -255,13 +256,11 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 allocate( h(size(basis),size(basis)) )
 
-do j = 1 , size(basis)
-    do i = j, size(basis)
-
-        h(i,j) = Huckel_stuff( i , j , basis ) * S_matrix(i,j)
-
-    end do
-end do    
+If( DP_field_ ) then
+    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+else
+    h(:,:) = Build_Huckel( basis , S_matrix )
+end If
 
 CALL SYGVD( h , S_matrix , erg , 1 , 'V' , 'L' , info )
 
@@ -273,40 +272,32 @@ end subroutine LocalEigenSystem
 !
 !
 !
-!======================================
- function Huckel_stuff( i , j , basis )
-!======================================
+!===================================================
+ function Build_Huckel( basis , S_matrix ) result(h)
+!===================================================
 implicit none
-integer         , intent(in) :: i , j
-type(STO_basis) , intent(in) :: basis(:)
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
 
-!local variables ...
-real*8 :: Huckel_stuff
-real*8 :: k_eff , k_WH , c1 , c2 , c3
+! local variables ... 
+integer              :: i , j , N
+real*8 , allocatable :: h(:,:)
 
-!-------------------------------------------------
-!    constants for the Huckel Hamiltonian
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
 
-if (i == j) then
+N = size(basis)
+ALLOCATE( h(N,N) , source = D_zero )
 
-    huckel_stuff = basis(i)%IP
+do j = 1 , N
+  do i = j , N
 
-else
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
-    c1 = basis(i)%IP - basis(j)%IP
-    c2 = basis(i)%IP + basis(j)%IP
+    end do
+end do
 
-    c3 = (c1/c2)*(c1/c2)
-
-    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-    Huckel_stuff = k_eff * c2 * HALF
-
-end if 
-
-end function Huckel_stuff
+end function Build_Huckel
 !
 !
 !

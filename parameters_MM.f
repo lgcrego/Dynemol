@@ -30,8 +30,8 @@ implicit none
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
-  MM % N_of_molecules = 2452                ! <== total number of molecules
-  MM % N_of_species   = 3                   ! <== total number of species
+  MM % N_of_molecules = 1                   ! <== total number of molecules
+  MM % N_of_species   = 1                   ! <== total number of species
 
   CALL allocate_species( MM % N_of_species )
 
@@ -43,16 +43,6 @@ implicit none
   species(1) % N_of_atoms      = 506        ! <== Number of atoms comprosing a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
 
-  species(2) % residue         = "Na+"      ! <== Residue label for species i ; character(len3)
-  species(2) % N_of_molecules  = 14         ! <== Number of molecules of species i
-  species(2) % N_of_atoms      = 1          ! <== Number of atoms comprosing a single molecule of species i
-  species(2) % flex            = T_         ! <== Flexible : T_ , F_
-
-  species(3) % residue         = "H2O"      ! <== Residue label for species i ; character(len3)
-  species(3) % N_of_molecules  = 2437       ! <== Number of molecules of species i
-  species(3) % N_of_atoms      = 3          ! <== Number of atoms comprosing a single molecule of species i
-  species(3) % flex            = T_         ! <== Flexible : T_ , F_
-
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
 
 !------------------------------------------------------------------------------
@@ -60,15 +50,14 @@ implicit none
 !
 
   thermostat                = "Microcanonical"  ! <== Berendsen, Nose_Hoover, Microcanonical
-!  thermostat                = "Berendsen"       ! <== Berendsen, Nose_Hoover, Microcanonical
 
   temperature               = 300.d0            ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
 
-  thermal_relaxation_time   = 5.d+1             ! <== Temperature coupling term with the bath
+  thermal_relaxation_time   = 1.d-1             ! <== Temperature coupling term with the bath
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  pressure_relaxation_time  = 1.d-1             ! <== Pressure coupling term 
+  pressure_relaxation_time  = infty             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   cutoff_radius             = 15.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
@@ -79,7 +68,7 @@ implicit none
 !
   driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
-  read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
+  read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
 
   MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
 

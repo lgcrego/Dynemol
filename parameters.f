@@ -33,8 +33,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-!  DRIVER         = "slice_Cheb"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
-  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_FSSH"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+!  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
@@ -82,7 +82,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
   Solvent_Type =  "QM"                        ! <== QM = quantum , MM = classical ...
   Solvent_step =  10                          ! <== step for updating DP_field
 
@@ -119,7 +119,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

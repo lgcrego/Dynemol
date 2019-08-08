@@ -5,10 +5,11 @@ module GA_QCModel_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : Alpha_Tensor
+    use parameters_m            , only : Alpha_Tensor , DP_Field_ , Induced_
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
+    use Hamiltonians            , only : X_ij , even_more_extended_Huckel
     use Multipole_Routines_m    , only : rotationmultipoles ,   &
                                          multipole_messages ,   &
                                          multipoles1c ,         &
@@ -507,13 +508,11 @@ end function C_Mulliken
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO
 
- DO j = 1 , size(basis)
-   DO i = 1 , j 
-
-      h_FMO(i,j) = Huckel_bare( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
- 
-   END DO
- END DO
+ If( DP_field_ .OR. Induced_ ) then
+     h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
+ else
+     h_FMO = Build_Huckel( basis , S_FMO )
+ end If
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
@@ -565,6 +564,37 @@ end function C_Mulliken
  Deallocate( Lv , Rv , S_FMO )
 
  end subroutine GA_eigen
+!
+!
+!
+!===================================================
+ function Build_Huckel( basis , S_matrix ) result(h)
+!===================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
+
+! local variables ... 
+integer :: i , j , N
+real*8  , allocatable   :: h(:,:)
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+
+N = size(basis)
+ALLOCATE( h(N,N) , source = D_zero )
+
+do j = 1 , N
+  do i = 1 , j
+
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
+
+        h(j,i) = h(i,j)
+
+    end do
+end do
+
+end function Build_Huckel
 !
 !
 !
@@ -673,13 +703,7 @@ CALL Overlap_Matrix( system , basis , S , "GA-CG" )
 
 ALLOCATE( H0(size(basis),size(basis)) , source=D_zero)
 
-do j = 1 , size(basis)
-    do i = 1 , j
-     
-        H0(i,j) = Huckel_bare( i , j , S(i,j) , basis )
-
-    end do
-end do  
+H0 = Build_Huckel( basis , S )
 
 end subroutine Build_H0_and_S
 !
@@ -899,41 +923,6 @@ deallocate( origin_Independent )
 If( .not. Alpha_Tensor ) deallocate( DP_matrix_AO )
 
 end subroutine Dipole_Moment
-!
-!
-!
-!=================================================
- pure function Huckel_bare( i , j , S_ij , basis )
-!=================================================
- implicit none
- integer         , intent(in) :: i , j
- real*8          , intent(in) :: S_ij
- type(STO_basis) , intent(in) :: basis(:)
-
-! local variables ... 
- real*8  :: k_eff , k_WH , Huckel_bare , c1 , c2 , c3 , c4
-
-!----------------------------------------------------------
-!      building  the  HUCKEL  HAMILTONIAN
- 
- if (i == j) then
-    huckel_bare = basis(i)%IP + basis(i)%V_shift
- else
-    c1 = basis(i)%IP - basis(j)%IP
-    c2 = basis(i)%IP + basis(j)%IP
-
-    c3 = (c1/c2)*(c1/c2)
-
-    c4 = (basis(i)%V_shift + basis(j)%V_shift)*HALF
-
-    k_WH = (basis(i)%k_WH + basis(j)%k_WH) / two
-
-    k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-    huckel_bare = k_eff*S_ij*c2/two + c4*S_ij
- endif
-
- end function Huckel_bare
 !
 !
 !

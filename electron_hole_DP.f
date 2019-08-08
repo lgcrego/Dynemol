@@ -5,13 +5,14 @@ module DP_excited_m
     use blas95
     use lapack95
     use parameters_m            , only : OPT_parms ,                    &
-                                         hole_state ,                   &
+                                         hole_state , DP_Field_ ,       &
                                          excited_state => electron_state         
     use Allocation_m            , only : Allocate_Structures
     use Semi_Empirical_Parms    , only : atom ,                         &
                                          Include_OPT_parameters
     use Overlap_Builder         , only : Overlap_Matrix
     use Structure_Builder       , only : Basis_Builder
+    use Hamiltonians            , only : X_ij , even_more_extended_Huckel
     use Multipole_Routines_m    , only : rotationmultipoles ,           &
                                          multipole_messages ,           &
                                          multipoles1c ,                 &
@@ -197,13 +198,11 @@ end subroutine DP_moments
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO
 
- DO j = 1 , size(basis)
-   DO i = 1 , j 
-
-      h_FMO(i,j) = huckel_Molecule( i, j, S_FMO(i,j), basis )     !! <== define h_FMO
- 
-   END DO
- END DO
+ If( DP_field_ ) then
+     h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
+ else
+     h_FMO = Build_Huckel( basis , S_FMO )
+ end If
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
@@ -254,35 +253,34 @@ end subroutine DP_moments
 !
 !
 !
-!
-!=====================================================
- pure function Huckel_Molecule( i , j , S_ij , basis )
-!=====================================================
- implicit none
- integer         , intent(in) :: i , j
- real*8          , intent(in) :: S_ij
- type(STO_basis) , intent(in) :: basis(:)
+!===================================================
+ function Build_Huckel( basis , S_matrix ) result(h)
+!===================================================
+implicit none
+type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: S_matrix(:,:)
 
 ! local variables ... 
- real*8  :: k_eff , k_WH , Huckel_Molecule , c1 , c2 , c3
+integer :: i , j , N
+real*8  , allocatable   :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
- 
- c1 = basis(i)%IP - basis(j)%IP
- c2 = basis(i)%IP + basis(j)%IP
 
- c3 = (c1/c2)*(c1/c2)
+N = size(basis)
+ALLOCATE( h(N,N) , source = D_zero )
 
- k_WH = (basis(i)%k_WH + basis(j)%k_WH) / 2.d0
+do j = 1 , N
+  do i = 1 , j
 
- k_eff = k_WH + c3 + c3 * c3 * (1.d0 - k_WH)
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
 
- huckel_Molecule = k_eff * S_ij * (basis(i)%IP + basis(j)%IP) / 2.d0
+        h(j,i) = h(i,j)
 
- IF(i == j) huckel_Molecule = basis(i)%IP
+    end do
+end do
 
- end function Huckel_Molecule
+end function Build_Huckel
 !
 !
 !
