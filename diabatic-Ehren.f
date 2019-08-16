@@ -23,7 +23,7 @@ module DiabaticEhrenfest_Builder
 
     !module variables ...
     integer     , allocatable   :: BasisPointer(:) , DOS(:) , pairs_map(:,:) , HF_atoms(:)
-    real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) 
+    real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , X_ij(:,:) 
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_snd(:,:,:) , F_rcv(:,:,:) , H_prime(:,:)
 
     !module parameters ...
@@ -48,8 +48,6 @@ contains
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
-
- real*8  , allocatable :: X_ij(:,:) 
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -107,7 +105,7 @@ If( myKernel == 1 ) then
 
     A_ad_nd = ( rho_eh + transpose(rho_eh) ) / two
 
-    CALL Huckel_stuff( basis , X_ij )
+    CALL Huckel_stuff( basis )
 
     call MPI_Wait( request_H_prime, mpi_status, err )
 
@@ -244,60 +242,34 @@ end subroutine Ehrenfest
 !
 !
 !
-!=====================================
- subroutine Huckel_stuff( basis , Xi ) 
-!=====================================
+!================================
+ subroutine Huckel_stuff( basis )
+!================================
+use Hamiltonians , only : X => X_ij
 implicit none
 type(STO_basis) , intent(in) :: basis(:)
-real*8          , allocatable , intent(out) :: Xi(:,:)
 
 !local variables ...
-integer :: i , j , n
-real*8  :: k_eff , k_WH , c1 , c2 , c3
-real*8  :: basis_j_IP, basis_j_k_WH
+integer :: i , j , N
 
-n = size(basis)
+N = size(basis)
 
-if ( .not. allocated(Xi) ) allocate( Xi(n,n) )
+If( .not. allocated(X_ij) ) allocate( X_ij(N,N) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-!$omp parallel private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared)
-!$omp do schedule(dynamic,1)
-do j = 1, n
+do j = 1 , N
+do i = 1 , j
 
-    basis_j_IP   = basis(j)%IP
-    basis_j_k_WH = basis(j)%k_WH
+         X_ij(i,j) = X( i , j , basis )
 
-    do i = 1, j-1
-
-        c1 = basis(i)%IP - basis_j_IP
-        c2 = basis(i)%IP + basis_j_IP
-        c3 = (c1/c2)**2
-
-        k_WH = (basis(i)%k_WH + basis_j_k_WH) * half
-
-        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-        Xi(i,j) = k_eff * c2 * half
-
-    end do
-
-    Xi(j,j) = basis_j_IP
+         X_ij(j,i) = X_ij(i,j)
 
 end do
-!$omp end do
-
-!$omp do
-do i = 1, n
-    Xi( i+1:n, i ) = Xi( i, i+1:n )
 end do
-!$omp end do nowait
-!$omp end parallel
 
 end subroutine Huckel_stuff
-!
 !
 !
 !
