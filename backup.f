@@ -14,7 +14,7 @@ module Backup_m
                                      trj
     use Structure_Builder   , only : Generate_Structure         , &
                                      Basis_Builder
-    use FMO_m               , only : orbital                    , &
+    use tuning_m            , only : orbital                    , &
                                      eh_tag    
     use QCModel_Huckel      , only : EigenSystem
     use DP_potential_m      , only : Molecular_DPs

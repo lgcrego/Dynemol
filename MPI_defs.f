@@ -4,7 +4,6 @@ module MPI_definitions_m
     use parameters_m     , only : driver 
 
     public :: world , myid , master , slave , np 
-    public :: EigenComm  , EigenCrew  , myEigen 
     public :: ChebyComm  , ChebyCrew  , myCheby 
     public :: KernelComm , KernelCrew , myKernel 
     public :: ForceComm  , ForceCrew  , myForce  , npForce
@@ -17,12 +16,10 @@ module MPI_definitions_m
     ! module variables ...
     integer    :: world , myid , np 
     integer    :: KernelComm , myKernel 
-    integer    :: EigenComm , myEigen
     integer    :: ChebyComm , myCheby
     integer    :: ChebyKernelComm , myChebyKernel
     integer    :: ForceComm , myForce , npForce
     logical    :: master = .false. , slave = .true. 
-    logical    :: EigenCrew  = .false. 
     logical    :: ChebyCrew  = .false. 
     logical    :: ForceCrew  = .false. 
     logical    :: KernelCrew = .false.
@@ -90,29 +87,15 @@ contains
  If( KernelCrew ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
  
 !------------------------------------------------------------------------
-! EigenComm group = (0,3)  ...
- select case ( myid )
-    case (0,3)
-        my_color = 0
-        EigenCrew = .true.
-    case (1,2,4:) 
-        my_color = MPI_undefined
- end select
- CALL MPI_Comm_split( world , my_color , myid , EigenComm  , err )
- If( EigenCrew ) CALL MPI_COMM_RANK ( EigenComm , myEigen , err )      ! <== sets the rank of processes in EigenComm
-
-!------------------------------------------------------------------------
 ! ForceComm group = KernelCrew + ForceCrew  ...
  select case ( myid )
     case (0:2)
         my_color = 0
         drafted  = .true.
-    case (4:)
+    case (3:)
         my_color   = 0
         drafted    = .true.
         ForceCrew  = .true.
-    case (3) 
-        my_color = MPI_undefined
  end select
  CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )
  If( drafted ) then
@@ -145,7 +128,7 @@ contains
         my_color = MPI_undefined
  end select
  CALL MPI_Comm_split( world , my_color , myid , ChebyComm  , err )
- If( ChebyCrew ) CALL MPI_COMM_RANK ( ChebyComm , myCheby , err )      ! <== sets the rank of processes in EigenComm
+ If( ChebyCrew ) CALL MPI_COMM_RANK ( ChebyComm , myCheby , err )      ! <== sets the rank of processes in ChebyComm
 
 !------------------------------------------------------------------------
 ! KernelComm group = (0,2) ...

@@ -78,6 +78,7 @@ if( KernelCrew ) then
     ! KernelCrew in stand-by to receive data from master ...
     CALL MPI_BCAST( QM%erg , N   , mpi_D_R , 0 , KernelComm , err )
     CALL MPI_BCAST( QM%L   , N*N , mpi_D_R , 0 , KernelComm , err )
+    CALL MPI_BCAST( MO_bra , N*2 , mpi_D_C , 0 , KernelComm , err )
     CALL MPI_BCAST( MO_ket , N*2 , mpi_D_C , 0 , KernelComm , err )
 
     If( .NOT. allocated(rho_eh) ) then
@@ -94,10 +95,10 @@ if( KernelCrew ) then
 
         case (1)
 
-           MO_bra = conjg( MO_ket )
-
            ! build up electron-hole density matrix ...
            forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+           tool   = transpose(rho_eh)
+           rho_eh = ( rho_eh + tool ) / two
 
            CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
            CALL MPI_Request_Free( request , err )

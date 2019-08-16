@@ -21,9 +21,7 @@ module AO_adiabatic_m
                                              CT_dump_step, solvent_step,      &
                                              driver, HFP_Forces ,             &
                                              step_security
-    use Babel_m                     , only : Coords_from_Universe ,           &
-                                             trj ,                            &
-                                             MD_dt                            
+    use Babel_m                     , only : Coords_from_Universe, trj, MD_dt                            
     use Allocation_m                , only : Allocate_UnitCell ,              &
                                              DeAllocate_UnitCell ,            &
                                              DeAllocate_Structures ,          &
@@ -59,12 +57,12 @@ module AO_adiabatic_m
     private
 
     ! module variables ...
-    type(R_eigen)                                   :: UNI , el_FMO , hl_FMO
-    Complex*16      , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Complex*16      , allocatable , dimension(:)    :: phase
-    real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    real*8                                          :: t
-    integer                                         :: it , mm , nn
+    type(R_eigen)                              :: UNI , el_FMO , hl_FMO
+    Complex*16 , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16 , allocatable , dimension(:)    :: phase
+    real*8     , allocatable , dimension(:)    :: Net_Charge_MM
+    real*8                                     :: t
+    integer                                    :: it , mm , nn
 
 contains
 !
@@ -122,6 +120,7 @@ do frame = frame_init , frame_final , frame_step
 
         CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
         CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
         CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
 
         CALL EhrenfestForce( Extended_Cell , ExCell_basis )
@@ -132,6 +131,9 @@ do frame = frame_init , frame_final , frame_step
     !============================================================================
     CALL U_ad(t_rate)  ! <== adiabatic component of the propagation ; 1 of 2 ... 
 
+    ! DUAL representation for efficient calculation of survival probabilities ...
+    CALL DUAL_wvpckts
+ 
     ! save populations(t + t_rate)  and  update Net_Charge ...
     QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
@@ -306,16 +308,16 @@ do n = 1 , n_part
 
             CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
-            MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
+            MO_bra( : , n ) = el_FMO%L( orbital(n) , : )    
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
 
             If( master ) Print 591, orbital(n) , el_FMO%erg(orbital(n))
        
         case( "hl" )
 
-            CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
+            CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
-            MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
+            MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
             If( master ) Print 592, orbital(n) , hl_FMO%erg(orbital(n))
@@ -331,9 +333,8 @@ If( preview ) stop
 UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_Electrons , 2 )
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-DUAL_bra = conjg(DUAL_ket)
-
+CALL DUAL_wvpckts
+ 
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn )
@@ -375,33 +376,44 @@ integer :: j
 
 phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
 
-! U_AD(dt) ; adiabatic component of the propagation ...
+! adiabatic component of the propagation ...
 forall( j=1:n_part )   
     MO_bra(:,j) = merge( conjg(phase(:)) * MO_bra(:,j) , C_zero , eh_tag(j) /= "XX" )
     MO_ket(:,j) = merge(       phase(:)  * MO_ket(:,j) , C_zero , eh_tag(j) /= "XX" )
 end forall
 
-! DUAL representation for efficient calculation of survival probabilities ...
-! Lowdin orthogonalization ...
-  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-  DUAL_bra = conjg(DUAL_ket)
-
 end subroutine U_ad
-!
 !
 !=================
  subroutine U_nad
 !=================
 implicit none
 
-! U_nad(dt) ; NON-adiabatic component of the propagation ...
-
+! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate)
-! Lowdin orthogonalization ...
-  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-  MO_bra = conjg(MO_ket)
+! asymmetric orthogonalization ...
+
+  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
 end subroutine U_nad
+!
+!
+!
+!=======================
+ subroutine DUAL_wvpckts
+!=======================
+implicit none
+
+real*8 , allocatable :: aux(:,:)
+
+! dual basis for evaluating local properties ...
+! asymmetrical orthogonalization ...
+
+  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+
+end subroutine DUAL_wvpckts
 !
 !
 !

@@ -26,7 +26,7 @@ module Chebyshev_driver_m
                                              Generate_Structure ,           &
                                              Basis_Builder ,                &
                                              ExCell_basis
-    use FMO_m                       , only : eh_tag
+    use tuning_m                    , only : eh_tag
     use DP_main_m                   , only : Dipole_Matrix                 
     use Solvated_M                  , only : Prepare_Solvated_System 
     use TD_Dipole_m                 , only : wavepacket_DP                                        
