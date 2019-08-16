@@ -142,7 +142,6 @@ SOURCE2 = constants_m.o \
 		  multip_routines.o \
 		  electron_hole_DP.o \
 		  LCMO_Builder.o \
-		  FMO.o \
 		  DP_main.o \
 		  td_dp.o \
 		  DP_FMO.o \
@@ -150,6 +149,7 @@ SOURCE2 = constants_m.o \
 		  Coulomb.o \
 		  polarizability.o \
 		  CoulInt_QMMM.o \
+		  FMO.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  Ehrenfest.o \

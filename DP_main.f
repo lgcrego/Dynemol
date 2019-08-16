@@ -17,7 +17,7 @@ module DP_main_m
                                           multipoles2c ,                        &
                                           util_multipoles
     use DP_excited_m            , only  : el_hl_StaticDPs
-    use FMO_m                   , only  : eh_tag
+    use tuning_m                , only  : eh_tag
 
 
     Real*8 , allocatable , public :: DP_matrix_AO(:,:,:)

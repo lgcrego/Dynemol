@@ -266,7 +266,7 @@ real*8  , allocatable   :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
-
+ 
 N = size(basis)
 ALLOCATE( h(N,N) , source = D_zero )
 

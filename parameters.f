@@ -98,7 +98,7 @@ logical :: dynamic
 !
   t_i  =  0.d0                              
   t_f  =  1.0d0                               ! <== final time in PICOseconds
-  n_t  =  1000000                             ! <== number of time steps
+  n_t  =  10000!00                             ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 

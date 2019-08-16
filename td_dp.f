@@ -8,7 +8,7 @@ module TD_Dipole_m
     use Structure_Builder           , only : Extended_Cell ,                &
                                              ExCell_basis
     use DP_main_m                   , only : DP_Matrix_AO
-    use FMO_m                       , only : eh_tag
+    use tuning_m                    , only : eh_tag
 
     public :: wavepacket_DP , DeAllocate_DPs , wavepacket 
 

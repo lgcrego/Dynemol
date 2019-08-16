@@ -8,11 +8,12 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m                , only : DP_Field_ , Induced_ , driver , verbose 
-    use Overlap_Builder             , only : Overlap_Matrix
-    use Hamiltonians                , only : X_ij , even_more_extended_Huckel
+    use parameters_m     , only : DP_Field_ , Induced_ , driver , verbose , restart
+    use Overlap_Builder  , only : Overlap_Matrix
+    use Hamiltonians     , only : X_ij , even_more_extended_Huckel
+    use Matrix_Math
 
-    public :: EigenSystem 
+    public :: EigenSystem , S_root_inv 
 
     private
 
@@ -20,6 +21,9 @@
         module procedure EigenSystem
         module procedure EigenSystem_just_erg
     end interface
+
+    ! module variables ...
+    real*8 , allocatable :: S_root_inv(:,:) 
 
  contains
 !
@@ -37,10 +41,11 @@ integer          , optional , intent(in) :: it
 
 
 ! local variables ...
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:)  
-real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:)
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:) , S_root(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
 integer               :: i , j , N , info 
+logical , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -79,42 +84,38 @@ select case ( driver )
           !
           !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
           !
-          !   Rv = <AO|MO> coefficients
+          !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
           !---------------------------------------------------
 
-          Allocate( Lv(size(basis),size(basis)) )
+          Allocate( Lv(N,N) )
+          Allocate( Rv(N,N) )
 
           Lv = h
-
           Deallocate(h)
 
-          Allocate( Rv(size(basis), size(basis)) )
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+          ! eigenvectors in the rows of QM%L
+          QM%L = transpose(Lv) 
 
-          !CALL gemm(S_matrix,Lv,Rv,'N','N',D_one,D_zero)
+          ! Rv = S * Lv ...
           call Multiply( S_matrix, Lv, Rv )
 
           DEALLOCATE( S_matrix )
 
-          !----------------------------------------------------------
-          !  normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
-
-          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(size(basis),size(basis))) 
-          ! eigenvectors in the rows of QM%L
-          QM%L = transpose(Lv) 
-          Deallocate( Lv )
-
-          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(size(basis),size(basis)))
+          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
           ! eigenvectors in the columns of QM%R
           QM%R = Rv
-          Deallocate( Rv )
+
+          Deallocate( Lv , Rv )
 
     case ("slice_FSSH" )    
 
           !--------------------------------------------------------
           ! Overlap Matrix Factorization: S^(1/2) ...
-          Allocate( S_eigen(N) )
 
           dumb_s = S_matrix
+
+          Allocate( S_eigen(N)  )
 
           CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
 
@@ -122,8 +123,11 @@ select case ( driver )
 
           forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
-          !now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
-          CALL gemm(dumb_S , tool , S_matrix , 'N' , 'N')
+          allocate( S_root(N,N) )
+          CALL gemm(dumb_S , tool , S_root , 'N' , 'N')
+
+          !now S_root   = S^(1/2) Lowdin Orthogonalization matrix ...
+          !now S_matrix = S ...
 
           DEALLOCATE( S_eigen , dumb_S , tool )
 
@@ -141,16 +145,27 @@ select case ( driver )
 
           If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
           ! eigenvectors in the rows of QM%L
+          ! keeping the nonorthogonal representation of %L for future use ...
           QM%L = transpose(Lv) 
 
-          ! Rv = S^(1/2) * Lv ...
-          CALL symm( S_matrix , Lv , Rv )
+          If( first_call_ .AND. (.NOT. restart) ) then
+
+              ! Rv = S * Lv ...
+              call symm( S_matrix, Lv, Rv )
+              call invert( S_root )
+              first_call_ = .false.
+          else
+
+              ! Rv = S^(1/2) * Lv ...
+              ! Lowding representation ...
+              CALL symm( S_root , Lv , Rv )
+          end If
 
           If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
           ! eigenvectors in the columns of QM%R
           QM%R = Rv
 
-          Deallocate( Lv , Rv , S_matrix )
+          Deallocate( Lv , Rv , S_matrix , S_root )
 
 end select
 
@@ -238,6 +253,26 @@ end function Build_Huckel
  DEALLOCATE( h , S_matrix )
 
  end subroutine EigenSystem_just_erg
+!
+!
+!
+!===========================
+ subroutine invert( matrix )
+!===========================
+implicit none
+real*8  , intent(inout) :: matrix(:,:) 
+
+!local variables ...
+integer :: N
+
+N = size(matrix(:,1))
+
+CALL syInvert( matrix, return_full ) ! <== matrix content is destroyed and matrix_inv is returned
+#define matrix_inv matrix
+allocate( S_root_inv(N,N) , source = matrix_inv )
+#undef matrix_inv
+
+end subroutine invert
 !
 !
 !

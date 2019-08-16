@@ -20,7 +20,7 @@
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
     use LCMO_m                      , only : LCMO_Builder
 
-    public :: FMO_analysis , eh_tag , orbital 
+    public :: FMO_analysis , eh_tag , orbital
 
     private
 
@@ -182,7 +182,7 @@ implicit none
  ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
  FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
 
- Allocate( FMO%L (ALL_size,FMO_size) , source=D_zero )
+ Allocate( FMO%L (FMO_size,ALL_size) , source=D_zero )
  Allocate( FMO%R (ALL_size,FMO_size) , source=D_zero )
  Allocate( CR_FMO(FMO_size,ALL_size) )
 
@@ -196,15 +196,22 @@ implicit none
 !             writes the isolated FMO eigenfunctions in the MO basis 
 ! the isolated orbitals are stored in the "ROWS of wv_FMO" and in the "COLUMNS of FMO"
 
- forall( j=1:FMO_size, i=1:ALL_size )
+ forall( i=1:FMO_size, j=1:ALL_size )
 
-    FMO%L(i,j) = sum( wv_FMO(j,:) * CR_FMO(:,i) )
+    ! %L = A^T.S.C
+    FMO%L(i,j) = sum( wv_FMO(i,:) * CR_FMO(:,j) )
 
  end forall    
+ ! %R = C^T.S.A
+ FMO%R = transpose(FMO%L)
 
- FMO%R = FMO%L
-
- check = sum( FMO%L(1:ALL_size,:)*FMO%R(1:ALL_size,:) ) 
+ check = 0.d0
+ do i = 1 , FMO_size
+    do j = 1 , FMO_size
+       ! %L*%R = A^T.S.C.C^T.S.A = 1
+       check = check + sum( FMO%L(i,:)*FMO%R(:,j) ) 
+    end do
+ end do
 
  if( dabs(check-FMO_size) < low_prec ) then
      print*, '>> projection done <<'
@@ -236,14 +243,10 @@ implicit none
 ! local variables ... 
  integer               :: N_of_FMO_electrons, i, j , N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
- real*8  , ALLOCATABLE :: dumb_s(:,:) , s_eigen(:) , aux(:,:)
 
  N = size(basis)
 
  ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  FMO%erg(N) )
- ALLOCATE( dumb_s(N,N) , aux (N,N)  ,  s_eigen(N) )
-
-!-----------------------------------------------------------------------
 
  CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
@@ -253,8 +256,6 @@ implicit none
      h_FMO = Build_Huckel( basis , S_FMO )
  end If
 
- dumb_S = S_FMO
-
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
  CALL SYGVD(h_FMO , s_FMO , FMO%erg , 1 , 'V' , 'U' , info)
@@ -262,31 +263,6 @@ implicit none
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
  FMO % Fermi_State = sum(system%Nvalen)/two + mod( sum(system%Nvalen) , 2 )
-!---------------------------------------------------------------------
-
- If( driver == "slice_FSSH" ) then
-!---------------------------------------------------------------------
-     ! Overlap Matrix Factorization: S^(1/2) ...
-
-     CALL SYEV(dumb_s , s_eigen , 'V' , 'L' , info)
-
-     aux = transpose( dumb_s )
-
-     forall( i=1:N ) aux(:,i) = sqrt(s_eigen) * aux(:,i)
-
-     ! now S_FMO = S^(1/2) matrix transformation ...
-     CALL gemm(dumb_s , aux , S_FMO , 'N' , 'N')
-
-     DEALLOCATE( s_eigen )
-     DEALLOCATE( dumb_S  )
-
-     aux = h_FMO
-
-     CALL symm( S_FMO , aux , h_FMO )
-
-     DeAllocate(aux)
-!---------------------------------------------------------------------
- end If
 
  ALLOCATE( wv_FMO(N,N) )
 
@@ -390,7 +366,7 @@ print*, pop
 deallocate( s_FMO , h_FMO , tmp_S , tmp_E )
 
 end subroutine  check_casida_builder
-! 
 !
-! 
+!
+!
 end module FMO_m
