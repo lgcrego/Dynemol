@@ -4,11 +4,9 @@ module QMDynamicSlice_driver_m
     use type_m
     use constants_m
     use parameters_m                , only : survival , driver , n_part
-    use FMO_m                       , only : eh_tag 
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use AO_adiabatic_m              , only : AO_adiabatic
-    use ElHl_adiabatic_m            , only : ElHl_adiabatic
     use Chebyshev_driver_m          , only : Chebyshev_driver
 
     public :: QMDynamicSlice_driver
@@ -34,10 +32,6 @@ If( .NOT. survival ) then
 end If
 
 select case ( DRIVER )
-
-    case( "slice_ElHl" )
-
-        CALL ElHl_adiabatic ( QDyn , it )
 
     case( "slice_AO" )
 

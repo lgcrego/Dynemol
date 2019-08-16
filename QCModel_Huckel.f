@@ -98,8 +98,8 @@ else If( myEigen == 1 ) then
 
          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
-         ! now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
          CALL gemm(dumb_S , tool , S_matrix , 'N' , 'N')
+         ! now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
 
          DEALLOCATE( S_eigen  )
          DEALLOCATE( dumb_S   )

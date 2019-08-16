@@ -30,7 +30,7 @@ module Sampling_m
     use Oscillator_m        , only : Optical_Transitions
     use DP_main_m           , only : Dipole_Matrix 
     use DP_potential_m      , only : Molecular_DPs
-    use Schroedinger_m      , only : Huckel_dynamics ,              &
+    use Schroedinger_m      , only : Simple_dynamics ,              &
                                      DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
 
@@ -51,7 +51,7 @@ contains
 integer                         :: frame , frame_init , nr , N_of_residues
 real*8                          :: internal_sigma
 logical                         :: FMO_ , DIPOLE_
-type(R_eigen)                   :: UNI , FMO
+type(R_eigen)                   :: UNI 
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(f_time)                    :: QDyn
@@ -117,13 +117,11 @@ do frame = frame_init , size(trj) , frame_step
         CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr , internal_sigma )            
     end do
 
-    If( FMO_     ) CALL FMO_analysis( Extended_Cell, ExCell_basis, UNI%R, FMO , instance="E" )
-
     If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
 
     If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC , internal_sigma )
 
-    If( survival ) CALL Huckel_dynamics( Extended_Cell, ExCell_basis, UNI, FMO , QDyn=QDyn )
+    If( survival ) CALL Simple_dynamics( Extended_Cell, ExCell_basis, UNI, QDyn )
 
     CALL DeAllocate_UnitCell    ( Unit_Cell     )
     CALL DeAllocate_Structures  ( Extended_Cell )
@@ -204,6 +202,8 @@ If( present(QDyn) ) then
 
         do np = 1 , n_part
 
+            if( eh_tag(n) == "XX" ) cycle
+
             OPEN( unit = 33 , file="tmp_data/"//eh_tag(n)//"_survival.dat" , status="unknown" )
 
             write(33,14) frame
@@ -281,6 +281,8 @@ If( present(QDyn) ) then
     N_of_fragments = size( QDyn%fragments )
 
         do np = 1 , n_part
+
+            if( eh_tag(n) == "XX" ) cycle
 
             OPEN( unit = 33 , file="tmp_data/"//eh_tag(n)//"_survival.dat" , status="unknown" )
 

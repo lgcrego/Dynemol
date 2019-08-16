@@ -154,9 +154,6 @@ select case( driver )
             end do
             end do
         end if
-
-    case( "slice_ElHl" )
-
         
 end select
 

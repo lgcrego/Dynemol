@@ -10,7 +10,7 @@ module DP_main_m
                                           DP_Moment ,                           &
                                           static ,                              &
                                           hole_state ,                          &
-                                          excited_state => initial_state        ! for static calculations initial state = excited state
+                                          excited_state => electron_state        ! for static calculations initial state = excited state
     use Multipole_Routines_m    , only  : rotationmultipoles ,                  &
                                           multipole_messages ,                  &
                                           multipoles1c ,                        &
@@ -194,7 +194,7 @@ integer :: nb , lb , mb
 integer :: lmult , i , j , k
 logical :: atom_not_moved
 
-real*8  , parameter :: tol = 1.d-10 
+real*8  , parameter :: tol = 1.d-10
 integer , parameter :: mxl = 5 , mxmult = 3 , mxlsup = max(mxl,mxmult)
 real*8  , parameter :: cutoff_Angs = 10.d0
 
@@ -277,7 +277,7 @@ do ia = 1 , system%atoms
 
             end if
 
-!           p_x(a,b) 
+!           p_x(a,b)
             DP_matrix_AO(a,b,1) = DP_matrix_AO(a,b,1) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(4,ma,mb)
 !           p_y(a,b)
             DP_matrix_AO(a,b,2) = DP_matrix_AO(a,b,2) + basis(a)%coef(i)*basis(b)%coef(j)*qlm(2,ma,mb)
@@ -286,7 +286,7 @@ do ia = 1 , system%atoms
 
         end do
         end do
-!---------------------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------------------
 
     enddo
     enddo

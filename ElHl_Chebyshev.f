@@ -26,8 +26,8 @@ module ElHl_Chebyshev_m
     real*8      , parameter :: norm_error   = 1.0d-12
 
 ! module variables ...
-    real*8      ,   save          :: save_tau(2)
     logical     ,   save          :: first_call_ = .true.
+    real*8      ,   save          :: save_tau(2)
     real*8, target, allocatable   :: h0(:,:)
     real*8      ,   allocatable   :: S_matrix(:,:)
     complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
@@ -64,6 +64,8 @@ type(R_eigen)                   :: FMO
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
 
+N = size(basis)
+
 allocate( h0(N,N) , source = D_zero )
 
 If( DP_field_ ) then
@@ -75,48 +77,48 @@ end If
 ! After instantiating Overlap_matrix, processes wait outside ...
 If( .not. ChebyCrew ) return
 
+allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
 ! prepare electron state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the electron state in Structure's Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-M  = size(wv_FMO)
-allocate( ElHl_Psi( N , n_part ) , source=C_zero )
-ElHl_Psi(li:li+M-1,1) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
-
+  ! place the electron state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,1) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(1) == "el")
+  deallocate( wv_FMO )
 !========================================================================
 ! prepare hole state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
-! place the hole state in Structure's Hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
-M  = size(wv_FMO)
-ElHl_Psi(li:li+M-1,2) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
+  ! place the hole state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,2) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(2) == "hl")
+  deallocate( wv_FMO )
 !========================================================================
 
 !==============================================
 ! prepare DUAL basis for local properties ...
 ! DUAL_bra = (C*)^T    ;    DUAL_ket = S*C ...
-DUAL_bra = dconjg( ElHl_Psi )
-call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
+  DUAL_bra = dconjg( ElHl_Psi )
+  call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
 !==============================================
 
 !==============================================
-!vector states to be propagated ...
-!Psi_bra = C^T*S       ;      Psi_ket = C ...
-allocate( Psi_t_bra(N,n_part) )
-allocate( Psi_t_ket(N,n_part) )
-call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
-Psi_t_ket = ElHl_Psi
+! vector states to be propagated ...
+! Psi_bra = C^T*S       ;      Psi_ket = C ...
+  allocate( Psi_t_bra(N,n_part) )
+  allocate( Psi_t_ket(N,n_part) )
+  call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
+  Psi_t_ket = ElHl_Psi
 !==============================================
 
 !==============================================
-AO_bra = ElHl_Psi 
-AO_ket = ElHl_Psi 
-CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
+! preprocess stuff for EhrenfestForce ...
+  AO_bra = ElHl_Psi 
+  AO_ket = ElHl_Psi 
+  CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
 !==============================================
 
 ! save populations(time=t_i) ...
@@ -162,7 +164,7 @@ t_max = delta_t*frame_step*(it-1)
 ! constants of evolution ...
 tau_max = delta_t / h_bar
 
-If( master ) then
+If( master ) then ! <== Electron wpckt Dynamics ...
 
     if(first_call_) allocate( H(N,N) , H_prime(N,N) , S_inv(N,N) )
 
@@ -177,8 +179,6 @@ If( master ) then
 
     ! compute S  and H0 ...
     CALL Overlap_Matrix( system , basis , S_matrix )
-
-    allocate( h0(N,N) , source = D_zero )
 
     If( DP_field_ ) then
         h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
@@ -213,11 +213,8 @@ If( master ) then
     ! proceed evolution of ELECTRON wapacket with best tau ...
     CALL Propagation( N, H_prime, Psi_t_bra(:,1), Psi_t_ket(:,1), t_init, t_max, tau(1), save_tau(1) )
 
-else If( myCheby == 1 ) then
+else If( myCheby == 1 ) then  ! <== Hole wpckt Dynamics ...
 
-    !===================
-    !  Hole   Dynamics
-    !===================
     do  ! <== myCheby = 1 dwells in here Forever ...
 
          CALL MPI_Recv( t_stuff , 2 , mpi_D_R , 0 , mpi_any_tag , ChebyComm , mpi_status , err )
@@ -235,6 +232,9 @@ else If( myCheby == 1 ) then
          end If
          CALL MPI_Wait( req2 , mpi_status , err ) 
 
+         !===================
+         !  Hole   Dynamics
+         !===================
          ! proceed evolution of HOLE wapacket with best tau ...
          CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_stuff(1) , t_stuff(2) , tau(2) , save_tau(2) )
 
@@ -243,7 +243,7 @@ else If( myCheby == 1 ) then
 
          deallocate( H_prime ) 
 
-     end do  !<== Return to Forever ...
+    end do  !<== Return to Forever ...
 
 end If
 
@@ -327,16 +327,26 @@ mm = size(AO_bra(:,1))
 
 erg_el = (0.d0,0.d0)
 erg_hl = (0.d0,0.d0)
-!$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el , erg_hl)
-do j = 1 , mm
-    do i = 1 , mm
 
-        erg_el = erg_el + AO_bra(i,1)*H(i,j)*AO_ket(j,1)
-        erg_hl = erg_hl + AO_bra(i,2)*H(i,j)*AO_ket(j,2)
-
+If( eh_tag(1) == "el" ) then
+    !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el )
+    do j = 1 , mm
+        do i = 1 , mm
+            erg_el = erg_el + AO_bra(i,1)*H(i,j)*AO_ket(j,1)
+        end do
     end do
-end do
-!$OMP end parallel do  
+    !$OMP end parallel do  
+End If
+
+If( eh_tag(2) == "hl" ) then
+    !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_hl)
+    do j = 1 , mm
+        do i = 1 , mm
+            erg_hl = erg_hl + AO_bra(i,2)*H(i,j)*AO_ket(j,2)
+        end do
+    end do
+    !$OMP end parallel do  
+End If
 
 Unit_Cell% QM_wp_erg(1) = erg_el
 Unit_Cell% QM_wp_erg(2) = erg_hl

@@ -3,7 +3,7 @@ MODULE parameters_m
 use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
-integer                 :: n_part , initial_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
+integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , solvent_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
@@ -33,7 +33,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, ElHl ] , MM_Dynamics
+!  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO ] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO ] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -56,7 +57,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
@@ -80,7 +81,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
   Solvent_Type =  "QM"                        ! <== QM = quantum , MM = classical ...
   Solvent_step =  10                          ! <== step for updating DP_field
 
@@ -102,11 +103,11 @@ logical :: dynamic
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state    = 25                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 25                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
-                                              ! <== case DYNAMIC           = intial MO for < HOLE >     wavepacket in DONOR fragment
+                                              ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  initial_state = 26                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 26                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -117,7 +118,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -152,7 +153,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_ElHl" , "slice_M0" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" )
         
         dynamic = T_ .OR. Survival 
 
@@ -191,12 +192,15 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
 end if
 
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
-
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
     stop
 End If    
+
+If ( driver == "slice_Cheb" .AND. electron_state*hole_state == 0 )  &
+stop ">>> execution halted: driver=[slice_Cheb] only propagates ElHl pairs; for individual wvpckts use other drivers <<<"
+
+If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...

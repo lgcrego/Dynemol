@@ -2,7 +2,7 @@
 
     use type_m
     use constants_m
-    use parameters_m            , only : initial_state
+    use parameters_m            , only : electron_state
     use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
     use Structure_Builder       , only : Extended_Cell
@@ -85,7 +85,7 @@
 
 !  start writing Gaussian cube files 
  write(4,*) System_Characteristics
- write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
+ write(4,*) 'electron_state = ',electron_state,'  /  time = ', t
 
  write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
  write(4,111) n_xyz_steps(1) + 1 , dx/a_Bohr , 0.d0 , 0.d0 
@@ -276,7 +276,7 @@
 
 !  start writing Gaussian cube files 
  write(4,*) System_Characteristics
- write(4,*) 'initial_state = ',initial_state,'  /  time = ', t
+ write(4,*) 'electron_state = ',electron_state,'  /  time = ', t
 
  write(4,111) extended_cell%atoms , a/a_Bohr , b/a_Bohr , c/a_Bohr
  write(4,111) n_xyz_steps(1) + 1  , dx/a_Bohr , 0.d0 , 0.d0 

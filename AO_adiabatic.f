@@ -16,7 +16,7 @@ module AO_adiabatic_m
                                              Induced_ , QMMM , restart ,      &
                                              GaussianCube , static ,          &
                                              GaussianCube_step , preview ,    &
-                                             hole_state , initial_state ,     &
+                                             hole_state , electron_state ,    &
                                              DensityMatrix, AutoCorrelation,  &
                                              CT_dump_step, solvent_step,      &
                                              driver, HFP_Forces ,             &
@@ -78,7 +78,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer         :: j , frame , frame_init , frame_final , frame_restart , err
+integer         :: frame , frame_init , frame_final , frame_restart , err
 integer         :: mpi_D_R = mpi_double_precision
 integer         :: mpi_D_C = mpi_double_complex
 real*8          :: t , t_rate 
@@ -130,24 +130,10 @@ do frame = frame_init , frame_final , frame_step
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     !============================================================================
-    phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
-
-    ! U_AD(dt) : adiabatic component of the propagation ; 1 of 2 ... 
-    forall( j=1:n_part )   
-        MO_bra(:,j) = conjg(phase(:)) * MO_bra(:,j)
-        MO_ket(:,j) =       phase(:)  * MO_ket(:,j) 
-    end forall
-
-    ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-    DUAL_bra = conjg(DUAL_ket)
+    CALL U_ad(t_rate)  ! <== adiabatic component of the propagation ; 1 of 2 ... 
 
     ! save populations(t + t_rate)  and  update Net_Charge ...
-    If( nn == 1) then
-        QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t )
-    else
-        QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
-    end If
+    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
     if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn )
 
@@ -192,26 +178,22 @@ do frame = frame_init , frame_final , frame_step
 
     end select
 
-    CALL Generate_Structure ( frame )
+    CALL Generate_Structure( frame )
 
     ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
     If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
-    CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+    CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL DP_stuff ( "DP_field"   )
+    If( DP_field_ ) CALL DP_stuff( "DP_field" )
 
-    If( Induced_ )  CALL DP_stuff ( "Induced_DP" )
+    If( Induced_ )  CALL DP_stuff( "Induced_DP" )
 
-    Deallocate                ( UNI%R , UNI%L , UNI%erg )
+    Deallocate ( UNI%R , UNI%L , UNI%erg )
 
-    CALL EigenSystem          ( Extended_Cell , ExCell_basis , UNI )
+    CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
-    ! project back to MO_basis with UNI(t + t_rate)
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
-    MO_bra = conjg(MO_ket)
-
-!============================================================================
+    CALL U_nad  ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -243,7 +225,6 @@ type(f_time)    , intent(out)   :: QDyn
 ! local variables
 integer         :: hole_save , n , err
 integer         :: mpi_D_R = mpi_double_precision
-logical         :: el_hl_
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -273,11 +254,9 @@ select case ( nuclear_matter )
 
 end select
 
-el_hl_ = any( Unit_Cell%Hl )
+CALL Generate_Structure( 1 )
 
-CALL Generate_Structure ( 1 )
-
-CALL Basis_Builder ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
@@ -295,7 +274,7 @@ If( DP_field_ ) then
 
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )   
+CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
 ! SLAVES only calculate S_matrix and return ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
@@ -303,8 +282,7 @@ CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
 
-mm = size(ExCell_basis)
-nn = n_part
+mm = size(ExCell_basis) ; nn = n_part
 
 If( KernelCrew ) then
         allocate( UNI%erg (mm)    )
@@ -315,31 +293,18 @@ CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
 CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 
-CALL Allocate_Brackets  ( size(ExCell_basis)  ,       & 
-                          MO_bra   , MO_ket   ,       &
-                          AO_bra   , AO_ket   ,       &
-                          DUAL_bra , DUAL_ket ,       &
-                          phase )
+CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
                           
 ! done for KernelCrew ; KernelCrew also dwells in EhrenfestForce ...
 If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
-CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
-
-If( el_hl_ ) CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
-
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-! initial state of the isolated molecule ...
-If( master ) Print 56 , initial_state     
-
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
-! assuming non-interacting electrons ...
-
 do n = 1 , n_part                         
     select case( eh_tag(n) )
 
         case( "el" )
+
+            CALL FMO_analysis( Extended_Cell , ExCell_basis , UNI%R , el_FMO , instance="E" )
 
             MO_bra( : , n ) = el_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
@@ -347,6 +312,8 @@ do n = 1 , n_part
             If( master ) Print 591, orbital(n) , el_FMO%erg(orbital(n))
        
         case( "hl" )
+
+            CALL FMO_analysis ( Extended_Cell , ExCell_basis , UNI%R , hl_FMO , instance="H" )
 
             MO_bra( : , n ) = hl_FMO%L( : , orbital(n) )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
@@ -368,19 +335,14 @@ CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zer
 DUAL_bra = conjg(DUAL_ket)
 
 ! save populations ...
-If( nn == 1) then
-    QDyn%dyn(it,:,1)    = Populations( QDyn%fragments , ExCell_basis , DUAL_bra(:,1) , DUAL_ket(:,1) , t_i )
-else
-    QDyn%dyn(it,:,1:nn) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
-end If
-
+QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn )
 
 If( GaussianCube ) CALL Send_to_GaussianCube( it )
 
-If( DP_Moment    ) CALL DP_stuff ( "DP_matrix" )
+If( DP_Moment    ) CALL DP_stuff( "DP_matrix" )
 
-If( DP_Moment    ) CALL DP_stuff ( "DP_moment" )
+If( DP_Moment    ) CALL DP_stuff( "DP_moment" )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -388,6 +350,8 @@ If( DensityMatrix ) then
 End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
+
+If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
@@ -399,7 +363,48 @@ end subroutine Preprocess
 ! 
 !
 !
-! 
+!
+!=========================
+ subroutine U_ad( t_rate )
+!=========================
+implicit none
+real*8  , intent(in) :: t_rate 
+
+! local variables ...
+integer :: j
+
+phase(:) = cdexp(- zi * UNI%erg(:) * t_rate / h_bar)
+
+! U_AD(dt) ; adiabatic component of the propagation ...
+forall( j=1:n_part )   
+    MO_bra(:,j) = merge( conjg(phase(:)) * MO_bra(:,j) , C_zero , eh_tag(j) /= "XX" )
+    MO_ket(:,j) = merge(       phase(:)  * MO_ket(:,j) , C_zero , eh_tag(j) /= "XX" )
+end forall
+
+! DUAL representation for efficient calculation of survival probabilities ...
+! Lowdin orthogonalization ...
+  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+  DUAL_bra = conjg(DUAL_ket)
+
+end subroutine U_ad
+!
+!
+!=================
+ subroutine U_nad
+!=================
+implicit none
+
+! U_nad(dt) ; NON-adiabatic component of the propagation ...
+
+! project back to MO_basis with UNI(t + t_rate)
+! Lowdin orthogonalization ...
+  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+  MO_bra = conjg(MO_ket)
+
+end subroutine U_nad
+!
+!
+!
 !========================================
  subroutine Send_to_GaussianCube( frame )
 !========================================
@@ -418,6 +423,7 @@ AO_bra = DUAL_bra
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
 do n = 1 , n_part
+    if( eh_tag(n) == "XX" ) cycle
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 
@@ -502,6 +508,8 @@ complex*16 :: wp_energy(n_part)
 
 do n = 1 , n_part
 
+    if( eh_tag(n) == "XX" ) cycle
+
     wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
 
     If( it == 1 ) then
@@ -511,7 +519,6 @@ do n = 1 , n_part
         write(52,12) "#" , QDyn%fragments , "total"
 
         open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
-        write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
 
     else
 
@@ -563,7 +570,7 @@ end If
 
 Call mpi_barrier( world , err )
 
-CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it , UNI )
+CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , UNI )
 
 mm = size(ExCell_basis)
 nn = n_part

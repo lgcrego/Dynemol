@@ -195,6 +195,8 @@ If( survival ) then
 
         do np = 1 , n_part
 
+            if( eh_tag(np) == "XX" ) cycle
+
             OPEN( unit=3 , file=eh_tag(np)//"_survival.dat" , status="unknown" )
 
             write(3,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...

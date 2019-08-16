@@ -7,7 +7,7 @@ FC = mpif90 -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-g -traceback -check all -fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = -g -traceback #-check all -fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align 
 FFLAGS2 = -O2 -align -qopenmp -parallel $(FREE) $(SAFE)
@@ -152,11 +152,8 @@ SOURCE2 = constants_m.o \
 		  diagnostic.o \
 		  qdynamics.o \
                   Taylor.o \
-		  Chebyshev.o \
-		  ElHl_Chebyshev_GPU.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
-		  ElHl_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \

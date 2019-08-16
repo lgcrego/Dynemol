@@ -17,7 +17,6 @@ module Backup_m
     use FMO_m               , only : orbital                    , &
                                      eh_tag    
     use QCModel_Huckel      , only : EigenSystem
-    use QCModel_Huckel_ElHl , only : EigenSystem_ElHl    
     use DP_potential_m      , only : Molecular_DPs
     use TD_Dipole_m         , only : wavepacket_DP
     use DP_main_m           , only : Dipole_Matrix   
@@ -46,9 +45,9 @@ contains
 !
 !
 !
-!====================================================================================================================================
- subroutine Restart_Sys_Eigen( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , it , UNI_el , UNI_hl )
-!====================================================================================================================================
+!======================================================================================================================
+ subroutine Restart_Sys_Eigen( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , UNI_el )
+!======================================================================================================================
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
@@ -57,9 +56,7 @@ complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
-integer                         , intent(in)    :: it
 type(R_eigen)                   , intent(out)   :: UNI_el
-type(R_eigen)   , optional      , intent(out)   :: UNI_hl
 
 ! local variables ...
 type(universe) :: Solvated_System
@@ -104,16 +101,8 @@ if( DP_field_ ) then
 
 end If
 
-if( driver == "slice_ElHl") then
-
-    CALL EigenSystem_ElHl( Extended_Cell , ExCell_basis , AO_bra , AO_ket , UNI_el , UNI_hl , it )
-
-else
-
-    ! SLAVES only calculate S_matrix and return ...
-    CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
-
-end if
+! SLAVES only calculate S_matrix and return ...
+CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
 end subroutine Restart_Sys_Eigen
 !

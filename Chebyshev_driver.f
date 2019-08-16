@@ -109,11 +109,7 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    If( n_part == 1) then
-         CALL Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , t , t_rate , it )
-    else
-         CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
-    end If
+    CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
 
     ! calculate, for using in MM ...
     If( QMMM ) then
@@ -255,11 +251,7 @@ end If
 N = size(ExCell_basis)
 CALL Allocate_Brackets( N , AO_bra , AO_ket , DUAL_bra , DUAL_ket )
 
-If( n_part == 1) then
-    CALL preprocess_Chebyshev( Extended_Cell , ExCell_basis , AO_bra(:,1) , AO_ket(:,1) , Dual_bra(:,1) , Dual_ket(:,1) , QDyn , it )
-else
-    CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
-end If
+CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket)
@@ -291,6 +283,7 @@ integer :: n
 
 ! LOCAL representation for film STO production ...
 do n = 1 , n_part
+    if( eh_tag(n) == "XX" ) cycle
     CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , frame ,t , eh_tag(n) )
 end do
 

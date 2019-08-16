@@ -2,13 +2,16 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m    , only  : T_ , F_ , static
+    use MPI_definitions_m  , only : master
+    use parameters_m       , only : T_ , F_ , static , electron_state , hole_state , n_part , Survival
 
-    public :: ad_hoc_tuning
+    public :: ad_hoc_tuning , eh_tag , orbital 
 
     private
 
-    logical , save  :: ad_hoc_verbose_ = T_
+    ! module variables ...
+    integer      , allocatable :: orbital(:)
+    character(2) , allocatable :: eh_tag(:)
 
     contains
 !
@@ -77,19 +80,6 @@ univ % atom (106:119) % fragment = "5"
 univ % atom (423:436) % fragment = "6"
 univ % atom ( 74: 87) % fragment = "7"
 
-!......................................................................
-!default: %El => DONOR
-If( any(univ % atom%El) ) then
-    where( univ % atom % El ) univ % atom % fragment = "D"
-else
-    if(.NOT. static) stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
-end If
-
-If( ad_hoc_verbose_ ) then
-    Print 46
-    ad_hoc_verbose_ = F_
-end If
-
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
 !   Donor       =   D 
@@ -113,13 +103,62 @@ DO i = 1 , size(univ%atom)
 
 END DO
 
-! just touching univ ...
-univ = univ
+call warnings( univ%atom ) 
+
+If( master ) Print 46
 
 include 'formats.h'
 
 end subroutine ad_hoc_tuning
+!
+!
+!
+!===========================
+ subroutine warnings( a )
+!===========================
+implicit none
+type(atomic) , intent(inout) :: a(:)
 
+!local variables ...
+logical :: propagate_el , propagate_hl
+
+! orbitals to be propagated ...
+If( Survival ) then
+
+   allocate( orbital(n_part) , source = 0    )
+   allocate( eh_tag(n_part)  , source = "XX" )
+
+   If( any(a% El) ) then
+       orbital(1) = electron_state ; eh_tag(1) = "el"
+   End If
+   If( any(a% Hl) ) then
+       orbital(2) = hole_state     ; eh_tag(2) = "hl"
+   End If
+
+end If
+
+!default: %El => DONOR
+If( any(a% El) ) then      ! <== first priority ...
+    where( a% El ) a% fragment = "D"
+else If( any(a% Hl) ) then ! <== second priority, only for cationic systems ...
+    where( a% Hl ) a% fragment = "A"
+else
+    if(.NOT. static .AND. electron_state /= 0 ) &
+    stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
+end If
+
+propagate_el = any(a% El) .EQV. (electron_state /= 0)
+If( .not. propagate_el ) &
+stop ">> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<"
+
+propagate_hl = any(a% Hl) .EQV. (hole_state /= 0)
+If( .not. propagate_hl ) &
+stop ">> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<"
+
+end subroutine warnings
+!
+!
+!
 end module tuning_m
 !
 !
@@ -200,9 +239,6 @@ select case ( instance )
 !=====================================
 
 end select
-
-! just touching univ ...
-atom = atom
 
 end subroutine ad_hoc_MM_tuning
 
