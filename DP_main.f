@@ -16,7 +16,6 @@ module DP_main_m
                                           multipoles1c ,                        &
                                           multipoles2c ,                        &
                                           util_multipoles
-    use DP_excited_m            , only  : el_hl_StaticDPs
     use tuning_m                , only  : eh_tag
 
 !   this is causing dependency problems in compilation
