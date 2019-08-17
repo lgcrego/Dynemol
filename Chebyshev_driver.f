@@ -42,8 +42,6 @@ module Chebyshev_driver_m
     use MM_dynamics_m               , only : MolecularMechanics ,           &
                                              preprocess_MM , MoveToBoxCM 
     use DiabaticEhrenfest_Builder   , only : EhrenfestForce 
-    use Chebyshev_m                 , only : Chebyshev ,                    &
-                                             preprocess_Chebyshev
 #ifdef USE_GPU
     use gpu_ElHl_Chebyshev_m        , only : ElHl_Chebyshev => gpu_ElHl_Chebyshev,    &
                                              preprocess_ElHl_Chebyshev => gpu_preprocess_ElHl_Chebyshev

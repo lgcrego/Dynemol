@@ -101,24 +101,23 @@ SOURCE2 = constants_m.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
-		  diabatic-Ehren.o \
-		  HuckelForces.o \
 		  STO.o \
 		  multip_routines.o \
-		  electron_hole_DP.o \
 		  LCMO_Builder.o \
-		  FMO.o \
+		  Coulomb.o \
 		  DP_main.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-		  Coulomb.o \
 		  polarizability.o \
-		  CoulInt_QMMM.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
-		  QCModel_ElHl.o \
+		  diabatic-Ehren.o \
+		  HuckelForces.o \
 		  Ehrenfest.o \
+		  CoulInt_QMMM.o \
+		  FMO.o \
+		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \
           backup_MM.o \

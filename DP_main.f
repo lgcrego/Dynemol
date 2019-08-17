@@ -16,8 +16,10 @@ module DP_main_m
                                           multipoles1c ,                        &
                                           multipoles2c ,                        &
                                           util_multipoles
-    use DP_excited_m            , only  : el_hl_StaticDPs
     use tuning_m                , only  : eh_tag
+
+!   this is causing dependency problems in compilation
+!   use DP_excited_m            , only  : el_hl_StaticDPs
 
 
     Real*8 , allocatable , public :: DP_matrix_AO(:,:,:)
@@ -143,7 +145,8 @@ If( hole_state /= I_zero ) then
 
     If( static ) then
 
-        CALL el_hl_StaticDPs( system , hole_DP , excited_DP )
+!        this is causing dependency problems in compilation
+!        CALL el_hl_StaticDPs( system , hole_DP , excited_DP )
 
     else
 
