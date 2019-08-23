@@ -1,0 +1,55 @@
+set term pngcairo dashed enhanced truecolor font "Helvetica,36" size 1400,1000
+
+set border lw 2
+
+##########################################
+# Adjust these ranges to your needs:
+#
+set yrange  [-12:-4]       # energy
+set xrange  [0:0.6]        # time
+set cbrange [-1:1]     # occupation
+##########################################
+
+# x margins
+x0 = 0.14
+x1 = 0.80
+Lx = x1 - x0
+
+# y margin positions
+y0 = 0.13
+y1 = 0.98
+Ly = y1 - y0
+
+set bmargin at screen y0;  set tmargin at screen y1
+
+# Electron ========================================
+
+set output "elhl_NADyn.png"
+
+set multiplot
+
+# Occupation --------------------------------------
+
+set lmargin at screen x0;  set rmargin at screen x1
+
+#set logscale cb
+
+set ytics in offset 0.7, 0.0 mirror
+set xtics in offset 0.0, 0.9
+
+set ylabel "Energy (eV)" offset 0.2, 0.0
+set xlabel "Time (ps)"   offset 0.0, 1.6
+
+set cbtics offset -0.2,0
+
+
+set pm3d map corners2color c1
+# set style fill transparent solid 0.5 noborder
+
+# great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
+set palette defined ( 0 '#0fffee',1 '#0090ff', 2 '#000fff',3 '#000090',4 '#ffffff',5 '#7f0000', 6 '#ee0000', 7 '#ff7000', 8 '#ffee00')
+set colorbox user origin x1+0.01,y0 size 0.035,Ly
+set format cb "%4.2f"
+splot "Occup_smear.dat" using 1:2:($3-$4) notitle
+
+unset multiplot

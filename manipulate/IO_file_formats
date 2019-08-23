@@ -1,0 +1,168 @@
+input.pdb
+
+System Characteristics                                                fmt(a72)
+CRYST1      T_x    T_y    T_z                                         fmt(t10, f6.3, t19, f6.3, t28, f6.3) 
+WORD      1  MMSymbol  residue    nr     x    y    z   Symbol
+WORD      2     .         .       .      .    .    .    .  
+WORD      3     .         .       .      .    .    .    .             fmt(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2) 
+WORD      .     .         .       .      .    .    .    .  
+WORD      .     .         .       .      .    .    .    .  
+MASTER
+END
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+frames.pdb
+
+System Characteristics                                                fmt(a72)
+TITLE     system characteristics  t= real*8
+REMARK    THIS IS A SIMULATION BOX									  not used
+CRYST1      T_x    T_y    T_z                                
+MODEL       integer                                                   fmt(a4)
+ATOM      1  MMSymbol  residue    nr     x    y    z   
+ATOM      2     .         .       .      .    .    .      
+ATOM      3     .         .       .      .    .    .                  fmt(13x, a3, t18, a3, t24, i7, t33, f6.3, t41, f6.3, t49, f6.3)
+ATOM      .     .         .       .      .    .    .      
+ATOM      .     .         .       .      .    .    .     
+TER
+ENDMDL
+REMARK    some remark
+TITLE     system characteristics  t= real*8 + delta_t
+REMARK    THIS IS A SIMULATION BOX									  not used
+CRYST1      T_x    T_y    T_z                                
+MODEL       integer                                                   fmt(a4)
+ATOM      1  MMSymbol  residue    nr     x    y    z   
+ATOM      2     .         .       .      .    .    .      
+ATOM      3     .         .       .      .    .    .                  fmt(13x, a3, t18, a3, t24, i7, t33, f6.3, t41, f6.3, t49, f6.3)
+ATOM      .     .         .       .      .    .    .      
+ATOM      .     .         .       .      .    .    .     
+  .       .     .         .       .      .    .    .
+  .       .     .         .       .      .    .    .
+TER
+ENDMDL
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+input.gro
+
+System Characteristics                                                fmt(a72)
+N_of_ATOMS
+nresid  resid   MMSymbol   1    X    Y    Z                           fmt(i5, a3, a7, i5 , 3f8.4)
+  .       .        .       2    .    .    .
+  .       .        .       3    .    .    .
+  .       .        .       4    .    .    .
+  .       .        .       5    .    .    .
+BOX_X   BOX_Y   BOX_Z
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+poscar.dat
+
+System Characteristics                                                fmt(t1,a72)
+real*8
+   T11   T12   T13
+   T21   T22   T23
+   T13   T23   T33
+   chemical elements 
+   N_of_different_chemical_elements 
+   x    y    z   TorF   TorF   TorF
+   .    .    .   .      .      .
+   .    .    .   .      .      .
+   .    .    .   .      .      .
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+VASP.trj
+
+System Characteristics                                                fmt(t1,a72)
+real*8
+   T11   T12   T13
+   T21   T22   T23
+   T13   T23   T33
+   chemical elements 
+   N_of_different_chemical_elements 
+dumb string    
+   x    y    z   													  fmt(t2,f12.8,t14,f12.8,t26,f12.8)
+   .    .    .   
+   .    .    .   
+   .    .    .  
+dummy line
+   x    y    z  
+   .    .    .  
+   .    .    .  
+   .    .    .  
+dummy line
+   x    y    z  
+   .    .    .  
+   .    .    .  
+   .    .    .  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+input.xyz
+
+N_of_ATOMS
+System Characteristics                                                fmt(a72)
+BOX1
+BOX2
+BOX3
+SYMBOL   x   y   z                                                    
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+frames.xyz
+
+N_of_ATOMS
+System Characteristics                                                fmt(a72)
+BOX1
+BOX2
+BOX3
+SYMBOL   x   y   z                                                    fmt(a2, f11.6, f11.6, f11.6)  
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
+not used
+not used
+SYMBOL   x   y   z                                                    fmt(a2, f11.6, f11.6, f11.6)  
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
+not used
+not used
+SYMBOL   x   y   z                                                    fmt(a2, f11.6, f11.6, f11.6)  
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   . 
+
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+DICE.trj
+
+N_of_ATOMS
+T_x  T_y  T_z                                                         fmt(t37, 3f9.4 ) 
+SYMBOL   x   y   z                                                    fmt(t4, a2, t10, f10.5, t25, f10.5, t40, f10.5)
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
+not used
+not used
+SYMBOL   x   y   z                                                    fmt(t4, a2, t10, f10.5, t25, f10.5, t40, f10.5)
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
+not used
+not used
+SYMBOL   x   y   z                                                    fmt(t4, a2, t10, f10.5, t25, f10.5, t40, f10.5)
+SYMBOL   .   .   .
+SYMBOL   .   .   .
+  .      .   .   .
+  .      .   .   .
