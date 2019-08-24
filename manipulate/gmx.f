@@ -454,6 +454,7 @@ else
         if ( keyword == "MASTER" ) exit
     end do
 
+    system% atom% resid = adjustl(system% atom% resid)
 !----------------------
 ! finished reading ...
 !----------------------

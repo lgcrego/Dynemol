@@ -72,7 +72,7 @@ end if
 20 Format(37a4)
 30 Format(50a3)
 40 Format(37a4)
-50 Format(50i3)
+50 Format(30i5)
 60 Format(50a3)
 70 Format(50L3)
 80 Format(152a1)

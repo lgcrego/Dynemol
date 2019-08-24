@@ -15,6 +15,7 @@ use Statistics_routines
 use Crystal_routines
 use Occupation
 use Aminoacids                 
+use Amber_routines
 
 implicit none
 
@@ -40,7 +41,7 @@ do
     write(*,'(/a)') '1  : Read "poscar.dat" file (coordinates from vasp-CONTCAR)'
     write(*,'(/a)') '2  : Read "input.xyz" file '
     write(*,'(/a)') '3  : Read "solvent.dat" file '
-    write(*,'(/a)') '4  : Read "input.gro" file '
+    write(*,'(/a)') '4  : AMBER stuff'
     write(*,'(/a)') '5  : Read "input.pdb" file '
     write(*,'(/a)') '6  : Build up crystal'
     write(*,'(/a)') '7  : Read trajectories '
@@ -66,9 +67,7 @@ do
             CALL Include_Solvent( structure )
 
         case ('4')
-            CALL Read_GROMACS( structure , file_type="gro")
-            CALL gro_2_pdb   ( structure )
-            pause '>>>  Saving seed.pdb  <<<'
+            CALL amber_stuff 
 
         case ('5')
             CALL Read_GROMACS( structure , file_type="pdb")

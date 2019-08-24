@@ -19,6 +19,7 @@ SOURCE = types_m.o \
 		 parms.o \
 		 tuning.o \
 		 topol.o \
+		 amber.o \
 		 RW.o \
 		 gmx.o \
 		 EDT.o \

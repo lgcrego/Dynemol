@@ -41,7 +41,7 @@ character(3) :: MMSymbols(60)
 
  delta_t = 2.5d-4
 
- If( system%time == 0.d0 .AND. present(frame) ) system % time = delta_t * (frame -1)
+! If( system%time == 0.d0 .AND. present(frame) ) system % time = delta_t * (frame -1)
 
 !----------------------------------
 !      define SPECIAL atoms 
@@ -63,22 +63,10 @@ character(3) :: MMSymbols(60)
 !      define resid's
 !----------------------------------
 
-system % atom( 1:31) % resid = "DG1"  
-system % atom(32:63) % resid = "DA2"  
-system % atom(64:95) % resid = "DT3"  
-system % atom(96:127) % resid = "DA4"  
-system % atom(128:157) % resid = "DC5"  
-system % atom(158:190) % resid = "DA6"  
-system % atom(191:220) % resid = "DT6"  
-system % atom(221:253) % resid = "DG5"  
-system % atom(254:285) % resid = "DT4"  
-system % atom(286:317) % resid = "DA3"  
-system % atom(318:349) % resid = "DT2"  
-system % atom(350:380) % resid = "DC1"  
-
 !----------------------------------
 !      define nresid's
 !----------------------------------
+system% atom% nresid = 1
 
 !----------------------------------
 !     Selective_Dynamics
