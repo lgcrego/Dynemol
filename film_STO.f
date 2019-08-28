@@ -52,7 +52,7 @@
 
  write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
- f_name = 'MO_trunk/'//prefix//'_dens_shot'//string//'.cube'
+ f_name = 'MO_trunk/'//prefix//'_MO_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
