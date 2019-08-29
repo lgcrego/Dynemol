@@ -43,7 +43,7 @@
  integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
- character(len=22)        :: f_name
+ character(len=31)        :: f_name
 
  ! bra is never used, so to avoid compiler warnings ...
  dumb = bra(1)
@@ -52,7 +52,7 @@
 
  write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
- f_name = prefix//'_MO_shot'//string//'.cube'
+ f_name = 'MO_trunk/'//prefix//'_MO_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
@@ -237,13 +237,13 @@
  integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
- character(len=22)        :: f_name
+ character(len=31)        :: f_name
 
  allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
- f_name = prefix//'_dens_shot'//string//'.cube'
+ f_name = 'MO_trunk/'//prefix//'_dens_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 

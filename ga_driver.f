@@ -101,11 +101,12 @@ Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(29) - UNI%erg(28) , 5.5190d0
-Print*, "dE2 = ",UNI%erg(30) - UNI%erg(28) , 5.7242d0
-Print*, "dE3 = ",UNI%erg(30) - UNI%erg(29) , 0.2050d0
-Print*, "dE4 = ",UNI%erg(30) - UNI%erg(27) , 6.9960d0
-
+Print*, "dE1 = ",UNI%erg(115) - UNI%erg(114) , 2.6470d0
+Print*, "dE2 = ",UNI%erg(114) - UNI%erg(113) , 0.3040d0
+Print*, "dE3 = ",UNI%erg(115) - UNI%erg(113) , 2.9510d0
+Print*, "dE4 = ",UNI%erg(113) - UNI%erg(112) , 0.8950d0
+Print*, "dE4 = ",UNI%erg(112) - UNI%erg(111) , 0.4360d0
+Print*, "dE4 = ",UNI%erg(117) - UNI%erg(116) , 1.6000d0
 
 ! Population analysis ...
 If( GaussianCube ) then

@@ -37,11 +37,12 @@ real*8   :: REF_DP(3) , REF_Alpha(3)
 !--------------------
 ! HOMO-LUMO gaps ...     
 !--------------------
-chi(1) = ( OPT_UNI%erg(22) - OPT_UNI%erg(21) )  - 5.3780d0           ; weight(1) = 5.0d-1 
-chi(2) = ( OPT_UNI%erg(23) - OPT_UNI%erg(21) )  - 6.8730d0           ; weight(2) = 5.0d-1
-chi(3) = ( OPT_UNI%erg(23) - OPT_UNI%erg(22) )  - 1.4950d0           ; weight(3) = 5.0d-1
-chi(4) = ( OPT_UNI%erg(23) - OPT_UNI%erg(20) )  - 7.3805d0           ; weight(4) = 5.0d-1
-chi(5) = ( OPT_UNI%erg(21) - OPT_UNI%erg(20) )  - 0.5075d0           ; weight(5) = 5.0d-1
+chi(1) = ( OPT_UNI%erg(115) - OPT_UNI%erg(114) )  - 2.6470d0           ; weight(1) = 1.0d0 
+chi(2) = ( OPT_UNI%erg(114) - OPT_UNI%erg(113) )  - 0.3040d0           ; weight(2) = 1.0d0
+chi(3) = ( OPT_UNI%erg(115) - OPT_UNI%erg(113) )  - 2.9510d0           ; weight(3) = 1.0d0
+chi(4) = ( OPT_UNI%erg(113) - OPT_UNI%erg(112) )  - 0.8950d0           ; weight(4) = 1.0d0
+chi(5) = ( OPT_UNI%erg(112) - OPT_UNI%erg(111) )  - 0.4360d0           ; weight(5) = 1.0d0
+chi(6) = ( OPT_UNI%erg(117) - OPT_UNI%erg(116) )  - 1.6000d0           ; weight(6) = 1.0d0
 
 !-------------------------------------------------------------------------
 ! Population analysis ...
@@ -49,35 +50,18 @@ chi(5) = ( OPT_UNI%erg(21) - OPT_UNI%erg(20) )  - 0.5075d0           ; weight(5)
 !-------------------------------------------------------------------------
 ! NO charge in these atoms ...
 
-!chi(49) =  Mulliken(OPT_UNI, basis, MO=20, atom=[ 7])    ; weight(49)= 3.0   
+chi(11) =  Mulliken(OPT_UNI, basis, MO=112, atom=[33:40])
+chi(12) =  Mulliken(OPT_UNI, basis, MO=112, atom=[44:51])
+chi(13) =  Mulliken(OPT_UNI, basis, MO=112, atom=[66:73])
+chi(14) =  Mulliken(OPT_UNI, basis, MO=112, atom=[55:62])
 
-!chi(47) =  Mulliken(OPT_UNI, basis, MO=21, atom=[ 5])    ; weight(47)= 3.0 !2.5    
-chi(8)  =  Mulliken(OPT_UNI, basis, MO=21, atom=[ 8])    
-chi(9)  =  Mulliken(OPT_UNI, basis, MO=21, atom=[ 2])   - 0.3 
-chi(45) =  Mulliken(OPT_UNI, basis, MO=21, atom=[11])   - 0.4
-!chi(46) =  Mulliken(OPT_UNI, basis, MO=23, atom=[13]) -0.1
-
-chi(10) =  Mulliken(OPT_UNI, basis, MO=21, atom=[13])    
-
-! missing charge on these atoms ...
-chi(13) =  Mulliken(OPT_UNI, basis, MO=22, atom=[11]) - 0.4   
-chi(6)  =  Mulliken(OPT_UNI, basis, MO=22, atom=[ 2]) - 0.4   
-
-chi(15) =  Mulliken(OPT_UNI, basis, MO=23, atom=[ 2]) - 0.2 
-chi(16) =  Mulliken(OPT_UNI, basis, MO=23, atom=[12]) - 0.2 
-chi(14) =  Mulliken(OPT_UNI, basis, MO=23, atom=[11]) - 0.4
-chi(14) =  Mulliken(OPT_UNI, basis, MO=23, atom=[ 7]) - 0.4
-chi(51) =  Mulliken(OPT_UNI, basis, MO=23, atom=[ 3]) - 0.4   
 !-------------------------------------------------------------------------
 ! MO character ...
 ! MO_character( system , GA , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !-------------------------------------------------------------------------
 
-chi(50) =  MO_character(OPT_UNI, basis, MO=20, AO='Py') 
-chi(17) =  MO_character(OPT_UNI, basis, MO=21, AO='Pz') 
-chi(18) =  MO_character(OPT_UNI, basis, MO=22, AO='Pz') 
-chi(19) =  MO_character(OPT_UNI, basis, MO=23, AO='Pz') 
+!chi(50) =  MO_character(OPT_UNI, basis, MO=20, AO='Py') 
 
 !-------------------------------------------------------------------------
 ! Bond Type analysis ...
@@ -86,41 +70,29 @@ chi(19) =  MO_character(OPT_UNI, basis, MO=23, AO='Pz')
 !  + = Bonding               &         - = Anti_Bonding
 !-------------------------------------------------------------------------
 
-chi(48) =  Bond_Type(system, OPT_UNI, 21,  5,  7, 'pz', '-')                                 
-chi(20) =  Bond_Type(system, OPT_UNI, 21,  5,  3, 'Pz', '+')                                 
-chi(21) =  Bond_Type(system, OPT_UNI, 21, 11, 12, 'Pz', '-')                                 
-chi(22) =  Bond_Type(system, OPT_UNI, 21, 12,  2, 'Pz', '-')                                 
-chi(23) =  Bond_Type(system, OPT_UNI, 21,  3,  2, 'Pz', '-')                                 
-chi(24) =  Bond_Type(system, OPT_UNI, 21,  2, 13, 'Pz', '-')                                 
-chi(25) =  Bond_Type(system, OPT_UNI, 21, 13, 11, 'Pz', '-')                                 
+chi(55) =  Bond_Type(system, OPT_UNI, 113,  23,  28, 'pz', '+')                                 
+chi(54) =  Bond_Type(system, OPT_UNI, 113,  22,  27, 'pz', '+')                                 
+chi(53) =  Bond_Type(system, OPT_UNI, 113,  22,  19, 'pz', '+')                                 
+chi(52) =  Bond_Type(system, OPT_UNI, 113,   7,  12, 'pz', '+')                                 
+chi(51) =  Bond_Type(system, OPT_UNI, 113,  23,  19, 'pz', '-')                                 
+chi(50) =  Bond_Type(system, OPT_UNI, 113,  27,  28, 'pz', '-')                                 
+chi(49) =  Bond_Type(system, OPT_UNI, 113,  22,   6, 'pz', '-')                                 
+chi(48) =  Bond_Type(system, OPT_UNI, 113,  22,  20, 'pz', '-')                                 
 
 
-chi(26) =  Bond_Type(system, OPT_UNI, 22,  5,  7, 'Pz', '+')                                 
-chi(27) =  Bond_Type(system, OPT_UNI, 22,  3,  4, 'Pz', '+')                                 
-chi(28) =  Bond_Type(system, OPT_UNI, 22, 11, 12, 'Pz', '+')                                 
-chi(29) =  Bond_Type(system, OPT_UNI, 22,  5,  3, 'Pz', '-')                                 
-chi(30) =  Bond_Type(system, OPT_UNI, 22,  3,  2, 'Pz', '-')                                 
-chi(31) =  Bond_Type(system, OPT_UNI, 22,  2, 11, 'Pz', '-')                                 
-chi(32) =  Bond_Type(system, OPT_UNI, 22,  7,  8, 'Pz', '-')                                 
-chi(33) =  Bond_Type(system, OPT_UNI, 22,  7, 11, 'Pz', '-')                                 
+chi(47) =  Bond_Type(system, OPT_UNI, 112,  22,   6, 'pz', '+')                                 
+chi(46) =  Bond_Type(system, OPT_UNI, 112,  22,  20, 'pz', '+')                                 
+chi(41) =  Bond_Type(system, OPT_UNI, 112,  30,  27, 'pz', '+')                                 
+chi(42) =  Bond_Type(system, OPT_UNI, 112,  16,  19, 'pz', '+')                                 
+chi(45) =  Bond_Type(system, OPT_UNI, 112,  22,  19, 'pz', '+')                                 
+chi(44) =  Bond_Type(system, OPT_UNI, 112,  22,  27, 'pz', '+')                                 
 
 
-chi(34) =  Bond_Type(system, OPT_UNI, 23,  3,  2, 'Pz', '+')                                 
-chi(35) =  Bond_Type(system, OPT_UNI, 23,  7, 11, 'Pz', '+')                                 
-chi(36) =  Bond_Type(system, OPT_UNI, 23,  5,  6, 'Pz', '+')                                 
-chi(37) =  Bond_Type(system, OPT_UNI, 23, 12, 13, 'Pz', '-')                                 
-chi(38) =  Bond_Type(system, OPT_UNI, 23,  2, 12, 'Pz', '-')                                 
-chi(39) =  Bond_Type(system, OPT_UNI, 23,  7,  8, 'Pz', '-')                                 
-chi(40) =  Bond_Type(system, OPT_UNI, 23,  7,  5, 'Pz', '-')                                
-chi(41) =  Bond_Type(system, OPT_UNI, 23,  5,  3, 'Pz', '-')                                
-chi(42) =  Bond_Type(system, OPT_UNI, 23, 12, 11, 'Pz', '-')                                
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------
-
-REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ]
-
+REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ] 
 !chi(6)  = DP(1) - REF_DP(1)     ; weight(6) = 1.d0
 !chi(7)  = DP(2) - REF_DP(2)     ; weight(7) = 2.d0
 !chi(8)  = DP(3) - REF_DP(3)     ; weight(8) = 1.d0

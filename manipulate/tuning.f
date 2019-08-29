@@ -58,6 +58,7 @@ character(3) :: MMSymbols(60)
 !----------------------------------
 !      define operations
 !----------------------------------
+where( system% atom% resid /= "RGT" ) system% atom% delete = .true.
 
 !----------------------------------
 !      define resid's
@@ -66,7 +67,6 @@ character(3) :: MMSymbols(60)
 !----------------------------------
 !      define nresid's
 !----------------------------------
-system% atom% nresid = 1
 
 !----------------------------------
 !     Selective_Dynamics
