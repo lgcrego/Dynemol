@@ -68,7 +68,7 @@ type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
 integer         , optional  , intent(in) :: atom(:)
 character(len=*), optional  , intent(in) :: residue
-real*8          , optional  , intent(in) :: threshold
+real            , optional  , intent(in) :: threshold
 
 ! local variables ...
 integer               :: i

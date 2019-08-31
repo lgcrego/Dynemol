@@ -60,20 +60,22 @@ eval(me) =  MO_character(OPT_UNI, basis, MO=118, AO='Pz')
 ! {...} terms are optional 
 ! default criterium (threshold=0.85): localized > 85% of total population
 !-------------------------------------------------------------------------
-eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.5 )    
+eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.6 )    
 
-eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom   = [6 ], threshold =2.5d-2) 
-eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom   = [22], threshold =2.5d-2) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom = [6 ], threshold =0.025 ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom = [22], threshold =0.025 ) 
 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[33:40]) - Mulliken(OPT_UNI, basis, MO=117, atom=[66:73])
-
-if(1==2) then
 !-------------------------------------------------------------------------
 ! Bond Type analysis ...
 ! Bond_Type( system , OPT_UNI , MO , atom1 , atom2 , AO , "+" or "-" )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
 !-------------------------------------------------------------------------
+eval(me) =  Bond_Type(system, OPT_UNI, 117, 25, 21, 'Pz', '-')                                
+eval(me) =  Bond_Type(system, OPT_UNI, 117, 23, 28, 'Pz', '-')                                
+
+IF(1==2) then
+
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 23, 28, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 16, 19, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 16, 11, 'Pz', '+')                                
@@ -90,17 +92,14 @@ eval(me) =  Bond_Type(system, OPT_UNI, 115, 23, 28, 'Pz', '+')
 eval(me) =  Bond_Type(system, OPT_UNI, 116, 25, 21, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
 
-eval(me) =  Bond_Type(system, OPT_UNI, 117, 25, 21, 'Pz', '-')                                
-eval(me) =  Bond_Type(system, OPT_UNI, 117, 23, 28, 'Pz', '-')                                
-
 !-------------------------------------------------------------------------
 ! NO charge in these atoms ...
 ! Exclude( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
 ! {...} terms are optional  
-! default threshold < 1.d-3 
+! default threshold < 0.001 
 !-------------------------------------------------------------------------
-eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [16], threshold =2.5d-2) 
-eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [30], threshold =2.5d-2) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [16], threshold =0.025 ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [30], threshold =0.025 ) 
 
 !-------------------------------------------------------------------------
 ! Population analysis ...
