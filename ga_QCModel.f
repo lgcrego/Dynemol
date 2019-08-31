@@ -15,7 +15,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public ::  GA_eigen , GA_DP_Analysis , Mulliken , AlphaPolar , Bond_Type , MO_character , Localize , Exclude
+    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude, i_
 
     private 
 
@@ -28,8 +28,34 @@ module GA_QCModel_m
     Real*8  , allocatable :: DP_matrix_AO(:,:,:)
     Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
     integer , allocatable :: occupancy(:)
+    integer               :: i_= 0
 
 contains
+!
+!
+!
+!====================================================================
+ function MO_erg_diff( GA , up , down , dE_ref , weight ) result(cost)
+!====================================================================
+implicit none
+type(R_eigen)            , intent(in) :: GA
+integer                  , intent(in) :: up
+integer                  , intent(in) :: down
+real                     , intent(in) :: dE_ref
+real          , optional , intent(in) :: weight
+
+!local variables ...
+real   :: w
+real*8 :: cost , delta_E
+
+delta_E = GA%erg(up) - GA%erg(down)
+
+w = merge( weight , 1.0 , present(weight) ) 
+cost = (delta_E - dE_ref) * w
+
+i_ = i_ + 1
+
+end function MO_erg_diff
 !
 !
 !
@@ -83,29 +109,34 @@ end if
 
 deallocate( mask )
 
+i_ = i_ + 1
+
 end function exclude
 !
 !
 !
 !
-!======================================================
- function Localize( GA , basis , MO , atom , residue )
-!======================================================
+!===========================================================================
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold)
+!===========================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
 integer         , optional  , intent(in) :: atom(:)
+character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
+real            , optional  , intent(in) :: threshold
 
 ! local variables ...
 integer               :: i
 real*8                :: Localize , population
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:)
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
+allocate( mask_3(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -122,16 +153,28 @@ else
     where( basis%residue == residue ) mask_2 = .true.
 end IF
 !====================================================
+IF( .NOT. present(EHSymbol) ) then
+    mask_3 = .true.
+else
+    where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-! 85% of localization is assumed ...
-localize = merge( D_zero , large , population > 8.5d-1 )
+If( present(threshold) ) then
+    localize = merge( D_zero , large , population > threshold )
+else
+    ! default value is assumed, 85% of localization ...
+    localize = merge( D_zero , large , population > 0.85 )
+end if
 
 deallocate( mask )
+
+i_ = i_ + 1
 
 end function Localize
 !
@@ -204,6 +247,8 @@ logical , allocatable :: mask(:)
  MO_character = merge( D_zero , large , population> HALF )
 
 deallocate( mask )
+
+i_ = i_ + 1
 
 end function MO_character
 !
@@ -303,13 +348,15 @@ select case ( instance )
 
 end select
 
+i_ = i_ + 1
+
 end function
 !
 !
 !
-!=======================================================================
- function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue )
-!=======================================================================
+!===============================================================================
+ function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue , weight)
+!===============================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -318,8 +365,10 @@ integer         , optional  , intent(in) :: atom(:)
 character(len=*), optional  , intent(in) :: AO
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
+real            , optional  , intent(in) :: weight
 
 ! local variables ...
+real                  :: w
 integer               :: i , l , m
 real*8                :: R_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
@@ -409,15 +458,21 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 ! perform the population analysis ...
 R_Mulliken = real( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
+! apply weight ...
+w = merge( weight , 1.0 , present(weight) ) 
+R_Mulliken = R_Mulliken * w
+
 deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
+
+i_ = i_ + 1
 
 end function R_Mulliken
 !
 !
 !
-!================================================================================
- pure function C_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
-!================================================================================
+!===========================================================================
+ function C_Mulliken( GA , basis , MO , atom , AO_ang , EHSymbol , residue )
+!===========================================================================
 implicit none
 type(C_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -470,6 +525,8 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4)
 C_Mulliken = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
 deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
+
+i_ = i_ + 1
 
 end function C_Mulliken
 !
