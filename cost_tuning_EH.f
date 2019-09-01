@@ -38,41 +38,73 @@ real*8   :: REF_DP(3) , REF_Alpha(3)
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  2.6470, weight = 3.0 )
+eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  2.6470, weight = 2.0 )
 eval(me) = MO_erg_diff( OPT_UNI, 114, 113,  0.3040 )
 eval(me) = MO_erg_diff( OPT_UNI, 115, 113,  2.9510 )
 eval(me) = MO_erg_diff( OPT_UNI, 113, 112,  0.8950 )
-eval(me) = MO_erg_diff( OPT_UNI, 112, 111,  0.4360 )
+eval(me) = MO_erg_diff( OPT_UNI, 112, 111,  0.4360, weight = 1.5 )
 eval(me) = MO_erg_diff( OPT_UNI, 117, 116,  1.6000 )
 
-!-------------------------------------------------------------------------
-! MO character ...
-! MO_character( OPT_UNI , basis , MO , AO )
+!----------------------------------------------------------------------------------------------
+! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
-!-------------------------------------------------------------------------
-eval(me) =  MO_character(OPT_UNI, basis, MO=111, AO='Pz') 
-eval(me) =  MO_character(OPT_UNI, basis, MO=112, AO='Pz') 
-eval(me) =  MO_character(OPT_UNI, basis, MO=117, AO='Pz') 
-eval(me) =  MO_character(OPT_UNI, basis, MO=118, AO='Pz') 
-
-!-------------------------------------------------------------------------
-! Localize( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
+!
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
 ! {...} terms are optional 
 ! default criterium (threshold=0.85): localized > 85% of total population
-!-------------------------------------------------------------------------
-eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.6 )    
-
-eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom = [6 ], threshold =0.025 ) 
-eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom = [22], threshold =0.025 ) 
-
-!-------------------------------------------------------------------------
-! Bond Type analysis ...
-! Bond_Type( system , OPT_UNI , MO , atom1 , atom2 , AO , "+" or "-" )
+!
+! ==> Bond_Type( system , OPT_UNI , MO , atom1 , atom2 , AO , "+" or "-" )
+! Bond Topolgy analysis ...
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
-!-------------------------------------------------------------------------
+!
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
+! NO charge on these atoms ...
+! {...} terms are optional  
+! default threshold < 0.001 
+!
+! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!----------------------------------------------------------------------------------------------
+
+!111
+eval(me) =  MO_character(OPT_UNI, basis, MO=111, AO='Pz') 
+
+!112
+eval(me) =  MO_character(OPT_UNI, basis, MO=112, AO='Pz') 
+
+!113
+
+!114
+
+!115
+eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom = [6 ], threshold =0.025 ) 
+
+!116
+eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom = [22], threshold =0.025 ) 
+
+!117
+eval(me) =  MO_character(OPT_UNI, basis, MO=117, AO='Pz') 
+
+eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.67 )    
+
 eval(me) =  Bond_Type(system, OPT_UNI, 117, 25, 21, 'Pz', '-')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 117, 23, 28, 'Pz', '-')                                
+
+eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[44:51,55:62,66:73] )    
+eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[33:40] ) - 0.2   
+
+!118
+eval(me) =  MO_character(OPT_UNI, basis, MO=118, AO='Pz') 
+
+eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[33:40] ) - 0.1     
+eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[44:51] ) - 0.1     
+eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[55:62] ) - 0.1     
+eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[66:73] ) - 0.1     
+!eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[44:51,55:62,66:73] ) - 0.5   
+
 
 IF(1==2) then
 
@@ -92,25 +124,10 @@ eval(me) =  Bond_Type(system, OPT_UNI, 115, 23, 28, 'Pz', '+')
 eval(me) =  Bond_Type(system, OPT_UNI, 116, 25, 21, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
 
-!-------------------------------------------------------------------------
-! NO charge in these atoms ...
-! Exclude( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
-! {...} terms are optional  
-! default threshold < 0.001 
-!-------------------------------------------------------------------------
 eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [16], threshold =0.025 ) 
 eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [30], threshold =0.025 ) 
 
-!-------------------------------------------------------------------------
-! Population analysis ...
-! Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
-! {...} terms are optional  
-! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
-!-------------------------------------------------------------------------
-! too much charge on these atoms ...
 eval(me) =  Mulliken(OPT_UNI, basis, MO=112, residue="BZN",  weight = 3.0 ) 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, residue="PPH",  weight = 3.0 )      
-
 end if
 
 !-------------------------                                                         
