@@ -67,37 +67,48 @@ eval(me) = MO_erg_diff( OPT_UNI, 117, 116,  1.6000 )
 ! Population analysis ...
 ! {...} terms are optional  
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
-! weight < 0  ==> does not update me when Mulliken in called
+! weight < 0  ==> does not update "me" when Mulliken in called
 !----------------------------------------------------------------------------------------------
 
-!111
+!111 ===================
 eval(me) =  MO_character(OPT_UNI, basis, MO=111, AO='Pz') 
 
 eval(me) =  Bond_Type(system, OPT_UNI, 111, 23, 28, 'Pz', '+')                                
-eval(me) =  Bond_Type(system, OPT_UNI, 111, 19, 11, 'Pz', '+')                                
+eval(me) =  Bond_Type(system, OPT_UNI, 111, 19, 11, 'Pz', '-')  
+eval(me) =  Bond_Type(system, OPT_UNI, 111, 20, 22, 'Pz', '-')  
 
-!112
+!112 ===================
 eval(me) =  MO_character(OPT_UNI, basis, MO=112, AO='Pz') 
 
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 23, 28, 'Pz', '+')                                
+eval(me) =  Bond_Type(system, OPT_UNI, 112, 12,  7, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 16, 19, 'Pz', '+')                                
 eval(me) =  Bond_Type(system, OPT_UNI, 112, 16, 11, 'Pz', '+')                                
 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=112, residue="BZN" ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=112, atom=[1:30], threshold = 0.5 )    
+eval(me) =  Exclude (OPT_UNI, basis, MO=112, atom = [77], threshold = 0.1 ) 
 
-!113
+!113 ===================
 eval(me) =  Bond_Type(system, OPT_UNI, 113, 23, 28, 'Pz', '-')                                
+eval(me) =  Exclude (OPT_UNI, basis, MO=113, atom = [30], threshold =0.025 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=113, atom = [22], threshold =0.05 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=113, atom=[1:30], threshold =0.7 )    
 
-!114
+!114 ===================
 eval(me) =  Bond_Type(system, OPT_UNI, 114, 23, 28, 'Pz', '+')                                
+eval(me) =  Localize(OPT_UNI, basis, MO=114, atom=[1:30], threshold = 0.7 )    
 
-!115
+!115 ===================
 eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom = [6 ], threshold =0.025 ) 
+eval(me) =  Bond_Type(system, OPT_UNI, 115, 25, 21, 'Pz', '-')                                
+eval(me) =  Bond_Type(system, OPT_UNI, 115, 23, 28, 'Pz', '+')                                
 
-!116
+!116 ===================
 eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom = [22], threshold =0.025 ) 
+eval(me) =  Bond_Type(system, OPT_UNI, 116, 25, 21, 'Pz', '+')                                
+eval(me) =  Bond_Type(system, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
 
-!117
+!117 ===================
 eval(me) =  MO_character(OPT_UNI, basis, MO=117, AO='Pz') 
 
 eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.6 )    
@@ -108,31 +119,13 @@ eval(me) =  Bond_Type(system, OPT_UNI, 117, 23, 28, 'Pz', '-')
 eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[44:51,55:62,66:73] )    
 eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[33:40] ) - 0.1   
 
-!118
+!118 ===================
 eval(me) =  MO_character(OPT_UNI, basis, MO=118, AO='Pz') 
 
 eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[33:40] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
 eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[44:51] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
 eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[55:62] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
 eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[66:73] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
-
-
-IF(1==2) then
-
-eval(me) =  Bond_Type(system, OPT_UNI, 112, 23, 19, 'Pz', '-')                                
-eval(me) =  Bond_Type(system, OPT_UNI, 112, 28, 27, 'Pz', '-')                                
-
-eval(me) =  Bond_Type(system, OPT_UNI, 115, 25, 21, 'Pz', '-')                                
-eval(me) =  Bond_Type(system, OPT_UNI, 115, 23, 28, 'Pz', '+')                                
-
-eval(me) =  Bond_Type(system, OPT_UNI, 116, 25, 21, 'Pz', '+')                                
-eval(me) =  Bond_Type(system, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
-
-eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [16], threshold =0.025 ) 
-eval(me) =  Exclude(OPT_UNI, basis, MO=111, atom   = [30], threshold =0.025 ) 
-
-
-end if
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
