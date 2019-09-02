@@ -473,11 +473,13 @@ do j = 1 , N_of_EHSymbol
 
 end do
 
-If( OPT_parms ) then
-     Print*, ">> OPT_parms being used <<"
-else
-     Print*, ">> OPT_parms were not used <<"
-end if
+If(master) then
+   If( OPT_parms ) then
+        Print*, ">> OPT_parms being used as input <<"
+   else
+        Print*, ">> OPT_parms were not used <<"
+   end if
+end If
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
