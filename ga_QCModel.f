@@ -354,9 +354,9 @@ end function
 !
 !
 !
-!===============================================================================
- function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue , weight)
-!===============================================================================
+!================================================================================
+ function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue , weight )
+!================================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -464,7 +464,11 @@ R_Mulliken = R_Mulliken * w
 
 deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
 
-i_ = i_ + 1
+If( .not. present(weight)) then
+    i_ = i_ + 1                     ! <= updat me
+else If( weight > 0 ) then 
+    i_ = i_ + 1                     ! <= also updat me
+end If                              ! <= otherwise dont update me
 
 end function R_Mulliken
 !

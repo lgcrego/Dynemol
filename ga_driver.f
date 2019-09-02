@@ -110,8 +110,7 @@ If( GaussianCube ) then
     do i = 1 , size(MOnum)
         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
     end do
-    Print*, " " 
-    Print*, '>> Gaussian Cube done <<',MOnum(:)
+    Print 220 , MOnum(:)
 end if
 
 If( OPT_parms ) then    
