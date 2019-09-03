@@ -1,0 +1,54 @@
+set term pngcairo enhanced truecolor font "Helvetica,36" size 1300,800
+
+set border lw 3
+
+# AFM hot
+# great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
+set palette defined ( 0 '#0fffee',1 '#0090ff', 2 '#000fff',3 '#000090',4 '#ffffff',5 '#7f0000', 6 '#ee0000', 7 '#ff7000', 8 '#ffee00')
+
+set xrange [-0.15:0.15]
+set yrange [0:2500]
+
+set bmargin at screen 0.16
+set tmargin at screen 0.96
+set lmargin at screen 0.17
+set rmargin at screen 0.88
+
+max(x,y) = (x > y) ? x : y
+min(x,y) = (x < y) ? x : y
+
+eV_cm1 = 8065.54429
+# eV_cm1 = 1
+
+set xlabel "time (ps)"           offset  0.2,  1.8
+set ylabel "frequency (cm^{-1})" offset  0.0,  0.1
+set cblabel "VDOS"               offset -0.4,  0.0
+
+set xtics 0.050  offset -0.2, 0.8 font "Helvetica,36" out scale 0.4, 0.2 nomirror
+set ytics 500 offset  0.9, 0.2 font "Helvetica,36" out scale 0.4, 0.2 mirror
+unset cbtics
+
+set mxtics 5
+set mytics 5
+
+set pm3d map corners2color c1
+
+
+# set cbrange [0:150000]
+# set output "VDOS.2d.png"
+# splot 'vdos.dat' notitle
+# 
+# set cbrange [*:*]
+# set output "VDOS.2d.rest.png"
+# splot 'vdos.rest.dat' notitle
+# 
+
+min_log_cb = -3e-6
+max = 3e-6
+set cbrange [min_log_cb:max]
+#set logscale cb
+Natoms = 4
+set output "VDOS.2d.dye.png"
+splot 'vdos.dye.dat' using 1:($2*eV_cm1):(max($3/Natoms,min_log_cb)) notitle
+show cbrange
+
