@@ -368,7 +368,6 @@ character(len=*), optional  , intent(in) :: residue
 real            , optional  , intent(in) :: weight
 
 ! local variables ...
-real                  :: w
 integer               :: i , l , m
 real*8                :: R_Mulliken
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
@@ -458,17 +457,21 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 ! perform the population analysis ...
 R_Mulliken = real( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-! apply weight ...
-w = merge( weight , 1.0 , present(weight) ) 
-R_Mulliken = R_Mulliken * w
-
-deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
 
 If( .not. present(weight)) then
+
     i_ = i_ + 1                     ! <= updat me
+
 else If( weight > 0 ) then 
+
+    ! apply weight ...
+    R_Mulliken = R_Mulliken * weight
+
     i_ = i_ + 1                     ! <= also updat me
-end If                              ! <= otherwise dont update me
+
+end If                              ! <= otherwise, dont update me and dont apply weight
+
+deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
 
 end function R_Mulliken
 !
