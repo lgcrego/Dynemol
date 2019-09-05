@@ -41,8 +41,8 @@ real*8   :: REF_DP(3) , REF_Alpha(3)
 eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  2.6470, weight = 2.0 )
 eval(me) = MO_erg_diff( OPT_UNI, 114, 113,  0.3040 )
 eval(me) = MO_erg_diff( OPT_UNI, 115, 113,  2.9510 )
-eval(me) = MO_erg_diff( OPT_UNI, 113, 112,  0.8950, weight = 1.5 )
-eval(me) = MO_erg_diff( OPT_UNI, 112, 111,  0.4360 )
+eval(me) = MO_erg_diff( OPT_UNI, 113, 112,  0.8950 )
+eval(me) = MO_erg_diff( OPT_UNI, 112, 111,  0.4360, weight = 1.5 )
 eval(me) = MO_erg_diff( OPT_UNI, 117, 116,  1.6000 )
 
 !----------------------------------------------------------------------------------------------
@@ -71,19 +71,19 @@ eval(me) = MO_erg_diff( OPT_UNI, 117, 116,  1.6000 )
 !----------------------------------------------------------------------------------------------
 
 !111 ===================
-eval(me) =  MO_character(OPT_UNI, basis, MO=111, AO='Pz') 
-
 eval(me) =  Bond_Type(sys, OPT_UNI, 111, 23, 28, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 11, 'Pz', '-')  
 eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 22, 'Pz', '-')  
 eval(me) =  Bond_Type(sys, OPT_UNI, 111, 27, 22, 'Pz', '+')  
 eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 22, 'Pz', '+')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 23, 'Pz', '-')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 24, 'Pz', '+')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 18, 'Pz', '+')  
 
-eval(me) =  Exclude (OPT_UNI, basis, MO=111, atom = [30], threshold =0.04 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=111, atom = [30], threshold =0.05 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=111, atom = [16], threshold =0.05 ) 
 
 !112 ===================
-!eval(me) =  MO_character(OPT_UNI, basis, MO=112, AO='Pz') 
-
 eval(me) =  Bond_Type(sys, OPT_UNI, 112, 23, 28, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 112, 12,  7, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 112, 16, 19, 'Pz', '+')                                
@@ -115,23 +115,25 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 116, 25, 21, 'Pz', '+')
 eval(me) =  Bond_Type(sys, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
 
 !117 ===================
-eval(me) =  MO_character(OPT_UNI, basis, MO=117, AO='Pz') 
 
-eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.67 )    
+eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.63 )    
 
 eval(me) =  Bond_Type(sys, OPT_UNI, 117, 25, 21, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 117, 23, 28, 'Pz', '-')                                
 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=117, atom=[44:51,55:62,66:73], weight =1.8 )    
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[33:40], threshold = 0.18 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[44:51], threshold = 0.15 )
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[55:62], threshold = 0.15 )
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[66:73], threshold = 0.15 )
 
 !118 ===================
-eval(me) =  MO_character(OPT_UNI, basis, MO=118, AO='Pz')   
 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[ 1:30] , weight = 2.0 ) 
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[33:40] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[44:51] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[55:62] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
-eval(me) =  Mulliken(OPT_UNI, basis, MO=118, atom=[66:73] ) - Mulliken(OPT_UNI, basis, MO=118, atom=[33:40,44:51,55:62,66:73], weight = -1.0 ) / 4.0
+eval(me) =  Exclude(OPT_UNI, basis, MO=118, atom=[ 1:30] , threshold = 0.2 ) 
+
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[33:40], threshold = 0.20 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[44:51], threshold = 0.20 )
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[55:62], threshold = 0.20 )
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[66:73], threshold = 0.20 )
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
@@ -161,6 +163,8 @@ If( present(ShowCost) ) then
 
    CALL system( "./env.sh save_cost_statement " )
 
+   Print 218
+
 end If
 !......................................................................
 
@@ -172,6 +176,8 @@ dumb = basis(1)%atom
 
 !reset index for next round ...
 me = 0
+
+include 'formats.h'
 
 end function evaluate_cost
 !

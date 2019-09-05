@@ -81,6 +81,9 @@ If( master ) then
 
     CALL generate_RND_Pop( Pop_start , Pop )       
 
+    ! this keeps the input EHT parameters in the population ...
+    Pop(1,:) = D_zero
+
     indx = [ ( i , i=1,Pop_Size ) ]
 end If
 !-----------------------------------------------
