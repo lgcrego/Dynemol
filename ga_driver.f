@@ -29,10 +29,9 @@ module GA_driver_m
 implicit none 
 
 ! local variables ...
- integer                        :: i , nr , N_of_residues , MO_total
+ integer                        :: i , nr , N_of_residues 
  integer         , allocatable  :: MOnum(:)
  real*8                         :: first_cost , DP(3) , Alpha_ii(3)
- character(6)                   :: MOstr
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
@@ -50,12 +49,8 @@ CALL DeAllocate_SPEC( SPEC , flag="alloc" )
 N_of_residues = size( Unit_Cell%list_of_residues )
 
 ! reading command line arguments for plotting MO cube files ...
-MO_total  = COMMAND_ARGUMENT_COUNT()
-allocate( MOnum(MO_total) )
-do i = 1 , MO_total
-    CALL GET_COMMAND_ARGUMENT(i, MOstr)
-    read( MOstr,*) MOnum(i)
-end do
+CALL Read_Command_Lines_Arguments( MOnum )
+
 !.........................................................
 
 ! setting up the system ...
@@ -105,16 +100,15 @@ Print*, "dE1 = ",UNI%erg(115) - UNI%erg(114) , 2.6470d0
 Print*, "dE2 = ",UNI%erg(114) - UNI%erg(113) , 0.3040d0
 Print*, "dE3 = ",UNI%erg(115) - UNI%erg(113) , 2.9510d0
 Print*, "dE4 = ",UNI%erg(113) - UNI%erg(112) , 0.8950d0
-Print*, "dE4 = ",UNI%erg(112) - UNI%erg(111) , 0.4360d0
-Print*, "dE4 = ",UNI%erg(117) - UNI%erg(116) , 1.6000d0
+Print*, "dE5 = ",UNI%erg(112) - UNI%erg(111) , 0.4360d0
+Print*, "dE6 = ",UNI%erg(117) - UNI%erg(116) , 1.6000d0
 
 ! Population analysis ...
 If( GaussianCube ) then
-    do i = 1 , MO_total
+    do i = 1 , size(MOnum)
         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
     end do
-    Print*, " " 
-    Print*, '>> Gaussian Cube done <<',MOnum(:)
+    Print 220 , MOnum(:)
 end if
 
 If( OPT_parms ) then    
@@ -135,6 +129,61 @@ CALL DeAllocate_SPEC( SPEC , flag="dealloc" )
 include 'formats.h'
 
 end subroutine GA_driver
+!
+!
+!
+!===============================================
+subroutine Read_Command_Lines_Arguments( MOnum )
+!===============================================
+implicit none
+integer , allocatable  , intent(out) :: MOnum(:)
+
+! local variables ...
+integer      :: i , MO_total , MO_first , MO_last
+character(6) :: MOstr
+
+MO_total  = COMMAND_ARGUMENT_COUNT()
+
+IF( MO_total == 3) then
+    call get_command_argument(2,MOstr)
+
+    select case (MOstr)
+      
+      case( ":" )  ! <== orbitals within a range ...
+         
+          CALL GET_COMMAND_ARGUMENT(1, MOstr)
+          read( MOstr,*) MO_first
+          CALL GET_COMMAND_ARGUMENT(3, MOstr)
+          read( MOstr,*) MO_last
+
+          MO_total  = MO_last - MO_first + 1
+          allocate( MOnum(MO_total) )
+
+          do i = 1 , MO_total
+             MOnum(i) = MO_first + (i-1)
+          end do   
+
+      case default  ! <== list of  3 orbitals ...     
+
+          allocate( MOnum(MO_total) )
+          do i = 1 , MO_total
+              CALL GET_COMMAND_ARGUMENT(i, MOstr)
+              read( MOstr,*) MOnum(i)
+          end do
+
+   end select 
+
+ELSE
+   ! arbitrary (/= 3) list of orbitals ...     
+   allocate( MOnum(MO_total) )
+   do i = 1 , MO_total
+       CALL GET_COMMAND_ARGUMENT(i, MOstr)
+       read( MOstr,*) MOnum(i)
+   end do
+
+end IF
+
+end subroutine Read_Command_Lines_Arguments
 !
 !
 !

@@ -7,7 +7,7 @@ module GA_m
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
                                          Mutation_rate , Mutate_Cross , &
-                                         Alpha_Tensor
+                                         Alpha_Tensor , OPT_parms
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use OPT_Parent_class_m      , only : GA_OPT
@@ -69,6 +69,9 @@ CALL random_seed
 
 Pop_start = 1
 CALL generate_RND_Pop( Pop_start , Pop )       
+
+! this keeps the input EHT parameters in the population ...
+Pop(1,:) = D_zero
 
 indx = [ ( i , i=1,Pop_Size ) ]
 
@@ -428,6 +431,12 @@ do j = 1 , N_of_EHSymbol
     where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 2 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
 
 end do
+
+If( OPT_parms ) then
+     Print*, ">> OPT_parms being used as input <<"
+else
+     Print*, ">> OPT_parms were not used <<"
+end if
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 

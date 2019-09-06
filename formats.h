@@ -160,8 +160,6 @@
 
 205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
 
-215 format(1x,'MM input format >>> ', A6 , '   <<<')
-
 206 format(1x,'NonBonded FF type       = ' , I6)
 
 207 format(1x,'Combination Rule        = ',I6)
@@ -170,4 +168,11 @@
 
 209 format(1x,'van der Walls 1-4 scale = ',F7.4)
 
-210 format(1x,'OPT cost/original cost = ',F16.4,' / ',F16.4)
+210 format(/,1x,'OPT cost/original cost = ',F16.4,' / ',F16.4)
+
+215 format(1x,'MM input format >>> ', A6 , '   <<<')
+
+218 format(/,1x,'>>> Saving detailed GA cost info to opt_trunk/GA_cost_statement <<<' )
+
+220 format(/,1x,'>>> Gaussian Cube done: ', 12I6 )
+

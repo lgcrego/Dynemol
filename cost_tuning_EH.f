@@ -2,7 +2,7 @@ module cost_EH
 
     use type_m
     use constants_m
-    use GA_QCModel_m            , only : Mulliken , Bond_Type , MO_character
+    use GA_QCModel_m , only : MO_erg_diff, Mulliken, Bond_Type, MO_character, Localize, Exclude, me => i_
 
 
     public :: evaluate_cost , REF_DP , REF_Alpha
@@ -16,11 +16,11 @@ contains
 !
 !
 !
-!==================================================================
- function evaluate_cost( system , OPT_UNI , basis , DP , Alpha_ii , ShowCost)
-!==================================================================
+!=========================================================================
+ function evaluate_cost( sys , OPT_UNI , basis , DP , Alpha_ii , ShowCost)
+!=========================================================================
 implicit none
-type(structure)             , intent(in) :: system
+type(structure)             , intent(in) :: sys
 type(R_eigen)               , intent(in) :: OPT_UNI
 type(STO_basis)             , intent(in) :: basis(:)
 real*8          , optional  , intent(in) :: DP(3)
@@ -30,102 +30,154 @@ real*8                                   :: evaluate_cost
 
 ! local variables ...
 integer  :: i , dumb
-real*8   :: chi(55)    = D_zero
-real*8   :: weight(55) = D_one
+real*8   :: eval(200) = D_zero
 real*8   :: REF_DP(3) , REF_Alpha(3)
 
-!--------------------
-! HOMO-LUMO gaps ...     
-!--------------------
-chi(1) = ( OPT_UNI%erg(115) - OPT_UNI%erg(114) )  - 2.6470d0           ; weight(1) = 1.0d0 
-chi(2) = ( OPT_UNI%erg(114) - OPT_UNI%erg(113) )  - 0.3040d0           ; weight(2) = 1.0d0
-chi(3) = ( OPT_UNI%erg(115) - OPT_UNI%erg(113) )  - 2.9510d0           ; weight(3) = 1.0d0
-chi(4) = ( OPT_UNI%erg(113) - OPT_UNI%erg(112) )  - 0.8950d0           ; weight(4) = 1.0d0
-chi(5) = ( OPT_UNI%erg(112) - OPT_UNI%erg(111) )  - 0.4360d0           ; weight(5) = 1.0d0
-chi(6) = ( OPT_UNI%erg(117) - OPT_UNI%erg(116) )  - 1.6000d0           ; weight(6) = 1.0d0
-
 !-------------------------------------------------------------------------
-! Population analysis ...
-! Mulliken( GA , basis , MO , atom=[.,.,.] , AO_ang , EHSymbol , residue )
+! Energy gaps ...     
+! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
+! {...} terms are optional 
 !-------------------------------------------------------------------------
-! NO charge in these atoms ...
+eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  2.6470, weight = 2.0 )
+eval(me) = MO_erg_diff( OPT_UNI, 114, 113,  0.3040 )
+eval(me) = MO_erg_diff( OPT_UNI, 115, 113,  2.9510 )
+eval(me) = MO_erg_diff( OPT_UNI, 113, 112,  0.8950 )
+eval(me) = MO_erg_diff( OPT_UNI, 112, 111,  0.4360, weight = 1.5 )
+eval(me) = MO_erg_diff( OPT_UNI, 117, 116,  1.6000 )
 
-chi(11) =  Mulliken(OPT_UNI, basis, MO=112, atom=[33:40])
-chi(12) =  Mulliken(OPT_UNI, basis, MO=112, atom=[44:51])
-chi(13) =  Mulliken(OPT_UNI, basis, MO=112, atom=[66:73])
-chi(14) =  Mulliken(OPT_UNI, basis, MO=112, atom=[55:62])
-
-!-------------------------------------------------------------------------
-! MO character ...
-! MO_character( system , GA , MO , AO )
+!----------------------------------------------------------------------------------------------
+! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
-!-------------------------------------------------------------------------
-
-!chi(50) =  MO_character(OPT_UNI, basis, MO=20, AO='Py') 
-
-!-------------------------------------------------------------------------
-! Bond Type analysis ...
-! Bond_Type( system , GA , MO , atom1 , atom2 , AO , "+" or "-" )
+!
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
+! {...} terms are optional 
+! default criterium (threshold=0.85): localized > 85% of total population
+!
+! ==> Bond_Type( sys , OPT_UNI , MO , atom1 , atom2 , AO , "+" or "-" )
+! Bond Topolgy analysis ...
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
-!-------------------------------------------------------------------------
+!
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
+! NO charge on these atoms ...
+! {...} terms are optional  
+! default threshold < 0.001 
+!
+! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+! weight < 0  ==> does not update "me" when Mulliken in called
+!----------------------------------------------------------------------------------------------
 
-chi(55) =  Bond_Type(system, OPT_UNI, 113,  23,  28, 'pz', '+')                                 
-chi(54) =  Bond_Type(system, OPT_UNI, 113,  22,  27, 'pz', '+')                                 
-chi(53) =  Bond_Type(system, OPT_UNI, 113,  22,  19, 'pz', '+')                                 
-chi(52) =  Bond_Type(system, OPT_UNI, 113,   7,  12, 'pz', '+')                                 
-chi(51) =  Bond_Type(system, OPT_UNI, 113,  23,  19, 'pz', '-')                                 
-chi(50) =  Bond_Type(system, OPT_UNI, 113,  27,  28, 'pz', '-')                                 
-chi(49) =  Bond_Type(system, OPT_UNI, 113,  22,   6, 'pz', '-')                                 
-chi(48) =  Bond_Type(system, OPT_UNI, 113,  22,  20, 'pz', '-')                                 
+!111 ===================
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 23, 28, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 11, 'Pz', '-')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 22, 'Pz', '-')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 27, 22, 'Pz', '+')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 22, 'Pz', '+')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 19, 23, 'Pz', '-')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 24, 'Pz', '+')  
+eval(me) =  Bond_Type(sys, OPT_UNI, 111, 20, 18, 'Pz', '+')  
 
+eval(me) =  Exclude (OPT_UNI, basis, MO=111, atom = [30], threshold =0.05 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=111, atom = [16], threshold =0.05 ) 
 
-chi(47) =  Bond_Type(system, OPT_UNI, 112,  22,   6, 'pz', '+')                                 
-chi(46) =  Bond_Type(system, OPT_UNI, 112,  22,  20, 'pz', '+')                                 
-chi(41) =  Bond_Type(system, OPT_UNI, 112,  30,  27, 'pz', '+')                                 
-chi(42) =  Bond_Type(system, OPT_UNI, 112,  16,  19, 'pz', '+')                                 
-chi(45) =  Bond_Type(system, OPT_UNI, 112,  22,  19, 'pz', '+')                                 
-chi(44) =  Bond_Type(system, OPT_UNI, 112,  22,  27, 'pz', '+')                                 
+!112 ===================
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 23, 28, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 12,  7, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 16, 19, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 16, 11, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 22, 19, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 112, 22, 27, 'Pz', '+')                                
 
+eval(me) =  Localize(OPT_UNI, basis, MO=112, EHSymbol="CA", threshold = 0.4 )    
+eval(me) =  Exclude (OPT_UNI, basis, MO=112, atom = [77], threshold = 0.05 ) 
 
+!113 ===================
+eval(me) =  Bond_Type(sys, OPT_UNI, 113, 23, 28, 'Pz', '-')                                
+eval(me) =  Exclude (OPT_UNI, basis, MO=113, atom = [30], threshold =0.025 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=113, atom = [6,22], threshold =0.05 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=113, atom=[1:30], threshold =0.7 )    
+
+!114 ===================
+eval(me) =  Bond_Type(sys, OPT_UNI, 114, 23, 28, 'Pz', '+')                                
+eval(me) =  Localize(OPT_UNI, basis, MO=114, atom=[1:30], threshold = 0.7 )    
+
+!115 ===================
+eval(me) =  Exclude(OPT_UNI, basis, MO=115, atom = [6 ], threshold =0.02 ) 
+eval(me) =  Bond_Type(sys, OPT_UNI, 115, 25, 21, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 115, 23, 28, 'Pz', '+')                                
+
+!116 ===================
+eval(me) =  Exclude(OPT_UNI, basis, MO=116, atom = [22], threshold =0.02 ) 
+eval(me) =  Bond_Type(sys, OPT_UNI, 116, 25, 21, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 116, 23, 28, 'Pz', '-')                                
+
+!117 ===================
+
+eval(me) =  Localize(OPT_UNI, basis, MO=117, EHSymbol = "CA", threshold = 0.63 )    
+
+eval(me) =  Bond_Type(sys, OPT_UNI, 117, 25, 21, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 117, 23, 28, 'Pz', '-')                                
+
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[33:40], threshold = 0.18 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[44:51], threshold = 0.15 )
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[55:62], threshold = 0.15 )
+eval(me) =  Localize(OPT_UNI, basis, MO=117, atom=[66:73], threshold = 0.15 )
+
+!118 ===================
+
+eval(me) =  Exclude(OPT_UNI, basis, MO=118, atom=[ 1:30] , threshold = 0.2 ) 
+
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[33:40], threshold = 0.20 ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[44:51], threshold = 0.20 )
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[55:62], threshold = 0.20 )
+eval(me) =  Localize(OPT_UNI, basis, MO=118, atom=[66:73], threshold = 0.20 )
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------
-REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ] 
-!chi(6)  = DP(1) - REF_DP(1)     ; weight(6) = 1.d0
-!chi(7)  = DP(2) - REF_DP(2)     ; weight(7) = 2.d0
-!chi(8)  = DP(3) - REF_DP(3)     ; weight(8) = 1.d0
+REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ]
+!eval()  = DP(1) - REF_DP(1)     
+!eval()  = DP(2) - REF_DP(2)    
+!eval()  = DP(3) - REF_DP(3)   
 
 !-----------------------------------------------------
 ! Polarizability: Alpha tensor diagonal elements  ...
 !-----------------------------------------------------
-
 REF_Alpha = [ 9.2d0 , 8.5d0 , 7.8d0 ]
-
-!chi(9)  = Alpha_ii(1) - REF_Alpha(1)     ; weight(9)  = 1.4d0
-!chi(10) = Alpha_ii(2) - REF_Alpha(2)     ; weight(10) = 1.d0
-!chi(11) = Alpha_ii(3) - REF_Alpha(3)     ; weight(11) = 1.4d0
+!eval() = Alpha_ii(1) - REF_Alpha(1)   
+!eval() = Alpha_ii(2) - REF_Alpha(2)  
+!eval() = Alpha_ii(3) - REF_Alpha(3) 
 
 !......................................................................
-! apply weight on chi and evaluate cost ...
-
-chi = chi * weight
-evaluate_cost = sqrt( dot_product(chi,chi) )
-
-!show the cost ...
+! at last, show the cost ...
 If( present(ShowCost) ) then
 
    open( unit=33 , file='opt_trunk/view_cost.dat' , status='unknown' )
 
-   do i = 1 , size(chi)
-      write(33,*) i , sqrt(chi(i)*chi(i)) , weight(i)
+   do i = 1 , me
+      write(33,*) i , dabs(eval(i)) 
    end do 
 
-end If
+   CALL system( "./env.sh save_cost_statement " )
 
-! just touching basis ...
-dumb = basis(1)%indx
+   Print 218
+
+end If
+!......................................................................
+
+! evaluate total cost ...
+evaluate_cost = dot_product(eval,eval) 
+
+! just touching variables ...
+dumb = basis(1)%atom
+
+!reset index for next round ...
+me = 0
+
+include 'formats.h'
 
 end function evaluate_cost
 !

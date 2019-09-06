@@ -363,13 +363,6 @@ do fragment = 1 , size(a%list_of_fragments)
 
 end do
 
-! Ground State vs Excited State calculation ...
-If( hole_state /= I_zero) then
-    Print 62
-else
-    Print 63
-end If
-
 ! dumping information about structure ...
 CALL dump_diagnosis( a )
 
