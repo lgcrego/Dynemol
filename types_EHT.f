@@ -231,6 +231,11 @@ module type_m
         character(3) , allocatable   :: residues(:)
     end type f_time
 
+    type charges
+        real*8  ,  allocatable  :: Q  (:)
+        real*8  ,  allocatable  :: xyz(:,:)
+    end type charges
+
 
     type dipoles
         integer ,  allocatable  :: nr   (:)

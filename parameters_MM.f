@@ -30,8 +30,8 @@ implicit none
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
-  MM % N_of_molecules = 1                   ! <== total number of molecules
-  MM % N_of_species   = 1                   ! <== total number of species
+  MM % N_of_molecules = 2452                ! <== total number of molecules
+  MM % N_of_species   = 3                   ! <== total number of species
 
   CALL allocate_species( MM % N_of_species )
 
@@ -40,8 +40,18 @@ implicit none
 !
   species(1) % residue         = "DNA"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 506        ! <== Number of atoms comprosing a single molecule of species i
+  species(1) % N_of_atoms      = 506        ! <== Number of atoms comprising a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
+
+  species(2) % residue         = "Na+"      ! <== Residue label for species i ; character(len3)
+  species(2) % N_of_molecules  = 14         ! <== Number of molecules of species i
+  species(2) % N_of_atoms      = 1          ! <== Number of atoms comprising a single molecule of species i
+  species(2) % flex            = T_         ! <== Flexible : T_ , F_
+
+  species(3) % residue         = "H2O"      ! <== Residue label for species i ; character(len3)
+  species(3) % N_of_molecules  = 2437       ! <== Number of molecules of species i
+  species(3) % N_of_atoms      = 3          ! <== Number of atoms comprising a single molecule of species i
+  species(3) % flex            = T_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
 

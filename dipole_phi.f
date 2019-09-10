@@ -9,7 +9,7 @@ module DP_potential_m
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
-    use PBC_m                   , only : Generate_Periodic_DPs
+    use PBC_m                   , only : give_me_PBC
 
     public :: Molecular_DPs , DP_phi
 
@@ -80,8 +80,7 @@ else
 end If
 
 ! generate periodic structure of solvent molecules ; if PBCx=PBCy=PBCz=0 ==> DP_mols_pbc = DP_mols ...
-CALL Generate_Periodic_DPs( a ,  DP_mols%CC     , DP_mols%DP     , DP_mols%nr     ,& 
-                                 DP_mols_pbc%CC , DP_mols_pbc%DP , DP_mols_pbc%nr )
+CALL give_me_PBC( a,  DP_mols%CC, DP_mols%DP, DP_mols%nr, DP_mols_pbc%CC, DP_mols_pbc%DP, DP_mols_pbc%nr )
 
 CALL DeAllocate_DPs( DP_mols , flag = "dealloc" )
 

@@ -6,7 +6,7 @@ module PBC_m
     use Allocation_m            , only  : Allocate_Structures
     use Structure_Builder       , only  : Basis_Builder 
 
-    public ::  Generate_Periodic_Structure , Generate_Periodic_DPs
+    public ::  Generate_Periodic_Structure , give_me_PBC
 
     private
 
@@ -14,6 +14,12 @@ module PBC_m
         module procedure default_Periodic_Structure 
         module procedure GACG_Periodic_Structure 
     end interface
+
+    interface give_me_PBC
+        module procedure Generate_Periodic_DPs
+        module procedure Generate_Periodic_Point_Charges
+    end interface
+  
 
 contains
 !
@@ -179,6 +185,96 @@ END DO
 END DO
 
 end subroutine Generate_Periodic_DPs
+! 
+!
+!
+!
+!================================================================
+ subroutine Generate_Periodic_Point_Charges( a , Q , Qpbc , indx )
+!================================================================
+ implicit none
+ type(structure)                 , intent(in)  :: a
+ type(charges)                   , intent(in)  :: Q     
+ type(charges)                   , intent(out) :: Qpbc
+ integer         , allocatable   , intent(out) :: indx(:)
+
+! local variables ... 
+integer        :: ix , iy , iz , j , k , n , N_of_Q , N_of_pbc_Q
+logical , save :: done
+
+! number of point charges in the original cell ...
+N_of_Q = size( Q%Q(:) )
+
+! (VIRTUAL) REPLICAS for Period Boundary Conditions ...
+N_of_pbc_Q = product(2*PBC(:)+1) * N_of_Q
+
+allocate( Qpbc%Q  ( N_of_pbc_Q     ) )
+allocate( Qpbc%xyz( N_of_pbc_Q , 3 ) )
+
+! original point charges in the cell ...
+Qpbc%Q(1:N_of_Q) = Q%Q
+do j = 1 , 3  
+    Qpbc%xyz(1:N_of_Q,j) = Q%xyz(:,j)
+end do
+
+! including the replicas        
+k = N_of_Q
+
+DO iz = -PBC(3) , PBC(3)
+DO iy = -PBC(2) , PBC(2)
+DO ix = -PBC(1) , PBC(1)
+
+    If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN 
+
+        DO n = 1 , N_of_Q
+
+            k = k + 1
+
+            Qpbc%xyz (k,1) =  Q%xyz(n,1) + ix * a % T_xyz(1)                                         
+            Qpbc%xyz (k,2) =  Q%xyz(n,2) + iy * a % T_xyz(2)                                         
+            Qpbc%xyz (k,3) =  Q%xyz(n,3) + iz * a % T_xyz(3)                                         
+                                                                                                        
+            Qpbc%Q(k) = Q%Q(n)                                                                   
+                                                                                                        
+        END DO                                                                                          
+    END IF                                                                                              
+                                                                                                        
+END DO                                                                                                  
+END DO
+END DO                                                                                                  
+
+! define index of point charges; only once ...
+If( .not. done ) then
+print*,'&$##*&(*&)(&('
+    allocate( indx(product(2*PBC(:)+1) * N_of_Q) )
+    indx(1:N_of_Q) = pack( [(j , j=1,a%atoms )] , a%fragment=='S' , indx )
+
+    k = N_of_Q
+
+    DO iz = -PBC(3) , PBC(3)
+    DO iy = -PBC(2) , PBC(2)
+    DO ix = -PBC(1) , PBC(1)
+
+        If( (ix /= 0) .OR. (iy /= 0) .OR. (iz /= 0) ) THEN
+
+            DO n = 1 , N_of_Q
+
+                k = k + 1
+
+                indx(k) = indx(n)
+
+            END DO
+        END IF
+
+    END DO
+    END DO
+    END DO
+
+    done = .true.
+
+end If
+
+end subroutine Generate_Periodic_Point_Charges
 !
 !
 !
@@ -191,7 +287,7 @@ end subroutine Generate_Periodic_DPs
  type(STO_basis)               , intent(in)  :: basis(:)
  type(structure)               , intent(out) :: pbc_cell
  type(STO_basis) , allocatable , intent(out) :: pbc_basis(:)
-
+                                                                           
 ! local variables ... 
  integer :: ix , iy , iz , k , n , copy
 

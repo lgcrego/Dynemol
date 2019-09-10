@@ -95,7 +95,7 @@ if( evaluate ) DP_4_matrix = D_zero
 
 N = size(basis)
 Allocate( h(N,N) , source = D_zero )
-
+call start_clock
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !$OMP parallel do &
 !$OMP   default(shared) &
@@ -137,7 +137,8 @@ do ib = 1, system%atoms
 end do  
 !$OMP END PARALLEL DO
 forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
-
+call stop_clock
+stop ' here'
 end function even_more_extended_huckel
 !
 !

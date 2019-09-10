@@ -145,6 +145,7 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
+                  Coul_phi.o \
 		  polarizability.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \

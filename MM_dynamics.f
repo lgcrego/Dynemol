@@ -119,7 +119,6 @@ CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-
 Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
 Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
 Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 

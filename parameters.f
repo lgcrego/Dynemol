@@ -33,17 +33,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "Genetic_Alg"               ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
-
+  DRIVER         = "slice_AO"                  ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
-  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -62,7 +61,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = T_                       
+  GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -81,8 +80,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  F_                          ! <== use dipole potential for solvent molecules
-  Solvent_Type =  "QM"                        ! <== QM = quantum , MM = classical ...
+  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  Solvent_Type =  "MM"                        ! <== QM = quantum , MM = classical ...
   Solvent_step =  10                          ! <== step for updating DP_field
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
@@ -118,7 +117,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -138,12 +137,12 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  500  
-  N_generations  =  100    
-  Top_Selection  =  100                    ! <== top selection < Pop_Size
-  Pop_range      =  0.5d0                  ! <== range of variation of parameters
+  Pop_Size       =  50  
+  N_generations  =  10    
+  Top_Selection  =  20                     ! <== top selection < Pop_Size
+  Pop_range      =  0.05d0                 ! <== range of variation of parameters
   Mutation_rate  =  0.5           
-  Mutate_Cross   =  T_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
   CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
   profiling      =  T_                     ! <== for tuning the optimization parameters of the code

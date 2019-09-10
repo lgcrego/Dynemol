@@ -49,6 +49,10 @@ module AO_adiabatic_m
 !    use FSSH                        , only : PSE_forces
     use Auto_Correlation_m          , only : MO_Occupation
 
+
+    use Dielectric_m , only: preprocess_Coul_phi
+
+
     public :: AO_adiabatic
 
     private
@@ -255,8 +259,17 @@ If( DP_field_ ) then
     hole_state = 0
     static     = .true. 
 
+
+
+
     ! DP potential in the static GS configuration ...
     CALL Molecular_DPs  ( Extended_Cell )
+
+    CALL preprocess_Coul_phi( Extended_Cell )
+
+
+
+
 
     hole_state = hole_save
     static     = .false.
