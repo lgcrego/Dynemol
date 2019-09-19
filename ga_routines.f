@@ -21,7 +21,7 @@ module GA_m
                                          KeyHolder
 
 
-    public :: Genetic_Algorithm 
+    public :: Genetic_Algorithm , Dump_OPT_parameters
 
     interface Genetic_Algorithm
         module procedure Genetic_Algorithm_EH
@@ -446,15 +446,17 @@ end subroutine Read_GA_key
 !
 !
 !
-!===========================================
- subroutine Dump_OPT_parameters( OPT_basis )
-!===========================================
+!====================================================
+ subroutine Dump_OPT_parameters( OPT_basis , output )
+!====================================================
 implicit none
-type(STO_basis) , intent(inout) :: OPT_basis(:)
+type(STO_basis)            , intent(inout) :: OPT_basis(:)
+character(len=*), optional , intent(in)    :: output
 
 ! local variables ...
-integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
-integer , allocatable   :: indx_EHS(:)
+integer               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable :: indx_EHS(:)
+integer               :: unit_tag
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
@@ -470,8 +472,18 @@ indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol
 ! creating file opt_eht_parameters.output.dat with the optimized parameters ...
 open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
 
+If( present(output) .AND. output=="STDOUT" ) then
+    Print*,""
+    Print*,""
+    unit_tag = 6
+else
+    ! creating file opt_eht_parameters.output.dat with the optimized parameters ...
+    open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
+    unit_tag = 13
+end If
+
 ! print heading ...
-write(13,48)
+write(unit_tag,48)
 
 do n_EHS = 1 , N_of_EHSymbol
 
@@ -483,7 +495,7 @@ do n_EHS = 1 , N_of_EHSymbol
 
         j = (i-1) + DOS(L)
     
-        write(13,17)    OPT_basis(j)%Symbol          ,   &
+  write(unit_tag,17)    OPT_basis(j)%Symbol          ,   &
                         OPT_basis(j)%EHSymbol        ,   &
                         OPT_basis(j)%residue         ,   &
                         OPT_basis(j)%AtNo            ,   &
@@ -500,7 +512,7 @@ do n_EHS = 1 , N_of_EHSymbol
     end do
 
 enddo
-close(13)
+If( unit_tag == '13' ) close(13)
 
 17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
