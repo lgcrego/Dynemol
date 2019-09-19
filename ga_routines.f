@@ -382,18 +382,18 @@ implicit none
 type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
-integer :: i , j , ioerr , err , nr , N_of_EHSymbol
+integer :: i , j , ioerr , err , n , N_of_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
-nr = 0
+n = 0
 do 
     read(3,*,IOSTAT=ioerr) dumb
     if(ioerr < 0) EXIT
-    nr = nr + 1
+    n = n + 1
 end do    
 
-N_of_EHSymbol = nr - 1
+N_of_EHSymbol = n - 1
 
 ! allocatting EH_keys: [s,p,d,IP,zeta,coef,k_WH] ...
 allocate( GA%EHSymbol    ( N_of_EHSymbol) )
@@ -422,13 +422,13 @@ GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N
 do j = 1 , N_of_EHSymbol
 
     If( GA%key(1,j) /= 0 ) &   ! <== optimizing s orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 0 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 0 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
     If( GA%key(2,j) /= 0 ) &   ! <== optimizing p orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 1 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 1 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
     If( GA%key(3,j) /= 0 ) &   ! <== optimizing d orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 2 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 2 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
 end do
 
