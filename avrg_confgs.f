@@ -6,7 +6,7 @@ module Sampling_m
     use constants_m
     use parameters_m        , only : frame_step , spectrum ,        &
                                      survival , nuclear_matter ,    &
-                                     DP_Moment , DP_Field_ ,        &
+                                     DP_Moment , EnvField_ ,        &
                                      file_type , sigma , n_part ,   &
                                      restart
     use Babel_m             , only : System_Characteristics ,       &
@@ -29,7 +29,7 @@ module Sampling_m
     use DOS_m
     use Oscillator_m        , only : Optical_Transitions
     use DP_main_m           , only : Dipole_Matrix 
-    use DP_potential_m      , only : Molecular_DPs
+    use DP_potential_m      , only : Environment_SetUp
     use Schroedinger_m      , only : Simple_dynamics ,              &
                                      DeAllocate_QDyn
     use Data_Output         , only : Dump_stuff
@@ -107,7 +107,7 @@ do frame = frame_init , size(trj) , frame_step
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL Molecular_DPs( Extended_Cell )
+    If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
     CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

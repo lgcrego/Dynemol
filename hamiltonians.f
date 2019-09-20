@@ -6,13 +6,15 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m                , only : DP_Field_  ,       &
+    use parameters_m                , only : EnvField_  ,       &
                                              Induced_ ,         &
                                              solvent_step
     use DP_potential_m              , only : DP_phi
     use DP_main_m                   , only : DP_matrix_AO
     use polarizability_m            , only : Induced_DP_phi
     use Semi_Empirical_Parms        , only : atom
+
+    use Dielectric_m                , only: V_Environ
 
 
     public :: X_ij , even_more_extended_Huckel 
@@ -95,7 +97,7 @@ if( evaluate ) DP_4_matrix = D_zero
 
 N = size(basis)
 Allocate( h(N,N) , source = D_zero )
-call start_clock
+
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !$OMP parallel do &
 !$OMP   default(shared) &
@@ -114,8 +116,11 @@ do ib = 1, system%atoms
         end if
 
         If( evaluate ) then 
+
+!           DP_4_vector = V_Environ( system , ia , ib )
            DP_4_vector = DP_phi( system , ia , ib )
            DP_4_matrix(ia,ib,:) = DP_4_vector
+
         else 
            DP_4_vector = DP_4_matrix(ia,ib,:)
         end if
@@ -137,8 +142,7 @@ do ib = 1, system%atoms
 end do  
 !$OMP END PARALLEL DO
 forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
-call stop_clock
-stop ' here'
+
 end function even_more_extended_huckel
 !
 !
@@ -196,7 +200,7 @@ end function even_more_extended_huckel
           
           If( Induced_  ) DP = Induced_DP_phi( i , j , basis )
           
-          If( DP_field_ ) DP = DP + DP_4_vector
+          If( EnvField_ ) DP = DP + DP_4_vector
           
           huckel_with_FIELDS = huckel_with_FIELDS - ( S_ij*DP(1) + dot_product(vector(1:3),DP(2:4)) )
 
@@ -238,7 +242,7 @@ end function GET_RAB
  N_of_QM = count(a%QMMM == "QM")
 
  If( minloc( a%QMMM , dim=1 , mask = a%QMMM == "MM" ) < N_of_QM ) then
-    stop ">> halting: block of QM atoms must precede solvent atoms if DP_field_ = T_ ; check input data <<"
+    stop ">> halting: block of QM atoms must precede solvent atoms if EnvField_ = T_ ; check input data <<"
  end if
 
  allocate( DP_4_matrix( N_of_QM , N_of_QM , 4 ) , source = D_zero ) 

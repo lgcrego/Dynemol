@@ -5,7 +5,7 @@ module Backup_m
     use parameters_m        , only : driver                     , &
                                      QMMM                       , &
                                      nuclear_matter             , &
-                                     DP_field_                  , &
+                                     EnvField_                  , &
                                      DP_Moment                  , &
                                      Coulomb_                   , &
                                      restart , n_part
@@ -17,7 +17,7 @@ module Backup_m
     use tuning_m            , only : orbital                    , &
                                      eh_tag    
     use QCModel_Huckel      , only : EigenSystem
-    use DP_potential_m      , only : Molecular_DPs
+    use DP_potential_m      , only : Environment_SetUp
     use TD_Dipole_m         , only : wavepacket_DP
     use DP_main_m           , only : Dipole_Matrix   
     use MM_dynamics_m       , only : preprocess_MM              , &
@@ -92,13 +92,13 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-if( DP_field_ ) then
+if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
     CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 
@@ -285,13 +285,13 @@ CALL Generate_Structure ( frame )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-if( DP_field_ ) then
+if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
     CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 

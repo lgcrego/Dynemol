@@ -3,7 +3,7 @@ module qdynamics_m
  use type_m
  use constants_m
  use parameters_m      , only : spectrum , DP_Moment , &
-                                survival , DP_Field_ , &
+                                survival , EnvField_ , &
                                 NetCharge
  use Solvated_M        , only : DeAllocate_TDOS ,      &
                                 DeAllocate_PDOS ,      &
@@ -17,7 +17,7 @@ module qdynamics_m
                                 Extended_Cell ,        &
                                 ExCell_Basis
  use DP_main_m         , only : Dipole_Matrix
- use DP_potential_m    , only : Molecular_DPs 
+ use DP_potential_m    , only : Environment_SetUp 
  use Oscillator_m      , only : Optical_Transitions
  use Schroedinger_m    , only : Simple_dynamics ,      &
                                 DeAllocate_QDyn
@@ -67,7 +67,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( DP_field_ )CALL Molecular_DPs( Extended_Cell )
+ If( EnvField_ )CALL Environment_SetUp( Extended_Cell )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

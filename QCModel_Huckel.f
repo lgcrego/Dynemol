@@ -8,7 +8,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : DP_Field_ , Induced_ , driver , verbose , restart
+    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart
     use Overlap_Builder  , only : Overlap_Matrix
     use Hamiltonians     , only : X_ij , even_more_extended_Huckel
     use Matrix_Math
@@ -61,7 +61,7 @@ Allocate( dumb_S(N,N) )
 ! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
 
-If( DP_field_ .OR. Induced_ ) then
+If( EnvField_ .OR. Induced_ ) then
 
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 
@@ -230,7 +230,7 @@ end function Build_Huckel
 
  ALLOCATE( h(N,N) )
 
- If( DP_field_ ) then
+ If( EnvField_ ) then
 
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix ) 
 

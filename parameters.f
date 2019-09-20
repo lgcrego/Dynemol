@@ -16,7 +16,7 @@ character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , DP_field_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
+logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -80,9 +80,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  DP_field_    =  T_                          ! <== use dipole potential for solvent molecules
+  EnvField_    =  T_                          ! <== use dipole potential for solvent molecules
   Solvent_Type =  "MM"                        ! <== QM = quantum , MM = classical ...
-  Solvent_step =  10                          ! <== step for updating DP_field
+  Solvent_step =  10                          ! <== step for updating EnvField
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 

@@ -9,9 +9,9 @@ module DP_potential_m
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
-    use PBC_m                   , only : give_me_PBC
+    use PBC_m                   , only : Generate_Periodic_DPs
 
-    public :: Molecular_DPs , DP_phi
+    public :: Environment_SetUp , DP_phi
 
     private
 
@@ -25,9 +25,9 @@ contains
 !
 !
 !
-!=============================
- subroutine Molecular_DPs( a )
-!=============================
+!=================================
+ subroutine Environment_SetUp( a )
+!=================================
 implicit none
 type(structure) , intent(inout) :: a
 
@@ -43,7 +43,7 @@ CALL DeAllocate_DPs( DP_mols_pbc , flag = "garbage" )
 
 ! solvent and solute must not overlap ...
 IF( any( (a%fragment=="S") .AND. (a%solute) ) ) then
-    Print*, " >>> solvent and solute overlap in Molecular_DPs <<< : execution stopped" 
+    Print*, " >>> solvent and solute overlap in Environment_SetUp <<< : execution stopped" 
     stop
 end If
 
@@ -80,11 +80,11 @@ else
 end If
 
 ! generate periodic structure of solvent molecules ; if PBCx=PBCy=PBCz=0 ==> DP_mols_pbc = DP_mols ...
-CALL give_me_PBC( a,  DP_mols%CC, DP_mols%DP, DP_mols%nr, DP_mols_pbc%CC, DP_mols_pbc%DP, DP_mols_pbc%nr )
+CALL Generate_Periodic_DPs( a,  DP_mols%CC, DP_mols%DP, DP_mols%nr, DP_mols_pbc%CC, DP_mols_pbc%DP, DP_mols_pbc%nr )
 
 CALL DeAllocate_DPs( DP_mols , flag = "dealloc" )
 
-end subroutine Molecular_DPs
+end subroutine Environment_SetUp
 !
 !
 !

@@ -5,7 +5,7 @@ module diagnostic_m
  use constants_m
  use DOS_m
  use parameters_m               , only : spectrum , DP_Moment , &
-                                         survival , DP_Field_ , &
+                                         survival , EnvField_ , &
                                          Alpha_Tensor ,         &
                                          GaussianCube ,         &
                                          HFP_Forces
@@ -20,7 +20,7 @@ module diagnostic_m
                                          ExCell_basis
  use GA_QCModel_m               , only : Mulliken
  use DP_main_m                  , only : Dipole_Matrix
- use DP_potential_m             , only : Molecular_DPs
+ use DP_potential_m             , only : Environment_SetUp
  use Oscillator_m               , only : Optical_Transitions
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff
@@ -68,9 +68,9 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( any([DP_Moment,Spectrum,DP_Field_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
+ If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
 
- If( DP_field_ ) CALL Molecular_DPs( Extended_Cell )
+ If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
  If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
