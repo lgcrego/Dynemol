@@ -4,35 +4,35 @@ module Sampling_m
 
     use type_m
     use constants_m
-    use parameters_m        , only : frame_step , spectrum ,        &
-                                     survival , nuclear_matter ,    &
-                                     DP_Moment , EnvField_ ,        &
-                                     file_type , sigma , n_part ,   &
-                                     restart
-    use Babel_m             , only : System_Characteristics ,       &
-                                     Coords_from_Universe ,         &
-                                     trj
-    use Allocation_m        , only : Allocate_UnitCell ,            &
-                                     DeAllocate_UnitCell ,          &
-                                     DeAllocate_Structures 
-    use Solvated_M          , only : Prepare_Solvated_System ,      &
-                                     DeAllocate_TDOS ,              &
-                                     DeAllocate_PDOS ,              &
-                                     DeAllocate_SPEC 
-    use QCModel_Huckel      , only : EigenSystem
-    use FMO_m               , only : FMO_analysis , eh_tag
-    use Structure_Builder   , only : Unit_Cell ,                    &
-                                     Extended_Cell ,                &
-                                     Generate_Structure ,           &
-                                     Basis_Builder ,                &
-                                     ExCell_basis
+    use parameters_m         , only : frame_step , spectrum ,        &
+                                      survival , nuclear_matter ,    &
+                                      DP_Moment , EnvField_ ,        &
+                                      file_type , sigma , n_part ,   &
+                                      restart
+    use Babel_m              , only : System_Characteristics ,       &
+                                      Coords_from_Universe ,         &
+                                      trj
+    use Allocation_m         , only : Allocate_UnitCell ,            &
+                                      DeAllocate_UnitCell ,          &
+                                      DeAllocate_Structures 
+    use Solvated_M           , only : Prepare_Solvated_System ,      &
+                                      DeAllocate_TDOS ,              &
+                                      DeAllocate_PDOS ,              &
+                                      DeAllocate_SPEC 
+    use QCModel_Huckel       , only : EigenSystem
+    use FMO_m                , only : FMO_analysis , eh_tag
+    use Structure_Builder    , only : Unit_Cell ,                    &
+                                      Extended_Cell ,                &
+                                      Generate_Structure ,           &
+                                      Basis_Builder ,                &
+                                      ExCell_basis
     use DOS_m
-    use Oscillator_m        , only : Optical_Transitions
-    use DP_main_m           , only : Dipole_Matrix 
-    use DP_potential_m      , only : Environment_SetUp
-    use Schroedinger_m      , only : Simple_dynamics ,              &
-                                     DeAllocate_QDyn
-    use Data_Output         , only : Dump_stuff
+    use Oscillator_m         , only : Optical_Transitions
+    use DP_main_m            , only : Dipole_Matrix 
+    use Dielectric_Potential , only : Environment_SetUp
+    use Schroedinger_m       , only : Simple_dynamics ,              &
+                                      DeAllocate_QDyn
+    use Data_Output          , only : Dump_stuff
 
 
     public :: Avrg_Confgs 

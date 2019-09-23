@@ -24,7 +24,7 @@ module Chebyshev_driver_m
     use DP_main_m                   , only : Dipole_Matrix                 
     use Solvated_M                  , only : Prepare_Solvated_System 
     use TD_Dipole_m                 , only : wavepacket_DP                                        
-    use DP_potential_m              , only : Environment_SetUp                                              
+    use Dielectric_Potential        , only : Environment_SetUp                                              
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Polarizability_m            , only : Build_Induced_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format

@@ -5,7 +5,6 @@ module DP_potential_m
     use blas95
     use f95_precision
     use parameters_m            , only : PBC , solvent_type , verbose
-    use Structure_Builder       , only : Extended_Cell
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
@@ -258,7 +257,7 @@ If( sum(PBC) == 0) then
 else
 
     ! maximum distance from midpoint a-b ...
-    cut_off_radius = minval(Extended_Cell%T_xyz) / TWO
+    cut_off_radius = minval(sys% T_xyz) / TWO
 
     allocate( vector_ALL   ( N_of_DP , 3 ) , source = D_zero  )
     allocate( distance_ALL ( N_of_DP     ) , source = D_zero  )

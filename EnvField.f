@@ -1,4 +1,4 @@
-module Dielectric_m
+module Dielectric_Potential
 
     use type_m                  
     use constants_m
@@ -6,11 +6,6 @@ module Dielectric_m
     use f95_precision
     use parameters_m            , only : PBC , solvent_type , verbose
     use MD_read_m               , only : atom
-
-
-
-    use Structure_Builder       , only : Extended_Cell
-    use Multipole_Routines_m    , only : Util_Multipoles
 
     public :: Environment_SetUp , V_Environ
 
@@ -182,7 +177,7 @@ If( sum(PBC) == 0) then
 else
 
         ! maximum distance from midpoint a-b ...
-        cut_off_radius = minval(Extended_Cell%T_xyz) / TWO
+        cut_off_radius = minval(sys% T_xyz) / TWO
         
         do j = 1 , 3
             vector_ALL(:,j) = midpoint_ab(j) - MolPBC(:)% CC(j)
@@ -192,19 +187,19 @@ else
         do i = 1 , size(MolPBC)
         
             CC_distance = sqrt( dot_product( vector_ALL(i,:),vector_ALL(i,:) ) )
-        
+
             inside = ( (CC_distance > hardcore) .AND. (CC_distance < cut_off_radius) )
         
             If( inside ) then
-
+   
                 na = MolPBC(i)% N_of_Atoms
-       
+
                 do j = 1 , na
         
                    AT_Q(k+j) = MolPBC(i)% PC% Q(j)
            
                    AT_distance(k+j) = sqrt( sum((midpoint_ab(:) - MolPBC(i)% PC% xyz(j,:))**2) )
-        
+
                    AT_versor(k+j,:) = ( midpoint_ab(:) - MolPBC(i)% PC% xyz(j,:) ) / AT_distance(k+j)
         
                 end do 
@@ -248,13 +243,13 @@ end do
 !end where
 
 ! first order ...
-V_Environ(1) = sum( Q_phi )
+V_Environ(1) = sum( Q_phi(:) )
 
 ! second order ...
 forall( j=1:3 ) V_Environ(j+1) = sum( Q_phi2(:,j) )
 
-! applying optical dielectric screening ...
-Q_phi = Q_phi * units / (refractive_index)**2
+! applying optical dielectric screening ; fix sign problem ...
+V_Environ = - V_Environ * units / (refractive_index)**2
 
 deallocate( versor , distance , Q , Q_phi , Q_phi2 )
 
@@ -396,4 +391,4 @@ end subroutine Allocation
 !
 !
 !
-end module Dielectric_m
+end module Dielectric_Potential

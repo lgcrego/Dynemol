@@ -33,7 +33,6 @@ implicit none
 ! local variables ...
 integer         :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr 
 
-if ( driver == "diagnostic" ) return
 
 !=======================  setting up system  ============================= 
 
@@ -516,6 +515,12 @@ if( read_velocities ) then
     endif
 
 end if
+
+! check list of input data ...
+If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) &
+stop ' >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check parameters_MM.f <<<' 
+If( Unit_Cell%atoms /= MM% N_of_atoms) &
+stop ' >>> error: Unit_Cell%atoms /= MM% N_of_atoms <<<' 
 
 end subroutine Structure_2_MD
 !

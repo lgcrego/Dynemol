@@ -20,7 +20,7 @@ module diagnostic_m
                                          ExCell_basis
  use GA_QCModel_m               , only : Mulliken
  use DP_main_m                  , only : Dipole_Matrix
- use DP_potential_m             , only : Environment_SetUp
+ use Dielectric_Potential       , only : Environment_SetUp
  use Oscillator_m               , only : Optical_Transitions
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
  use Data_Output                , only : Dump_stuff

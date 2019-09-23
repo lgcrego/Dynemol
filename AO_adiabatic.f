@@ -47,10 +47,7 @@ module AO_adiabatic_m
     use Ehrenfest_Builder           , only : EhrenfestForce
 !    use FSSH                        , only : PSE_forces
     use Auto_Correlation_m          , only : MO_Occupation
-
-
-    use Dielectric_m                , only: Environment_SetUp
-!    use DP_potential_m              , only : Environment_SetUp                                              
+    use Dielectric_Potential        , only : Environment_SetUp
 
 
     public :: AO_adiabatic

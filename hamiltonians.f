@@ -6,16 +6,13 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m                , only : EnvField_  ,       &
-                                             Induced_ ,         &
-                                             solvent_step
-    use DP_potential_m              , only : DP_phi
-    use DP_main_m                   , only : DP_matrix_AO
-    use polarizability_m            , only : Induced_DP_phi
-    use Semi_Empirical_Parms        , only : atom
-
-    use Dielectric_m                , only: V_Environ
-
+    use parameters_m          , only : EnvField_  ,       &
+                                       Induced_ ,         &
+                                       solvent_step
+    use Dielectric_Potential  , only : V_Environ
+    use DP_main_m             , only : DP_matrix_AO
+    use polarizability_m      , only : Induced_DP_phi
+    use Semi_Empirical_Parms  , only : atom
 
     public :: X_ij , even_more_extended_Huckel 
 
@@ -116,11 +113,8 @@ do ib = 1, system%atoms
         end if
 
         If( evaluate ) then 
-
-!           DP_4_vector = V_Environ( system , ia , ib )
-           DP_4_vector = DP_phi( system , ia , ib )
+           DP_4_vector = V_Environ( system , ia , ib )
            DP_4_matrix(ia,ib,:) = DP_4_vector
-
         else 
            DP_4_vector = DP_4_matrix(ia,ib,:)
         end if
@@ -141,6 +135,7 @@ do ib = 1, system%atoms
     end do
 end do  
 !$OMP END PARALLEL DO
+
 forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
 
 end function even_more_extended_huckel
