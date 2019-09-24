@@ -4,7 +4,7 @@ module GA_driver_m
  use constants_m
  use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
- use GA_m                       , only : Genetic_Algorithm 
+ use GA_m                       , only : Genetic_Algorithm , Dump_OPT_parameters
  use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar 
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
@@ -96,12 +96,15 @@ Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(115) - UNI%erg(114) , 2.6470d0
-Print*, "dE2 = ",UNI%erg(114) - UNI%erg(113) , 0.3040d0
-Print*, "dE3 = ",UNI%erg(115) - UNI%erg(113) , 2.9510d0
-Print*, "dE4 = ",UNI%erg(113) - UNI%erg(112) , 0.8950d0
-Print*, "dE5 = ",UNI%erg(112) - UNI%erg(111) , 0.4360d0
-Print*, "dE6 = ",UNI%erg(117) - UNI%erg(116) , 1.6000d0
+Print*, "dE1 = ", UNI%erg(155) - UNI%erg(154) ,   2.5120
+Print*, "dE2 = ", UNI%erg(154) - UNI%erg(153) ,   0.1400
+Print*, "dE3 = ", UNI%erg(156) - UNI%erg(155) ,   0.0960
+Print*, "dE4 = ", UNI%erg(153) - UNI%erg(152) ,   0.0170
+Print*, "dE5 = ", UNI%erg(152) - UNI%erg(151) ,   0.0510
+Print*, "dE6 = ", UNI%erg(157) - UNI%erg(156) ,   0.2470
+Print*, "dE7 = ", UNI%erg(158) - UNI%erg(157) ,   0.8530
+
+CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 
 ! Population analysis ...
 If( GaussianCube ) then
