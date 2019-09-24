@@ -5,7 +5,7 @@ module GA_QCModel_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : Alpha_Tensor , DP_Field_ , Induced_
+    use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
@@ -572,7 +572,7 @@ end function C_Mulliken
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO
 
- If( DP_field_ .OR. Induced_ ) then
+ If( EnvField_ .OR. Induced_ ) then
      h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
  else
      h_FMO = Build_Huckel( basis , S_FMO )

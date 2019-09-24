@@ -7,7 +7,7 @@ module ElHl_Chebyshev_m
     use constants_m
     use ifport
     use MPI_definitions_m  , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master, myid
-    use parameters_m       , only : t_i , frame_step , Coulomb_ , DP_Field_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
+    use parameters_m       , only : t_i , frame_step , Coulomb_ , EnvField_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
     use Structure_Builder  , only : Unit_Cell 
     use Overlap_Builder    , only : Overlap_Matrix
     use FMO_m              , only : FMO_analysis , eh_tag    
@@ -68,7 +68,7 @@ N = size(basis)
 
 allocate( h0(N,N) , source = D_zero )
 
-If( DP_field_ ) then
+If( EnvField_ ) then
     h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
 else
     h0(:,:) = Build_Huckel( basis , S_matrix )
@@ -180,7 +180,7 @@ If( master ) then ! <== Electron wpckt Dynamics ...
     ! compute S  and H0 ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
-    If( DP_field_ ) then
+    If( Envfield_ ) then
         h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
     else
         h0(:,:) = Build_Huckel( basis , S_matrix )
@@ -385,7 +385,7 @@ Psi_t_ket = AO_ket
 CALL Overlap_Matrix( system , basis , S_matrix )
 
 allocate( h0(N,N) , source = D_zero )
-If( DP_field_ ) then
+If( Envfield_ ) then
 
     h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
 

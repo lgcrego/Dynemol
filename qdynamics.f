@@ -7,29 +7,29 @@ module qdynamics_m
  use omp_lib
  use type_m
  use constants_m
- use parameters_m      , only : spectrum , DP_Moment , &
-                                survival , DP_Field_ , &
-                                NetCharge , Induced_ , &
-                                verbose
- use Solvated_M        , only : DeAllocate_TDOS ,      &
-                                DeAllocate_PDOS ,      &
-                                DeAllocate_SPEC 
- use DOS_m             , only : Total_DOS ,            &
-                                Partial_DOS
- use Structure_Builder , only : Generate_Structure ,   &
-                                Basis_Builder ,        &
-                                Unit_Cell ,            &
-                                Extended_Cell ,        &
-                                ExCell_Basis
- use Overlap_Builder   , only : Overlap_Matrix
- use DP_main_m         , only : Dipole_Matrix 
- use DP_potential_m    , only : Molecular_DPs 
- use Oscillator_m      , only : Optical_Transitions
- use Schroedinger_m    , only : Simple_dynamics ,      &
-                                DeAllocate_QDyn
- use Data_Output       , only : Dump_stuff , Net_Charge
- use Hamiltonians      , only : X_ij ,                 &
-                                even_more_extended_Huckel
+ use parameters_m         , only : spectrum , DP_Moment , &
+                                   survival , EnvField_ , &
+                                   NetCharge , Induced_ , &
+                                   verbose
+ use Solvated_M           , only : DeAllocate_TDOS ,      &
+                                   DeAllocate_PDOS ,      &
+                                   DeAllocate_SPEC 
+ use DOS_m                , only : Total_DOS ,            &
+                                   Partial_DOS
+ use Structure_Builder    , only : Generate_Structure ,   &
+                                   Basis_Builder ,        &
+                                   Unit_Cell ,            &
+                                   Extended_Cell ,        &
+                                   ExCell_Basis
+ use Overlap_Builder      , only : Overlap_Matrix
+ use DP_main_m            , only : Dipole_Matrix 
+ use Dielectric_Potential , only : Environment_SetUp
+ use Oscillator_m         , only : Optical_Transitions
+ use Schroedinger_m       , only : Simple_dynamics ,      &
+                                   DeAllocate_QDyn
+ use Data_Output          , only : Dump_stuff , Net_Charge
+ use Hamiltonians         , only : X_ij ,                 &
+                                   even_more_extended_Huckel
 
  public :: qdynamics
 
@@ -46,7 +46,6 @@ implicit none
 
 ! local variables ...
  integer                        :: nr , N_of_residues
- logical                        :: DIPOLE_ , el_hl_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
@@ -54,9 +53,6 @@ implicit none
 
  
 ! preprocessing stuff ...................................
-
-el_hl_  = any( Unit_Cell%Hl)
-DIPOLE_ = ( spectrum .OR. DP_Moment )
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
 CALL DeAllocate_PDOS( PDOS , flag="alloc" )
@@ -71,11 +67,13 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Generate_Structure(1)
 
- If( NetCharge ) allocate( Net_Charge(Extended_Cell%atoms) )
+ If( NetCharge .AND. (.NOT. allocated(Net_Charge)) ) allocate( Net_Charge(Extended_Cell%atoms) )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( DP_field_ )CALL Molecular_DPs( Extended_Cell )
+ If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
+
+ If( EnvField_ )CALL Environment_SetUp( Extended_Cell )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
@@ -84,8 +82,6 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
-
- If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 

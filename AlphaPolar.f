@@ -5,7 +5,7 @@
     use blas95
     use lapack95
     use constants_m
-    use parameters_m                , only : DP_Field_, Induced_ , verbose
+    use parameters_m                , only : EnvField_, Induced_ , verbose
     use Overlap_Builder             , only : Overlap_Matrix
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
     use DP_main_m                   , only : DP_matrix_AO , Dipole_Moment
@@ -117,7 +117,7 @@ CALL Overlap_Matrix( system , basis , S )
 
 ALLOCATE( H0(size(basis),size(basis)) , source=D_zero)
 
-If( DP_field_ .OR. Induced_ ) then
+If( EnvField_ .OR. Induced_ ) then
 
     H0(:,:) = even_more_extended_Huckel( system , basis , S )
 

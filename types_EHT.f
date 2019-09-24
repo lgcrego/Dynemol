@@ -69,7 +69,15 @@ module type_m
         logical                       :: flex
     end type atomic
 
+    type Point_Charges
+        integer ,  allocatable  :: nr (:)
+        real*8  ,  allocatable  :: Q  (:)
+        real*8  ,  allocatable  :: xyz(:,:)
+    end type Point_Charges
+
+
     type molecular
+        type(Point_Charges)           :: PC
         type(atomic)    , allocatable :: atom(:) 
         real*8                        :: radius
         real*8                        :: CG(3)
@@ -233,11 +241,11 @@ module type_m
 
 
     type dipoles
-        integer ,  allocatable  :: nr   (:)
-        real*8  ,  allocatable  :: CC   (:,:)
-        real*8  ,  allocatable  :: DP   (:,:)
-        real*8  ,  allocatable  :: el_DP(:,:)
-        real*8  ,  allocatable  :: hl_DP(:,:)
+        integer      , allocatable :: nr   (:)
+        real*8       , allocatable :: CC   (:,:)
+        real*8       , allocatable :: DP   (:,:)
+        real*8       , allocatable :: el_DP(:,:)
+        real*8       , allocatable :: hl_DP(:,:)
     end type dipoles
 
 

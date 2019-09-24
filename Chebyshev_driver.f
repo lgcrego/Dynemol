@@ -10,12 +10,12 @@ module Chebyshev_driver_m
 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
-                                             DP_Field_ , Induced_ , QMMM ,  &
+                                             EnvField_ , Induced_ , QMMM ,  &
                                              GaussianCube , static ,        &
                                              GaussianCube_step ,            &
                                              hole_state , restart ,         &
                                              step_security, HFP_Forces ,    &
-                                             preview , solvent_step
+                                             preview , Environ_step
     use Babel_m                     , only : Coords_from_Universe ,         &
                                              trj , MD_dt
     use Allocation_m                , only : DeAllocate_UnitCell ,          &
@@ -30,7 +30,7 @@ module Chebyshev_driver_m
     use DP_main_m                   , only : Dipole_Matrix                 
     use Solvated_M                  , only : Prepare_Solvated_System 
     use TD_Dipole_m                 , only : wavepacket_DP                                        
-    use DP_potential_m              , only : Molecular_DPs                                              
+    use Dielectric_Potential        , only : Environment_SetUp                                              
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Polarizability_m            , only : Build_Induced_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
@@ -161,7 +161,7 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL DP_stuff ( "DP_field" )
+    If( EnvField_ ) CALL DP_stuff ( "EnvField" )
 
     If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
 
@@ -230,14 +230,14 @@ CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( DP_field_ ) then
+If( EnvField_ ) then
 
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
 
     ! DP potential in the static GS configuration ...
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
     hole_state = hole_save
     static     = .false.
@@ -309,7 +309,7 @@ select case( instance )
 
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-    case( "DP_field" )
+    case( "EnvField" )
 
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
@@ -317,11 +317,11 @@ select case( instance )
         ! decide what to do with this ############ 
         !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        If( mod(it-1,solvent_step) == 0 ) CALL Molecular_DPs( Extended_Cell )
+        If( mod(it-1,Environ_step) == 0 ) CALL Environment_SetUp( Extended_Cell )
 
     case( "Induced_DP" ) 
 
-        If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+        If( .NOT. EnvField_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 

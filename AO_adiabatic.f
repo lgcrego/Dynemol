@@ -12,13 +12,13 @@ module AO_adiabatic_m
                                              ForceComm , ForceCrew            
     use parameters_m                , only : t_i , n_t , t_f , n_part ,       &
                                              frame_step , nuclear_matter ,    &
-                                             DP_Field_ , DP_Moment ,          &
+                                             EnvField_ , DP_Moment ,          &
                                              Induced_ , QMMM , restart ,      &
                                              GaussianCube , static ,          &
                                              GaussianCube_step , preview ,    &
                                              hole_state , electron_state ,    &
                                              DensityMatrix, AutoCorrelation,  &
-                                             CT_dump_step, solvent_step,      &
+                                             CT_dump_step, Environ_step,      &
                                              driver, HFP_Forces ,             &
                                              step_security
     use Babel_m                     , only : Coords_from_Universe, trj, MD_dt                            
@@ -36,7 +36,6 @@ module AO_adiabatic_m
     use DP_main_m                   , only : Dipole_Matrix ,                  &
                                              Dipole_Moment
     use TD_Dipole_m                 , only : wavepacket_DP                                        
-    use DP_potential_m              , only : Molecular_DPs                                              
     use Polarizability_m            , only : Build_Induced_DP
     use Solvated_M                  , only : Prepare_Solvated_System 
     use QCModel_Huckel              , only : EigenSystem                                                 
@@ -51,6 +50,8 @@ module AO_adiabatic_m
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
     use Auto_Correlation_m          , only : MO_Occupation
+    use Dielectric_Potential        , only : Environment_SetUp
+
 
     public :: AO_adiabatic
 
@@ -187,7 +188,7 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-    If( DP_field_ ) CALL DP_stuff( "DP_field" )
+    If( EnvField_ ) CALL DP_stuff( "EnvField" )
 
     If( Induced_ )  CALL DP_stuff( "Induced_DP" )
 
@@ -262,14 +263,14 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( DP_field_ ) then
+If( EnvField_ ) then
 
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
 
-    ! DP potential in the static GS configuration ...
-    CALL Molecular_DPs  ( Extended_Cell )
+    ! Environ potential in the static GS configuration ...
+    CALL Environment_SetUp  ( Extended_Cell )
 
     hole_state = hole_save
     static     = .false.
@@ -361,7 +362,7 @@ CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , Forc
 include 'formats.h'
 
 end subroutine Preprocess
-! 
+!
 !
 !
 !
@@ -471,7 +472,7 @@ select case( instance )
 
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-    case( "DP_field" )
+    case( "EnvField" )
 
         CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
@@ -479,7 +480,7 @@ select case( instance )
         ! decide what to do with this ############ 
         !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        If( mod(it-1,solvent_step) == 0 ) CALL Molecular_DPs( Extended_Cell )
+        If( mod(it-1,Environ_step) == 0 ) CALL Environment_SetUp( Extended_Cell )
 
     case( "DP_moment" )
 
@@ -495,7 +496,7 @@ select case( instance )
 
     case( "Induced_DP" ) 
 
-        If( .NOT. DP_field_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+        If( .NOT. EnvField_ ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
         CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
@@ -504,7 +505,6 @@ end select
 !----------------------------------------------------------
 
 end subroutine DP_stuff
-!
 !
 !
 !

@@ -2,27 +2,28 @@ module Backup_m
 
     use type_m
     use blas95
-    use parameters_m        , only : driver                     , &
-                                     QMMM                       , &
-                                     nuclear_matter             , &
-                                     DP_field_                  , &
-                                     DP_Moment                  , &
-                                     Coulomb_                   , &
-                                     restart , n_part
-    use Solvated_M          , only : Prepare_Solvated_System
-    use Babel_m             , only : Coords_from_Universe       , &
-                                     trj
-    use Structure_Builder   , only : Generate_Structure         , &
-                                     Basis_Builder
-    use tuning_m            , only : orbital                    , &
-                                     eh_tag    
-    use QCModel_Huckel      , only : EigenSystem
-    use DP_potential_m      , only : Molecular_DPs
-    use TD_Dipole_m         , only : wavepacket_DP
-    use DP_main_m           , only : Dipole_Matrix   
-    use MM_dynamics_m       , only : preprocess_MM              , &
-                                     Saving_MM_Backup
-    use Data_Output         , only : Net_Charge
+    use parameters_m         , only : driver                     , &
+                                      QMMM                       , &
+                                      nuclear_matter             , &
+                                      EnvField_                  , &
+                                      DP_Moment                  , &
+                                      Coulomb_                   , &
+                                      restart , n_part
+    use Solvated_M           , only : Prepare_Solvated_System
+    use Babel_m              , only : Coords_from_Universe       , &
+                                      trj
+    use Structure_Builder    , only : Generate_Structure         , &
+                                      Basis_Builder
+    use tuning_m             , only : orbital                    , &
+                                      eh_tag    
+    use QCModel_Huckel       , only : EigenSystem
+    use Dielectric_Potential , only : Environment_SetUp
+    use TD_Dipole_m          , only : wavepacket_DP
+    use DP_main_m            , only : Dipole_Matrix   
+    use MM_dynamics_m        , only : preprocess_MM              , &
+                                      Saving_MM_Backup
+    use Data_Output          , only : Net_Charge
+
 
     public  :: Security_Copy , Restart_State , Restart_Sys
 
@@ -91,18 +92,19 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-if( DP_field_ ) then
+if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
     CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 
 ! SLAVES only calculate S_matrix and return ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
+
 
 end subroutine Restart_Sys_Eigen
 !
@@ -284,13 +286,13 @@ CALL Generate_Structure ( frame )
 
 CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
 
-if( DP_field_ ) then
+if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
     CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Molecular_DPs  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 

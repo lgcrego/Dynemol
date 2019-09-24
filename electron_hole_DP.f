@@ -5,7 +5,7 @@ module DP_excited_m
     use blas95
     use lapack95
     use parameters_m            , only : OPT_parms ,                    &
-                                         hole_state , DP_Field_ ,       &
+                                         hole_state , EnvField_ ,       &
                                          excited_state => electron_state         
     use Allocation_m            , only : Allocate_Structures
     use Semi_Empirical_Parms    , only : atom ,                         &
@@ -198,7 +198,7 @@ end subroutine DP_moments
 ! clone S_matrix because SYGVD will destroy it ... 
  dumb_S = S_FMO
 
- If( DP_field_ ) then
+ If( EnvField_ ) then
      h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
  else
      h_FMO = Build_Huckel( basis , S_FMO )

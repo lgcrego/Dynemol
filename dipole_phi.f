@@ -4,14 +4,13 @@ module DP_potential_m
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , solvent_type , verbose
-    use Structure_Builder       , only : Extended_Cell
+    use parameters_m            , only : PBC , Environ_type , verbose
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
     use PBC_m                   , only : Generate_Periodic_DPs
 
-    public :: Molecular_DPs , DP_phi
+    public :: Dipole_Potentials , DP_phi
 
     private
 
@@ -25,9 +24,9 @@ contains
 !
 !
 !
-!=============================
- subroutine Molecular_DPs( a )
-!=============================
+!=================================
+ subroutine Dipole_Potentials( a )
+!=================================
 implicit none
 type(structure) , intent(inout) :: a
 
@@ -43,7 +42,7 @@ CALL DeAllocate_DPs( DP_mols_pbc , flag = "garbage" )
 
 ! solvent and solute must not overlap ...
 IF( any( (a%fragment=="S") .AND. (a%solute) ) ) then
-    Print*, " >>> solvent and solute overlap in Molecular_DPs <<< : execution stopped" 
+    Print*, " >>> solvent and solute overlap in Environment_SetUp <<< : execution stopped" 
     stop
 end If
 
@@ -80,12 +79,11 @@ else
 end If
 
 ! generate periodic structure of solvent molecules ; if PBCx=PBCy=PBCz=0 ==> DP_mols_pbc = DP_mols ...
-CALL Generate_Periodic_DPs( a ,  DP_mols%CC     , DP_mols%DP     , DP_mols%nr     ,& 
-                                 DP_mols_pbc%CC , DP_mols_pbc%DP , DP_mols_pbc%nr )
+CALL Generate_Periodic_DPs( a,  DP_mols%CC, DP_mols%DP, DP_mols%nr, DP_mols_pbc%CC, DP_mols_pbc%DP, DP_mols_pbc%nr )
 
 CALL DeAllocate_DPs( DP_mols , flag = "dealloc" )
 
-end subroutine Molecular_DPs
+end subroutine Dipole_Potentials
 !
 !
 !
@@ -157,12 +155,12 @@ do nr = first_nr , last_nr
     !-----------------------------------------------------------------------------------------------
     ! calculate the dipole vector ...
  
-    select case( solvent_type )
+    select case( Environ_type )
    
-        case( "QM" )
+        case( "DP_QM" )
         CALL DP_FMO_analysis( a , Q_center(nr,:) , DP_FMO(nr,:) , nr ) 
 
-        case( "MM" ) 
+        case( "DP_MM" ) 
 
         ! atomic positions measured from the Center of Charge ...
         allocate(nr_vector(nr_atoms,3))
@@ -259,7 +257,7 @@ If( sum(PBC) == 0) then
 else
 
     ! maximum distance from midpoint a-b ...
-    cut_off_radius = minval(Extended_Cell%T_xyz) / TWO
+    cut_off_radius = minval(sys% T_xyz) / TWO
 
     allocate( vector_ALL   ( N_of_DP , 3 ) , source = D_zero  )
     allocate( distance_ALL ( N_of_DP     ) , source = D_zero  )

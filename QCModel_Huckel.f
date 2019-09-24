@@ -10,7 +10,7 @@
     use type_m
     use constants_m
     use MPI_definitions_m           , only : ForceCrew , master 
-    use parameters_m                , only : DP_Field_ , Induced_ , verbose 
+    use parameters_m                , only : EnvField_ , Induced_ , verbose 
     use Overlap_Builder             , only : Overlap_Matrix
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
 
@@ -57,7 +57,7 @@ Allocate( dumb_S(N,N) )
 ! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
 
-If( DP_field_ .OR. Induced_ ) then
+If( EnvField_ .OR. Induced_ ) then
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
 else
     h(:,:) = Build_Huckel( basis , S_matrix )
@@ -151,7 +151,7 @@ end function Build_Huckel
 
  ALLOCATE( h(N,N) )
 
- If( DP_field_ ) then
+ If( EnvField_ ) then
 
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix ) 
 

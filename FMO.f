@@ -8,7 +8,7 @@
     use parameters_m                , only : driver ,                   &
                                              n_part ,                   &
                                              Survival ,                 &
-                                             DP_Field_ ,                &
+                                             EnvField_ ,                &
                                              Induced_ ,                 & 
                                              electron_state ,           &
                                              hole_state ,               &
@@ -252,7 +252,7 @@ implicit none
 
  CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
- If( DP_field_ .OR. Induced_ ) then
+ If( EnvField_ .OR. Induced_ ) then
      h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
  else
      h_FMO = Build_Huckel( basis , S_FMO )
@@ -345,7 +345,7 @@ ALLOCATE( s_FMO(nn,nn) , h_FMO(nn,nn) , tmp_S(nn) , tmp_E(nn) )
 
 CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
-If( DP_field_ .OR. Induced_ ) then
+If( EnvField_ .OR. Induced_ ) then
     h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
 else
     h_FMO = Build_Huckel( basis , S_FMO )
@@ -368,7 +368,6 @@ If( master ) Print*, pop
 deallocate( s_FMO , h_FMO , tmp_S , tmp_E )
 
 end subroutine  check_casida_builder
-! 
 !
 !
 !

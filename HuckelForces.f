@@ -6,7 +6,7 @@ module HuckelForces_m
     use lapack95
     use type_m
     use constants_m
-    use parameters_m            , only : verbose , DP_Field_
+    use parameters_m            , only : verbose , EnvField_
     use Overlap_Builder         , only : Overlap_Matrix
     use Allocation_m            , only : DeAllocate_Structures    
     use Hamiltonians            , only : X_ij , even_more_extended_Huckel
@@ -256,7 +256,7 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 allocate( h(size(basis),size(basis)) )
 
-If( DP_field_ ) then
+If( EnvField_ ) then
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
 else
     h(:,:) = Build_Huckel( basis , S_matrix )
