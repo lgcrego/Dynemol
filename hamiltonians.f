@@ -6,10 +6,9 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m          , only : EnvField_  ,       &
-                                       Induced_ ,         &
-                                       solvent_step
-    use Dielectric_Potential  , only : V_Environ
+    use parameters_m          , only : EnvField_ , Induced_ , Environ_type , Environ_step
+    use Dielectric_Potential  , only : Q_phi
+    use DP_potential_m        , only : DP_phi
     use DP_main_m             , only : DP_matrix_AO
     use polarizability_m      , only : Induced_DP_phi
     use Semi_Empirical_Parms  , only : atom
@@ -83,7 +82,7 @@ if( .not. done ) CALL allocate_DP4_matrix
 ! evaluate or not evaluate DP_phi this time...
 If( .not. present(it) ) then
    evaluate = .true.
-else If( mod(it-1,solvent_step) == 0 ) then
+else If( mod(it-1,Environ_step) == 0 ) then
    evaluate = .true.
 else
    evaluate = .false.
@@ -113,7 +112,12 @@ do ib = 1, system%atoms
         end if
 
         If( evaluate ) then 
-           DP_4_vector = V_Environ( system , ia , ib )
+           select case (Environ_Type)
+                case('DP_MM','DP_QM')
+                    DP_4_vector = DP_phi( system , ia , ib )
+                case default
+                    DP_4_vector =  Q_phi( system , ia , ib )
+           end select
            DP_4_matrix(ia,ib,:) = DP_4_vector
         else 
            DP_4_vector = DP_4_matrix(ia,ib,:)

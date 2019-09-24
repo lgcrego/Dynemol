@@ -4,12 +4,12 @@ use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , solvent_step
+integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
-character (len=2)       :: solvent_type
+character (len=5)       :: Environ_type
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
@@ -33,12 +33,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
@@ -80,9 +80,9 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =  T_                          ! <== use dipole potential for solvent molecules
-  Solvent_Type =  "MM"                        ! <== QM = quantum , MM = classical ...
-  Solvent_step =  10                          ! <== step for updating EnvField
+  EnvField_    =  T_                          ! <== Potential produced by Environment
+  Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
+  Environ_step =  10                          ! <== step for updating EnvField
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 

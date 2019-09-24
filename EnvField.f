@@ -4,10 +4,11 @@ module Dielectric_Potential
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , solvent_type , verbose
+    use parameters_m            , only : PBC , Environ_type , verbose
     use MD_read_m               , only : atom
+    use DP_potential_m          , only : Dipole_Potentials
 
-    public :: Environment_SetUp , V_Environ
+    public :: Environment_SetUp , Q_phi
 
     private
 
@@ -25,6 +26,32 @@ contains
 !===================================
  subroutine Environment_SetUp( sys )
 !===================================
+implicit none
+type(structure) , intent(inout)  :: sys
+
+select case (Environ_Type)
+
+    case( 'DP_QM' , 'DP_MM')  ! <== leave to modulo DP_potential_m
+
+        CALL Dipole_Potentials( sys )
+
+    case( 'Ch_MM' )           ! <== stay in the modulo
+
+        CALL Classical_Point_Charges( sys )
+
+    case default
+
+        stop 'execution halted: check your option for Environ_Type in parameters.f'
+
+end select
+
+end subroutine Environment_SetUp
+!
+!
+!
+!=========================================
+ subroutine Classical_Point_Charges( sys )
+!=========================================
 implicit none
 type(structure) , intent(in)  :: sys
 
@@ -111,21 +138,21 @@ CALL give_me_PBC( sys, Env_Mols, MolPBC )
 
 include 'formats.h'
 
-end subroutine Environment_SetUp
+end subroutine Classical_Point_Charges
 !
 !
 !
-!=================================
- function V_Environ( sys , a , b )
-!=================================
+!=============================
+ function Q_phi( sys , a , b )
+!=============================
 implicit none
 type(structure) , intent(in) :: sys
 integer         , intent(in) :: a , b
 
 ! local variables ...
 integer               :: i , j , k , na , N_of_Q , N_of_M
-real*8                :: hardcore , cut_off_radius, CC_distance, midpoint_ab(3) , V_Environ(4)
-real*8  , allocatable :: distance(:), Q_phi(:), Q_phi2(:,:), Q(:), versor(:,:), vector_ALL(:,:) , AT_Q(:), AT_versor(:,:) , AT_distance(:) , aux(:)
+real*8                :: hardcore , cut_off_radius, CC_distance, midpoint_ab(3) , Q_phi(4)
+real*8  , allocatable :: distance(:), V_phi(:), V_phi2(:,:), Q(:), versor(:,:), vector_ALL(:,:) , AT_Q(:), AT_versor(:,:) , AT_distance(:) , aux(:)
 logical               :: inside
 
 ! combination rule for solvation hardcore shell ...
@@ -221,39 +248,39 @@ deallocate( AT_Q , AT_distance , AT_versor )
 ! calculate dipole potential at a-b midpoint ...
 !------------------------------------------------------------------------
 
-allocate( Q_phi   ( N_of_Q     ) , source = D_zero )
-allocate( Q_phi2  ( N_of_Q , 3 ) , source = D_zero )
+allocate( V_phi   ( N_of_Q     ) , source = D_zero )
+allocate( V_phi2  ( N_of_Q , 3 ) , source = D_zero )
 
 ! zeroth order potential due to point charges i ...
-Q_phi(:) = Q(:)/distance(:) 
+V_phi(:) = Q(:)/distance(:) 
 
 do j = 1 , 3
 
     ! first order ...
-    Q_phi2(:,j) = Q(:) * versor(:,j) / (distance(:)*distance(:))
+    V_phi2(:,j) = Q(:) * versor(:,j) / (distance(:)*distance(:))
 
 end do
 
 ! eliminate self-interactions ...
 !where( (indx == a) .OR. (indx == b) ) 
-!    Q_phi = 0.d0
-!    Q_phi2(:,1) = 0.d0
-!    Q_phi2(:,2) = 0.d0
-!    Q_phi2(:,3) = 0.d0
+!    V_phi = 0.d0
+!    V_phi2(:,1) = 0.d0
+!    V_phi2(:,2) = 0.d0
+!    V_phi2(:,3) = 0.d0
 !end where
 
 ! first order ...
-V_Environ(1) = sum( Q_phi(:) )
+Q_phi(1) = sum( V_phi(:) )
 
 ! second order ...
-forall( j=1:3 ) V_Environ(j+1) = sum( Q_phi2(:,j) )
+forall( j=1:3 ) Q_phi(j+1) = sum( V_phi2(:,j) )
 
 ! applying optical dielectric screening ; fix sign problem ...
-V_Environ = - V_Environ * units / (refractive_index)**2
+Q_phi = - Q_phi * units / (refractive_index)**2
 
-deallocate( versor , distance , Q , Q_phi , Q_phi2 )
+deallocate( versor , distance , Q , V_phi , V_phi2 )
 
-end function V_Environ
+end function Q_phi
 !
 !
 !

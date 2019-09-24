@@ -4,13 +4,13 @@ module DP_potential_m
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , solvent_type , verbose
+    use parameters_m            , only : PBC , Environ_type , verbose
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
     use Multipole_Routines_m    , only : Util_Multipoles
     use PBC_m                   , only : Generate_Periodic_DPs
 
-    public :: Environment_SetUp , DP_phi
+    public :: Dipole_Potentials , DP_phi
 
     private
 
@@ -25,7 +25,7 @@ contains
 !
 !
 !=================================
- subroutine Environment_SetUp( a )
+ subroutine Dipole_Potentials( a )
 !=================================
 implicit none
 type(structure) , intent(inout) :: a
@@ -83,7 +83,7 @@ CALL Generate_Periodic_DPs( a,  DP_mols%CC, DP_mols%DP, DP_mols%nr, DP_mols_pbc%
 
 CALL DeAllocate_DPs( DP_mols , flag = "dealloc" )
 
-end subroutine Environment_SetUp
+end subroutine Dipole_Potentials
 !
 !
 !
@@ -155,12 +155,12 @@ do nr = first_nr , last_nr
     !-----------------------------------------------------------------------------------------------
     ! calculate the dipole vector ...
  
-    select case( solvent_type )
+    select case( Environ_type )
    
-        case( "QM" )
+        case( "DP_QM" )
         CALL DP_FMO_analysis( a , Q_center(nr,:) , DP_FMO(nr,:) , nr ) 
 
-        case( "MM" ) 
+        case( "DP_MM" ) 
 
         ! atomic positions measured from the Center of Charge ...
         allocate(nr_vector(nr_atoms,3))

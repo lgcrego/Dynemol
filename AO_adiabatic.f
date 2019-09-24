@@ -14,7 +14,7 @@ module AO_adiabatic_m
                                              GaussianCube_step , preview ,    &
                                              hole_state , electron_state ,    &
                                              DensityMatrix, AutoCorrelation,  &
-                                             CT_dump_step, solvent_step,      &
+                                             CT_dump_step, Environ_step,      &
                                              driver, HFP_Forces ,             &
                                              step_security
     use Babel_m                     , only : Coords_from_Universe, trj, MD_dt                            
@@ -466,7 +466,7 @@ select case( instance )
         ! decide what to do with this ############ 
         !CALL wavepacket_DP( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-        If( mod(it-1,solvent_step) == 0 ) CALL Environment_SetUp( Extended_Cell )
+        If( mod(it-1,Environ_step) == 0 ) CALL Environment_SetUp( Extended_Cell )
 
     case( "DP_moment" )
 
