@@ -127,7 +127,7 @@ Allocate( dumb_S(N,N) )
 ! clone S_matrix because SYGVD will destroy it ...
 dumb_s = S_matrix
 
-If( DP_field_ .OR. Induced_ ) then
+If( EnvField_ .OR. Induced_ ) then
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
 else
     h(:,:) = Build_Huckel( basis , S_matrix )
