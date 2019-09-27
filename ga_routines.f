@@ -44,7 +44,7 @@ type(STO_basis)                 , intent(inout) :: basis(:)
 type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) 
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: i , generation , info , Pop_start , GeneSize
@@ -81,7 +81,7 @@ indx = [ ( i , i=1,Pop_Size ) ]
 allocate( GA_basis (size(basis)) )
 GA_basis = basis
 
-allocate( custo(Pop_size) )
+allocate( cost(Pop_size) )
 
 do generation = 1 , N_generations
 
@@ -94,8 +94,8 @@ do generation = 1 , N_generations
         CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
 
         If (info /= 0) then 
-            custo(i) = 1.d14
-            continue
+            cost(i) = real_large
+            cycle    
         end if
 
         If( DP_Moment )    CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
@@ -103,12 +103,12 @@ do generation = 1 , N_generations
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
 !       gather data and evaluate population cost ...
-        custo(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
+        cost(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 
 !   evolve populations ...    
-    CALL sort2(custo,indx)
+    CALL sort2(cost,indx)
 
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
@@ -125,10 +125,12 @@ do generation = 1 , N_generations
     indx = [ ( i , i=1,Pop_Size ) ]
 
     Print 160 , generation , N_generations
-    Print*, custo(1)
-    write(23,*) generation , custo(1)
+    Print*, cost(1)
+    write(23,*) generation , cost(1)
 
 end do
+
+close(23)
 
 !----------------------------------------------------------------
 ! Prepare grid of parameters for CG fine tuning optimization ...
@@ -471,9 +473,6 @@ allocate( indx_EHS(N_of_EHSymbol) )
 ! locate position of the first appearance of EHS-atoms in OPT_basis
 indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
-! creating file opt_eht_parameters.output.dat with the optimized parameters ...
-open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
-
 If( present(output) .AND. output=="STDOUT" ) then
     Print*,""
     Print*,""
@@ -639,7 +638,7 @@ real*8          , allocatable , intent(out)   :: GA_Selection(:,:)
 character(*)                  , intent(in)    :: directives
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , Custo(:) , p0(:)
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , p0(:)
 integer         , allocatable   :: indx(:)
 integer                         :: i , generation , Pop_start ,  GeneSize
 type(LogicalKey)                :: key
@@ -681,7 +680,7 @@ indx = [ ( i , i=1,Pop_Size ) ]
 !-----------------------------------------------
 ! setting normal mode data in FF_OPT_class ...
 
-allocate( custo(Pop_size) )
+allocate( cost(Pop_size) )
 
 do generation = 1 , N_generations
 
@@ -691,12 +690,12 @@ do generation = 1 , N_generations
         MM_parms % p(:) = p0(:) * (D_one + Pop(i,:))
 
         ! evaluate  Pop(i,:)'s  cost ...
-        custo(i) = MM_parms % cost()
+        cost(i) = MM_parms % cost()
 
     end do
 
 !   evolve populations ...    
-    CALL sort2(custo,indx)
+    CALL sort2(cost,indx)
 
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
@@ -718,7 +717,7 @@ do generation = 1 , N_generations
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    Print 161 , generation , N_generations , custo(1) , directives 
+    Print 161 , generation , N_generations , cost(1) , directives 
 
 end do
 
