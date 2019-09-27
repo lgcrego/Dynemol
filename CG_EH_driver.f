@@ -30,10 +30,10 @@ integer                 :: i , GlobalMinimum
 integer                 :: Top_Selection 
 real*8  , allocatable   :: local_minimum(:) , InitialCost(:)
 character(len=2)        :: string
-character(len=21)       :: f_name
+character(len=31)       :: f_name
 type(EH_OPT)            :: CG
 
-If( profiling ) OPEN( unit=32 , file='CG-log.dat' , status='unknown' )
+If( profiling ) OPEN( unit=32 , file='opt_trunk/CG.log.dat' , status='unknown' )
 
 Top_Selection = size(GA_Selection(1,:)) 
 
@@ -46,7 +46,7 @@ do i = 1 , Top_Selection
 
     If( profiling ) then
         write(string,'(i2.2)') i
-        f_name = 'CG_OPT_parms'//string//'.dat'
+        f_name = 'opt_trunk/CG_OPT_parms'//string//'.dat'
         OPEN( unit = 42 , file=f_name , status='replace' )
     end If
 
@@ -55,6 +55,7 @@ do i = 1 , Top_Selection
 
     InitialCost(i) = CG%cost() 
 
+    Print 162 , i , Top_Selection 
     If( CG%cost() /= InitialCost(i-1) ) CALL Fletcher_Reeves_Polak_Ribiere_minimization( CG , GA%GeneSize , local_minimum(i) )
 
     ! temporarily stores CG optimized basis here ...
@@ -75,6 +76,8 @@ allocate( CG_basis (size(CG%basis)) )
 CG_basis = GA_Selection(:,GlobalMinimum)
 
 If( profiling ) close(32)
+
+include 'formats.h'
 
 end subroutine CG_driver
 !

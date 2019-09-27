@@ -19,8 +19,8 @@ module CG_class_m
 
     type , extends(GA_OPT) :: EH_OPT
         integer                         :: ITMAX_EH = 50               ! <== 50-200 is a good compromise of accuracy and safety
-        real*8                          :: BracketSize_EH = 1.d-4      ! <== this value may vary between 1.0d-3 and 1.0d-5
-        logical                         :: profiling_EH = .false.
+        real*8                          :: BracketSize_EH = 1.d-5      ! <== this value may vary between 1.0d-3 and 1.0d-5
+        logical                         :: profiling_EH = .true. 
         type(STO_basis) , allocatable   :: basis(:)
     contains
         procedure :: cost
@@ -62,6 +62,7 @@ allocate( me % erg      (size(GA%erg)                       ) , source=GA%erg   
 allocate( me % EHSymbol (size(GA%EHSymbol)                  ) , source=GA%EHSymbol )
 allocate( me % key      (size(GA%key(:,1)),size(GA%key(1,:))) , source=GA%key      )
 
+! GENES go in here ...
 allocate( me % p(GA%GeneSize) , source=D_zero ) 
 
 end function preprocess
@@ -296,6 +297,7 @@ do n_EHS = 1 , N_of_EHSymbol
     
         write(42,17)    me % basis(j) % Symbol          ,   &
                         me % basis(j) % EHSymbol        ,   &
+                        me % basis(j) % residue         ,   & 
                         me % basis(j) % AtNo            ,   &
                    atom(me % basis(j) % AtNo) % Nvalen  ,   &
                         me % basis(j) % Nzeta           ,   &
@@ -313,7 +315,7 @@ enddo
 
 rewind(42)
 
-17 format(t1,A2,t13,A3,t25,I3,t33,I3,t45,I3,t53,I3,t60,A3,t68,F9.5,t78,F9.6,t88,F9.6,t98,F9.6,t108,F9.6,t118,F9.6)
+17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
 include 'formats.h'
 

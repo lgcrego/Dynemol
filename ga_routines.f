@@ -138,10 +138,12 @@ If( CG_ ) then
     allocate( GA_Selection( size(basis) , Top_Selection ) )
 
     do i = 1 , Top_Selection 
+
         ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
 
         GA_Selection(:,i) = GA_basis
+
     end do
 
     CALL CG_driver( GA , GA_Selection , CG_basis )
