@@ -73,9 +73,6 @@ do its=1,this % ITMAX                                           ! Loop over iter
       goto 100     ! ==> convergence not likely; Exit ...
    Else 
       this%p = p   ! ==> accept iteration; continue ...
-
-print*, 'tmp_cost = ' ,this%cost(),local_minimum,fp 
-
       output_minimum = this% cost()
    EndIf
 
