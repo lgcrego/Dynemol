@@ -22,85 +22,92 @@ module NonlinearCG_m
 
 contains      
 
-!=================================================================================
- subroutine Fletcher_Reeves_Polak_Ribiere_minimization( this , n , local_minimum ) 
-!=================================================================================
+!==================================================================================
+ subroutine Fletcher_Reeves_Polak_Ribiere_minimization( this , n , output_minimum ) 
+!==================================================================================
 class(OPT_Parent)   , intent(inout) :: this
 integer             , intent(in)    :: n
-real*8              , intent(out)   :: local_minimum 
+real*8              , intent(out)   :: output_minimum 
 
 !local variables ...
 INTEGER :: its,j,iter
-INTEGER :: steps_up = 0
 real*8  :: dgg,fp,gam,gg
-real*8  :: relative_difference
-real*8  :: g(N),h(N),xi(N)
+real*8  :: relative_difference , local_minimum
+real*8  :: g(N),h(N),xi(N),p(N)
 
 
 ! saving first geometry ...
 if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
 
-! Initializations ...
-        NMAX = n
-        allocate( f1%xicom(NMAX) , f1%pcom(NMAX) )
+! Preprocess ...
+!----------------------------------------------------------
+NMAX = n
+allocate( f1%xicom(NMAX) , f1%pcom(NMAX) )
 
-        fp = this % cost()
-        If( fp == real_large ) then ; local_minimum = real_large ; goto 100 ; end If
-        call this % cost_variation(xi)
+fp = this % cost()
+If( fp == real_large ) then 
+  local_minimum = real_large 
+  goto 100  ! ==> initial cost is already too high; do nothing; Exit ...
+end If
 
-        do j=1,n
-           g(j)  = -xi(j)
-           h(j)  = g(j)
-           xi(j) = h(j)
-        end do 
+! initial gradient ...
+call this % cost_variation(xi)
 
-        do its=1,this % ITMAX                                                                   ! Loop over iterations.
-           iter=its
+do j=1,n
+   g(j)  = -xi(j)
+   h(j)  = g(j)
+   xi(j) = h(j)
+end do 
+!----------------------------------------------------------
 
-           call Linear_Minimization( this , xi , n , local_minimum )                            ! Next statement is the normal return:
+! Start CG Minimization ...
+!----------------------------------------------------------
+do its=1,this % ITMAX                                           ! Loop over iterations.
 
-           If( this% profiling ) then
-               Print*, its , local_minimum
-               If (local_minimum /= real_large) then
-                    write(32,*) its , local_minimum 
-                    if ( any(this% driver == ["MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
-                EndIf
-           EndIf
+   iter=its
 
-           ! define relative difference between iterations ...
-           relative_difference = abs( local_minimum - fp ) / ( (abs(local_minimum) + abs(fp) + high_prec) / TWO ) 
+   call Linear_Minimization( this , xi , n , p , local_minimum )    
 
-           ! accept cost increase within tolerance ...
-           if( local_minimum > fp ) then
-               steps_up = steps_up + 1
-               if(local_minimum - fp > D_one) then
-                    local_minimum = real_large
-                    goto 100
-                end if
-           else
-                steps_up = 0
-           end if
+   If( this% cost() - fp > D_one ) then
+      local_minimum = real_large
+      goto 100     ! ==> convergence not likely; Exit ...
+   Else 
+      this%p = p   ! ==> accept iteration; continue ...
+      output_minimum = this% cost()
+   EndIf
 
-           if( relative_difference <= this% accuracy )  goto 100
+   ! some output ...
+   If( this% profiling ) then
+      Print*,     its , local_minimum
+      write(32,*) its , local_minimum 
+      if ( any(this% driver == ["Genetic_Alg","MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
+   EndIf
 
-           fp=local_minimum
-           call this % cost_variation(xi)
+   ! define relative difference between iterations ...
+   relative_difference = abs( local_minimum - fp ) / ( (abs(local_minimum) + abs(fp) + high_prec) / TWO ) 
+   If( relative_difference <= this% accuracy )  goto 100  ! ==> convergence achieved; Exit ...
 
-           gg=0.0d0
-           dgg=0.0d0
-           do j=1,n
-              gg=gg+g(j)**2
-!              dgg=dgg+xi(j)**2                ! This statement for Fletcher-Reeves.
-              dgg=dgg+(xi(j)+g(j))*xi(j)       ! This statement for Polak-Ribiere.
-           end do 
-           if(gg.eq.0.)return                                                                   ! Unlikely. If gradient is exactly zero then we are al-
-           gam=dgg/gg                                                                           ! ready done.
-           do j=1,n
-              g(j)=-xi(j)
-              h(j)=g(j)+gam*h(j)
-              xi(j)=h(j)
-           end do 
-        enddo 
+   ! continue with CG iterations ...
+   fp=local_minimum
+   call this % cost_variation(xi)
+
+   gg=D_zero
+   dgg=D_zero
+   do j=1,n
+      gg=gg+g(j)**2
+!       dgg=dgg+xi(j)**2           ! This statement for Fletcher-Reeves.
+      dgg=dgg+(xi(j)+g(j))*xi(j)   ! This statement for Polak-Ribiere.
+   end do 
+   if(gg.eq.0.)return              ! Unlikely. If gradient is exactly zero then we are already done.
+   gam=dgg/gg               
+   do j=1,n
+      g(j)=-xi(j)
+      h(j)=g(j)+gam*h(j)
+      xi(j)=h(j)
+   end do 
+
+enddo 
+!----------------------------------------------------------
 
 if ( this % driver == "Parametrize" .and. this % profiling ) call this%output( 0 )
 
@@ -110,17 +117,18 @@ end subroutine Fletcher_Reeves_Polak_Ribiere_minimization
 !        
 !
 !
-!======================================================
-subroutine Linear_Minimization(this,xi,n,local_minimum)
-!======================================================
+!========================================================
+subroutine Linear_Minimization(this,xi,n,p,local_minimum)
+!========================================================
 class(OPT_Parent)   , intent(inout) :: this
 real*8              , intent(inout) :: xi(:)
 integer             , intent(in)    :: n
+real*8              , intent(out)   :: p(n)
 real*8              , intent(out)   :: local_minimum
 
 ! local variables ...
 INTEGER     :: j
-real*8      :: ax,bx,xmin,xx,p(n)
+real*8      :: ax,bx,xmin,xx
 !real*8      :: fa,fb,fx
 
  p = this%p
@@ -140,14 +148,10 @@ real*8      :: ax,bx,xmin,xx,p(n)
  local_minimum = brent(this,ax,xx,bx,xmin)
  If( local_minimum == real_large ) return
  
- If( this % driver == "Genetic_Alg" .AND. this % profiling ) CALL this % output
-
  do j=1,n                                               ! Construct the vector results to return.
     xi(j)=xmin*xi(j)
     p(j)=p(j)+xi(j)
  end do 
-
- this%p = p
 
 end subroutine Linear_Minimization
 !
@@ -181,9 +185,9 @@ real*8 :: dum,fu,q,r,u,ulim
  1      if(fb.ge.fc)then                                                    ! “do while”: keep returning here until we bracket.
         r=(bx-ax)*(fb-fc)                                                   ! Compute u by parabolic extrapolation from a, b, c. WEE
         q=(bx-cx)*(fb-fa)                                                   ! is used to prevent any possible division by zero.
-        u=bx-((bx-cx)*q-(bx-ax)*r)/(2.d0*sign(max(abs(q-r),WEE),q-r))
+        u=bx-((bx-cx)*q-(bx-ax)*r)/(TWO*sign(max(abs(q-r),WEE),q-r))
         ulim=bx+GLIMIT*(cx-bx)                                              ! We won’t go farther than this. Test various possibilities:
-        if((bx-u)*(u-cx).gt.0.d0)then                                       ! Parabolic u is between b and c: try it.
+        if((bx-u)*(u-cx).gt.D_zero)then                                     ! Parabolic u is between b and c: try it.
            fu=f1dim(this,u)
            if(fu.lt.fc)then                                                 ! Got a minimum between b and c.
               ax=bx

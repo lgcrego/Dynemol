@@ -110,6 +110,8 @@
 
 161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
 
+162   FORMAT(/,1x,'Custo_CG : ',I5,' /',I5)
+
 165   FORMAT(1x,'========= ',A20,' =========')
 
 166   FORMAT(1x,'truncation error = ',F8.5)
