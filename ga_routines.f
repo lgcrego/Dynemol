@@ -421,7 +421,7 @@ implicit none
 type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
-integer :: i , j , ioerr , nr , N_of_EHSymbol , err , size_EHSymbol
+integer :: i , j , ioerr , n , N_of_EHSymbol , err , size_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
