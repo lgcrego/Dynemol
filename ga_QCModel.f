@@ -254,16 +254,17 @@ end function MO_character
 !
 !
 !
-!======================================================================
- function Bond_Type( system , GA , MO , atom1 , atom2 , AO , instance )
-!======================================================================
+!=============================================================================
+ function Bond_Type( system , GA , MO , atom1 , AO1 , atom2 , AO2 , instance )
+!=============================================================================
 implicit none
 type(structure)  , intent(in) :: system
 type(R_eigen)    , intent(in) :: GA
 integer          , intent(in) :: MO
 integer          , intent(in) :: atom1
+character(*)     , intent(in) :: AO1
 integer          , intent(in) :: atom2
-character(*)     , intent(in) :: AO
+character(*)     , intent(in) :: AO2
 character(len=1) , intent(in) :: instance
 
 real*8 :: bond_type 
@@ -272,51 +273,86 @@ real*8 :: bond_type
 integer :: indx1 , indx2
 real*8  :: bond_signal
 
-select case( AO ) 
+select case( AO1 ) 
 
     case( 's', 'S' )
 
         indx1 = system% BasisPointer(atom1) + 1
-        indx2 = system% BasisPointer(atom2) + 1
 
     case( 'py', 'Py' , 'PY' )
 
         indx1 = system% BasisPointer(atom1) + 2
-        indx2 = system% BasisPointer(atom2) + 2
 
     case( 'pz', 'Pz' , 'PZ' )
 
         indx1 = system% BasisPointer(atom1) + 3
+
+    case( 'px', 'Px' , 'PX' )
+
+        indx1 = system% BasisPointer(atom1) + 4
+
+    case( 'dxy', 'Dxy' , 'DXY' )
+
+        indx1 = system% BasisPointer(atom1) + 5
+
+    case( 'dyz', 'Dyz' , 'DYZ' )
+
+        indx1 = system% BasisPointer(atom1) + 6
+
+    case( 'dz2', 'Dz2' , 'DZ2' )
+
+        indx1 = system% BasisPointer(atom1) + 7
+
+    case( 'dxz', 'Dxz' , 'DXZ' )
+
+        indx1 = system% BasisPointer(atom1) + 8
+
+    case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+
+        indx1 = system% BasisPointer(atom1) + 9
+
+    case default
+
+        stop " >> error in [bond] subroutine check input arguments <<"
+
+end select
+
+select case( AO2 ) 
+
+    case( 's', 'S' )
+
+        indx2 = system% BasisPointer(atom2) + 1
+
+    case( 'py', 'Py' , 'PY' )
+
+        indx2 = system% BasisPointer(atom2) + 2
+
+    case( 'pz', 'Pz' , 'PZ' )
+
         indx2 = system% BasisPointer(atom2) + 3
 
     case( 'px', 'Px' , 'PX' )
 
         indx1 = system% BasisPointer(atom1) + 4
-        indx2 = system% BasisPointer(atom2) + 4
 
     case( 'dxy', 'Dxy' , 'DXY' )
 
-        indx1 = system% BasisPointer(atom1) + 5
         indx2 = system% BasisPointer(atom2) + 5
 
     case( 'dyz', 'Dyz' , 'DYZ' )
 
-        indx1 = system% BasisPointer(atom1) + 6
         indx2 = system% BasisPointer(atom2) + 6
 
     case( 'dz2', 'Dz2' , 'DZ2' )
 
-        indx1 = system% BasisPointer(atom1) + 7
         indx2 = system% BasisPointer(atom2) + 7
 
     case( 'dxz', 'Dxz' , 'DXZ' )
 
-        indx1 = system% BasisPointer(atom1) + 8
         indx2 = system% BasisPointer(atom2) + 8
 
     case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
 
-        indx1 = system% BasisPointer(atom1) + 9
         indx2 = system% BasisPointer(atom2) + 9
 
     case default
@@ -582,7 +618,7 @@ end function C_Mulliken
 
  CALL SYGVD( h_FMO , dumb_S , FMO%erg , 1 , 'V' , 'U' , info )
 
- If (info /= 0) write(*,*) 'info = ',info,' in GA_Eigen '
+! If (info /= 0) write(*,*) 'info = ',info,' in GA_Eigen '
  If ( present(flag) ) flag = info
 
  !--------------------------------------------------------
