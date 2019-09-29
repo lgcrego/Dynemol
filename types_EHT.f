@@ -234,18 +234,23 @@ module type_m
 
 
     type f_time
-        real*8       , allocatable   :: dyn(:,:,:)                          ! <== dyn( time , fragments , el/hl )
+        real*8       , allocatable   :: dyn(:,:,:)     ! <== dyn( time , fragments , el/hl )
         character(1) , allocatable   :: fragments(:)
         character(3) , allocatable   :: residues(:)
     end type f_time
 
+    type on_the_fly 
+        logical :: mode = .false.  ! <== must turn on before use ...
+        integer :: gen
+        integer :: Ngen
+    end type on_the_fly
 
     type dipoles
-        integer      , allocatable :: nr   (:)
-        real*8       , allocatable :: CC   (:,:)
-        real*8       , allocatable :: DP   (:,:)
-        real*8       , allocatable :: el_DP(:,:)
-        real*8       , allocatable :: hl_DP(:,:)
+        integer ,  allocatable  :: nr   (:)
+        real*8  ,  allocatable  :: CC   (:,:)
+        real*8  ,  allocatable  :: DP   (:,:)
+        real*8  ,  allocatable  :: el_DP(:,:)
+        real*8  ,  allocatable  :: hl_DP(:,:)
     end type dipoles
 
 

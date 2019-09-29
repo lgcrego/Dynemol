@@ -17,7 +17,8 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar 
+                                         AlphaPolar ,                   &
+                                         GA_onthefly
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
@@ -50,7 +51,7 @@ real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: mpi_D_R = mpi_double_precision
-integer                         :: i , generation , info , err , Pop_start , GeneSize
+integer                         :: i , generation , err , Pop_start , GeneSize
 logical                         :: done = .false.
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
@@ -85,6 +86,7 @@ If( master ) then
     Pop(1,:) = D_zero
 
     indx = [ ( i , i=1,Pop_Size ) ]
+
 end If
 !-----------------------------------------------
 
@@ -95,6 +97,9 @@ GA_basis = basis
 allocate( cost    (Pop_size), source=D_zero ) 
 allocate( snd_cost(Pop_size) )
 
+! enable on the fly evaluation cost ...
+GA_onthefly%mode = .true.
+
 do generation = 1 , N_generations
 
 99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
@@ -104,28 +109,31 @@ do generation = 1 , N_generations
     End If
 
     CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
+    ! for on_the_fly cost evaluation ...
+    CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
+    CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
+
+    ! sharing these variables with ga_QCModel ...
+    GA_onthefly%gen = generation ; GA_onthefly%Ngen = N_generations
 
     snd_cost = D_zero
+
+    ! Mutation_&_Crossing preserves the top-selections ...
+    ! evaluate cost only for new Pop outside top_selection ...
 
     do i = myid + Pop_start , Pop_Size , np
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
 
-        info = 0
-        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
-
-        If (info /= 0) then 
-            snd_cost(i) = real_large
-            cycle    
-        end if
+        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI )
 
         If( DP_Moment )    CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
         ! population cost ...
-        snd_cost(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
+        snd_cost(i) = evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 
@@ -145,7 +153,7 @@ do generation = 1 , N_generations
     PopStar(:) = Pop(1,:)
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross) then
+    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
@@ -165,6 +173,10 @@ do generation = 1 , N_generations
 end do
 
 close(23)
+
+! switch-off on the fly evaluation cost ...
+GA_onthefly%mode = .false.
+
 deallocate( cost , snd_cost , indx , Old_Pop ) 
 
 !----------------------------------------------------------------

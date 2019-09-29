@@ -30,7 +30,7 @@ module GA_driver_m
 implicit none 
 
 ! local variables ...
- integer                        :: i , nr , N_of_residues 
+ integer                        :: i , nr , N_of_residues , info = 0
  integer         , allocatable  :: MOnum(:)
  real*8                         :: first_cost , DP(3) , Alpha_ii(3)
  logical                        :: DIPOLE_
@@ -73,7 +73,7 @@ CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
 if( slave ) return
 
 ! calculations with new parameters ...
-CALL GA_eigen( Extended_Cell, OPT_basis, UNI )
+CALL GA_eigen( Extended_Cell, OPT_basis, UNI , info )
 
 CALL Total_DOS( UNI%erg, TDOS )
 
