@@ -8,7 +8,6 @@ module cost_EH
                               MO_character,       &
                               Localize,           &
                               Exclude,            &
-                              GA_onthefly,        &
                               me => i_       
 
     public :: evaluate_cost , REF_DP , REF_Alpha
@@ -38,9 +37,6 @@ real*8                                   :: evaluate_cost
 integer  :: i , dumb
 real*8   :: eval(200) = D_zero
 real*8   :: REF_DP(3) , REF_Alpha(3)
-logical  :: fly
-
-fly = GA_onthefly% mode
 
 !-------------------------------------------------------------------------
 ! Energy gaps ...     
@@ -101,15 +97,15 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 120, 16, 'Pz', 11, 'Pz', '+')
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 22, 'Pz', 19, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 22, 'Pz', 27, 'Pz', '+')                                
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 80, 'Px', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Px', 79, 'Px', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 81, 'S ', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 80, 'Px', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Px', 79, 'Px', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 81, 'S ', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Py', 81, 'S ', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Pz', 81, 'S ', '+')                                
 
-eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], threshold=0.15, flymode=fly ) 
+eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], threshold=0.15 ) 
 
-eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", threshold=0.60, flymode=fly )    
+eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", threshold=0.57 )    
 
 eval(me) =  Exclude (OPT_UNI, basis, MO=120, atom = [77], threshold = 0.15 ) 
 

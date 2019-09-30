@@ -17,8 +17,7 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar ,                   &
-                                         GA_onthefly
+                                         AlphaPolar                    
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
@@ -97,9 +96,6 @@ GA_basis = basis
 allocate( cost    (Pop_size), source=D_zero ) 
 allocate( snd_cost(Pop_size) )
 
-! enable on the fly evaluation cost ...
-GA_onthefly%mode = .true.
-
 do generation = 1 , N_generations
 
 99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
@@ -109,12 +105,6 @@ do generation = 1 , N_generations
     End If
 
     CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
-    ! for on_the_fly cost evaluation ...
-    CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
-    CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
-
-    ! sharing these variables with ga_QCModel ...
-    GA_onthefly%gen = generation ; GA_onthefly%Ngen = N_generations
 
     snd_cost = D_zero
 
@@ -173,9 +163,6 @@ do generation = 1 , N_generations
 end do
 
 close(23)
-
-! switch-off on the fly evaluation cost ...
-GA_onthefly%mode = .false.
 
 deallocate( cost , snd_cost , indx , Old_Pop ) 
 

@@ -15,8 +15,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
-    public :: GA_onthefly, i_ 
+    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude, i_
 
     private 
 
@@ -30,7 +29,6 @@ module GA_QCModel_m
     Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
     integer , allocatable :: occupancy(:)
     integer               :: i_= 0
-    type(on_the_fly)      :: GA_onthefly
 
 contains
 !
@@ -118,9 +116,9 @@ end function exclude
 !
 !
 !
-!======================================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , flymode )
-!======================================================================================
+!===========================================================================
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold)
+!===========================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -129,11 +127,10 @@ integer         , optional  , intent(in) :: atom(:)
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 real            , optional  , intent(in) :: threshold
-logical         , optional  , intent(in) :: flymode
 
 ! local variables ...
 integer               :: i
-real*8                :: Localize , population , LinearFill
+real*8                :: Localize , population
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
@@ -168,36 +165,12 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( .NOT. present(flymode) ) then
-
-    If( present(threshold) ) then
-       localize = merge( D_zero , large , population > threshold )
-    else
-        ! default value is assumed, 85% of localization ...
-        localize = merge( D_zero , large , population > 0.85 )
-    end if
-
-ElseIf( GA_onthefly% mode == .true. ) then
-
-    If( present(threshold) ) then
-        LinearFill = threshold * GA_onthefly% gen / GA_onthefly% Ngen
-        localize = merge( D_zero , large , population > LinearFill )
-    else
-        ! default value is assumed, 85% of localization ...
-        LinearFill = 0.85 * GA_onthefly% gen / GA_onthefly% Ngen
-        localize = merge( D_zero , large , population > 0.85 )
-    end if
-
-ElseIf( GA_onthefly% mode == .false. ) then
-
-    If( present(threshold) ) then
-       localize = merge( D_zero , large , population > threshold )
-    else
-        ! default value is assumed, 85% of localization ...
-        localize = merge( D_zero , large , population > 0.85 )
-    end if
-
-EndIf
+If( present(threshold) ) then
+    localize = merge( D_zero , large , population > threshold )
+else
+    ! default value is assumed, 85% of localization ...
+    localize = merge( D_zero , large , population > 0.85 )
+end if
 
 deallocate( mask )
 
@@ -614,7 +587,6 @@ end function C_Mulliken
 ! local variables ... 
  integer               :: i , N , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
-
  real*8  , ALLOCATABLE :: S_eigen(:) , tool(:,:)
 
 
