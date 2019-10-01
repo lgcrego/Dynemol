@@ -38,8 +38,7 @@ type(R_eigen)    , intent(inout) :: QM
 integer          , optional , intent(in) :: it
 
 ! local variables ...
-integer               :: mpi_D_R = mpi_double_precision
-integer               :: i , N , info , err , mpi_status(mpi_status_size)
+integer               :: i , N , info 
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , dumb_S(:,:) , h(:,:) , S_matrix(:,:)
 
 CALL Overlap_Matrix( system , basis , S_matrix )

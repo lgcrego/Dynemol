@@ -243,7 +243,7 @@ implicit none
  character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
- integer               :: N_of_FMO_electrons, i, j , N , info
+ integer               :: N_of_FMO_electrons, i, N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
 
  N = size(basis)
@@ -333,7 +333,7 @@ end function Build_Huckel
  type(R_eigen)   , intent(in)  :: FMO       
 
 ! local variables ... 
- integer               :: i, j , nn
+ integer               :: i, nn
  real*8                :: erg , pop
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , tmp_S(:) , tmp_E(:)
 

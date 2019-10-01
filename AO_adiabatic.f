@@ -406,8 +406,6 @@ end subroutine U_nad
 !=======================
 implicit none
 
-real*8 , allocatable :: aux(:,:)
-
 ! dual basis for evaluating local properties ...
 ! asymmetrical orthogonalization ...
 
