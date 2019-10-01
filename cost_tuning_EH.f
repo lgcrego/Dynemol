@@ -8,6 +8,7 @@ module cost_EH
                               MO_character,       &
                               Localize,           &
                               Exclude,            &
+                              Adaptive_GA,        &
                               me => i_       
 
     public :: evaluate_cost , REF_DP , REF_Alpha
@@ -37,6 +38,9 @@ real*8                                   :: evaluate_cost
 integer  :: i , dumb
 real*8   :: eval(200) = D_zero
 real*8   :: REF_DP(3) , REF_Alpha(3)
+logical  :: mode
+
+mode = Adaptive_GA% mode
 
 !-------------------------------------------------------------------------
 ! Energy gaps ...     
@@ -103,11 +107,11 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 81, 'S ', '+')
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Py', 81, 'S ', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Pz', 81, 'S ', '+')                                
 
-eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], threshold=0.15 ) 
-
-eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", threshold=0.57 )    
+eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], vary=real_interval(0.1,0.15), adaptive=mode )
+eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", vary=real_interval(0.4,0.60), adaptive=mode )    
 
 eval(me) =  Exclude (OPT_UNI, basis, MO=120, atom = [77], threshold = 0.15 ) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=120, atom = [5,7,9,12,21,23,25,28], threshold = 0.30 ) 
 
 !121 ===================
 eval(me) =  Bond_Type(sys, OPT_UNI, 121, 23, 'Pz', 28, 'Pz', '-')                                
@@ -184,7 +188,7 @@ end If
 !......................................................................
 
 ! evaluate total cost ...
-evaluate_cost = dot_product(eval,eval) 
+evaluate_cost = sum( abs(eval) )
 
 ! just touching variables ...
 dumb = basis(1)%atom

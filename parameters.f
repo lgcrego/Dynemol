@@ -14,7 +14,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
-logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview
+logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -137,15 +137,16 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  10000  
-  N_generations  =  110    
-  Top_Selection  =  5000                    ! <== top selection < Pop_Size
-  Pop_range      =  0.35d0                  ! <== range of variation of parameters
-  Mutation_rate  =  0.2           
-  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Pop_Size       =  390  
+  N_generations  =  500    
+  Pop_range      =  0.65     ! <== range of variation of parameters range: [0:1]
+  Mutation_rate  =  0.6     
+  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
+  Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Top_Selection  =  5        ! <== top selection to undergo CG_
 
-  CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
-  profiling      =  T_                     ! <== for tuning the optimization parameters of the code
+  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 !  hereafter only CHECKLIST and  WARNINGS !!!

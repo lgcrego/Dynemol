@@ -239,6 +239,12 @@ module type_m
         character(3) , allocatable   :: residues(:)
     end type f_time
 
+    type on_the_fly 
+        logical :: mode = .false.  ! <== must turn on before use ...
+        integer :: gen
+        integer :: Ngen
+    end type on_the_fly
+
     type dipoles
         integer ,  allocatable  :: nr   (:)
         real*8  ,  allocatable  :: CC   (:,:)

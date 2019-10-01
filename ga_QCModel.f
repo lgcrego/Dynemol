@@ -15,7 +15,8 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude, i_
+    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
+    public :: Adaptive_GA, i_ 
 
     private 
 
@@ -29,6 +30,7 @@ module GA_QCModel_m
     Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
     integer , allocatable :: occupancy(:)
     integer               :: i_= 0
+    type(on_the_fly)      :: Adaptive_GA
 
 contains
 !
@@ -116,21 +118,23 @@ end function exclude
 !
 !
 !
-!===========================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold)
-!===========================================================================
+!==============================================================================================
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+!==============================================================================================
 implicit none
-type(R_eigen)               , intent(in) :: GA
-type(STO_basis)             , intent(in) :: basis(:)
-integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom(:)
-character(len=*), optional  , intent(in) :: EHSymbol
-character(len=*), optional  , intent(in) :: residue
-real            , optional  , intent(in) :: threshold
+type(R_eigen)                  , intent(in) :: GA
+type(STO_basis)                , intent(in) :: basis(:)
+integer                        , intent(in) :: MO
+integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: EHSymbol
+character(len=*)   , optional  , intent(in) :: residue
+real               , optional  , intent(in) :: threshold
+type(real_interval), optional  , intent(in) :: vary
+logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: Localize , population
+real*8                :: Localize , population , LinearFill
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
@@ -165,12 +169,25 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( present(threshold) ) then
-    localize = merge( D_zero , large , population > threshold )
-else
-    ! default value is assumed, 85% of localization ...
-    localize = merge( D_zero , large , population > 0.85 )
-end if
+If( .NOT. present(vary) ) then
+
+    If( present(threshold) ) then
+       localize = merge( D_zero , large , population > threshold )
+    else
+        ! default value is assumed, 85% of localization ...
+        localize = merge( D_zero , large , population > 0.85 )
+    end if
+
+ElseIf( adaptive == .true. ) then
+
+    LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
+    localize = merge( D_zero , large , population > LinearFill )
+
+ElseIf( adaptive == .false. ) then
+
+    localize = merge( D_zero , large , population > vary%fim)
+
+EndIf
 
 deallocate( mask )
 
