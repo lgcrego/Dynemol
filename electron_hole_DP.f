@@ -182,7 +182,7 @@ end subroutine DP_moments
  type(R_eigen)   , intent(out) :: FMO       
 
 ! local variables ... 
- integer               :: i , j , info
+ integer               :: info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
 
 

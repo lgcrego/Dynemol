@@ -15,7 +15,8 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude, i_
+    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
+    public :: Adaptive_GA, i_ 
 
     private 
 
@@ -29,14 +30,15 @@ module GA_QCModel_m
     Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
     integer , allocatable :: occupancy(:)
     integer               :: i_= 0
+    type(on_the_fly)      :: Adaptive_GA
 
 contains
 !
 !
 !
-!====================================================================
+!=====================================================================
  function MO_erg_diff( GA , up , down , dE_ref , weight ) result(cost)
-!====================================================================
+!=====================================================================
 implicit none
 type(R_eigen)            , intent(in) :: GA
 integer                  , intent(in) :: up
@@ -59,25 +61,29 @@ end function MO_erg_diff
 !
 !
 !
-!===============================================================
- function Exclude( GA , basis , MO , atom , residue , threshold)
-!===============================================================
+!==============================================================================================
+ function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+!==============================================================================================
 implicit none
-type(R_eigen)               , intent(in) :: GA
-type(STO_basis)             , intent(in) :: basis(:)
-integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom(:)
-character(len=*), optional  , intent(in) :: residue
-real            , optional  , intent(in) :: threshold
+type(R_eigen)                  , intent(in) :: GA
+type(STO_basis)                , intent(in) :: basis(:)
+integer                        , intent(in) :: MO
+integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: EHSymbol
+character(len=*)   , optional  , intent(in) :: residue
+real               , optional  , intent(in) :: threshold
+type(real_interval), optional  , intent(in) :: vary
+logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: exclude , population
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:)
+real*8                :: Exclude , population , LinearFill
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
+allocate( mask_3(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -94,18 +100,37 @@ else
     where( basis%residue == residue ) mask_2 = .true.
 end IF
 !====================================================
+IF( .NOT. present(EHSymbol) ) then
+    mask_3 = .true.
+else
+    where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( present(threshold) ) then
-    exclude = merge( D_zero , large , population < threshold )
-else
-    ! default value is assumed ...
-    exclude = merge( D_zero , large , population < 1.0d-3 )
-end if
+If( .NOT. present(vary) ) then
+
+       If( present(threshold) ) then
+          Exclude = merge( D_zero , large , population < threshold )
+       else
+           ! default value is assumed, 85% of localization ...
+           Exclude = merge( D_zero , large , population < 1.d-3 )
+       end if
+
+ElseIf( adaptive == .true. ) then
+
+       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
+       Exclude = merge( D_zero , large , population < LinearFill )
+
+ElseIf( adaptive == .false. ) then
+
+       Exclude = merge( D_zero , large , population < vary%fim)
+
+EndIf
 
 deallocate( mask )
 
@@ -116,21 +141,23 @@ end function exclude
 !
 !
 !
-!===========================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold)
-!===========================================================================
+!==============================================================================================
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+!==============================================================================================
 implicit none
-type(R_eigen)               , intent(in) :: GA
-type(STO_basis)             , intent(in) :: basis(:)
-integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom(:)
-character(len=*), optional  , intent(in) :: EHSymbol
-character(len=*), optional  , intent(in) :: residue
-real            , optional  , intent(in) :: threshold
+type(R_eigen)                  , intent(in) :: GA
+type(STO_basis)                , intent(in) :: basis(:)
+integer                        , intent(in) :: MO
+integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: EHSymbol
+character(len=*)   , optional  , intent(in) :: residue
+real               , optional  , intent(in) :: threshold
+type(real_interval), optional  , intent(in) :: vary
+logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: Localize , population
+real*8                :: Localize , population , LinearFill
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
@@ -165,12 +192,25 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( present(threshold) ) then
-    localize = merge( D_zero , large , population > threshold )
-else
-    ! default value is assumed, 85% of localization ...
-    localize = merge( D_zero , large , population > 0.85 )
-end if
+If( .NOT. present(vary) ) then
+
+       If( present(threshold) ) then
+          localize = merge( D_zero , large , population > threshold )
+       else
+           ! default value is assumed, 85% of localization ...
+           localize = merge( D_zero , large , population > 0.85 )
+       end if
+
+ElseIf( adaptive == .true. ) then
+
+       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
+       localize = merge( D_zero , large , population > LinearFill )
+
+ElseIf( adaptive == .false. ) then
+
+       localize = merge( D_zero , large , population > vary%fim)
+
+EndIf
 
 deallocate( mask )
 
@@ -254,16 +294,17 @@ end function MO_character
 !
 !
 !
-!======================================================================
- function Bond_Type( system , GA , MO , atom1 , atom2 , AO , instance )
-!======================================================================
+!=============================================================================
+ function Bond_Type( system , GA , MO , atom1 , AO1 , atom2 , AO2 , instance )
+!=============================================================================
 implicit none
 type(structure)  , intent(in) :: system
 type(R_eigen)    , intent(in) :: GA
 integer          , intent(in) :: MO
 integer          , intent(in) :: atom1
+character(*)     , intent(in) :: AO1
 integer          , intent(in) :: atom2
-character(*)     , intent(in) :: AO
+character(*)     , intent(in) :: AO2
 character(len=1) , intent(in) :: instance
 
 real*8 :: bond_type 
@@ -272,51 +313,86 @@ real*8 :: bond_type
 integer :: indx1 , indx2
 real*8  :: bond_signal
 
-select case( AO ) 
+select case( AO1 ) 
 
     case( 's', 'S' )
 
         indx1 = system% BasisPointer(atom1) + 1
-        indx2 = system% BasisPointer(atom2) + 1
 
     case( 'py', 'Py' , 'PY' )
 
         indx1 = system% BasisPointer(atom1) + 2
-        indx2 = system% BasisPointer(atom2) + 2
 
     case( 'pz', 'Pz' , 'PZ' )
 
         indx1 = system% BasisPointer(atom1) + 3
-        indx2 = system% BasisPointer(atom2) + 3
 
     case( 'px', 'Px' , 'PX' )
 
         indx1 = system% BasisPointer(atom1) + 4
-        indx2 = system% BasisPointer(atom2) + 4
 
     case( 'dxy', 'Dxy' , 'DXY' )
 
         indx1 = system% BasisPointer(atom1) + 5
-        indx2 = system% BasisPointer(atom2) + 5
 
     case( 'dyz', 'Dyz' , 'DYZ' )
 
         indx1 = system% BasisPointer(atom1) + 6
-        indx2 = system% BasisPointer(atom2) + 6
 
     case( 'dz2', 'Dz2' , 'DZ2' )
 
         indx1 = system% BasisPointer(atom1) + 7
-        indx2 = system% BasisPointer(atom2) + 7
 
     case( 'dxz', 'Dxz' , 'DXZ' )
 
         indx1 = system% BasisPointer(atom1) + 8
-        indx2 = system% BasisPointer(atom2) + 8
 
     case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
 
         indx1 = system% BasisPointer(atom1) + 9
+
+    case default
+
+        stop " >> error in [bond] subroutine check input arguments <<"
+
+end select
+
+select case( AO2 ) 
+
+    case( 's', 'S' )
+
+        indx2 = system% BasisPointer(atom2) + 1
+
+    case( 'py', 'Py' , 'PY' )
+
+        indx2 = system% BasisPointer(atom2) + 2
+
+    case( 'pz', 'Pz' , 'PZ' )
+
+        indx2 = system% BasisPointer(atom2) + 3
+
+    case( 'px', 'Px' , 'PX' )
+
+        indx2 = system% BasisPointer(atom2) + 4
+
+    case( 'dxy', 'Dxy' , 'DXY' )
+
+        indx2 = system% BasisPointer(atom2) + 5
+
+    case( 'dyz', 'Dyz' , 'DYZ' )
+
+        indx2 = system% BasisPointer(atom2) + 6
+
+    case( 'dz2', 'Dz2' , 'DZ2' )
+
+        indx2 = system% BasisPointer(atom2) + 7
+
+    case( 'dxz', 'Dxz' , 'DXZ' )
+
+        indx2 = system% BasisPointer(atom2) + 8
+
+    case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+
         indx2 = system% BasisPointer(atom2) + 9
 
     case default
@@ -543,15 +619,14 @@ end function C_Mulliken
  subroutine  GA_eigen( system , basis , FMO , flag )
 !===================================================
  implicit none
- type(structure)              , intent(in)    :: system
- type(STO_basis)              , intent(in)    :: basis(:)
- type(R_eigen)                , intent(out)   :: FMO       
- integer         , optional   , intent(inout) :: flag 
+ type(structure)              , intent(in)  :: system
+ type(STO_basis)              , intent(in)  :: basis(:)
+ type(R_eigen)                , intent(out) :: FMO       
+ integer         , optional   , intent(in)  :: flag 
 
 ! local variables ... 
- integer               :: i , j , N , info
+ integer               :: i , N , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
-
  real*8  , ALLOCATABLE :: S_eigen(:) , tool(:,:)
 
 
@@ -582,8 +657,7 @@ end function C_Mulliken
 
  CALL SYGVD( h_FMO , dumb_S , FMO%erg , 1 , 'V' , 'U' , info )
 
- If (info /= 0) write(*,*) 'info = ',info,' in GA_Eigen '
- If ( present(flag) ) flag = info
+ If ( present(flag) .AND. info/=0 ) write(*,*) 'info = ',info,' in GA_Eigen '
 
  !--------------------------------------------------------
  ! Overlap Matrix Factorization: S^(1/2) ...
@@ -761,7 +835,6 @@ type(structure)  , intent(in)    :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 
 ! local variables ...
-integer :: i , j 
 
 CALL Overlap_Matrix( system , basis , S , "GA-CG" )
 

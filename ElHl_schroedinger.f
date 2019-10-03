@@ -4,7 +4,7 @@
  use constants_m
  use f95_precision
  use blas95
- use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube ,          &
+ use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
                                          Coulomb_ , restart , DensityMatrix , CT_dump_step
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
@@ -25,7 +25,6 @@
     ! module variables ...
     Complex*16 , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Real*8     , ALLOCATABLE , dimension(:,:,:) :: Pops(:,:,:)
-    type(R_eigen)                               :: UNI , el_FMO , hl_FMO
 
  contains
 !
@@ -45,6 +44,7 @@ integer                          :: it , n , it_init
 real*8                           :: t , t_rate
 real*8                           :: Total_DP(3)
 complex*16      , ALLOCATABLE    :: phase(:)
+type(R_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
@@ -86,6 +86,9 @@ end do
 ! deallocate after use ...
 deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
+! stop here to preview and check input and system info ...
+If( preview ) stop
+
 ! DUAL representation for efficient calculation of survival probabilities ...
 CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -94,7 +97,7 @@ CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zer
 Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
 QDyn%dyn(1,:,:) = Pops(1,:,:)
-CALL dump_QDyn( QDyn , 1 )
+CALL dump_QDyn( QDyn , 1 , UNI )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -141,7 +144,7 @@ DO it = it_init , n_t
     Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
     QDyn%dyn(it,:,:) = Pops(it,:,:)
-    if( mod(it,CT_dump_step) == 0 ) CALL dump_QDyn( QDyn , it )
+    if( mod(it,CT_dump_step) == 0 ) CALL dump_QDyn( QDyn , it , UNI )
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
@@ -174,11 +177,12 @@ end subroutine Simple_dynamics
 !
 !
 !========================================
- subroutine dump_Qdyn( Qdyn , it )
+ subroutine dump_Qdyn( Qdyn , it , UNI )
 !========================================
 implicit none
 type(f_time)    , intent(in) :: QDyn
 integer         , intent(in) :: it
+type(R_eigen)   , intent(in) :: UNI
 
 ! local variables ...
 integer     :: nf , n

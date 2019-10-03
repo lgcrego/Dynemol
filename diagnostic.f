@@ -102,10 +102,15 @@ CALL Read_Command_Lines_Arguments( MOnum )
  Print*, "dE6 = ", UNI%erg(117) - UNI%erg(116) ,   1.6000
  
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
+
+     ! use this to check the orbitals separately ... 
+     ! Extended_Cell% coord = Extended_Cell% coord * TWO
+
      do i = 1 , size(MOnum)
          CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
      end do
      Print 220 , MOnum(:)
+
  end if
 
  CALL Dump_stuff( TDOS , PDOS , SPEC )

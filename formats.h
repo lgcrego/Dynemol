@@ -110,6 +110,8 @@
 
 161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
 
+162   FORMAT(/,1x,'Custo_CG : ',I5,' /',I5)
+
 165   FORMAT(1x,'========= ',A20,' =========')
 
 166   FORMAT(1x,'truncation error = ',F8.5)
@@ -168,7 +170,7 @@
 
 209 format(1x,'van der Walls 1-4 scale = ',F7.4)
 
-210 format(/,1x,'OPT cost/original cost = ',F16.4,' / ',F16.4)
+210 format(/,1x,'OPT cost/original cost = ',F20.4,' / ',F20.4)
 
 215 format(1x,'MM input format >>> ', A6 , '   <<<')
 

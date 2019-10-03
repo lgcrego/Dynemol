@@ -9,7 +9,8 @@ module GA_m
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
                                          Mutation_rate , Mutate_Cross , &
-                                         Alpha_Tensor , OPT_parms
+                                         Alpha_Tensor , OPT_parms ,     &
+                                         Adaptive_
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use OPT_Parent_class_m      , only : GA_OPT
@@ -17,13 +18,14 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar 
+                                         AlphaPolar ,                   &
+                                         Adaptive_GA  
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
 
 
-    public :: Genetic_Algorithm 
+    public :: Genetic_Algorithm , Dump_OPT_parameters
 
     interface Genetic_Algorithm
         module procedure Genetic_Algorithm_EH
@@ -50,7 +52,7 @@ real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: mpi_D_R = mpi_double_precision
-integer                         :: i , generation , info , err , Pop_start , GeneSize
+integer                         :: i , generation , err , Pop_start , GeneSize
 logical                         :: done = .false.
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
@@ -77,14 +79,13 @@ If( master ) then
     allocate( indx    (Pop_Size)                )
     allocate( PopStar (GeneSize)                ) 
 
-    CALL random_seed
-
     CALL generate_RND_Pop( Pop_start , Pop )       
 
     ! this keeps the input EHT parameters in the population ...
     Pop(1,:) = D_zero
 
     indx = [ ( i , i=1,Pop_Size ) ]
+
 end If
 !-----------------------------------------------
 
@@ -95,6 +96,9 @@ GA_basis = basis
 allocate( cost    (Pop_size), source=D_zero ) 
 allocate( snd_cost(Pop_size) )
 
+! enable on the fly evaluation cost ...
+Adaptive_GA%mode = Adaptive_
+
 do generation = 1 , N_generations
 
 99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
@@ -103,40 +107,45 @@ do generation = 1 , N_generations
         return
     End If
 
-    CALL MPI_BCAST( Pop       , Pop_Size*GeneSize , mpi_D_R     , 0 , world , err )
+    CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
+    ! for on_the_fly cost evaluation ...
+    CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
+    CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
+
+    ! sharing these variables with ga_QCModel ...
+    Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
 
     snd_cost = D_zero
 
-    do i = myid + Pop_start , Pop_Size , np
+    ! Mutation_&_Crossing preserves the top-selections ...
+    ! evaluate cost only for new Pop outside top_selection ...
+
+!    do i = myid + Pop_start , Pop_Size , np
+    do i = myid + 1 , Pop_Size , np
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
 
-        info = 0
-        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
-
-        If (info /= 0) then 
-            snd_cost(i) = 1.d14
-            continue
-        end if
+        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI )
 
         If( DP_Moment )    CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
         ! population cost ...
-        snd_cost(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
+        snd_cost(i) = evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
 
     ! gather data ...
-    CALL MPI_reduce( snd_cost(Pop_start:) , cost(Pop_start:) , (Pop_size-Pop_start+1) , MPI_D_R , mpi_SUM , 0 , world , err )
+!    CALL MPI_reduce( snd_cost(Pop_start:) , cost(Pop_start:) , (Pop_size-Pop_start+1) , MPI_D_R , mpi_SUM , 0 , world , err )
+    CALL MPI_reduce( snd_cost , cost , Pop_Size , MPI_D_R , mpi_SUM , 0 , world , err )
 
-    Pop_start = Top_Selection + 1
+    Pop_start = Pop_size/2 + 1
 
     If ( slave ) goto 99
 
-!   evolve populations ...    
+!   select the fittest ...    
     CALL sort2(cost,indx)
 
     Old_Pop = Pop
@@ -145,7 +154,7 @@ do generation = 1 , N_generations
     PopStar(:) = Pop(1,:)
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross) then
+    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
@@ -165,6 +174,10 @@ do generation = 1 , N_generations
 end do
 
 close(23)
+
+! switch-off on the fly evaluation cost ...
+Adaptive_GA%mode = .false.
+
 deallocate( cost , snd_cost , indx , Old_Pop ) 
 
 !----------------------------------------------------------------
@@ -175,10 +188,12 @@ If( CG_ ) then
     allocate( GA_Selection( size(basis) , Top_Selection ) )
 
     do i = 1 , Top_Selection 
+
         ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
 
         GA_Selection(:,i) = GA_basis
+
     end do
 
     CALL CG_driver( GA , GA_Selection , CG_basis )
@@ -235,7 +250,7 @@ allocate( a    (Pop_Size , GeneSize) )
 allocate( seed (Pop_Size , GeneSize) )
 allocate( pot  (Pop_Size , GeneSize) )
 
-CALL random_seed
+CALL random_seed ! <== distribution within the range 0 <= x < 1.
         
 do i = Pop_start , Pop_size
     do j = 1 , GeneSize
@@ -243,7 +258,7 @@ do i = Pop_start , Pop_size
         CALL random_number( a   (i,j) )
         CALL random_number( seed(i,j) )
 
-        pot(i,j) = int( 2*seed(i,j) )
+        pot(i,j) = int( 2*seed(i,j) )  ! <== bimodal function (-1)^pot = -1 , +1 
         Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
 
     end do
@@ -267,61 +282,84 @@ implicit none
 real*8  , intent(inout) :: Pop(:,:)
 
 ! local variables ...
-real*8  , allocatable   :: mat2(:,:) , ma(:) , za(:) , sem(:) , po(:)
-real*8                  :: rn , rp
-integer , allocatable   :: p(:) , n(:)
-integer                 :: i , j , pt , pm , N_crossings , Ponto_cruzamento , GeneSize
+real*8  , allocatable   :: aux(:,:), a(:), b(:), seed(:), pot(:)
+real*8                  :: rn, rp
+integer , allocatable   :: p(:), n(:)
+integer                 :: i, j, MT, HALF_MT, NX, XP, GeneSize, odd, even, ind1, ind2
 
 GeneSize = size(Pop(1,:))
 
-N_crossings      = Pop_Size - Top_Selection 
-Ponto_cruzamento = N_crossings / 2 
+!N_crossings and XingPoint ...
+NX = Pop_Size / 2
+XP = NX / 2 
 
-! Random number for crossing ...
-allocate( n(N_crossings) )
-do i = 1 , N_crossings
-    call random_number( rn )
+! Start Xing ...
+!---------------------------------------------------------------------------
+! random population pointer ...
+allocate( n(NX) )
+do i = 1 , NX
+    call random_number( rn ) ! <== distribution within the range 0 <= x < 1.
     n(i) = int(Pop_Size*rn) + 1
 end do
 
-allocate( p(Ponto_Cruzamento) )
-do i = 1 , Ponto_cruzamento
+! random gene pointer ...
+allocate( p(XP) )
+do i = 1 , XP
     call random_number( rp )
     p(i) = min( int(GeneSize*rp) + 1 , GeneSize-1 )
 end do
 
-! Crossing ...
-allocate( mat2(Pop_Size,GeneSize) )
-mat2 = Pop
-do i = 1 , 2
-    do j = 1 , Ponto_Cruzamento
-        Pop( Top_Selection+i+(2*j-2) , 1      : p(j)        )  =  mat2( n(i+(2*j-2)) , 1      : p(j)        )
-        Pop( Top_Selection+i+(2*j-2) , p(j)+1 : GeneSize )  =  mat2( n((2*j+1)-i) , p(j)+1 : GeneSize )
-    end do
+allocate( aux(Pop_Size,GeneSize) , source=Pop )
+
+j=0
+do odd = 1 , 2*XP-1 , 2
+
+   even = odd + 1
+   j=j+1
+
+   Pop( NX + odd ,      1:p(j)     ) = aux( n(odd)  ,       1:p(j)      )
+   Pop( NX + odd , p(j)+1:GeneSize ) = aux( n(even) , p(j)+1 : GeneSize )
+
+   Pop( NX + even,      1:p(j)     ) = aux( n(even) ,       1:p(j)      )
+   Pop( NX + even, p(j)+1:GeneSize ) = aux( n(odd)  , p(j)+1 : GeneSize )
+
 end do
 
-! Mutation ...
-pt = 2*int( N_crossings * GeneSize * Mutation_rate )
-allocate( ma(pt) )
+deallocate( n , p , aux )
+!---------------------------------------------------------------------------
+! End Xing...
 
-do i = 1 , pt
-    call random_number( ma (i) )
+! Start Mutation ...
+!---------------------------------------------------------------------------
+! integer # of genes to mutate 
+MT = int( NX * GeneSize * Mutation_rate )
+HALF_MT = MT / 2
+
+allocate( b(MT), a(HALF_MT), seed(HALF_MT), pot(HALF_MT) )
+
+do i = 1 , MT
+    call random_number( b(i) ) ! <== distribution within the range 0 <= x < 1.
 end do
 
-pm = pt / 2
-allocate( za  (pm) )
-allocate( sem (pm) )
-allocate( po  (pm) )
-do i = 1 , pm
-    call random_number( za (i) )
-    call random_number( sem(i) )
+do i = 1 , HALF_MT
 
-    po(i) = int( 2 * sem(i) )
-    Pop(int(N_crossings*ma(i))+Top_Selection+1,int(GeneSize*ma(i+pm))+1) = ((-1)**po(i)) * za(i)
+    call random_number( a (i)   )
+    call random_number( seed(i) )
+
+    pot(i) = int( two * seed(i) )  ! <== bimodal function (-1)^pot = -1 , +1 
+    ind1   = int( NX  * b(i)    )
+    ind2   = int( GeneSize * b(HALF_MT+i) )
+
+    Pop( NX+1+ind1 , ind2+1) = (-1)**pot(i) * a(i) * Pop_range
+
 end do
 
-! deallocating ...
-deallocate( n , p , mat2 , ma , za , sem , po )
+! truncate variations to 1.d-5 ...
+Pop = Pop * 1.d5 ; Pop = int(Pop) ; Pop = Pop * 1.d-5
+
+deallocate( b , a , seed , pot )
+!---------------------------------------------------------------------------
+! End Mutation ...
 
 end subroutine Mutation_and_Crossing
 !
@@ -419,18 +457,18 @@ implicit none
 type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
-integer :: i , j , ioerr , nr , N_of_EHSymbol , err , size_EHSymbol
+integer :: i , j , ioerr , n , N_of_EHSymbol , err , size_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
-nr = 0
+n = 0
 do 
     read(3,*,IOSTAT=ioerr) dumb
     if(ioerr < 0) EXIT
-    nr = nr + 1
+    n = n + 1
 end do    
 
-N_of_EHSymbol = nr - 1
+N_of_EHSymbol = n - 1
 
 ! allocatting EH_keys: [s,p,d,IP,zeta,coef,k_WH] ...
 allocate( GA%EHSymbol    ( N_of_EHSymbol) )
@@ -466,13 +504,13 @@ GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N
 do j = 1 , N_of_EHSymbol
 
     If( GA%key(1,j) /= 0 ) &   ! <== optimizing s orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 0 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 0 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
     If( GA%key(2,j) /= 0 ) &   ! <== optimizing p orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 1 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 1 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
     If( GA%key(3,j) /= 0 ) &   ! <== optimizing d orbital ...
-    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%l == 2 ) basis%Nzeta = GA% key(5,j) + GA% key(6,j)
+    where( adjustl(basis% EHSymbol) == adjustl(GA% EHSymbol(j)) .AND. basis%L == 2 ) basis%Nzeta = max( GA% key(5,j)+GA% key(6,j) , basis%Nzeta )
 
 end do
 
@@ -492,15 +530,17 @@ end subroutine Read_GA_key
 !
 !
 !
-!===========================================
- subroutine Dump_OPT_parameters( OPT_basis )
-!===========================================
+!====================================================
+ subroutine Dump_OPT_parameters( OPT_basis , output )
+!====================================================
 implicit none
-type(STO_basis) , intent(inout) :: OPT_basis(:)
+type(STO_basis)            , intent(inout) :: OPT_basis(:)
+character(len=*), optional , intent(in)    :: output
 
 ! local variables ...
-integer :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
-integer , allocatable   :: indx_EHS(:)
+integer               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable :: indx_EHS(:)
+integer               :: unit_tag
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
@@ -513,11 +553,18 @@ allocate( indx_EHS(N_of_EHSymbol) )
 ! locate position of the first appearance of EHS-atoms in OPT_basis
 indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
-! creating file opt_eht_parameters.output.dat with the optimized parameters ...
-open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
+If( present(output) .AND. output=="STDOUT" ) then
+    Print*,""
+    Print*,""
+    unit_tag = 6
+else
+    ! creating file opt_eht_parameters.output.dat with the optimized parameters ...
+    open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
+    unit_tag = 13
+end If
 
 ! print heading ...
-write(13,48)
+write(unit_tag,48)
 
 do n_EHS = 1 , N_of_EHSymbol
 
@@ -529,7 +576,7 @@ do n_EHS = 1 , N_of_EHSymbol
 
         j = (i-1) + DOS(L)
     
-        write(13,17)    OPT_basis(j)%Symbol          ,   &
+  write(unit_tag,17)    OPT_basis(j)%Symbol          ,   &
                         OPT_basis(j)%EHSymbol        ,   &
                         OPT_basis(j)%residue         ,   &
                         OPT_basis(j)%AtNo            ,   &
@@ -546,7 +593,7 @@ do n_EHS = 1 , N_of_EHSymbol
     end do
 
 enddo
-close(13)
+If( unit_tag == '13' ) close(13)
 
 17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
@@ -699,8 +746,6 @@ allocate( p0(GeneSize) , source = MM_parms % p )
 allocate( Pop     (Pop_Size , GeneSize) )
 allocate( Old_Pop (Pop_Size , GeneSize) )
 allocate( indx    (Pop_Size)            )
-
-CALL random_seed
 
 Pop_start = 1
 CALL generate_RND_Pop( Pop_start , Pop )       
