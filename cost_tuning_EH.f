@@ -124,12 +124,12 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 122, 23, 'Pz', 28, 'Pz', '+')
 eval(me) =  Localize(OPT_UNI, basis, MO=122, atom=[1:30], threshold = 0.7 )    
 
 !123 ===================
-eval(me) =  Exclude(OPT_UNI, basis, MO=123, atom = [6 ], threshold =0.02 ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=123, atom = [6 ], vary=real_interval(0.1,0.06), adaptive=mode ) 
 eval(me) =  Bond_Type(sys, OPT_UNI, 123, 25, 'Pz', 21, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 123, 23, 'Pz', 28, 'Pz', '+')                                
 
 !124 ===================
-eval(me) =  Exclude(OPT_UNI, basis, MO=124, atom = [22], threshold =0.02 ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=124, atom = [22], vary=real_interval(0.1,0.06), adaptive=mode ) 
 eval(me) =  Bond_Type(sys, OPT_UNI, 124, 25, 'Pz', 21, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 124, 23, 'Pz', 28, 'Pz', '-')                                
 

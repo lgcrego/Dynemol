@@ -36,9 +36,9 @@ contains
 !
 !
 !
-!====================================================================
+!=====================================================================
  function MO_erg_diff( GA , up , down , dE_ref , weight ) result(cost)
-!====================================================================
+!=====================================================================
 implicit none
 type(R_eigen)            , intent(in) :: GA
 integer                  , intent(in) :: up
@@ -61,25 +61,29 @@ end function MO_erg_diff
 !
 !
 !
-!===============================================================
- function Exclude( GA , basis , MO , atom , residue , threshold)
-!===============================================================
+!==============================================================================================
+ function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+!==============================================================================================
 implicit none
-type(R_eigen)               , intent(in) :: GA
-type(STO_basis)             , intent(in) :: basis(:)
-integer                     , intent(in) :: MO
-integer         , optional  , intent(in) :: atom(:)
-character(len=*), optional  , intent(in) :: residue
-real            , optional  , intent(in) :: threshold
+type(R_eigen)                  , intent(in) :: GA
+type(STO_basis)                , intent(in) :: basis(:)
+integer                        , intent(in) :: MO
+integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: EHSymbol
+character(len=*)   , optional  , intent(in) :: residue
+real               , optional  , intent(in) :: threshold
+type(real_interval), optional  , intent(in) :: vary
+logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: exclude , population
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:)
+real*8                :: Exclude , population , LinearFill
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
+allocate( mask_3(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -96,18 +100,37 @@ else
     where( basis%residue == residue ) mask_2 = .true.
 end IF
 !====================================================
+IF( .NOT. present(EHSymbol) ) then
+    mask_3 = .true.
+else
+    where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( present(threshold) ) then
-    exclude = merge( D_zero , large , population < threshold )
-else
-    ! default value is assumed ...
-    exclude = merge( D_zero , large , population < 1.0d-3 )
-end if
+If( .NOT. present(vary) ) then
+
+       If( present(threshold) ) then
+          Exclude = merge( D_zero , large , population < threshold )
+       else
+           ! default value is assumed, 85% of localization ...
+           Exclude = merge( D_zero , large , population < 1.d-3 )
+       end if
+
+ElseIf( adaptive == .true. ) then
+
+       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
+       Exclude = merge( D_zero , large , population < LinearFill )
+
+ElseIf( adaptive == .false. ) then
+
+       Exclude = merge( D_zero , large , population < vary%fim)
+
+EndIf
 
 deallocate( mask )
 
@@ -171,21 +194,21 @@ population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
 If( .NOT. present(vary) ) then
 
-    If( present(threshold) ) then
-       localize = merge( D_zero , large , population > threshold )
-    else
-        ! default value is assumed, 85% of localization ...
-        localize = merge( D_zero , large , population > 0.85 )
-    end if
+       If( present(threshold) ) then
+          localize = merge( D_zero , large , population > threshold )
+       else
+           ! default value is assumed, 85% of localization ...
+           localize = merge( D_zero , large , population > 0.85 )
+       end if
 
 ElseIf( adaptive == .true. ) then
 
-    LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
-    localize = merge( D_zero , large , population > LinearFill )
+       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
+       localize = merge( D_zero , large , population > LinearFill )
 
 ElseIf( adaptive == .false. ) then
 
-    localize = merge( D_zero , large , population > vary%fim)
+       localize = merge( D_zero , large , population > vary%fim)
 
 EndIf
 
