@@ -4,6 +4,7 @@ module Dielectric_Potential
     use constants_m
     use blas95
     use f95_precision
+    use MPI_definitions_m       , only : master
     use parameters_m            , only : PBC , Environ_type , verbose
     use MD_read_m               , only : atom
     use DP_potential_m          , only : Dipole_Potentials
@@ -76,7 +77,7 @@ N_of_Q = sum( Env_Mols(:)% N_of_Atoms )
 
 ! consistency checks ...
 If( N_of_Q /= count( sys%nr >= first_nr .and. sys%nr <= last_nr ) ) stop '>>> something wrong in Environment_SetUp <<<'
-Print 157 , N_of_Mols
+If( master ) Print 157 , N_of_Mols
 
 !======================================================
 ! Setting Up Env_Atoms and Env_Mols ...

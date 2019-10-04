@@ -174,6 +174,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
 
+ extended_cell % N_of_electrons = sum( extended_cell % Nvalen , extended_cell % QMMM == "QM" )
  extended_cell % N_of_Solvent_Molecules = (2*nnx+1) * (2*nny+1) * unit_cell % N_of_Solvent_Molecules
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
@@ -182,7 +183,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 
  If( OPT_parms ) CALL Include_OPT_parameters( extended_cell )
 
- if( frame == 1 ) CALL diagnosis( Extended_Cell )
+ if( frame == 1 .AND. master ) CALL diagnosis( Extended_Cell )
 
  include 'formats.h'
 
@@ -307,7 +308,7 @@ If( GaussianCube .AND. (.NOT. done) ) then
  subroutine Diagnosis( a )
 !=========================
  implicit none
- type(structure) , intent(inout) :: a
+ type(structure) , intent(in) :: a
 
 ! local variables ...
 integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
@@ -315,20 +316,19 @@ integer :: first_nr , last_nr , N_of_residue_members
 
 ! total number of orbitals ...
 N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
-If( master ) Print 120 , N_of_orbitals                       
+Print 120 , N_of_orbitals                       
 
 ! total number of electrons ...
-a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
-If( master ) Print 140 , a%N_of_electrons
+Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
-If( master ) Print 141 , a%atoms , count(a%flex)
+Print 141 , a%atoms , count(a%flex)
 
 ! total number of QM atoms ...
-If( master ) Print 142 , count( a%QMMM == "QM" )
+Print 142 , count( a%QMMM == "QM" )
 
 ! total number of MM atoms ...
-If( master ) Print 143 , count( a%QMMM == "MM" )
+Print 143 , count( a%QMMM == "MM" )
 
 ! total number of atoms of given type ...
 ! total number of atoms of given type ...
@@ -336,7 +336,7 @@ do AtNo = 1 , size(atom)
 
     N_of_atom_type = count( a%AtNo == AtNo )
    
-    If( N_of_atom_type /= 0 .and. master ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
+    If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
 
 end do
 
@@ -351,7 +351,7 @@ do residue = 1 , size(Unit_Cell%list_of_residues)
 
     N_of_residue_members = last_nr - first_nr + 1
 
-    If( N_of_residue_type /= 0 .and. master ) Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
+    If( N_of_residue_type /= 0 ) Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
 
 end do
 
@@ -360,14 +360,14 @@ do fragment = 1 , size(a%list_of_fragments)
 
     N_of_fragment_type = count( a%fragment == a%list_of_fragments(fragment) )
     
-    If( N_of_fragment_type /= 0 .and. master ) Print 123 , a%list_of_fragments(fragment) , N_of_fragment_type
+    If( N_of_fragment_type /= 0 ) Print 123 , a%list_of_fragments(fragment) , N_of_fragment_type
 
 end do
 
 ! dumping information about structure ...
 CALL dump_diagnosis( a )
 
-If( master ) Print 47
+Print 47
 
 include 'formats.h'
 
@@ -379,7 +379,7 @@ end subroutine diagnosis
  subroutine dump_diagnosis( a )
 !==============================
 implicit none
-type(structure) , intent(inout) :: a
+type(structure) , intent(in) :: a
 
 ! local variables ...
 integer :: i , j

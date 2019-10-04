@@ -40,7 +40,7 @@ logical :: dynamic
 !			
   Survival       = T_                       
   DP_Moment      = F_                       
-  QMMM           = F_
+  QMMM           = T_                        ! <== Hellman-Feynman-Pulay ; HFP_Forces MUST be T_ for QMMM calcs 
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
@@ -56,7 +56,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
@@ -80,7 +80,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =  T_                          ! <== Potential produced by Environment
+  EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
   Environ_step =  10                          ! <== step for updating EnvField
 
