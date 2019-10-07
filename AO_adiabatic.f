@@ -263,24 +263,24 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( EnvField_ ) then
+If( EnvField_ .AND. master ) then
 
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
 
     ! Environ potential in the static GS configuration ...
-    CALL Environment_SetUp  ( Extended_Cell )
+    CALL Environment_SetUp( Extended_Cell )
 
     hole_state = hole_save
     static     = .false.
 
+    CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+
 end If
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-
 ! SLAVES only calculate S_matrix and return ...
-CALL EigenSystem( Extended_Cell , ExCell_basis , UNI )
+CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )

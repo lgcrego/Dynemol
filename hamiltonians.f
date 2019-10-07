@@ -13,7 +13,7 @@
     use polarizability_m      , only : Induced_DP_phi
     use Semi_Empirical_Parms  , only : atom
 
-    public :: X_ij , even_more_extended_Huckel 
+    public :: X_ij , even_more_extended_Huckel , Huckel_with_FIELDS
 
     private
 
@@ -76,8 +76,8 @@ real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) 
 logical               :: evaluate
 
-! instantiating DP_$_matrix ...
-if( .not. done ) CALL allocate_DP4_matrix
+! instantiating DP_4_matrix ...
+if( .not. done ) CALL allocate_DP_4_matrix
 
 ! evaluate or not evaluate DP_phi this time...
 If( .not. present(it) ) then
@@ -230,7 +230,7 @@ end function GET_RAB
 !
 !
 !===============================
- subroutine allocate_DP4_matrix
+ subroutine allocate_DP_4_matrix
 !===============================
  use Structure_Builder , only : a => Extended_Cell 
  implicit none
@@ -248,7 +248,7 @@ end function GET_RAB
 
  done = .true.
 
-end subroutine allocate_DP4_matrix
+end subroutine allocate_DP_4_matrix
 !
 !
 !
