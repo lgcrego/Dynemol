@@ -7,7 +7,6 @@ module Chebyshev_driver_m
                                              ForceComm , ForceCrew ,        &
                                              ChebyCrew, KernelComm ,        &
                                              myid , world
-
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              EnvField_ , Induced_ , QMMM ,  &
@@ -237,7 +236,7 @@ If( EnvField_ ) then
     static     = .true. 
 
     ! DP potential in the static GS configuration ...
-    CALL Environment_SetUp  ( Extended_Cell )
+    CALL Environment_SetUp( Extended_Cell )
 
     hole_state = hole_save
     static     = .false.

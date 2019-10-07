@@ -74,8 +74,8 @@ else
     h0(:,:) = Build_Huckel( basis , S_matrix )
 end If
 
-! After instantiating Overlap_matrix, processes wait outside ...
-If( .not. ChebyCrew ) return
+! After instantiating S_matrix AND h0, processes wait outside ...
+If( .not. ChebyCrew ) return         
 
 allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
