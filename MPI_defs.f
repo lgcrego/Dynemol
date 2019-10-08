@@ -154,7 +154,7 @@ contains
  implicit none
 
 ! local variables ...
- integer :: err , my_color
+ integer :: err , my_color , ForceCrewLimit
  logical :: drafted = .false.
 
 ! define sub_groups and new communicators ...
@@ -170,9 +170,10 @@ contains
  CALL MPI_Comm_split( world , my_color , myid , ChebyComm  , err )
  If( ChebyCrew ) CALL MPI_COMM_RANK ( ChebyComm , myCheby , err )      ! <== sets the rank of processes in ChebyComm
 
+! processes released for next drafting ...
+ drafted = .false.
 !------------------------------------------------------------------------
 ! KernelComm group = (0,2) ...
- drafted = .false.
  select case ( myid )
     case (0,2)
         my_color   =  0
@@ -183,9 +184,10 @@ contains
  CALL MPI_Comm_split( world , my_color , myid , KernelComm  , err )
  If( drafted ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
 
+! processes released for next drafting ...
+ drafted = .false.
 !------------------------------------------------------------------------
 ! ChebyKernelComm group = (0,1,2) = ChebyComm + KernelComm ...
- drafted = .false.
  select case ( myid )
     case (0:2)
         my_color   =  0
@@ -196,25 +198,56 @@ contains
  CALL MPI_Comm_split( world , my_color , myid , ChebyKernelComm  , err )
  If( drafted ) CALL MPI_COMM_RANK ( ChebyKernelComm , myChebyKernel , err )   ! <== sets the rank of processes in KernelComm
 
+! processes released for next drafting ...
+ drafted = .false.
 !------------------------------------------------------------------------
 ! ForceComm group = KernelCrew + ForceCrew ...
- drafted = .false.
- select case ( myid )
-    case (0)
+
+ ForceCrewLimit = (np-1) - merge( EnvProcs , 0 , EnvField_ )
+
+ If( myid == 0) then                                        ! <== case(0)
+        my_color = 0
+        drafted  = .true.
+ ElseIf( (2 <= myid) .AND. (myid <= ForceCrewLimit) ) then  ! <== case(2:ForceCrewLimit)
         my_color  = 0
         drafted   = .true.
-    case (1) 
-        my_color  = MPI_undefined
-    case (2:)
-        my_color  = 0
         ForceCrew = .true.
-        drafted   = .true.
- end select
+ Else                                                       ! <== case(1,ForceCrewLimit+1:)
+        my_color = MPI_undefined
+ EndIf
+
  CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )
  If( drafted ) then
     CALL MPI_COMM_RANK (ForceComm , myForce , err )   ! <== sets the rank of processes
     CALL MPI_COMM_SIZE (ForceComm , npForce , err )   ! <== gets the total number of processes
  end If
+
+! processes released for next drafting ...
+ drafted = .false.
+!------------------------------------------------------------------------
+! EnvComm group = (0,[EnvProcs]) ; to work in "even_more_extended_huckel" ...
+
+ If( EnvField_ ) then
+ 
+     IF( myid == 0 ) then                    ! <== case(0)
+            my_color = 0
+            drafted  = .true.
+     ElseIf( myid > ForceCrewLimit ) then    ! <== case(ForceCrewLimit+1:)
+            my_color = 0
+            drafted  = .true.
+            EnvCrew  = .true.
+     Else
+            my_color = MPI_undefined
+     EndIf
+ 
+     CALL MPI_Comm_split( world , my_color , myid , EnvComm  , err )
+ 
+     If( drafted ) then
+        CALL MPI_COMM_RANK (EnvComm , myEnvId , err )   ! <== sets the rank of processes
+        CALL MPI_COMM_SIZE (EnvComm , npEnv   , err )   ! <== gets the total number of processes
+     end If
+ 
+ EndIf
 !------------------------------------------------------------------------
 
  end subroutine setup_Chebyshev_Crew

@@ -6,7 +6,7 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m  , only : myCheby, ChebyCrew, ChebyComm, ChebyKernelComm, KernelComm, master, myid
+    use MPI_definitions_m  , only : myCheby, ForceCrew, ChebyComm, ChebyKernelComm, KernelComm, world, EnvCrew, master, myid
     use parameters_m       , only : t_i , frame_step , Coulomb_ , EnvField_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
     use Structure_Builder  , only : Unit_Cell 
     use Overlap_Builder    , only : Overlap_Matrix
@@ -55,7 +55,8 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , M , N
+integer                         :: li , M , N , err
+integer                         :: mpi_D_R = mpi_double_precision
 real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
@@ -68,14 +69,26 @@ N = size(basis)
 
 allocate( h0(N,N) , source = D_zero )
 
-If( EnvField_ ) then
-    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
-else
-    h0(:,:) = Build_Huckel( basis , S_matrix )
+!------------------------------------------------------------------------
+If( (.not.master) .AND. (.not.EnvCrew) ) then ! <== wait here to receive h0 from master ...
+
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+
+   ! After instantiating S_matrix AND h0, processes wait outside ...
+   If( ForceCrew ) return
+
+ElseIf( EnvField_ ) then
+
+   h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+
+Else
+
+   h0(:,:) = Build_Huckel( basis , S_matrix )
+
 end If
 
-! After instantiating S_matrix AND h0, processes wait outside ...
-If( .not. ChebyCrew ) return         
+If( master ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+!------------------------------------------------------------------------
 
 allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
