@@ -9,7 +9,7 @@
     use lapack95
     use type_m
     use constants_m
-    use MPI_definitions_m           , only : ForceCrew , master 
+    use MPI_definitions_m           , only : ForceCrew , KernelCrew 
     use parameters_m                , only : EnvField_ , Induced_ , verbose 
     use Overlap_Builder             , only : Overlap_Matrix
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
@@ -44,7 +44,7 @@ real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , dumb_S(:,:) , h(:,:) , S_matrix(:,:
 CALL Overlap_Matrix( system , basis , S_matrix )
 
 ! After instantiating Overlap_matrix, processes wait outside ...
-If( .not. master ) return
+If( ForceCrew .OR. KernelCrew ) return
 
 N = size(basis)
 

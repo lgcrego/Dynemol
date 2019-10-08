@@ -80,7 +80,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =  F_                          ! <== Potential produced by Environment
+  EnvField_    =  T_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
   Environ_step =  10                          ! <== step for updating EnvField
 

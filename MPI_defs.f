@@ -1,12 +1,13 @@
 module MPI_definitions_m
 
     use MPI
-    use parameters_m     , only : driver 
+    use parameters_m     , only : driver , EnvField_
 
     public :: world , myid , master , slave , np 
     public :: ChebyComm  , ChebyCrew  , myCheby 
     public :: KernelComm , KernelCrew , myKernel 
     public :: ForceComm  , ForceCrew  , myForce  , npForce
+    public :: EnvComm    , EnvCrew    , myEnvId  , npEnv
     public :: ChebyKernelComm , myChebyKernel
 
     public :: launch_MPI
@@ -14,15 +15,20 @@ module MPI_definitions_m
     private
 
     ! module variables ...
-    integer    :: world , myid , np 
-    integer    :: KernelComm , myKernel 
-    integer    :: ChebyComm , myCheby
-    integer    :: ChebyKernelComm , myChebyKernel
-    integer    :: ForceComm , myForce , npForce
-    logical    :: master = .false. , slave = .true. 
-    logical    :: ChebyCrew  = .false. 
-    logical    :: ForceCrew  = .false. 
-    logical    :: KernelCrew = .false.
+    integer :: world , myid , np 
+    integer :: KernelComm , myKernel 
+    integer :: ChebyComm , myCheby
+    integer :: ChebyKernelComm , myChebyKernel
+    integer :: ForceComm , myForce , npForce
+    integer :: EnvComm , myEnvId , npEnv
+    logical :: master = .false. , slave = .true. 
+    logical :: ChebyCrew  = .false. 
+    logical :: ForceCrew  = .false. 
+    logical :: KernelCrew = .false.
+    logical :: EnvCrew    = .false.
+
+    ! module parameters ...
+    integer :: EnvProcs = 6  ! <== MPI procs dedicated to EnvFields; default = 6 ...   
  
 contains
 !
@@ -68,40 +74,74 @@ contains
  implicit none
 
 ! local variables ...
- integer :: err , my_color
+ integer :: err , my_color , ForceCrewLimit
  logical :: drafted = .false.
 
 ! define sub_groups and new communicators ...
 !------------------------------------------------------------------------
-! KernelComm group = (0,1,2) ...
+! KernelComm group = (0,1,2) ; to work in "EhrenfestForce" ...
  select case ( myid )
     case (0)
-        my_color   =  0
+        my_color   = 0
     case (1:2)
-        my_color   =  0
-        KernelCrew =  .true.
+        my_color   = 0
+        KernelCrew = .true.
     case (3:)
-        my_color   =  MPI_undefined
+        my_color   = MPI_undefined
  end select
+
  CALL MPI_Comm_split( world , my_color , myid , KernelComm  , err )
  If( KernelCrew ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
  
 !------------------------------------------------------------------------
-! ForceComm group = KernelCrew + ForceCrew  ...
- select case ( myid )
-    case (0:2)
+! ForceComm group = KernelCrew + ForceCrew ; to work in "EhrenfestForce" ...
+
+ ForceCrewLimit = (np-1) - merge( EnvProcs , 0 , EnvField_ )
+
+ If( myid <= 2) then                                        ! <== case(0:2)
         my_color = 0
         drafted  = .true.
-    case (3:)
-        my_color   = 0
-        drafted    = .true.
-        ForceCrew  = .true.
- end select
+ ElseIf( (3 <= myid) .AND. (myid <= ForceCrewLimit) ) then  ! <== case(3:ForceCrewLimit)
+        my_color  = 0
+        drafted   = .true.
+        ForceCrew = .true.
+ Else                                                       ! <== case(ForceCrewLimit+1:)
+        my_color = MPI_undefined
+ EndIf
+
  CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )
+
  If( drafted ) then
     CALL MPI_COMM_RANK (ForceComm , myForce , err )   ! <== sets the rank of processes
     CALL MPI_COMM_SIZE (ForceComm , npForce , err )   ! <== gets the total number of processes
- end If
+ end If 
+
+! processes released for next drafting ...
+ drafted = .false.
+!------------------------------------------------------------------------
+! EnvComm group = (0,[EnvProcs]) ; to work in "even_more_extended_huckel" ...
+
+ If( EnvField_ ) then
+ 
+     IF( myid == 0 ) then                    ! <== case(0)
+            my_color = 0
+            drafted  = .true.
+     ElseIf( myid > ForceCrewLimit ) then    ! <== case(ForceCrewLimit+1:)
+            my_color = 0
+            drafted  = .true.
+            EnvCrew  = .true.
+     Else
+            my_color = MPI_undefined
+     EndIf
+ 
+     CALL MPI_Comm_split( world , my_color , myid , EnvComm  , err )
+ 
+     If( drafted ) then
+        CALL MPI_COMM_RANK (EnvComm , myEnvId , err )   ! <== sets the rank of processes
+        CALL MPI_COMM_SIZE (EnvComm , npEnv   , err )   ! <== gets the total number of processes
+     end If
+ 
+ EndIf
 !------------------------------------------------------------------------
 
  end subroutine setup_Adiabatic_Crew

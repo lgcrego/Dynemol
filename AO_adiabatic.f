@@ -9,7 +9,7 @@ module AO_adiabatic_m
     use blas95
     use MPI_definitions_m           , only : master , world , myid,           &
                                              KernelComm , KernelCrew ,        &
-                                             ForceComm , ForceCrew            
+                                             ForceComm , ForceCrew , EnvCrew 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,       &
                                              frame_step , nuclear_matter ,    &
                                              EnvField_ , DP_Moment ,          &
@@ -263,7 +263,7 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( EnvField_ .AND. master ) then
+If( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
     hole_save  = hole_state
     hole_state = 0
@@ -279,7 +279,7 @@ If( EnvField_ .AND. master ) then
 
 end If
 
-! SLAVES only calculate S_matrix and return ...
+! ForceCrew only calculate S_matrix and return ; EnvCrew stay in hamiltonians.f ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...

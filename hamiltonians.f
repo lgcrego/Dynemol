@@ -1,11 +1,13 @@
  module Hamiltonians
 
+    use MPI
     use f95_precision
     use blas95
     use lapack95
     use type_m
     use omp_lib
     use constants_m
+    use MPI_definitions_m     , only : master , myEnvId , npEnv , EnvCrew , EnvComm , myid
     use parameters_m          , only : EnvField_ , Induced_ , Environ_type , Environ_step
     use Dielectric_Potential  , only : Q_phi
     use DP_potential_m        , only : DP_phi
@@ -72,74 +74,109 @@ integer         , optional , intent(in) :: it
 
 ! local variables ...
 integer               :: i , j , ia , ib , ja , jb , N
+integer               :: err
+integer               :: mpi_D_R = mpi_double_precision
 real*8                :: Rab , DP_4_vector(4)
-real*8  , ALLOCATABLE :: h(:,:) 
+real*8  , ALLOCATABLE :: h(:,:) , snd_h(:,:)
 logical               :: evaluate
 
 ! instantiating DP_4_matrix ...
-if( .not. done ) CALL allocate_DP_4_matrix
-
-! evaluate or not evaluate DP_phi this time...
-If( .not. present(it) ) then
-   evaluate = .true.
-else If( mod(it-1,Environ_step) == 0 ) then
-   evaluate = .true.
-else
-   evaluate = .false.
-end if
-
-! resetting DP_$_matrix before fresh calculation ...
-if( evaluate ) DP_4_matrix = D_zero
+if( EnvCrew .AND. (.not. done) ) CALL allocate_DP_4_matrix
 
 N = size(basis)
-Allocate( h(N,N) , source = D_zero )
 
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-!$OMP parallel do &
-!$OMP   default(shared) &
-!$OMP   schedule(dynamic, 1) &
-!$OMP   private(ib, ia, Rab, jb, ja, j, i, DP_4_vector)
-do ib = 1, system%atoms
-    do ia = ib+1, system%atoms
+If( master ) then
 
-        if ((system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM")) then
-            cycle
-        end if
+    ! evaluate or not evaluate DP_phi this time...
+    If( .not. present(it) ) then
+       evaluate = .true.
+    else If( mod(it-1,Environ_step) == 0 ) then
+       evaluate = .true.
+    else
+       evaluate = .false.
+    end if
+    
+    Allocate( h(N,N) , source = D_zero )
+    
+EndIf
 
-        Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
-        if (Rab > cutoff_Angs) then
-           cycle
-        end if
+! EnvCrew dwells here ...
+99  CALL MPI_BCAST( evaluate , 1 , mpi_logical , 0 , EnvComm , err )
 
-        If( evaluate ) then 
-           select case (Environ_Type)
-                case('DP_MM','DP_QM')
-                    DP_4_vector = DP_phi( system , ia , ib )
-                case default
-                    DP_4_vector =  Q_phi( system , ia , ib )
-           end select
-           DP_4_matrix(ia,ib,:) = DP_4_vector
-        else 
-           DP_4_vector = DP_4_matrix(ia,ib,:)
-        end if
+! export new coordinates for EnvCrew ...
+CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , EnvComm, err )
 
-        do jb = 1, atom(system%AtNo(ib))% DOS
+! export new S_matrix for EnvCrew ...
+CALL MPI_BCAST( S_matrix , N*N , mpi_D_R , 0 , EnvComm, err )
+
+Allocate( snd_h(N,N) , source = D_zero )
+
+If( EnvCrew ) then ! <== evaluates snd_h ...
+
+    ! resetting DP_4_matrix before fresh calculation ...
+    if( evaluate ) DP_4_matrix = D_zero
+    
+    !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    !$OMP parallel do &
+    !$OMP   default(shared) &
+    !$OMP   schedule(dynamic, 1) &
+    !$OMP   private(ib, ia, Rab, jb, ja, j, i, DP_4_vector)
+
+    do ib = myEnvId, system%atoms, npEnv-1
+        do ia = ib+1, system%atoms
+    
+            if ((system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM")) then
+                cycle
+            end if
+    
+            Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
+            if (Rab > cutoff_Angs) then
+               cycle
+            end if
+    
+            If( evaluate ) then 
+               select case (Environ_Type)
+                    case('DP_MM','DP_QM')
+                        DP_4_vector = DP_phi( system , ia , ib )
+                    case default
+                        DP_4_vector =  Q_phi( system , ia , ib )
+               end select
+               DP_4_matrix(ia,ib,:) = DP_4_vector
+            else 
+               DP_4_vector = DP_4_matrix(ia,ib,:)
+            end if
+    
+            do jb = 1, atom(system%AtNo(ib))% DOS
             do ja = 1, atom(system%AtNo(ia))% DOS
-
-                j = system% BasisPointer(ib) + jb
-                i = system% BasisPointer(ia) + ja
-
-                h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
-
-                h(j,i) = h(i,j)
-
+    
+               j = system% BasisPointer(ib) + jb
+               i = system% BasisPointer(ia) + ja
+    
+               snd_h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
+    
+               snd_h(j,i) = snd_h(i,j)
+    
             end do
+            end do
+    
         end do
+    end do  
+    !$OMP END PARALLEL DO
 
-    end do
-end do  
-!$OMP END PARALLEL DO
+    CALL MPI_reduce( snd_h , h , N*N , MPI_D_R , mpi_SUM , 0 , EnvComm , err )
 
+else ! master waits for snd_h ...
+
+    CALL MPI_reduce( snd_h , h , N*N , MPI_D_R , mpi_SUM , 0 , EnvComm , err )
+
+EndIf
+
+deallocate( snd_h )
+
+! return to forever ...
+If( EnvCrew ) goto 99
+
+! diagonal elements ...
 forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
 
 end function even_more_extended_huckel
