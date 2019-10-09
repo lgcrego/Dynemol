@@ -1,7 +1,9 @@
 module Backup_m
 
+    use MPI 
     use type_m
     use blas95
+    use MPI_definitions_m    , only : master , EnvCrew
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
@@ -90,19 +92,20 @@ CALL Generate_Structure( frame )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-
-if( EnvField_ ) then
+if( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    ! wavepacket component of the dipole vector ...
+    ! decide what to do with this ############ 
+    !CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
     CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 
-! SLAVES only calculate S_matrix and return ...
+! KernelCrew and ForceCrew: only calculate S_matrix and return; 
+! EnvCrew: follow to even_more_extended_Huckel ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
 

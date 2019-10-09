@@ -80,7 +80,7 @@ integer         , intent(out)   :: final_it
 integer         :: frame , frame_init , frame_final , frame_restart , err
 integer         :: mpi_D_R = mpi_double_precision
 integer         :: mpi_D_C = mpi_double_complex
-real*8          :: t , t_rate 
+real*8          :: t_rate 
 type(universe)  :: Solvated_System
 
 it = 1
@@ -565,8 +565,8 @@ end subroutine dump_Qdyn
 subroutine Restart_stuff( QDyn , frame_restart )
 !===============================================
 implicit none
-type(f_time)    , intent(out)   :: QDyn
-integer         , intent(inout) :: frame_restart
+type(f_time)    , intent(out) :: QDyn
+integer         , intent(out) :: frame_restart
 
 integer :: err
 integer :: mpi_D_R = mpi_double_precision
@@ -600,15 +600,11 @@ CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 ! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
 If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
-If( QMMM ) then 
+If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-    If( Induced_ ) then
-         CALL Build_Induced_DP( instance = "allocate" )
-         CALL DP_stuff ( "Induced_DP" )
-    end If
-
+If( Induced_ ) then
+     CALL Build_Induced_DP( instance = "allocate" )
+     CALL DP_stuff ( "Induced_DP" )
 end If
 
 ! ForceCrew is on stand-by for this ...
