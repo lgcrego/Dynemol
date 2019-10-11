@@ -43,6 +43,7 @@ contains
 !
 !==========================================================================================================
  subroutine preprocess_ElHl_Chebyshev( system , basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
+! used for normal start (see interface) ...
 !==========================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
@@ -372,19 +373,19 @@ end subroutine QuasiParticleEnergies
 !
 !
 !
-!======================================================================================
- subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket , it )
-!======================================================================================
+!=================================================================================
+ subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket )
+!=================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
 complex*16      , intent(in)    :: DUAL_ket (:,:)
 complex*16      , intent(in)    :: AO_bra   (:,:)
 complex*16      , intent(in)    :: AO_ket   (:,:)
-integer         , intent(in)    :: it
 
 !local variables ...
-integer :: N
+integer :: N , err
+integer :: mpi_D_R = mpi_double_precision
 
 N = size(basis)
 
@@ -398,15 +399,27 @@ Psi_t_ket = AO_ket
 CALL Overlap_Matrix( system , basis , S_matrix )
 
 allocate( h0(N,N) , source = D_zero )
-If( Envfield_ ) then
 
-    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+!------------------------------------------------------------------------
+If( (.not.master) .AND. (.not.EnvCrew) ) then ! <== wait here to receive h0 from master ...
 
-else
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
 
-    h0(:,:) = Build_Huckel( basis , S_matrix )
+   ! After instantiating S_matrix AND h0, processes wait outside ...
+   If( ForceCrew ) return
+
+ElseIf( EnvField_ ) then
+
+   h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+
+Else
+
+   h0(:,:) = Build_Huckel( basis , S_matrix )
 
 end If
+
+If( master ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+!------------------------------------------------------------------------
 
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
 

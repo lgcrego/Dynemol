@@ -6,7 +6,7 @@ module Chebyshev_driver_m
     use MPI_definitions_m           , only : master , world , myid,         &
                                              ForceComm , ForceCrew ,        &
                                              ChebyCrew, KernelComm ,        &
-                                             myid , world
+                                             myid , world 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,     &
                                              frame_step , nuclear_matter ,  &
                                              EnvField_ , Induced_ , QMMM ,  &
@@ -191,7 +191,6 @@ type(f_time)    , intent(out)   :: QDyn
 ! local variables
 integer         :: hole_save , err
 integer         :: mpi_D_R = mpi_double_precision
-logical         :: el_hl_
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -220,8 +219,6 @@ select case ( nuclear_matter )
         stop
 
 end select
-
-el_hl_ = any( Unit_Cell%Hl )  
 
 CALL Generate_Structure ( 1 )
 
@@ -349,17 +346,16 @@ CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_rest
 
 CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
-CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket , it )
+CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
 
-If( QMMM ) then 
+! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
+If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
 
-    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    If( Induced_ ) then
-          CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
-          CALL DP_stuff ( "Induced_DP" )
-    end If
-
+If( Induced_ ) then
+      CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+      CALL DP_stuff ( "Induced_DP" )
 end If
 
 ! ForceCrew is on stand-by for this ...
