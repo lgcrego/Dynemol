@@ -33,7 +33,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -72,12 +72,6 @@ logical :: dynamic
   AutoCorrelation   = F_             
   VDOS_             = F_
 !--------------------------------------------------------------------
-!           SECURITY COPY
-!
-  restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 100                         ! <== step for saving backup files
-                                              ! <== default = 100 (QMMM) ; 1000 (MM) 
-!--------------------------------------------------------------------
 !           POTENTIALS
 !
   EnvField_    =  T_                          ! <== Potential produced by Environment
@@ -91,6 +85,12 @@ logical :: dynamic
 !           SAMPLING parameters
 !
   frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+!--------------------------------------------------------------------
+!           SECURITY COPY
+!
+  restart       = F_                          ! <== TRUE for restarting dynamics
+  step_security = 100                         ! <== step for saving backup files
+                                              ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !

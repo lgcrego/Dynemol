@@ -22,9 +22,11 @@ module DiabaticEhrenfest_Builder
     end interface EhrenfestForce 
 
     !module variables ...
-    integer     , allocatable   :: BasisPointer(:) , DOS(:) , pairs_map(:,:) , HF_atoms(:)
-    real*8      , allocatable   :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , X_ij(:,:) 
-    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_snd(:,:,:) , F_rcv(:,:,:) , H_prime(:,:)
+    integer , allocatable :: BasisPointer(:) , DOS(:) , pairs_map(:,:) , HF_atoms(:) , scheduler(:,:)
+    real*8  , allocatable :: rho_eh(:,:) , A_ad_nd(:,:) , B_ad_nd(:,:) , Kernel(:,:) , X_ij(:,:) 
+    real*8  , allocatable :: grad_S(:,:) , F_vec(:) , F_snd(:,:,:) , F_rcv(:,:,:) , H_prime(:,:)
+
+    logical :: done_npForceSchedule = .false.
 
     !module parameters ...
     integer , parameter :: xyz_key(3) = [1,2,3]
@@ -44,7 +46,7 @@ contains
  complex*16      , optional , intent(in)    :: AO_ket(:,:)
 
 ! local variables ... 
- integer :: i , N , xyz , err , request_H_prime
+ integer :: i , N , xyz , err , request_H_prime , mytasks , myatom
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
@@ -72,7 +74,7 @@ end If
 
 ! preprocess overlap matrix for Pulay calculations, all ForceCrew must do it ...
  CALL Overlap_Matrix( system , basis )
- CALL preprocess    ( system )
+ CALL preprocess    ( system , mytasks)
 
 If( myKernel == 1 ) then
 
@@ -128,10 +130,12 @@ call MPI_BCAST( Kernel , N*N , mpi_D_R , 1 , ForceComm , err )
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 F_rcv = D_zero ; F_snd = D_zero ; F_vec = D_zero 
 
-do i = myForce+1 , system% atoms , npForce
+do i = 1 , mytasks
 
-    If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
-    CALL Ehrenfest( system, basis, i ) 
+    myatom = scheduler(i,myForce+1)
+
+    If( system%QMMM(myatom) == "MM" .OR. system%flex(myatom) == F_ ) cycle
+    CALL Ehrenfest( system, basis, myatom ) 
 
 end do
 
@@ -273,20 +277,26 @@ end subroutine Huckel_stuff
 !
 !
 !
-!============================
- subroutine Preprocess( sys ) 
-!============================
+!======================================
+ subroutine Preprocess( sys , mytasks )
+!======================================
 use Semi_empirical_parms , only: atom
 implicit none
-type(structure) , intent(in) :: sys
+type(structure) , intent(in)  :: sys
+integer         , intent(out) :: mytasks
 
 !local variables ...
-real*8   :: R_LK
-integer  :: K , L , N_of_HF_atoms
+real*8  :: R_LK
+integer :: K , L , N_of_HF_atoms
+
+integer :: NFold , remainder
+integer :: i , j , j1 , j2 , step_j , aux
 
 !save local variables ...
 save :: N_of_HF_atoms 
 
+! define (update) matrix of atom pairs for HFP calculations ...
+!-------------------------------------------------------------------
 If( .NOT. allocated(HF_atoms) ) then
 
     allocate( BasisPointer(sys%atoms) , source = sys% BasisPointer(:)     )
@@ -314,6 +324,39 @@ do K = 1 , N_of_HF_atoms
    end do
 end do    
 !$OMP end parallel do 
+!-------------------------------------------------------------------
+
+! define Load Balance for MPI HFP calculations in EhrenfestForce ...
+!-------------------------------------------------------------------
+If( .not. done_npForceSchedule ) then
+
+   NFold = int(sys% atoms/npForce) + merge( 1 , 0 , mod(sys% atoms,npForce)/=0 )
+   remainder = mod(sys% atoms,npForce)
+
+   allocate( scheduler(nFold,npForce) , source = -1 )
+
+   k = 0; j1 = 1 ; j2 = npForce ; step_j = 1
+   do i = 1 , NFold
+      do j = j1 , j2 , step_j
+
+         k = k + 1
+         scheduler(i,j) = merge( k , 0 , k <= sys% atoms)
+
+      end do
+
+      aux = j1
+      j1  = j - step_j
+      j2  = aux
+      step_j = step_j * (-1)
+
+   end do
+
+   done_npForceSchedule = .true.
+
+End If
+
+mytasks = count( scheduler(:,myForce+1) /= 0 )
+!-------------------------------------------------------------------
 
 end subroutine Preprocess
 !
