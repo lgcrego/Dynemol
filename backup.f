@@ -7,7 +7,7 @@ module Backup_m
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
-                                      EnvField_                  , &
+                                      EnvField_ , Environ_step   , &
                                       DP_Moment                  , &
                                       Coulomb_                   , &
                                       restart , n_part
@@ -246,9 +246,9 @@ end subroutine Restart_State_Eigen
 !
 !
 !
-!============================================================================================================
- subroutine Restart_Sys_Cheb( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame )
-!============================================================================================================
+!=================================================================================================================
+ subroutine Restart_Sys_Cheb( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , it )
+!=================================================================================================================
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
@@ -257,6 +257,7 @@ complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
+integer                         , intent(in)    :: it
 
 ! local variables ...
 type(universe) :: Solvated_System
@@ -297,7 +298,7 @@ if( EnvField_ ) then
     ! decide what to do with this ############ 
     !CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    CALL Environment_SetUp  ( Extended_Cell )
+    If( mod(it-1,Environ_step) == 0 ) CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 

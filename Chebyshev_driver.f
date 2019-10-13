@@ -344,12 +344,12 @@ CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
 CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
-CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
+CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
 
 CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
-If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
+!If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
 
 If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 

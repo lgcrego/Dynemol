@@ -87,7 +87,7 @@ N = size(basis)
 
 If( master ) then
 
-    ! evaluate or not evaluate DP_phi this time...
+    ! to evaluate or not to evaluate this time...
     If( .not. present(it) ) then
        evaluate = .true.
     else If( mod(it-1,Environ_step) == 0 ) then
