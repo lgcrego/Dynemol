@@ -98,7 +98,7 @@ if( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
     ! wavepacket component of the dipole vector ...
     ! decide what to do with this ############ 
-    !CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    If( .false. ) CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
     CALL Environment_SetUp  ( Extended_Cell )
 
@@ -296,9 +296,9 @@ if( EnvField_ ) then
 
     ! wavepacket component of the dipole vector ...
     ! decide what to do with this ############ 
-    !CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    If( .false. ) CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
-    If( mod(it-1,Environ_step) == 0 ) CALL Environment_SetUp  ( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
 end If
 
