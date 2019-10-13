@@ -96,10 +96,10 @@ If( master ) then
        evaluate = .false.
     end if
     
-    Allocate( h(N,N) , source = D_zero )
-    
 EndIf
 
+Allocate( h(N,N) , source = D_zero )
+    
 ! EnvCrew dwells here ...
 99  CALL MPI_BCAST( evaluate , 1 , mpi_logical , 0 , EnvComm , err )
 

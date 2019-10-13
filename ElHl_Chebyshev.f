@@ -6,8 +6,13 @@ module ElHl_Chebyshev_m
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m  , only : myCheby, ForceCrew, ChebyComm, ChebyKernelComm, KernelComm, world, EnvCrew, master, myid
-    use parameters_m       , only : t_i , frame_step , Coulomb_ , EnvField_ , n_part, driver , QMMM, CT_dump_step , HFP_Forces
+    use MPI_definitions_m  , only : master , EnvCrew ,  myCheby ,   &       
+                                    ChebyComm , ChebyCrew ,         &  
+                                    ForceComm , ForceCrew ,         &
+                                    KernelComm , ChebyKernelComm   
+    use parameters_m       , only : t_i , frame_step , Coulomb_ ,   &
+                                    EnvField_ , n_part, driver ,    &
+                                    QMMM, CT_dump_step , HFP_Forces
     use Structure_Builder  , only : Unit_Cell 
     use Overlap_Builder    , only : Overlap_Matrix
     use FMO_m              , only : FMO_analysis , eh_tag    
@@ -56,7 +61,7 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , M , N , err
+integer                         :: li , M , N , err 
 integer                         :: mpi_D_R = mpi_double_precision
 real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
@@ -71,24 +76,28 @@ N = size(basis)
 allocate( h0(N,N) , source = D_zero )
 
 !------------------------------------------------------------------------
-If( (.not.master) .AND. (.not.EnvCrew) ) then ! <== wait here to receive h0 from master ...
+If( master .OR. EnvCrew ) then 
 
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+   If( EnvField_ ) then
+      ! EnCrew stay in even_more_extended_Huckel ...
+      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+   Else
+      h0(:,:) = Build_Huckel( basis , S_matrix )
+   end If
 
-   ! After instantiating S_matrix AND h0, processes wait outside ...
-   If( ForceCrew ) return
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 
-ElseIf( EnvField_ ) then
+End If
 
-   h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+If( ForceCrew ) then
+   ! After instantiating S_matrix AND h0, ForceCrew leave to EhrenfestForce ...
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   return
+End If
 
-Else
-
-   h0(:,:) = Build_Huckel( basis , S_matrix )
-
-end If
-
-If( master ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+! Another ChebyCrew  mate ...
+If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 !------------------------------------------------------------------------
 
 allocate( ElHl_Psi( N , n_part ) , source=C_zero )
@@ -401,24 +410,28 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 allocate( h0(N,N) , source = D_zero )
 
 !------------------------------------------------------------------------
-If( (.not.master) .AND. (.not.EnvCrew) ) then ! <== wait here to receive h0 from master ...
+If( master .OR. EnvCrew ) then 
 
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+   If( EnvField_ ) then
+      ! EnCrew stay in even_more_extended_Huckel ...
+      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+   Else
+      h0(:,:) = Build_Huckel( basis , S_matrix )
+   end If
 
-   ! After instantiating S_matrix AND h0, processes wait outside ...
-   If( ForceCrew ) return
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 
-ElseIf( EnvField_ ) then
+End If
 
-   h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+If( ForceCrew ) then
+   ! After instantiating S_matrix AND h0, ForceCrew leave to EhrenfestForce ...
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   return
+End If
 
-Else
-
-   h0(:,:) = Build_Huckel( basis , S_matrix )
-
-end If
-
-If( master ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , world , err )
+! Another ChebyCrew  mate ...
+If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 !------------------------------------------------------------------------
 
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)

@@ -248,7 +248,7 @@ implicit none
  character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
- integer               :: N_of_FMO_electrons, i, j , N , info
+ integer               :: N_of_FMO_electrons, i, N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
 
  N = size(basis)
