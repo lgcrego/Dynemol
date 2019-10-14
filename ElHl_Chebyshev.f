@@ -48,6 +48,7 @@ contains
 !
 !==========================================================================================================
  subroutine preprocess_ElHl_Chebyshev( system , basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
+! used for normal start (see interface) ...
 !==========================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
@@ -158,8 +159,6 @@ end if
 deallocate( H_prime )
 #endif
 #undef S_inv
-
-! leaving S_matrix allocated ...
 !==============================================
 
 end subroutine preprocess_ElHl_Chebyshev
@@ -401,6 +400,23 @@ integer :: N
 
 N = size(basis)
 
+#ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    allocate( S_matrix(N,N) )
+    call GPU_Pin(S_matrix, N*N*8)
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#endif
+
+CALL Overlap_Matrix( system , basis , S_matrix )
+
+allocate( h0(N,N) , source = D_zero )
+
+If( EnvField_ ) then
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+else
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+end If
+
 !vector states to be propagated ...
 allocate( Psi_t_bra(N,n_part) )
 allocate( Psi_t_ket(N,n_part) )
@@ -408,20 +424,33 @@ allocate( Psi_t_ket(N,n_part) )
 Psi_t_bra = DUAL_ket
 Psi_t_ket = AO_ket
 
-CALL Overlap_Matrix( system , basis , S_matrix )
-
-allocate( h0(N,N) , source = D_zero )
-If( EnvField_ ) then
-
-    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
-
-else
-
-    h0(:,:) = Build_Huckel( basis , S_matrix )
-
-end If
-
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
+
+!==============================================
+! preprocess stuff for EhrenfestForce ...
+
+  CALL syInvert( S_matrix, return_full ) ! <== S_matrix content is destroyed and S_inv is returned
+#define S_inv S_matrix
+
+  allocate( H(N,N) )
+  h => h0
+
+! allocate and compute H' = S_inv * H ...
+  allocate( H_prime(N,N) , source = D_zero )
+  CALL syMultiply( S_inv , h , H_prime )
+
+  CALL store_Hprime( N , H_prime )
+!==============================================
+
+!==============================================
+! clean and exit ...
+deallocate( h0 )
+nullify( h )
+#ifndef USE_GPU
+deallocate( H_prime )
+#endif
+#undef S_inv
+!==============================================
 
 ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
 QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)

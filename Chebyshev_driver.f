@@ -239,7 +239,7 @@ CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket ,
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it )
 
@@ -331,15 +331,11 @@ CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra 
 
 CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket , it )
 
-If( QMMM ) then 
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-    If( Induced_ ) then
-          CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
-          CALL DP_stuff ( "Induced_DP" )
-    end If
-
+If( Induced_ ) then
+      CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
+      CALL DP_stuff ( "Induced_DP" )
 end If
 
 Allocate( past_AO_bra (size(ExCell_basis),n_part) , past_AO_ket (size(ExCell_basis),n_part))

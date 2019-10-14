@@ -90,13 +90,13 @@ CALL Generate_Structure( frame )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-if( DP_Moment ) CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
-
 if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    ! wavepacket component of the dipole vector ...
+    ! decide what to do with this ############ 
+    If( .false. ) CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
     CALL Environment_SetUp  ( Extended_Cell )
 
@@ -283,13 +283,15 @@ end select
 
 CALL Generate_Structure ( frame )
 
-CALL Basis_Builder      ( Extended_Cell , ExCell_basis )
+CALL Basis_Builder ( Extended_Cell , ExCell_basis )
 
 if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
-    CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
+    ! wavepacket component of the dipole vector ...
+    ! decide what to do with this ############ 
+    If( .false. ) CALL wavepacket_DP  ( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_ket )
 
     CALL Environment_SetUp  ( Extended_Cell )
 

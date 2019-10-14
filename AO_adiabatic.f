@@ -319,7 +319,7 @@ End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 !..........................................................................
 
 include 'formats.h'
@@ -553,8 +553,8 @@ end subroutine dump_Qdyn
 subroutine Restart_stuff( QDyn , frame_restart )
 !===============================================
 implicit none
-type(f_time)    , intent(out)   :: QDyn
-integer         , intent(inout) :: frame_restart
+type(f_time)    , intent(out) :: QDyn
+integer         , intent(out) :: frame_restart
 
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
@@ -567,15 +567,11 @@ CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra ,
 mm = size(ExCell_basis)
 nn = n_part
 
-If( QMMM ) then 
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
-    allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-    If( Induced_ ) then
-         CALL Build_Induced_DP( instance = "allocate" )
-         CALL DP_stuff ( "Induced_DP" )
-    end If
-
+If( Induced_ ) then
+     CALL Build_Induced_DP( instance = "allocate" )
+     CALL DP_stuff ( "Induced_DP" )
 end If
 
 end subroutine Restart_stuff
