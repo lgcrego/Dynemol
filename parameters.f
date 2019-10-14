@@ -14,7 +14,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
-logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview
+logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
 logical , parameter     :: T_ = .true. , F_ = .false. 
@@ -72,12 +72,6 @@ logical :: dynamic
   AutoCorrelation   = F_             
   VDOS_             = F_
 !--------------------------------------------------------------------
-!           SECURITY COPY
-!
-  restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 100                         ! <== step for saving backup files
-                                              ! <== default = 100 (QMMM) ; 1000 (MM) 
-!--------------------------------------------------------------------
 !           POTENTIALS
 !
   EnvField_    =  T_                          ! <== Potential produced by Environment
@@ -91,6 +85,12 @@ logical :: dynamic
 !           SAMPLING parameters
 !
   frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+!--------------------------------------------------------------------
+!           SECURITY COPY
+!
+  restart       = F_                          ! <== TRUE for restarting dynamics
+  step_security = 100                         ! <== step for saving backup files
+                                              ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
@@ -137,15 +137,16 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  50  
-  N_generations  =  10    
-  Top_Selection  =  20                     ! <== top selection < Pop_Size
-  Pop_range      =  0.05d0                 ! <== range of variation of parameters
-  Mutation_rate  =  0.5           
-  Mutate_Cross   =  F_                     ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Pop_Size       =  390  
+  N_generations  =  500    
+  Pop_range      =  0.65     ! <== range of variation of parameters range: [0:1]
+  Mutation_rate  =  0.6     
+  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
+  Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Top_Selection  =  5        ! <== top selection to undergo CG_
 
-  CG_            =  F_                     ! <== use conjugate gradient method after genetic algorithm
-  profiling      =  T_                     ! <== for tuning the optimization parameters of the code
+  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 !  hereafter only CHECKLIST and  WARNINGS !!!
@@ -191,12 +192,12 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
 end if
 
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
-
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
     stop
 End If    
+
+If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...

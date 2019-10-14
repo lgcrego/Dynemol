@@ -90,19 +90,18 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , sqrt(evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. )) , sqrt(first_cost) 
+Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost
 
 !Print 154, DP, sqrt( dot_product(DP,DP) )
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ", UNI%erg(155) - UNI%erg(154) ,   2.5120
-Print*, "dE2 = ", UNI%erg(154) - UNI%erg(153) ,   0.1400
-Print*, "dE3 = ", UNI%erg(156) - UNI%erg(155) ,   0.0960
-Print*, "dE4 = ", UNI%erg(153) - UNI%erg(152) ,   0.0170
-Print*, "dE5 = ", UNI%erg(152) - UNI%erg(151) ,   0.0510
-Print*, "dE6 = ", UNI%erg(157) - UNI%erg(156) ,   0.2470
-Print*, "dE7 = ", UNI%erg(158) - UNI%erg(157) ,   0.8530
+Print*, "dE1 = ",UNI%erg(123) - UNI%erg(122) , 2.8670d0
+Print*, "dE2 = ",UNI%erg(122) - UNI%erg(121) , 0.0930d0
+Print*, "dE3 = ",UNI%erg(123) - UNI%erg(121) , 2.9600d0
+Print*, "dE4 = ",UNI%erg(121) - UNI%erg(120) , 1.0970d0
+Print*, "dE5 = ",UNI%erg(120) - UNI%erg(119) , 0.2020d0
+Print*, "dE6 = ",UNI%erg(125) - UNI%erg(124) , 1.6310d0
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 
@@ -148,6 +147,7 @@ character(6) :: MOstr
 MO_total  = COMMAND_ARGUMENT_COUNT()
 
 IF( MO_total == 3) then
+
     call get_command_argument(2,MOstr)
 
     select case (MOstr)
@@ -177,6 +177,7 @@ IF( MO_total == 3) then
    end select 
 
 ELSE
+
    ! arbitrary (/= 3) list of orbitals ...     
    allocate( MOnum(MO_total) )
    do i = 1 , MO_total

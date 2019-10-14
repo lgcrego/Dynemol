@@ -44,7 +44,6 @@ integer                          :: it , n , it_init
 real*8                           :: t , t_rate
 real*8                           :: Total_DP(3)
 complex*16      , ALLOCATABLE    :: phase(:)
-character(11)                    :: argument
 type(R_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------

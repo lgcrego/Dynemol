@@ -56,9 +56,9 @@ implicit none
 type(structure) , intent(in)  :: sys
 
 ! local variables ...
-integer                       :: i, j, I1, I2, nr, na, last_nr, first_nr, nr_atoms, N_of_Q, N_of_Mols
+integer                       :: i, j, I1, I2, nr, na, last_nr, first_nr, N_of_Q, N_of_Mols
 real*8                        :: total_valence
-real*8          , allocatable :: Qi_Ri(:,:) , Q_center(:,:) 
+real*8          , allocatable :: Qi_Ri(:,:) 
 type(molecular) , allocatable :: Env_Mols(:)
 
 ! find positions of environment molecules ...
@@ -76,7 +76,7 @@ N_of_Q = sum( Env_Mols(:)% N_of_Atoms )
 
 ! consistency checks ...
 If( N_of_Q /= count( sys%nr >= first_nr .and. sys%nr <= last_nr ) ) stop '>>> something wrong in Environment_SetUp <<<'
-Print 157 , N_of_Mols
+If( verbose ) Print 157 , N_of_Mols
 
 !======================================================
 ! Setting Up Env_Atoms and Env_Mols ...
@@ -152,7 +152,7 @@ integer         , intent(in) :: a , b
 ! local variables ...
 integer               :: i , j , k , na , N_of_Q , N_of_M
 real*8                :: hardcore , cut_off_radius, CC_distance, midpoint_ab(3) , Q_phi(4)
-real*8  , allocatable :: distance(:), V_phi(:), V_phi2(:,:), Q(:), versor(:,:), vector_ALL(:,:) , AT_Q(:), AT_versor(:,:) , AT_distance(:) , aux(:)
+real*8  , allocatable :: distance(:), V_phi(:), V_phi2(:,:), Q(:), versor(:,:), vector_ALL(:,:) , AT_Q(:), AT_versor(:,:) , AT_distance(:) 
 logical               :: inside
 
 ! combination rule for solvation hardcore shell ...
@@ -209,7 +209,7 @@ else
         do j = 1 , 3
             vector_ALL(:,j) = midpoint_ab(j) - MolPBC(:)% CC(j)
         end do
-       
+
         k = 0 
         do i = 1 , size(MolPBC)
         
@@ -218,7 +218,7 @@ else
             inside = ( (CC_distance > hardcore) .AND. (CC_distance < cut_off_radius) )
         
             If( inside ) then
-   
+
                 na = MolPBC(i)% N_of_Atoms
 
                 do j = 1 , na
@@ -310,7 +310,7 @@ forall(j=1:3) MolPBC(1:N_of_M)% CC(j)      = Mol(:)% CC(j)
 do concurrent (i=1:N_of_M)
 
     na = Mol(i)% N_of_Atoms
-    If( .not. allocated(MolPBC) ) Then
+    If( .not. allocated(MolPBC(i)% PC% Q) ) Then
         allocate( MolPBC(i)% PC% Q(na)     )
         allocate( MolPBC(i)% PC% nr(na)    )
         allocate( MolPBC(i)% PC% xyz(na,3) )

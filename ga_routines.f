@@ -7,7 +7,8 @@ module GA_m
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
                                          Mutation_rate , Mutate_Cross , &
-                                         Alpha_Tensor , OPT_parms
+                                         Alpha_Tensor , OPT_parms ,     &
+                                         Adaptive_
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use OPT_Parent_class_m      , only : GA_OPT
@@ -15,7 +16,8 @@ module GA_m
     use EH_CG_driver_m          , only : CG_driver
     use GA_QCModel_m            , only : GA_eigen ,                     &
                                          GA_DP_Analysis ,               &
-                                         AlphaPolar 
+                                         AlphaPolar ,                   &
+                                         Adaptive_GA  
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
@@ -85,18 +87,16 @@ allocate( cost(Pop_size) )
 
 do generation = 1 , N_generations
 
-    do i = Pop_start , Pop_Size
+    ! sharing these variables with ga_QCModel ...
+    Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
+
+    !do i = Pop_start , Pop_Size
+     do i = 1 , Pop_Size
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
 
-        info = 0
-        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI , info )
-
-        If (info /= 0) then 
-            cost(i) = real_large
-            cycle    
-        end if
+        CALL  GA_eigen( Extended_Cell , GA_basis , GA_UNI )
 
         If( DP_Moment )    CALL GA_DP_Analysis( Extended_Cell , GA_basis , GA_UNI%L , GA_UNI%R , GA_DP )
 
@@ -107,16 +107,16 @@ do generation = 1 , N_generations
 
     end do
 
-!   evolve populations ...    
+!   select the fittest ...    
     CALL sort2(cost,indx)
 
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
 
-    Pop_start = Top_Selection + 1
+    Pop_start = Pop_size/2 + 1
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross) then
+    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
@@ -131,6 +131,9 @@ do generation = 1 , N_generations
 end do
 
 close(23)
+
+! switch-off on the fly evaluation cost ...
+Adaptive_GA%mode = .false.
 
 !----------------------------------------------------------------
 ! Prepare grid of parameters for CG fine tuning optimization ...
@@ -202,7 +205,7 @@ allocate( a    (Pop_Size , GeneSize) )
 allocate( seed (Pop_Size , GeneSize) )
 allocate( pot  (Pop_Size , GeneSize) )
 
-CALL random_seed
+CALL random_seed ! <== distribution within the range 0 <= x < 1.
         
 do i = Pop_start , Pop_size
     do j = 1 , GeneSize
@@ -210,7 +213,7 @@ do i = Pop_start , Pop_size
         CALL random_number( a   (i,j) )
         CALL random_number( seed(i,j) )
 
-        pot(i,j) = int( 2*seed(i,j) )
+        pot(i,j) = int( 2*seed(i,j) )  ! <== bimodal function (-1)^pot = -1 , +1 
         Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
 
     end do
@@ -234,61 +237,84 @@ implicit none
 real*8  , intent(inout) :: Pop(:,:)
 
 ! local variables ...
-real*8  , allocatable   :: mat2(:,:) , ma(:) , za(:) , sem(:) , po(:)
-real*8                  :: rn , rp
-integer , allocatable   :: p(:) , n(:)
-integer                 :: i , j , pt , pm , N_crossings , Ponto_cruzamento , GeneSize
+real*8  , allocatable   :: aux(:,:), a(:), b(:), seed(:), pot(:)
+real*8                  :: rn, rp
+integer , allocatable   :: p(:), n(:)
+integer                 :: i, j, MT, HALF_MT, NX, XP, GeneSize, odd, even, ind1, ind2
 
 GeneSize = size(Pop(1,:))
 
-N_crossings      = Pop_Size - Top_Selection 
-Ponto_cruzamento = N_crossings / 2 
+!N_crossings and XingPoint ...
+NX = Pop_Size / 2
+XP = NX / 2 
 
-! Random number for crossing ...
-allocate( n(N_crossings) )
-do i = 1 , N_crossings
-    call random_number( rn )
+! Start Xing ...
+!---------------------------------------------------------------------------
+! random population pointer ...
+allocate( n(NX) )
+do i = 1 , NX
+    call random_number( rn ) ! <== distribution within the range 0 <= x < 1.
     n(i) = int(Pop_Size*rn) + 1
 end do
 
-allocate( p(Ponto_Cruzamento) )
-do i = 1 , Ponto_cruzamento
+! random gene pointer ...
+allocate( p(XP) )
+do i = 1 , XP
     call random_number( rp )
     p(i) = min( int(GeneSize*rp) + 1 , GeneSize-1 )
 end do
 
-! Crossing ...
-allocate( mat2(Pop_Size,GeneSize) )
-mat2 = Pop
-do i = 1 , 2
-    do j = 1 , Ponto_Cruzamento
-        Pop( Top_Selection+i+(2*j-2) , 1      : p(j)        )  =  mat2( n(i+(2*j-2)) , 1      : p(j)        )
-        Pop( Top_Selection+i+(2*j-2) , p(j)+1 : GeneSize )  =  mat2( n((2*j+1)-i) , p(j)+1 : GeneSize )
-    end do
+allocate( aux(Pop_Size,GeneSize) , source=Pop )
+
+j=0
+do odd = 1 , 2*XP-1 , 2
+
+   even = odd + 1
+   j=j+1
+
+   Pop( NX + odd ,      1:p(j)     ) = aux( n(odd)  ,       1:p(j)      )
+   Pop( NX + odd , p(j)+1:GeneSize ) = aux( n(even) , p(j)+1 : GeneSize )
+
+   Pop( NX + even,      1:p(j)     ) = aux( n(even) ,       1:p(j)      )
+   Pop( NX + even, p(j)+1:GeneSize ) = aux( n(odd)  , p(j)+1 : GeneSize )
+
 end do
 
-! Mutation ...
-pt = 2*int( N_crossings * GeneSize * Mutation_rate )
-allocate( ma(pt) )
+deallocate( n , p , aux )
+!---------------------------------------------------------------------------
+! End Xing...
 
-do i = 1 , pt
-    call random_number( ma (i) )
+! Start Mutation ...
+!---------------------------------------------------------------------------
+! integer # of genes to mutate 
+MT = int( NX * GeneSize * Mutation_rate )
+HALF_MT = MT / 2
+
+allocate( b(MT), a(HALF_MT), seed(HALF_MT), pot(HALF_MT) )
+
+do i = 1 , MT
+    call random_number( b(i) ) ! <== distribution within the range 0 <= x < 1.
 end do
 
-pm = pt / 2
-allocate( za  (pm) )
-allocate( sem (pm) )
-allocate( po  (pm) )
-do i = 1 , pm
-    call random_number( za (i) )
-    call random_number( sem(i) )
+do i = 1 , HALF_MT
 
-    po(i) = int( 2 * sem(i) )
-    Pop(int(N_crossings*ma(i))+Top_Selection+1,int(GeneSize*ma(i+pm))+1) = ((-1)**po(i)) * za(i)
+    call random_number( a (i)   )
+    call random_number( seed(i) )
+
+    pot(i) = int( two * seed(i) )  ! <== bimodal function (-1)^pot = -1 , +1 
+    ind1   = int( NX  * b(i)    )
+    ind2   = int( GeneSize * b(HALF_MT+i) )
+
+    Pop( NX+1+ind1 , ind2+1) = (-1)**pot(i) * a(i) * Pop_range
+
 end do
 
-! deallocating ...
-deallocate( n , p , mat2 , ma , za , sem , po )
+! truncate variations to 1.d-5 ...
+Pop = Pop * 1.d5 ; Pop = int(Pop) ; Pop = Pop * 1.d-5
+
+deallocate( b , a , seed , pot )
+!---------------------------------------------------------------------------
+! End Mutation ...
 
 end subroutine Mutation_and_Crossing
 !
@@ -513,7 +539,7 @@ do n_EHS = 1 , N_of_EHSymbol
     end do
 
 enddo
-If( unit_tag == '13' ) close(13)
+If( unit_tag == 13 ) close(13)
 
 17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 

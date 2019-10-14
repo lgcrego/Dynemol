@@ -8,16 +8,21 @@
                                              n_part ,                   &
                                              Survival ,                 &
                                              EnvField_ ,                &
+                                             Environ_type ,             &
                                              Induced_ ,                 & 
                                              electron_state ,           &
                                              hole_state ,               &
                                              LCMO
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
+    use Dielectric_Potential        , only : Q_phi
+    use DP_potential_m              , only : DP_phi
+    use DP_main_m                   , only : DP_matrix_AO
+    use Semi_Empirical_Parms        , only : atom
     use tuning_m                    , only : eh_tag , orbital 
     use Overlap_Builder             , only : Overlap_Matrix
     use Structure_Builder           , only : Basis_Builder
-    use Hamiltonians                , only : X_ij , even_more_extended_Huckel
+    use Hamiltonians                , only : X_ij , Huckel_with_Fields 
     use LCMO_m                      , only : LCMO_Builder
 
     public :: FMO_analysis , eh_tag , orbital
@@ -109,7 +114,7 @@
 
  deallocate( system_fragment , basis_fragment )
 
- print*, '>> FMO analysis done <<'
+ Print*, '>> FMO analysis done <<'
 
  include 'formats.h'
 
@@ -214,10 +219,10 @@ implicit none
  end do
 
  if( dabs(check-FMO_size) < low_prec ) then
-     print*, '>> projection done <<'
+     Print*, '>> projection done <<'
  else
      Print 58 , check 
-     print*, '---> problem in projector <---'
+     Print*, '---> problem in projector <---'
  end if
 
 !-----------------------------------------------------------------------------------------
@@ -284,7 +289,7 @@ implicit none
  end do
  CLOSE(9)   
 
- print*, '>> eigen_FMO done <<'
+ Print*, '>> eigen_FMO done <<'
 
  end subroutine eigen_FMO
 !
@@ -321,6 +326,83 @@ end function Build_Huckel
 !
 !
 !
+!=========================================================================
+ function even_more_extended_huckel( system , basis , S_matrix ) result(h)
+!=========================================================================
+implicit none
+type(structure) , intent(in) :: system
+type(STO_basis) , intent(in) :: basis(:)
+real*8          , intent(in) :: S_matrix(:,:)
+
+! local variables ...
+integer               :: i , j , ia , ib , ja , jb , N
+real*8                :: Rab , DP_4_vector(4)
+real*8  , ALLOCATABLE :: h(:,:) 
+
+N = size(basis)
+Allocate( h(N,N) , source = D_zero )
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+!$OMP parallel do &
+!$OMP   default(shared) &
+!$OMP   schedule(dynamic, 1) &
+!$OMP   private(ib, ia, Rab, jb, ja, j, i, DP_4_vector)
+do ib = 1, system%atoms
+    do ia = ib+1, system%atoms
+
+        Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
+        if (Rab > cutoff_Angs) then
+           cycle
+        end if
+
+        select case (Environ_Type)
+           case('DP_MM','DP_QM')
+               DP_4_vector = DP_phi( system , ia , ib )
+           case default
+               DP_4_vector =  Q_phi( system , ia , ib )
+        end select
+
+        do jb = 1, atom(system%AtNo(ib))% DOS
+            do ja = 1, atom(system%AtNo(ia))% DOS
+
+               j = system% BasisPointer(ib) + jb
+               i = system% BasisPointer(ia) + ja
+
+               h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
+
+               h(j,i) = h(i,j)
+
+            end do
+        end do
+
+    end do
+end do  
+!$OMP END PARALLEL DO
+
+forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
+
+end function even_more_extended_huckel
+!
+!
+!
+!==================================================
+pure function GET_RAB(a_coord, b_coord) result(rab)
+!==================================================
+ implicit none
+
+ ! args
+ real*8, intent(in) :: a_coord(:)
+ real*8, intent(in) :: b_coord(:)
+
+ ! result
+ real*8 :: rab
+
+ rab = SUM((a_coord - b_coord) ** 2)
+ rab = SQRT(rab)
+end function GET_RAB
+!
+!
+!
 !--------------------------------------------------------------
  subroutine  check_casida_builder( system, basis, wv_FMO, FMO )
 !--------------------------------------------------------------
@@ -331,7 +413,7 @@ end function Build_Huckel
  type(R_eigen)   , intent(in)  :: FMO       
 
 ! local variables ... 
- integer               :: i, j , nn
+ integer               :: i, nn
  real*8                :: erg , pop
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , tmp_S(:) , tmp_E(:)
 
@@ -358,10 +440,10 @@ do i = 1 , nn
     pop = dot_product( wv_FMO(i,:) , tmp_S ) + pop
     erg = dot_product( wv_FMO(i,:) , tmp_E )
 
-    print*, i, erg , FMO % erg(i)
+    Print*, i, erg , FMO % erg(i)
 end do
 
-print*, pop
+Print*, pop
 
 deallocate( s_FMO , h_FMO , tmp_S , tmp_E )
 
