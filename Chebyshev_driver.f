@@ -95,11 +95,19 @@ do frame = frame_init , frame_final , frame_step
 
     it = it + 1
 
-    ! for use in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
+    ! for use in Ehrenfest
+    If( QMMM ) then
+        past_AO_ket = AO_ket
+        past_AO_bra = AO_bra
+    end If
+
+    ! propagate the wavepackets to the next time-slice ...
+    CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
+
     ! calculate, for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
+        CALL EhrenfestForce( Extended_Cell , ExCell_basis , past_AO_bra , past_AO_ket )
     end If
 
     If( GaussianCube .AND. mod(frame,GaussianCube_step) < frame_step ) CALL  Send_to_GaussianCube( frame )
@@ -148,9 +156,6 @@ do frame = frame_init , frame_final , frame_step
     If( EnvField_ ) CALL DP_stuff ( "EnvField" )
 
     If( Induced_ ) CALL DP_stuff ( "Induced_DP" )
-
-    ! propagate the wavepackets to the next time-slice ...
-    CALL ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , t , t_rate , it )
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( Dual_bra , Dual_ket , AO_bra , AO_ket , t , it , frame )
 
