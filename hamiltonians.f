@@ -88,7 +88,7 @@ else
    evaluate = .false.
 end if
 
-! resetting DP_$_matrix before fresh calculation ...
+! resetting DP_4_matrix before fresh calculation ...
 if( evaluate ) DP_4_matrix = D_zero
 
 N = size(basis)

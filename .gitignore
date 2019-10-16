@@ -98,4 +98,15 @@ dkms.conf
 # Executables
 
 
+### DATA and all that Jazz ###
+fort.*
+*.swp
+*.txt
+*.dat
+*.inpt
+*.err
+*.top
+*.itp
+*.log
+a
 # End of https://www.gitignore.io/api/c,c++,cuda,fortran

@@ -262,9 +262,9 @@ If( EnvField_ ) then
     hole_state = hole_save
     static     = .false.
 
-end If
+    CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
 
-CALL Dipole_Matrix( Extended_Cell , ExCell_basis )
+end If
 
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 

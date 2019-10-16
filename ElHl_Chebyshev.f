@@ -181,7 +181,7 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer :: j , N
+integer :: j , N , it_sync
 real*8  :: t_max , tau_max , tau(2) , t_init
 
 t_init = t
@@ -215,9 +215,10 @@ If ( necessary_ ) then ! <== not necessary for a rigid structures ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
     allocate( h0(N,N) , source = D_zero )
-
+    
     If( EnvField_ ) then
-        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+        it_sync = it-1  ! <== for synchronizing EnvSetUp call therein ...
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it_sync)
     else
         h0(:,:) = Build_Huckel( basis , S_matrix )
     end If
