@@ -98,8 +98,9 @@ dkms.conf
 # Executables
 
 
-### DATA ###
+### DATA and all that Jazz ###
 fort.*
+*.swp
 *.txt
 *.dat
 *.inpt
