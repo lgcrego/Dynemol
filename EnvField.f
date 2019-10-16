@@ -27,7 +27,7 @@ contains
  subroutine Environment_SetUp( sys )
 !===================================
 implicit none
-type(structure) , intent(inout)  :: sys
+type(structure) , intent(in)  :: sys
 
 select case (Environ_Type)
 

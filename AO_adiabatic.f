@@ -298,7 +298,7 @@ CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
                           
-! done for KernelCrew ; KernelCrew also dwells in EhrenfestForce ...
+! done for KernelCrew ; KernelCrew dwells in EhrenfestForce ...
 If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
@@ -353,7 +353,7 @@ End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )

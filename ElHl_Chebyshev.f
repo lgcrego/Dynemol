@@ -171,7 +171,7 @@ integer          , intent(in)    :: it
 
 ! local variables...
 integer :: N , err , mpi_status(mpi_status_size)
-integer :: req1 , req2 
+integer :: req1 , req2 , it_sync
 integer :: mpi_D_R = mpi_double_precision
 integer :: mpi_D_C = mpi_double_complex
 real*8  :: t_init , t_max , tau_max , tau(2) , t_stuff(2)
@@ -204,7 +204,8 @@ If( master ) then ! <== Electron wpckt Dynamics ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
     If( Envfield_ ) then
-        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+        it_sync = it-1  ! <== for synchronizing EnvSetUp call therein ...
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it_sync )
     else
         h0(:,:) = Build_Huckel( basis , S_matrix )
     end If

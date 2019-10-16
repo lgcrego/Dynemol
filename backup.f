@@ -7,7 +7,7 @@ module Backup_m
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
-                                      EnvField_ , Environ_step   , &
+                                      EnvField_                  , &
                                       DP_Moment                  , &
                                       Coulomb_                   , &
                                       restart , n_part
@@ -246,9 +246,9 @@ end subroutine Restart_State_Eigen
 !
 !
 !
-!=================================================================================================================
- subroutine Restart_Sys_Cheb( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame , it )
-!=================================================================================================================
+!============================================================================================================
+ subroutine Restart_Sys_Cheb( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame )
+!============================================================================================================
 implicit none
 type(structure)                 , intent(out)   :: Extended_Cell
 type(STO_basis) , allocatable   , intent(out)   :: ExCell_basis(:)
@@ -257,7 +257,6 @@ complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
-integer                         , intent(in)    :: it
 
 ! local variables ...
 type(universe) :: Solvated_System

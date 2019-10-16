@@ -13,6 +13,7 @@
     use DP_potential_m        , only : DP_phi
     use DP_main_m             , only : DP_matrix_AO
     use polarizability_m      , only : Induced_DP_phi
+    use Dielectric_Potential  , only : Environment_SetUp
     use Semi_Empirical_Parms  , only : atom
 
     public :: X_ij , even_more_extended_Huckel , Huckel_with_FIELDS
@@ -83,8 +84,6 @@ logical               :: evaluate
 ! instantiating DP_4_matrix ...
 if( EnvCrew .AND. (.not. done) ) CALL allocate_DP_4_matrix
 
-N = size(basis)
-
 If( master ) then
 
     ! to evaluate or not to evaluate this time...
@@ -95,9 +94,10 @@ If( master ) then
     else
        evaluate = .false.
     end if
-    
+
 EndIf
 
+N = size(basis)
 Allocate( h(N,N) , source = D_zero )
     
 ! EnvCrew dwells here ...
@@ -109,12 +109,18 @@ CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , EnvComm, err )
 ! export new S_matrix for EnvCrew ...
 CALL MPI_BCAST( S_matrix , N*N , mpi_D_R , 0 , EnvComm, err )
 
+! export new Transition-Dipole-Moment matrix for EnvCrew ...
+CALL MPI_BCAST( DP_matrix_AO , 3*N*N , mpi_D_R , 0 , EnvComm, err )
+
 Allocate( snd_h(N,N) , source = D_zero )
 
 If( EnvCrew ) then ! <== evaluates snd_h ...
 
-    ! resetting DP_4_matrix before fresh calculation ...
-    if( evaluate ) DP_4_matrix = D_zero
+    ! refresh Enviroment before new EnvField evaluation ...
+    if( evaluate ) then
+        CALL Environment_SetUp( system )
+        DP_4_matrix = D_zero
+    end If
     
     !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     !$OMP parallel do &

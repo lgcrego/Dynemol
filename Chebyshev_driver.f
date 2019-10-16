@@ -344,19 +344,19 @@ CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
 CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
-CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , it )
+CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
 CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
 If( ForceCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , AO_bra , AO_ket )
 
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
 If( Induced_ ) then
       CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
       CALL DP_stuff ( "Induced_DP" )
 end If
+
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 If( master ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm , err )
