@@ -80,7 +80,7 @@ If( master .OR. EnvCrew ) then
 
    If( EnvField_ ) then
       ! EnCrew stay in even_more_extended_Huckel ...
-      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
    Else
       h0(:,:) = Build_Huckel( basis , S_matrix )
    end If
