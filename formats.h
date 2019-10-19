@@ -178,3 +178,4 @@
 
 220 format(/,1x,'>>> Gaussian Cube done: ', 12I6 )
 
+230 format(/,1x,'>>> Saving Security Copy (ref:it/frame/t): ', 2I6 , F11.6 )

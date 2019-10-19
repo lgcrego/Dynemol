@@ -81,7 +81,7 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 allocate( h0(N,N) , source = D_zero )
 
 If( EnvField_ ) then
-    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
 else
     h0(:,:) = Build_Huckel( basis , S_matrix )
 end If
@@ -385,16 +385,15 @@ end subroutine QuasiParticleEnergies
 !
 !
 !
-!======================================================================================
- subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket , it )
-!======================================================================================
+!=================================================================================
+ subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket )
+!=================================================================================
 implicit none
 type(structure) , intent(inout) :: system
 type(STO_basis) , intent(inout) :: basis(:)
 complex*16      , intent(in)    :: DUAL_ket (:,:)
 complex*16      , intent(in)    :: AO_bra   (:,:)
 complex*16      , intent(in)    :: AO_ket   (:,:)
-integer         , intent(in)    :: it
 
 !local variables ...
 integer :: N
@@ -413,7 +412,7 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 allocate( h0(N,N) , source = D_zero )
 
 If( EnvField_ ) then
-    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
 else
     h0(:,:) = Build_Huckel( basis , S_matrix )
 end If

@@ -128,6 +128,8 @@ integer         :: i , j , basis_size
 logical , save  :: first_time = .true. 
 logical         :: exist
 
+write( * , 230 , advance='no' )  it , frame , t
+
 ! check whether restart conditions are properly set ...
 If( first_time ) then
 
@@ -175,6 +177,10 @@ end do
 write(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
+
+Print*, 'DONE <<<'
+
+include 'formats.h'
 
 end subroutine Security_Copy_Eigen
 !
@@ -318,6 +324,8 @@ integer         :: i , j , basis_size
 logical , save  :: first_time = .true. 
 logical         :: exist
 
+write( * , 230 , advance='no' )  it , frame , t
+
 ! check whether restart conditions are properly set ...
 If( first_time ) then
 
@@ -360,6 +368,10 @@ end do
 write(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
+
+Print*, 'DONE <<<'
+
+include 'formats.h'
 
 end subroutine Security_Copy_Cheb
 !
