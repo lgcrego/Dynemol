@@ -182,9 +182,9 @@ write(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-close( 33 )
-
 Print*, 'DONE <<<'
+
+include 'formats.h'
 
 end subroutine Security_Copy_Eigen
 !
