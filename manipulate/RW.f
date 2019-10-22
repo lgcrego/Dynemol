@@ -178,7 +178,7 @@ implicit none
 type(universe) , intent(out) :: system
 
 !	local variables
-integer :: i , j , ioerr , N_of_atoms
+integer :: i , j , ioerr , N_of_atoms , ASCII
 
 OPEN(unit=3,file='input.xyz',status='old',iostat=ioerr,err=10)
 read(3,*) system%N_of_atoms
@@ -192,19 +192,44 @@ read(3,*) system%box(3)
 allocate( system%atom(system%N_of_atoms) )
 CALL Initialize_System( system )
 
+read(3,*,iostat=ioerr) system%atom(1)%symbol
+ASCII = ichar(system%atom(1)%symbol(1:1)) 
+
+backspace 3
 ! reads the coordinates 
-do i = 1 , system%N_of_atoms 
+select case (ASCII)
 
-    read(3,*,iostat=ioerr) system%atom(i)%symbol , (system%atom(i)%xyz(j),j=1,3) 
+       case(48:57)  ! <== input is Atomic Number
 
-    if(ioerr < 0) EXIT
-    print*,i
+           do i = 1 , system%N_of_atoms 
+           
+               read(3,*,iostat=ioerr) system%atom(i)%AtNo , (system%atom(i)%xyz(j),j=1,3) 
+           
+               if(ioerr < 0) EXIT
+               print*,i, system%atom(i)%AtNo
+           
+           end do
 
-end do
+           ! get the Atomic_Number ...
+           CALL AtNo_2_Symbol(system%atom)
+
+       case default  ! <== input is Element Symbol
+
+           do i = 1 , system%N_of_atoms 
+           
+               read(3,*,iostat=ioerr) system%atom(i)%symbol , (system%atom(i)%xyz(j),j=1,3) 
+           
+               if(ioerr < 0) EXIT
+               print*,i
+           
+           end do
+
+           ! get the Atomic_Number ...
+           CALL Symbol_2_AtNo(system%atom)
+
+end select
+
 close(3)
-
-! get the Atomic_Number ...
-CALL Symbol_2_AtNo(system%atom)
 
 ! get the Atomic_Masses ...
 system%atom%mass = Atomic_Mass(system%atom%AtNo)
