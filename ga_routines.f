@@ -162,7 +162,11 @@ do generation = 1 , N_generations
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    Print 160 , generation , N_generations
+    If( Adaptive_ ) then    
+        Print 159 , generation , N_generations
+    else 
+        Print 160 , generation , N_generations
+    EndIf
     Print*, cost(1)
     write(23,*) generation , cost(1)
 

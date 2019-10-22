@@ -1,4 +1,4 @@
-40    FORMAT(/,"======================   Opitimizing  Parameters  ==========================")
+40    FORMAT(/,"======================   Optimizing  Parameters  ==========================")
 
 41    FORMAT(/,"MMsymbol    |   s   |   p   |   d   |   IP  |   zeta1   |   zeta2   |   k_WH")
 
@@ -106,9 +106,11 @@
 
 158   FORMAT(/,1x,'N_of_Solute_Molecules in DP_field = ',I4/)
 
-160   FORMAT(/,1x,'Custo_GA : ',I5,' /',I5)
+159   FORMAT(/,1x,'AdaptiveCost_GA : ',I5,' /',I5)
 
-161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
+160   FORMAT(/,1x,'Cost_GA : ',I5,' /',I5)
+
+161   FORMAT(/,1x,'Cost_GA : ',I4,' /',I4 , F15.4 , a25)
 
 162   FORMAT(/,1x,'Custo_CG : ',I5,' /',I5)
 
