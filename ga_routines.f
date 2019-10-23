@@ -751,6 +751,8 @@ allocate( Pop     (Pop_Size , GeneSize) )
 allocate( Old_Pop (Pop_Size , GeneSize) )
 allocate( indx    (Pop_Size)            )
 
+CALL random_seed
+
 Pop_start = 1
 CALL generate_RND_Pop( Pop_start , Pop )       
 
