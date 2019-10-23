@@ -58,19 +58,23 @@ eval(me) = MO_erg_diff( OPT_UNI, 125, 124,  1.6310 )
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !
-! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
-! {...} terms are optional 
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {vary} , {adaptive} )
+! {...} terms are optional
 ! default criterium (threshold=0.85): localized > 85% of total population
+! vary = real_interval( begin , end ) : no need to use {threshold} if {vary} is used
+! adaptive = mode : to enable adpative GA method
 !
-! ==> Bond_Type( sys , OPT_UNI , MO , atom1 , atom2 , AO , "+" or "-" )
+! ==> Bond_Type( sys , OPT_UNI , MO , atom1 , AO1 , atom2 , AO2 , "+" or "-" )
 ! Bond Topolgy analysis ...
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
 !
-! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {residue} , {threshold} )
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {vary} , {adaptive} )
 ! NO charge on these atoms ...
 ! {...} terms are optional  
 ! default threshold < 0.001 
+! vary = real_interval( begin , end ) : no need to use {threshold} if {vary} is used
+! adaptive = mode : to enable adpative GA method
 !
 ! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
 ! Population analysis ...
