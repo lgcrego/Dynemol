@@ -11,7 +11,7 @@ module cost_EH
                               Adaptive_GA,        &
                               me => i_       
 
-    public :: evaluate_cost , REF_DP , REF_Alpha
+    public :: evaluate_cost , REF_DP , REF_Alpha 
 
     ! module variables ...
     real*8 :: REF_DP(3) , REF_Alpha(3)
@@ -85,8 +85,8 @@ eval(me) = Bond_Type( sys , OPT_UNI , 115 , 4 , 'Pz' , 8 , 'Pz' , '+' )
 eval(me) = Bond_Type( sys , OPT_UNI , 115 , 7 , 'Pz' , 5 , 'Pz' , '+' )
 eval(me) = Bond_Type( sys , OPT_UNI , 115 , 6 , 'Pz' , 3 , 'Pz' , '+' )
 
-eval(me) = Localize( OPT_UNI , basis , 115 , EHSymbol='SA' , slide=real_interval( 0.1 , 0.25 ), adaptive=mode )
-eval(me) = Exclude ( OPT_UNI , basis , 115 , atom = [3,6]  , slide=real_interval( 0.15 , 0.1 ), adaptive=mode )
+eval(me) = Localize( OPT_UNI , basis , 115 , EHSymbol='SA' , slide=real_interval( 0.20 , 0.26 ), adaptive=mode )
+eval(me) = Exclude ( OPT_UNI , basis , 115 , atom = [3,6]  , slide=real_interval( 0.12 , 0.08 ), adaptive=mode )
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------

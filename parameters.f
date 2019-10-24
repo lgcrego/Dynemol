@@ -138,14 +138,15 @@ logical :: dynamic
 !
 
   Pop_Size       =  200  
-  N_generations  =  50     
-  Pop_range      =  0.66     ! <== range of variation of parameters [0:1]
+  N_generations  =  50    
+  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
   Mutation_rate  =  0.5     
+
   Adaptive_      =  T_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
-  Top_Selection  =  5        ! <== top selection to undergo CG_
 
-  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  CG_            =  T_       ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  5        ! <== top selection to undergo CG_
   profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------

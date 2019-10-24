@@ -3,6 +3,7 @@ module EH_CG_driver_m
     use type_m
     use constants_m
     use parameters_m            , only : profiling
+    use GA_QCModel_m            , only : eval_CG_cost
     use OPT_Parent_class_m      , only : GA_OPT
     use CG_class_m              , only : EH_OPT
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
@@ -33,6 +34,8 @@ character(len=2)        :: string
 character(len=31)       :: f_name
 type(EH_OPT)            :: CG
 
+eval_CG_cost = .true.
+
 If( profiling ) OPEN( unit=32 , file='opt_trunk/CG.log.dat' , status='unknown' )
 
 Top_Selection = size(GA_Selection(1,:)) 
@@ -59,7 +62,15 @@ do i = 1 , Top_Selection
     If( CG%cost() /= InitialCost(i-1) ) CALL Fletcher_Reeves_Polak_Ribiere_minimization( CG , GA%GeneSize , local_minimum(i) )
 
     ! temporarily stores CG optimized basis here ...
-    GA_Selection(:,i) = CG%basis
+    If( local_minimum(i) < InitialCost(i) ) then
+
+        GA_Selection(:,i) = CG%basis
+
+    else ! <== CG minimization failed ...
+
+        local_minimum(i) = InitialCost(i)
+
+    End If
 
     If( profiling ) close(42)
 

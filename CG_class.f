@@ -18,8 +18,8 @@ module CG_class_m
     public :: EH_OPT
 
     type , extends(GA_OPT) :: EH_OPT
-        integer                         :: ITMAX_EH = 50               ! <== 50-200 is a good compromise of accuracy and safety
-        real*8                          :: BracketSize_EH = 1.d-5      ! <== this value may vary between 1.0d-3 and 1.0d-5
+        integer                         :: ITMAX_EH = 100              ! <== 50-200 is a good compromise of accuracy and safety
+        real*8                          :: BracketSize_EH = 1.d-3      ! <== this value may vary between 1.0d-3 and 1.0d-5
         logical                         :: profiling_EH = .true. 
         type(STO_basis) , allocatable   :: basis(:)
     contains

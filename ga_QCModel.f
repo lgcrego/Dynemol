@@ -5,7 +5,7 @@ module GA_QCModel_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_
+    use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_ , CG_
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
@@ -16,7 +16,7 @@ module GA_QCModel_m
                                          multipoles2c 
 
     public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
-    public :: Adaptive_GA, i_ 
+    public :: eval_CG_cost , Adaptive_GA, i_ 
 
     private 
 
@@ -31,6 +31,7 @@ module GA_QCModel_m
     integer , allocatable :: occupancy(:)
     integer               :: i_= 0
     type(on_the_fly)      :: Adaptive_GA
+    logical               :: eval_CG_cost = .false.
 
     ! module parameters ...
     real :: big = 1.d2
@@ -135,9 +136,12 @@ ElseIf( adaptive == .false. ) then
 
 EndIf
 
-! population < reference  ==> no penalty for Exclude function ...
-!Exclude = big * max( D_zero , x)
-Exclude = merge( D_zero , large , x < D_zero )
+! (population < reference) ==> no penalty for Exclude function ...
+If( eval_CG_cost ) then
+    Exclude = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
+else
+    Exclude = merge( D_zero , large , x < D_zero )   ! <== Genetic Algorithm uses step function
+EndIf
 
 deallocate( mask )
 
@@ -219,9 +223,12 @@ ElseIf( adaptive == .false. ) then
 
 EndIf
 
-! population > reference  ==> no penalty for localize function ...
-!localize = big * max( D_zero , x)
-localize = merge( D_zero , large , x < D_zero )
+! (population > reference) ==> no penalty for localize function ...
+If( eval_CG_cost ) then
+    Localize = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
+else
+    Localize = merge( D_zero , large , x < D_zero )   ! <== Genetic Algorithm uses step function
+EndIf
 
 deallocate( mask )
 
