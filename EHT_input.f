@@ -99,7 +99,7 @@ module Semi_Empirical_Parms
  character(12)  :: EHSymbol_char 
  logical        :: flag1 , flag2 , flag3 , flag4
 
-OPEN(unit=3,file='opt_eht_parameters.input.dat',status='old')
+OPEN(unit=3,file='opt_eht_parms.input',status='old')
 
 ! read file heading ...
 read(3,*,IOSTAT=ioerr) dumb 
@@ -128,8 +128,8 @@ do i = 1 , size(EH_atom)
                 EH_atom(i)%n            ,   &
                 spdf                    ,   &
                 EH_atom(i)%IP(0)        ,   &
-                EH_atom(i)%zeta(0,1)    ,   &      ! <== zetas of opt_eht_parameters.input.dat are given in units of a0^{-1} ...
-                EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of opt_eht_parameters.input.dat are given in units of a0^{-1} ...
+                EH_atom(i)%zeta(0,1)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of a0^{-1} ...
+                EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of a0^{-1} ...
                 EH_atom(i)%coef(0,1)    ,   &
                 EH_atom(i)%coef(0,2)    ,   &
                 EH_atom(i)%k_WH(0)
@@ -159,7 +159,7 @@ do i = 1 , size(EH_atom)
     flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
     flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
 
-    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in opt_eht_parameters_input.dat ; check Nzeta parameter <<<"
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in opt_eht_parms.input ; check Nzeta parameter <<<"
  
 end do
 

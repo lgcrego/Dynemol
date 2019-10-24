@@ -85,6 +85,9 @@ GA_basis = basis
 
 allocate( cost(Pop_size) )
 
+! enable on the fly evaluation cost ...
+Adaptive_GA%mode = Adaptive_
+
 do generation = 1 , N_generations
 
     ! sharing these variables with ga_QCModel ...
@@ -508,8 +511,8 @@ If( present(output) .AND. output=="STDOUT" ) then
     Print*,""
     unit_tag = 6
 else
-    ! creating file opt_eht_parameters.output.dat with the optimized parameters ...
-    open( unit=13, file='opt_eht_parameters.output.dat', status='unknown' )
+    ! creating file opt_eht_parms.output with the optimized parameters ...
+    open( unit=13, file='opt_eht_parms.output', status='unknown' )
     unit_tag = 13
 end If
 
@@ -535,8 +538,8 @@ do n_EHS = 1 , N_of_EHSymbol
                         OPT_basis(j)%n               ,   &
                  Lquant(OPT_basis(j)%l)              ,   &
                         OPT_basis(j)%IP              ,   &
-                        OPT_basis(j)%zeta(1)*a_Bohr  ,   &      ! <== zetas of opt_eht_parameters.output.dat are written in units of a0^{-1} ...
-                        OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of opt_eht_parameters.output.dat are written in units of a0^{-1} ...
+                        OPT_basis(j)%zeta(1)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
+                        OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
                         OPT_basis(j)%coef(1)         ,   &
                         OPT_basis(j)%coef(2)         ,   &
                         OPT_basis(j)%k_WH

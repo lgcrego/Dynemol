@@ -32,6 +32,9 @@ module GA_QCModel_m
     integer               :: i_= 0
     type(on_the_fly)      :: Adaptive_GA
 
+    ! module parameters ...
+    real :: big = 1.d2
+
 contains
 !
 !
@@ -62,7 +65,7 @@ end function MO_erg_diff
 !
 !
 !==============================================================================================
- function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+ function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , slide , adaptive )
 !==============================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
@@ -72,12 +75,12 @@ integer            , optional  , intent(in) :: atom(:)
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
 real               , optional  , intent(in) :: threshold
-type(real_interval), optional  , intent(in) :: vary
+type(real_interval), optional  , intent(in) :: slide
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: Exclude , population , LinearFill
+real*8                :: x , Exclude , population , LinearFill
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
@@ -112,25 +115,29 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( .NOT. present(vary) ) then
+If( .NOT. present(slide) ) then
 
        If( present(threshold) ) then
-          Exclude = merge( D_zero , large , population < threshold )
+          x = population  - threshold
        else
-           ! default value is assumed, 85% of localization ...
-           Exclude = merge( D_zero , large , population < 1.d-3 )
+          ! default value is assumed, 0.001 of localization ...
+          x = population - 1.d-3
        end if
 
 ElseIf( adaptive == .true. ) then
 
-       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
-       Exclude = merge( D_zero , large , population < LinearFill )
+       LinearFill = (slide%fim - slide%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + slide%inicio
+       x = population - LinearFill
 
 ElseIf( adaptive == .false. ) then
 
-       Exclude = merge( D_zero , large , population < vary%fim)
+       x = population - slide%fim
 
 EndIf
+
+! population < reference  ==> no penalty for Exclude function ...
+!Exclude = big * max( D_zero , x)
+Exclude = merge( D_zero , large , x < D_zero )
 
 deallocate( mask )
 
@@ -142,7 +149,7 @@ end function exclude
 !
 !
 !==============================================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , vary , adaptive )
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , slide , adaptive )
 !==============================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
@@ -152,12 +159,12 @@ integer            , optional  , intent(in) :: atom(:)
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
 real               , optional  , intent(in) :: threshold
-type(real_interval), optional  , intent(in) :: vary
+type(real_interval), optional  , intent(in) :: slide
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i
-real*8                :: Localize , population , LinearFill
+real*8                :: x , Localize , population , LinearFill
 logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
 
 allocate( mask  (size(basis)) , source=.false. )
@@ -192,25 +199,29 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
 population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
-If( .NOT. present(vary) ) then
+If( .NOT. present(slide) ) then
 
        If( present(threshold) ) then
-          localize = merge( D_zero , large , population > threshold )
+          x = threshold - population 
        else
-           ! default value is assumed, 85% of localization ...
-           localize = merge( D_zero , large , population > 0.85 )
+          ! default value is assumed, 85% of localization ...
+          x = 0.85 - population
        end if
 
 ElseIf( adaptive == .true. ) then
 
-       LinearFill = (vary%fim - vary%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + vary%inicio
-       localize = merge( D_zero , large , population > LinearFill )
+       LinearFill = (slide%fim - slide%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + slide%inicio
+       x = LinearFill - population
 
 ElseIf( adaptive == .false. ) then
 
-       localize = merge( D_zero , large , population > vary%fim)
+       x = slide%fim - population  
 
 EndIf
+
+! population > reference  ==> no penalty for localize function ...
+!localize = big * max( D_zero , x)
+localize = merge( D_zero , large , x < D_zero )
 
 deallocate( mask )
 

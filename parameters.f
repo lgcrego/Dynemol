@@ -33,16 +33,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -61,7 +61,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -74,7 +74,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =  T_                          ! <== Potential produced by Environment
+  EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
   Environ_step =  10                          ! <== step for updating EnvField
 
@@ -137,10 +137,10 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  390  
-  N_generations  =  500    
-  Pop_range      =  0.65     ! <== range of variation of parameters range: [0:1]
-  Mutation_rate  =  0.6     
+  Pop_Size       =  200  
+  N_generations  =  50     
+  Pop_range      =  0.66     ! <== range of variation of parameters [0:1]
+  Mutation_rate  =  0.5     
   Adaptive_      =  T_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
   Top_Selection  =  5        ! <== top selection to undergo CG_
