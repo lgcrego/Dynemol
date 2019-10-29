@@ -450,7 +450,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
    
     do i = 1 , NangsTypes
         ! Harmonic potential ...
-        ! factor1 = 1.0d26      <== Factor used to correct the unis read fom Gromacs
+        ! factor1 = 1.0d26      <== Factor used to correct the units 
         if( AngleParameters(i,3) == D_zero ) then 
            Angle_Type(i) = 1 
            funct_angle(i) = "harm"
@@ -549,7 +549,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         select case( Dihed_Type(i) )
            case( 9 )
                 ! V = k[1 + cos(n.phi - theta)] (charmm; multiple)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct units 
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kcal.mol⁻¹) * factor1 * imol * cal_2_J
                 ! kdihed0(:,3) = n       ==> multiplicity 
@@ -559,7 +559,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
            case( 2 )
                 ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct units 
                 ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
                 DihedParameters(i,1) = InputReals(i,3) * deg_2_rad
@@ -615,7 +615,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     end do
 
     ! conversion 
-    ! factor1 = 1.0d26  <== Factor used to correct the unis readed fom Gromacs
+    ! factor1 = 1.0d26  <== Factor used to correct units 
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
     FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ

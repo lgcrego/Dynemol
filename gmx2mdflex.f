@@ -428,7 +428,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     end do
 
     ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct units read fom Gromacs
+    ! factor1 = 1.0d26      <== Factor used to correct units read from Gromacs
     FF % eps = sqrt( FF % eps * factor1 * imol )
     FF % sig = FF % sig * nano_2_angs
 
@@ -610,7 +610,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     do i = 1 , NangsTypes
         select case( Angle_Type(i) )
         ! conversion 
-        ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
             case( 1 ) ! Harmonic potential ...
                 AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * factor1 * imol
                 AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * deg_2_rad
@@ -658,7 +658,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)]
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ/mol) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -672,7 +672,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(xi) ==> force constant (kJ/(mol.rad^2)) * factor1 * imol
                 !============================================================================
@@ -685,7 +685,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = C0 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,2) = C1 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,3) = C2 (kJ/mol) * factor1 * imol
@@ -701,7 +701,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)] (improper; same as 1)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -715,7 +715,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)] (multiple; same as 1)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 

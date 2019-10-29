@@ -809,7 +809,7 @@ character(len=:) , allocatable  :: string(:)
                                         flag
 
             case ('harm') ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                     ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+                     ! factor1 = 1.0d26      <== Factor used to correct the units 
                      ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
                      ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
 
