@@ -429,6 +429,10 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     ! conversion 
     ! factor1 = 1.0d26      <== Factor used to correct units read from Gromacs
+    ! GAFF  vs  GMX  LJ parameters:
+    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
     FF % eps = sqrt( FF % eps * factor1 * imol )
     FF % sig = FF % sig * nano_2_angs
 

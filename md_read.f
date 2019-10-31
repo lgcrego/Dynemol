@@ -773,7 +773,7 @@ character(len=:) , allocatable  :: string(:)
 
     string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol//molecule(1)%Dihedral_Type(i)
 
-    if( .NOT. any(string(1:i-1) == string(i)) ) then 
+    if( (.NOT. any(string(1:i-1) == string(i))) .OR. (.NOT. any(molecule(1)%kdihed0(1:i-1,1) == molecule(1)%kdihed0(i,1))) ) then 
 
         ! warns if paramater was not assigned to this dihedral ...
         flag = merge( "<==" , "   " , sum(abs(molecule(1)%kdihed0(i,:))) == 0 )

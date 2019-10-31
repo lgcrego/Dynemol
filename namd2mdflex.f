@@ -205,7 +205,8 @@ do a = 1 , MM % N_of_species
         end do
         backspace(33)
         read(33,*) Nimpropers
-   
+  
+        ! reading full lines ...
         do k = 1 , ceiling(Nimpropers/two)-1
             select case ( MM_input_format )
                 case( "GAFF" )
@@ -215,6 +216,7 @@ do a = 1 , MM % N_of_species
             end select
         end do 
 
+        ! reading incomplete lines ...
         select case ( MM_input_format )
             case( "GAFF" )
             read(33 , * , iostat=ioerr )  &
@@ -252,7 +254,6 @@ do a = 1 , MM % N_of_species
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
 
         rewind 33
-
 !==============================================================================================
 
         If( species(a) % Nbonds /= 0 ) then 
@@ -616,6 +617,10 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
     ! conversion 
     ! factor1 = 1.0d26  <== Factor used to correct units 
+    ! GAFF  vs  GMX  LJ parameters:
+    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
     FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
