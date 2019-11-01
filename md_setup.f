@@ -37,6 +37,10 @@ module setup_m
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
 
+    ! module variables ...
+    logical :: there_are_NB_SpecialPairs = .false.
+
+
 contains
 !
 !
@@ -53,6 +57,8 @@ contains
  logical :: flag1 , flag2 
 
  rcutsq  = rcut * rcut
+
+If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 !################################################
  atmax = sum( species(:) % N_of_atoms )                 
@@ -75,19 +81,24 @@ contains
        end select
        eps = FF(i) % eps * FF(j) % eps
 
-       ! Nbond_parms directive on ...
-       read_loop: do  k = 1, size(SpecialPairs)
-            flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
-                    ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
-            flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
-                    ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
-            if ( flag1 .OR. flag2 ) then
-                sr2 = ( (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) * (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) ) / rcutsq
-                eps = SpecialPairs(k) % Parms(2) * SpecialPairs(k) % Parms(2) 
-                exit read_loop
-            end if
-       cycle  read_loop
-       end do read_loop
+       If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
+
+          read_loop: do  k = 1, size(SpecialPairs)
+
+               flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                       ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
+               flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                       ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
+
+               if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+                   sr2 = ( (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) * (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) ) / rcutsq
+                   eps = SpecialPairs(k) % Parms(2) * SpecialPairs(k) % Parms(2) 
+                   exit read_loop
+               end if
+
+          end do read_loop
+
+       end if
 
        sr6  = sr2 * sr2 * sr2
        sr12 = sr6 * sr6

@@ -14,6 +14,7 @@ module F_inter_m
     
     ! module variables ...
     real*8  , public  , save :: stressr(3,3), stresre(3,3)
+    logical                  :: there_are_NB_SpecialPairs = .false.
 
 contains
 !
@@ -64,6 +65,8 @@ vself  = D_zero
 ecoul  = D_zero
 evdw   = D_zero
 eintra = D_zero
+
+If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true. 
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
@@ -180,29 +183,24 @@ do k = 1 , MM % N_of_atoms - 1
                     end select
                     eps = atom(k) % eps * atom(l) % eps
 
-                    ! Nbond_parms directive on ...
-                    read_loop: do  n = 1, size(SpecialPairs)
-                       flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                               ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-                       flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                               ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+                    If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
 
-                       if ( flag1 .OR. flag2 ) then
+                       read_loop: do  n = 1, size(SpecialPairs)
 
-                          select case ( MM % CombinationRule )
-                              case (2) 
-                                 ! AMBER FF :: GMX COMB-RULE 2
-                                 sr2 = ( (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) ) / rklq
-                              case (3)
-                                 ! OPLS  FF :: GMX COMB-RULE 3
-                                 sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                          flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                                  ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+                          flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                                  ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
 
-                          end select
-                          eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
-                          exit read_loop
-                       end if
-                       cycle  read_loop
-                    end do read_loop
+                          if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+                             sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                             eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                             exit read_loop
+                          end if
+
+                       end do read_loop
+
+                    end if
                    
                     sr6  = sr2 * sr2 * sr2
                     sr12 = sr6 * sr6

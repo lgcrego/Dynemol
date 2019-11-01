@@ -24,9 +24,12 @@ module F_intra_m
                                term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
                                sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
                                term4 , dphi1 , dphi2
+    real*8                  :: pot_INTRA
     integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
     logical                 :: flag1, flag2, flag3, flag4, flag5
-    real*8                  :: pot_INTRA
+    logical                  :: there_are_NB_SpecialPairs   = .false.
+    logical                  :: there_are_NB_SpecialPairs14 = .false.
+
     integer , allocatable   :: species_offset(:)
 
 
@@ -277,6 +280,9 @@ end do
 
 !====================================================================
 ! Non-bonded 1,4 intramolecular interactions ...
+
+If( allocated(SpecialPairs14) ) there_are_NB_SpecialPairs14 = .true.
+
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % Nbonds14
         ati    = molecule(i) % bonds14(j,1)
@@ -303,33 +309,26 @@ do i = 1 , MM % N_of_molecules
 
             end select
             eps   =  atom(ati) % eps14 * atom(atj) % eps14 
-     
-            ! Nbond_parms directive on ...
-            read_loop1: do  n = 1, size(SpecialPairs14)
-                flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+
+            If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (K,L) is a SpecialPair ... 
+
+               read_loop1: do  n = 1, size(SpecialPairs14)
+
+                   flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                           ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+                   flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                           ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
  
-                if ( flag1 .OR. flag2 ) then
-                    select case ( MM % CombinationRule )
+                   if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
+                       sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
+                       eps = SpecialPairs14(n) % Parms(2) * SpecialPairs14(n) % Parms(2)
+                       exit read_loop1
+                   end if
+                
+               end do read_loop1
 
-                       case (2)
-                          ! AMBER FF :: GMX COMB-RULE 2
-                          sr2 = ( (SpecialPairs14(n)%Parms(1)+SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)+SpecialPairs14(n)%Parms(1)) ) / rklq
-
-                       case (3)
-                          ! OPLS  FF :: GMX COMB-RULE 3
-                          sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
-
-                    end select
-                    eps = SpecialPairs14(n) % Parms(2) * SpecialPairs14(n) % Parms(2)
-                    
-                    exit read_loop1
-                end if
-             
-                cycle  read_loop1 
-            end do read_loop1
+            end if
 
             rklsq = sqrt(rklq)
             sr6   = sr2 * sr2 * sr2
@@ -367,6 +366,9 @@ end do
 
 !====================================================================
 ! Lennard-Jones intramolecular interactions ...
+
+If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
+
 do i = 1 , MM % N_of_molecules
     do j   = 1 , molecule(i) % NintraLJ
         ati  = molecule(i) % IntraLJ(j,1) 
@@ -396,31 +398,24 @@ do i = 1 , MM % N_of_molecules
             end select
             eps   =  atom(ati) % eps * atom(atj) % eps
 
-            ! Nbond_parms directive on ...
-            read_loop: do  n = 1, size(SpecialPairs)
-                flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                        ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
-               
-                if ( flag1 .OR. flag2 ) then
-                    select case ( MM % CombinationRule )
+            If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
 
-                       case (2)
-                          ! AMBER FF :: GMX COMB-RULE 2
-                          sr2 = ( (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)+SpecialPairs(n)%Parms(1)) ) / rklq
+               read_loop: do  n = 1, size(SpecialPairs)
 
-                       case (3)
-                          ! OPLS  FF :: GMX COMB-RULE 3
-                          sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
+                  flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+                  flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
 
-                    end select
-                    eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
-                    exit read_loop
+                  if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+                     sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq 
+                     eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                     exit read_loop
+                  end if
 
-                end if
-                cycle  read_loop
-            end do read_loop
+               end do read_loop
+
+            end if
 
             rklsq = SQRT(rklq)
             sr6   = sr2 * sr2 * sr2
@@ -460,32 +455,37 @@ do i = 1 , MM % N_of_molecules
 end do
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
-do k = 1 , MM % N_of_atoms - 1
-    do l = k , MM % N_of_atoms
-    read_loop2: do  n = 1, size(SpecialMorse) 
-        flag1 = ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-        flag2 = ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) ) 
-        if ( flag1 .OR. flag2 ) then
-            atk = atom(k) % my_id
-            atl = atom(l) % my_id
-            rkl(:)  = atom(atk) % xyz(:) - atom(atl) % xyz(:)
-            rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
-            rklq    = rkl(1)*rkl(1) + rkl(2)*rkl(2) + rkl(3)*rkl(3)
-            rklsq   = SQRT(rklq)
 
-            ! Morse potential ...
-            qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
-            qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
-            coephi = TWO * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) * qterm0 * ( 1.d0 - qterm0 ) / rklsq
-            atom(atk) % fMorse(:) = atom(atk) % fMorse(:) - coephi*rkl(:)
-            atom(atl) % fMorse(:) = atom(atl) % fMorse(:) + coephi*rkl(:)
-            Morspot = qterm + Morspot
-        end if
-    end do read_loop2
-    end do
-end do
+If( allocated(SpecialMorse) ) then
+
+   do k = 1 , MM % N_of_atoms - 1
+       do l = k , MM % N_of_atoms
+       read_loop2: do  n = 1, size(SpecialMorse) 
+           flag1 = ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                   ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+           flag2 = ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                   ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) ) 
+           if ( flag1 .OR. flag2 ) then
+               atk = atom(k) % my_id
+               atl = atom(l) % my_id
+               rkl(:)  = atom(atk) % xyz(:) - atom(atl) % xyz(:)
+               rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+               rklq    = rkl(1)*rkl(1) + rkl(2)*rkl(2) + rkl(3)*rkl(3)
+               rklsq   = SQRT(rklq)
+   
+               ! Morse potential ...
+               qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
+               qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
+               coephi = TWO * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) * qterm0 * ( 1.d0 - qterm0 ) / rklsq
+               atom(atk) % fMorse(:) = atom(atk) % fMorse(:) - coephi*rkl(:)
+               atom(atl) % fMorse(:) = atom(atl) % fMorse(:) + coephi*rkl(:)
+               Morspot = qterm + Morspot
+           end if
+       end do read_loop2
+       end do
+   end do
+
+endIf
 
 !
 !====================================================================

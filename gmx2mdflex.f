@@ -788,17 +788,21 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     NPairsParms = i - 1
 
-    allocate( SpecialPairs14 ( NPairsParms ) )
+    If( NPairsParms /= 0 ) then
 
-    forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
+        allocate( SpecialPairs14 ( NPairsParms ) )
 
-    SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
-    SpecialPairs14(:NPairsParms) % Parms(2) = InputReals(:NPairsParms,2)
+        forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
 
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-    SpecialPairs14(:NPairsParms) % Parms(1) = sqrt( SpecialPairs14(:NPairsParms)%Parms(1) * nano_2_angs    )
-    SpecialPairs14(:NPairsParms) % Parms(2) = sqrt( SpecialPairs14(:NPairsParms)%Parms(2) * factor1 * imol )
+        SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
+        SpecialPairs14(:NPairsParms) % Parms(2) = InputReals(:NPairsParms,2)
+
+        ! conversion 
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+        SpecialPairs14(:NPairsParms) % Parms(1) = sqrt( SpecialPairs14(:NPairsParms)%Parms(1) * nano_2_angs    )
+        SpecialPairs14(:NPairsParms) % Parms(2) = sqrt( SpecialPairs14(:NPairsParms)%Parms(2) * factor1 * imol )
+
+    EndIf
 
   end if
 !
