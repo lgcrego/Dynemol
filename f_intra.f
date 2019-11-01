@@ -321,8 +321,8 @@ do i = 1 , MM % N_of_molecules
                            ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
  
                    if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
-                       sr2 = ( (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) * (SpecialPairs14(n)%Parms(1)*SpecialPairs14(n)%Parms(1)) ) / rklq
-                       eps = SpecialPairs14(n) % Parms(2) * SpecialPairs14(n) % Parms(2)
+                       sr2 = ( SpecialPairs14(n)%Parms(1) * SpecialPairs14(n)%Parms(1) ) / rklq
+                       eps = SpecialPairs14(n) % Parms(2) 
                        exit read_loop1
                    end if
                 
@@ -408,8 +408,8 @@ do i = 1 , MM % N_of_molecules
                           ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
 
                   if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                     sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq 
-                     eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                     sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq 
+                     eps = SpecialPairs(n) % Parms(2) 
                      exit read_loop
                   end if
 

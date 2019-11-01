@@ -193,8 +193,8 @@ do k = 1 , MM % N_of_atoms - 1
                                   ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
 
                           if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                             sr2 = ( (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) * (SpecialPairs(n)%Parms(1)*SpecialPairs(n)%Parms(1)) ) / rklq
-                             eps = SpecialPairs(n) % Parms(2) * SpecialPairs(n) % Parms(2)
+                             sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq
+                             eps = SpecialPairs(n) % Parms(2) 
                              exit read_loop
                           end if
 

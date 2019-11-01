@@ -9,8 +9,9 @@ use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBo
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
+use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
 
-public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities
+public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
 private
  
@@ -313,7 +314,7 @@ real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms 
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms, SpecialNBParms
 real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
 character(18)                   :: keyword
@@ -584,6 +585,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         if ( ioerr /= 0 ) exit read_loop5
         read(line,*,iostat=ioerr) InputChars(i,1)
         if( index(InputChars(i,1),"!") /= 0 ) cycle read_loop5
+        if( trim(InputChars(i,1)) == "SPEC" ) exit
         if( trim(InputChars(i,1)) == "HBON" ) exit
         if( trim(InputChars(i,1)) == "END " ) exit
         if( ioerr > 0  ) exit
@@ -639,7 +641,65 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
             FF % sig14 = sqrt( FF % sig14 )
 
     end select
- 
+
+!=====================================================================================
+!  SPECIALNonBonding parameters :: reading ...
+    do
+        read(33,100) keyword
+        if( trim(keyword(1:7)) == "SPECIAL" ) exit
+    end do
+    read(33,100)
+    
+    InputReals = D_zero
+    i = 1
+    read_loopS: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loopS
+        read(line,*,iostat=ioerr) InputChars(i,1)
+        if( index(InputChars(i,1),"!") /= 0 ) cycle read_loopS
+        if( trim(InputChars(i,1)) == "HBON" ) exit
+        if( trim(InputChars(i,1)) == "END " ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loopS
+        read(line,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , (InputReals(i,j) , j=1,6)
+        
+        i = i + 1
+    end do read_loopS
+    backspace(33)
+
+    SpecialNBParms = i - 1
+
+    If( SpecialNBParms /= 0 ) then
+
+        allocate( SpecialPairs ( SpecialNBParms ) )
+
+        forall(i=1:2) SpecialPairs(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
+
+        SpecialPairs(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,3)
+        SpecialPairs(:SpecialNBParms) % Parms(2) = abs(InputReals(:SpecialNBParms,2))
+
+        ! conversion 
+        ! factor1 = 1.0d26  <== Factor used to correct units 
+        ! GAFF  vs  GMX  LJ parameters:
+        ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+        ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
+        SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
+        SpecialPairs(:SpecialNBParms) % Parms(2) = SpecialPairs(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
+
+        allocate( SpecialPairs14 ( SpecialNBParms ) )
+
+        forall(i=1:2) SpecialPairs14(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
+
+        SpecialPairs14(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,6)
+        SpecialPairs14(:SpecialNBParms) % Parms(2) = abs(InputReals(:SpecialNBParms,5))
+
+        ! conversion 
+        SpecialPairs14(:SpecialNBParms) % Parms(1) = SpecialPairs14(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
+        SpecialPairs14(:SpecialNBParms) % Parms(2) = SpecialPairs14(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
+
+    endIf
+
 !=====================================================================================
 !
 close(33)

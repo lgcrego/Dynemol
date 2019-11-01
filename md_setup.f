@@ -91,8 +91,8 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
                        ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
 
                if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                   sr2 = ( (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) * (SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1)) ) / rcutsq
-                   eps = SpecialPairs(k) % Parms(2) * SpecialPairs(k) % Parms(2) 
+                   sr2 = ( SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1) ) / rcutsq
+                   eps = SpecialPairs(k) % Parms(2)  
                    exit read_loop
                end if
 
