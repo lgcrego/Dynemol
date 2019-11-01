@@ -460,11 +460,18 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     i = 1
     k = 1
     read_loop5: do
-        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( ioerr /= 0 ) exit 
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop5
+        read(line,*,iostat=ioerr) InputChars(i,1)        
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop5
+        if( trim(InputChars(i,1)) == "[  "  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 )  cycle read_loop5 
+
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
         if( InputIntegers(i,1) == 3 ) then 
             backspace(33)
-            read(33,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
+            read(line,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
             k = k + 1 
             cycle read_loop5
         end if
@@ -474,32 +481,41 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     NBondParms = i - 1
 
-    allocate( SpecialPairs ( NbondParms ) )
+    If( NBondParms /= 0 ) then  
 
-    forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
+        allocate( SpecialPairs ( NbondParms ) )
 
-    SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
-    SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
+        forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
 
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-    SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
-    SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+        SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
+        SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
+
+        ! conversion 
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+        SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
+        SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+
+    EndIf
 
     ! SpecialMorse Potential :: Nothing special about it ... 
     NMorseParms = k - 1  
-    allocate( SpecialMorse ( NMorseParms ) ) 
 
-    forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+    If( NMorseParms /= 0 ) then
 
-    SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
-    SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
-    SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
-    
-    ! conversion   
-    SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
-    SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
-    SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+        allocate( SpecialMorse ( NMorseParms ) ) 
+
+        forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+
+        SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
+        SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
+        SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
+        
+        ! conversion   
+        SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
+        SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
+        SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+
+    EndIf
 
 !=====================================================================================
 !  reads [ bondtypes ] ...
