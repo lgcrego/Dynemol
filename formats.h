@@ -158,10 +158,6 @@
                                           
 204 format(1x,'Number of dihedrals in     ' ,a3 ' = ',I6)
 
-214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
-
-224 format(1x,'Number of Improper DHDs in ' ,a3 ' = ',I6)
-
 205 format(1x,'Number of defined/different AtomTypes = ',I3,'/',I3)
 
 206 format(1x,'NonBonded FF type       = ' , I6)
@@ -174,10 +170,16 @@
 
 210 format(/,1x,'OPT cost/original cost = ',F16.4,' / ',F16.4)
 
+214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
+
 215 format(1x,'MM input format >>> ', A6 , '   <<<')
 
 218 format(/,1x,'>>> Saving detailed GA cost info to opt_trunk/GA_cost_statement <<<' )
 
 220 format(/,1x,'>>> Gaussian Cube done: ', 12I6 )
+
+224 format(1x,'Number of Improper DHDs in ' ,a3 ' = ',I6)
+
+225 format(1x,'Total MM_charge in ' ,a3 ' = ',F11.6)
 
 230 format(/,1x,'>>> Saving Security Copy (ref:it/frame/t): ', 2I6 , F11.6 )

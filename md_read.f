@@ -8,7 +8,7 @@ module MD_read_m
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
-    use gmx2mdflex              , only : itp2mdflex, top2mdflex
+    use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs
     use namd2mdflex             , only : psf2mdflex, prm2mdflex, convert_NAMD_velocities
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
@@ -294,6 +294,7 @@ do i = 1 , MM % N_of_species
 end do
 
 !call debug_MM( atom )
+
 !========================================================================================= 
 
 CALL MM_diagnosis( )
@@ -627,10 +628,12 @@ character(len=:) , allocatable  :: string(:)
      write(51, 214) species(i) % residue, species(i) % NTorsions
  ! Print # of Improper DHSs
      write(51, 224) species(i) % residue, species(i) % NImpropers
+ ! Print total MM_charge
+     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge)
+     write(51, *) " "
  end do
  !========================================================================================================
  ! Force Field Parameters ...
- write(51, *) " "
  write(51,"(A)") "Force Field Parameters:"               
 
  write(51, 206) forcefield
@@ -643,11 +646,12 @@ character(len=:) , allocatable  :: string(:)
  write(51, *) " "
  write(51,"(A)") "[ atomtypes ]"               
 
+ ! General NonBonded parms ...
  do i = 1 , size(FF)
 
     if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
 
-        ! warns if paramater was not assigned to this bond ...
+        ! warns if NB paramater was not assigned to this atom  ...
         flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
 
         write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
@@ -657,6 +661,23 @@ character(len=:) , allocatable  :: string(:)
                                       flag
 
     end if
+
+ end do
+
+ write(51, *) " "
+ write(51,"(A)") "[ SpecialPairs ]"               
+
+ ! NonBonded SpecialPairs parms ...
+ do i = 1 , size(SpecialPairs)
+
+    ! warns if NB paramater was not assigned to this atom  ...
+    flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+
+    write(51,'(2A5,2F12.5,A4)')   SpecialPairs(i)% MMSymbols(1)          , & 
+                                  SpecialPairs(i)% MMSymbols(2)          , & 
+                                  SpecialPairs(i)% Parms(1)              , &
+                                  SpecialPairs(i)% Parms(2)              , &
+                                  flag
 
  end do
  !========================================================================================================
