@@ -2,6 +2,7 @@
 
 module namd2mdflex
 
+use iso_fortran_env
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
@@ -645,11 +646,12 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 !=====================================================================================
 !  SPECIALNonBonding parameters :: reading ...
     do
-        read(33,100) keyword
+        read(33,100,iostat=ioerr) keyword
+        if(ioerr == iostat_end) goto 99     ! <== end of file 
         if( trim(keyword(1:7)) == "SPECIAL" ) exit
     end do
     read(33,100)
-    
+
     InputReals = D_zero
     i = 1
     read_loopS: do
@@ -702,7 +704,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
 !=====================================================================================
 !
-close(33)
+99 close(33)
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )

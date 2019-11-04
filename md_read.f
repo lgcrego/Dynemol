@@ -680,17 +680,6 @@ character(len=:) , allocatable  :: string(:)
                                   flag
 
  end do
- !========================================================================================================
- ! charge parms saving ...
- write(51, *) " "
- write(51,"(A)") "[ charges ]"               
-
- do j = 1 , size(species)
-    
-    write(51,"(3A)") "( ",species(j)%residue," )"               
-    write(51,"(A5,F8.4,A5)") (species(j)% atom(i)% MMSymbol , species(j)% atom(i) % MM_Charge , &
-                              merge("<==" , "   " , species(j)% atom(i) % MM_Charge == 0), i = 1,species(j)% N_of_atoms)
- end do
 
  !========================================================================================================
  ! bond parms saving ...
@@ -871,6 +860,18 @@ character(len=:) , allocatable  :: string(:)
     end if
  end  do
  deallocate(string)
+
+ !========================================================================================================
+ ! charge parms saving ...
+ write(51, *) " "
+ write(51,"(A)") "[ charges ]"               
+
+ do j = 1 , size(species)
+    
+    write(51,"(3A)") "( ",species(j)%residue," )"               
+    write(51,"(A5,F8.4,A5)") (species(j)% atom(i)% MMSymbol , species(j)% atom(i) % MM_Charge , &
+                              merge("<==" , "   " , species(j)% atom(i) % MM_Charge == 0), i = 1,species(j)% N_of_atoms)
+ end do
 !========================================================================================================
 
  close(51)
