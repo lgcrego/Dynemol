@@ -257,26 +257,26 @@ integer :: ati , i , j
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving net_charge ...
-OPEN(unit=112 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=21 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , system%atoms
-    write(112,'(F9.5)',advance='no') net_charge(ati) 
+    write(21,'(F9.5)',advance='no') net_charge(ati) 
 end do
-close(112)
+close(21)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=114 , file="tmp_data/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=24 , file="tmp_data/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
-If( counter == 0 ) write(114,6) 'COMPND' , System_Characteristics
+If( counter == 0 ) write(24,6) 'COMPND' , System_Characteristics
 
-write(114,4) 'REMARK' , 'manipulated by charge-transfer'
-write(114,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
-write(114,4) 'REMARK' , 'manipulated by charge-transfer'
-write(114,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-write(114,3) 'MODEL'  , counter
+write(24,4) 'REMARK' , 'manipulated by charge-transfer'
+write(24,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
+write(24,4) 'REMARK' , 'manipulated by charge-transfer'
+write(24,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+write(24,3) 'MODEL'  , counter
 
 do i = 1 , system%atoms
 
-            write(114,2)'HETATM'                        ,  &    ! <== non-standard atom
+             write(24,2)'HETATM'                        ,  &    ! <== non-standard atom
                         i                               ,  &    ! <== global number
                         system%Symbol(i)                ,  &    ! <== atom type
                         system%residue(i)               ,  &    ! <== residue name
@@ -288,10 +288,10 @@ do i = 1 , system%atoms
 
 end do
 
-write(114,'(a)') 'TER'
-write(114,'(a)') 'ENDMDL'
+write(24,'(a)') 'TER'
+write(24,'(a)') 'ENDMDL'
 
-close(114)
+close(24)
 
 1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
 2 FORMAT(a6,i5,t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t56,f8.5,t65,f8.5,t77,a2)

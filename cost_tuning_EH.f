@@ -11,7 +11,7 @@ module cost_EH
                               Adaptive_GA,        &
                               me => i_       
 
-    public :: evaluate_cost , REF_DP , REF_Alpha
+    public :: evaluate_cost , REF_DP , REF_Alpha 
 
     ! module variables ...
     real*8 :: REF_DP(3) , REF_Alpha(3)
@@ -58,10 +58,10 @@ eval(me) = MO_erg_diff( OPT_UNI, 125, 124,  1.6310 )
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !
-! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {vary} , {adaptive} )
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {slide} , {adaptive} )
 ! {...} terms are optional
 ! default criterium (threshold=0.85): localized > 85% of total population
-! vary = real_interval( begin , end ) : no need to use {threshold} if {vary} is used
+! slide = real_interval( begin , end ) : no need to use {threshold} if {slide} is used
 ! adaptive = mode : to enable adpative GA method
 !
 ! ==> Bond_Type( sys , OPT_UNI , MO , atom1 , AO1 , atom2 , AO2 , "+" or "-" )
@@ -69,11 +69,11 @@ eval(me) = MO_erg_diff( OPT_UNI, 125, 124,  1.6310 )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
 !
-! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {vary} , {adaptive} )
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {slide} , {adaptive} )
 ! NO charge on these atoms ...
 ! {...} terms are optional  
 ! default threshold < 0.001 
-! vary = real_interval( begin , end ) : no need to use {threshold} if {vary} is used
+! slide = real_interval( begin , end ) : no need to use {threshold} if {slide} is used
 ! adaptive = mode : to enable adpative GA method
 !
 ! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
@@ -111,8 +111,8 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 120, 79, 'Px', 81, 'S ', '+')
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Py', 81, 'S ', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 120, 78, 'Pz', 81, 'S ', '+')                                
 
-eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], vary=real_interval(0.1,0.15), adaptive=mode )
-eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", vary=real_interval(0.4,0.60), adaptive=mode )    
+eval(me) =  Localize(OPT_UNI, basis, MO=120, atom = [81], slide=real_interval(0.1,0.15), adaptive=mode )
+eval(me) =  Localize(OPT_UNI, basis, MO=120, residue = "COO", slide=real_interval(0.4,0.60), adaptive=mode )    
 
 eval(me) =  Exclude (OPT_UNI, basis, MO=120, atom = [77], threshold = 0.15 ) 
 eval(me) =  Exclude (OPT_UNI, basis, MO=120, atom = [5,7,9,12,21,23,25,28], threshold = 0.30 ) 
@@ -128,12 +128,12 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 122, 23, 'Pz', 28, 'Pz', '+')
 eval(me) =  Localize(OPT_UNI, basis, MO=122, atom=[1:30], threshold = 0.7 )    
 
 !123 ===================
-eval(me) =  Exclude(OPT_UNI, basis, MO=123, atom = [6 ], vary=real_interval(0.1,0.06), adaptive=mode ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=123, atom = [6 ], slide=real_interval(0.1,0.06), adaptive=mode ) 
 eval(me) =  Bond_Type(sys, OPT_UNI, 123, 25, 'Pz', 21, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 123, 23, 'Pz', 28, 'Pz', '+')                                
 
 !124 ===================
-eval(me) =  Exclude(OPT_UNI, basis, MO=124, atom = [22], vary=real_interval(0.1,0.06), adaptive=mode ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=124, atom = [22], slide=real_interval(0.1,0.06), adaptive=mode ) 
 eval(me) =  Bond_Type(sys, OPT_UNI, 124, 25, 'Pz', 21, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 124, 23, 'Pz', 28, 'Pz', '-')                                
 

@@ -34,6 +34,7 @@ INTEGER :: its,j,iter
 real*8  :: dgg,fp,gam,gg
 real*8  :: relative_difference , local_minimum
 real*8  :: g(N),h(N),xi(N),p(N)
+logical :: NaN
 
 
 ! saving first geometry ...
@@ -68,9 +69,14 @@ do its=1,this % ITMAX                                           ! Loop over iter
 
    call Linear_Minimization( this , xi , n , p , local_minimum )    
 
-   If( this% cost() - fp > D_one ) then
+   NaN = merge( .true. , .false. , local_minimum /= local_minimum )
+
+   If( this% cost() - fp > THIRD ) then
       local_minimum = real_large
       goto 100     ! ==> convergence not likely; Exit ...
+   ElseIf( NaN ) then
+      local_minimum = real_large
+      goto 100     ! ==> convergence failed; Exit ...
    Else 
       this%p = p   ! ==> accept iteration; continue ...
       output_minimum = this% cost()

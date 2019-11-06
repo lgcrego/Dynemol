@@ -2,6 +2,7 @@
 
 module namd2mdflex
 
+use iso_fortran_env
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
@@ -10,8 +11,9 @@ use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBo
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
+use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
 
-public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities
+public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
 private
  
@@ -206,7 +208,8 @@ do a = 1 , MM % N_of_species
         end do
         backspace(33)
         read(33,*) Nimpropers
-   
+  
+        ! reading full lines ...
         do k = 1 , ceiling(Nimpropers/two)-1
             select case ( MM_input_format )
                 case( "GAFF" )
@@ -216,6 +219,7 @@ do a = 1 , MM % N_of_species
             end select
         end do 
 
+        ! reading incomplete lines ...
         select case ( MM_input_format )
             case( "GAFF" )
             read(33 , * , iostat=ioerr )  &
@@ -253,7 +257,6 @@ do a = 1 , MM % N_of_species
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
 
         rewind 33
-
 !==============================================================================================
 
         If( species(a) % Nbonds /= 0 ) then 
@@ -313,7 +316,7 @@ real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes 
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms 
+integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms, SpecialNBParms
 real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
 character(18)                   :: keyword
@@ -451,7 +454,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
    
     do i = 1 , NangsTypes
         ! Harmonic potential ...
-        ! factor1 = 1.0d26      <== Factor used to correct the unis read fom Gromacs
+        ! factor1 = 1.0d26      <== Factor used to correct the units 
         if( AngleParameters(i,3) == D_zero ) then 
            Angle_Type(i) = 1 
            funct_angle(i) = "harm"
@@ -550,7 +553,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         select case( Dihed_Type(i) )
            case( 9 )
                 ! V = k[1 + cos(n.phi - theta)] (charmm; multiple)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct units 
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kcal.mol⁻¹) * factor1 * imol * cal_2_J
                 ! kdihed0(:,3) = n       ==> multiplicity 
@@ -560,7 +563,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
            case( 2 )
                 ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct units 
                 ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
                 DihedParameters(i,1) = InputReals(i,3) * deg_2_rad
@@ -584,6 +587,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         if ( ioerr /= 0 ) exit read_loop5
         read(line,*,iostat=ioerr) InputChars(i,1)
         if( index(InputChars(i,1),"!") /= 0 ) cycle read_loop5
+        if( trim(InputChars(i,1)) == "SPEC" ) exit
         if( trim(InputChars(i,1)) == "HBON" ) exit
         if( trim(InputChars(i,1)) == "END " ) exit
         if( ioerr > 0  ) exit
@@ -616,7 +620,11 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     end do
 
     ! conversion 
-    ! factor1 = 1.0d26  <== Factor used to correct the unis readed fom Gromacs
+    ! factor1 = 1.0d26  <== Factor used to correct units 
+    ! GAFF  vs  GMX  LJ parameters:
+    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
     FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
@@ -635,10 +643,69 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
             FF % sig14 = sqrt( FF % sig14 )
 
     end select
- 
+
+!=====================================================================================
+!  SPECIALNonBonding parameters :: reading ...
+    do
+        read(33,100,iostat=ioerr) keyword
+        if(ioerr == iostat_end) goto 99     ! <== end of file 
+        if( trim(keyword(1:7)) == "SPECIAL" ) exit
+    end do
+    read(33,100)
+
+    InputReals = D_zero
+    i = 1
+    read_loopS: do
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loopS
+        read(line,*,iostat=ioerr) InputChars(i,1)
+        if( index(InputChars(i,1),"!") /= 0 ) cycle read_loopS
+        if( trim(InputChars(i,1)) == "HBON" ) exit
+        if( trim(InputChars(i,1)) == "END " ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 ) cycle read_loopS
+        read(line,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , (InputReals(i,j) , j=1,6)
+        
+        i = i + 1
+    end do read_loopS
+    backspace(33)
+
+    SpecialNBParms = i - 1
+
+    If( SpecialNBParms /= 0 ) then
+
+        allocate( SpecialPairs ( SpecialNBParms ) )
+
+        forall(i=1:2) SpecialPairs(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
+
+        SpecialPairs(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,3)
+        SpecialPairs(:SpecialNBParms) % Parms(2) = abs(InputReals(:SpecialNBParms,2))
+
+        ! conversion 
+        ! factor1 = 1.0d26  <== Factor used to correct units 
+        ! GAFF  vs  GMX  LJ parameters:
+        ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+        ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
+        SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
+        SpecialPairs(:SpecialNBParms) % Parms(2) = SpecialPairs(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
+
+        allocate( SpecialPairs14 ( SpecialNBParms ) )
+
+        forall(i=1:2) SpecialPairs14(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
+
+        SpecialPairs14(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,6)
+        SpecialPairs14(:SpecialNBParms) % Parms(2) = abs(InputReals(:SpecialNBParms,5))
+
+        ! conversion 
+        SpecialPairs14(:SpecialNBParms) % Parms(1) = SpecialPairs14(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
+        SpecialPairs14(:SpecialNBParms) % Parms(2) = SpecialPairs14(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
+
+    endIf
+
 !=====================================================================================
 !
-close(33)
+99 close(33)
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )

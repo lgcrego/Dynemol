@@ -428,8 +428,10 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         end where   
     end do
 
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct units read fom Gromacs
+    ! GAFF  vs  GMX  LJ parameters:
+    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
     FF % eps = sqrt( FF % eps * factor1 * imol )
     FF % sig = FF % sig * nano_2_angs
 
@@ -457,11 +459,18 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     i = 1
     k = 1
     read_loop5: do
-        read(33,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( ioerr /= 0 ) exit 
+        read(33, '(A)', iostat=ioerr) line
+        if ( ioerr /= 0 ) exit read_loop5
+        read(line,*,iostat=ioerr) InputChars(i,1)        
+        if( index(InputChars(i,1),";") /= 0 ) cycle read_loop5
+        if( trim(InputChars(i,1)) == "[  "  ) exit
+        if( ioerr > 0  ) exit
+        if( ioerr /= 0 )  cycle read_loop5 
+
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
         if( InputIntegers(i,1) == 3 ) then 
             backspace(33)
-            read(33,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
+            read(line,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
             k = k + 1 
             cycle read_loop5
         end if
@@ -471,32 +480,41 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     NBondParms = i - 1
 
-    allocate( SpecialPairs ( NbondParms ) )
+    If( NBondParms /= 0 ) then  
 
-    forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
+        allocate( SpecialPairs ( NbondParms ) )
 
-    SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
-    SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
+        forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
 
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-    SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
-    SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+        SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
+        SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
+
+        ! conversion 
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+        SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
+        SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+
+    EndIf
 
     ! SpecialMorse Potential :: Nothing special about it ... 
     NMorseParms = k - 1  
-    allocate( SpecialMorse ( NMorseParms ) ) 
 
-    forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+    If( NMorseParms /= 0 ) then
 
-    SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
-    SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
-    SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
-    
-    ! conversion   
-    SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
-    SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
-    SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+        allocate( SpecialMorse ( NMorseParms ) ) 
+
+        forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+
+        SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
+        SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
+        SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
+        
+        ! conversion   
+        SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
+        SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
+        SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+
+    EndIf
 
 !=====================================================================================
 !  reads [ bondtypes ] ...
@@ -611,7 +629,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     do i = 1 , NangsTypes
         select case( Angle_Type(i) )
         ! conversion 
-        ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
             case( 1 ) ! Harmonic potential ...
                 AngleParameters(:NangsTypes,1) = InputReals(:NangsTypes,2) * factor1 * imol
                 AngleParameters(:NangsTypes,2) = InputReals(:NangsTypes,1) * deg_2_rad
@@ -659,7 +677,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)]
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ/mol) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -673,7 +691,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(xi) ==> force constant (kJ/(mol.rad^2)) * factor1 * imol
                 !============================================================================
@@ -686,7 +704,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = 1/2.A1[1 + cos(phi)] + 1/2.A2[1 - cos(2.phi)] + 1/2.A3[1 + cos(3.phi)]
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = C0 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,2) = C1 (kJ/mol) * factor1 * imol
                 ! kdihed0(:,3) = C2 (kJ/mol) * factor1 * imol
@@ -702,7 +720,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)] (improper; same as 1)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -716,7 +734,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
                 !============================================================================
                 ! V = k[1 + cos(n.phi - theta)] (multiple; same as 1)
-                ! factor1 = 1.0d26      <== Factor used to correct the units read fom Gromacs
+                ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
                 ! kdihed0(:,1) = phi_s   ==> angle (deg) * deg_2_rad
                 ! kdihed0(:,2) = K_(phi) ==> force constant (kJ.mol⁻¹) * factor1 * imol
                 ! kdihed0(:,3) = n       ==> multiplicity (it will be) 
@@ -769,17 +787,21 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
     NPairsParms = i - 1
 
-    allocate( SpecialPairs14 ( NPairsParms ) )
+    If( NPairsParms /= 0 ) then
 
-    forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
+        allocate( SpecialPairs14 ( NPairsParms ) )
 
-    SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
-    SpecialPairs14(:NPairsParms) % Parms(2) = InputReals(:NPairsParms,2)
+        forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
 
-    ! conversion 
-    ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-    SpecialPairs14(:NPairsParms) % Parms(1) = sqrt( SpecialPairs14(:NPairsParms)%Parms(1) * nano_2_angs    )
-    SpecialPairs14(:NPairsParms) % Parms(2) = sqrt( SpecialPairs14(:NPairsParms)%Parms(2) * factor1 * imol )
+        SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
+        SpecialPairs14(:NPairsParms) % Parms(2) = InputReals(:NPairsParms,2)
+
+        ! conversion 
+        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+        SpecialPairs14(:NPairsParms) % Parms(1) = sqrt( SpecialPairs14(:NPairsParms)%Parms(1) * nano_2_angs    )
+        SpecialPairs14(:NPairsParms) % Parms(2) = sqrt( SpecialPairs14(:NPairsParms)%Parms(2) * factor1 * imol )
+
+    EndIf
 
   end if
 !

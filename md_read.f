@@ -9,7 +9,7 @@ module MD_read_m
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
-    use gmx2mdflex              , only : itp2mdflex, top2mdflex
+    use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs
     use namd2mdflex             , only : psf2mdflex, prm2mdflex, convert_NAMD_velocities
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
@@ -597,7 +597,7 @@ end subroutine MMSymbol_2_Symbol
 implicit none
 
 ! local variabbles ...
-integer                         :: i , j , at1 , at2 , at3 , at4 , funct_dih , multiples
+integer                         :: i , j , m , at1 , at2 , at3 , at4 , funct_dih , multiples , prototype
 real*8                          :: factor , factor_1 , factor_2 
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
@@ -628,10 +628,12 @@ character(len=:) , allocatable  :: string(:)
      write(51, 214) species(i) % residue, species(i) % NTorsions
  ! Print # of Improper DHSs
      write(51, 224) species(i) % residue, species(i) % NImpropers
+ ! Print total MM_charge
+     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge)
+     write(51, *) " "
  end do
  !========================================================================================================
  ! Force Field Parameters ...
- write(51, *) " "
  write(51,"(A)") "Force Field Parameters:"               
 
  write(51, 206) forcefield
@@ -644,11 +646,12 @@ character(len=:) , allocatable  :: string(:)
  write(51, *) " "
  write(51,"(A)") "[ atomtypes ]"               
 
+ ! General NonBonded parms ...
  do i = 1 , size(FF)
 
     if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
 
-        ! warns if paramater was not assigned to this bond ...
+        ! warns if NB paramater was not assigned to this atom  ...
         flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
 
         write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
@@ -660,6 +663,235 @@ character(len=:) , allocatable  :: string(:)
     end if
 
  end do
+
+ write(51, *) " "
+ write(51,"(A)") "[ SpecialPairs ]"               
+
+ ! NonBonded SpecialPairs parms ...
+ do i = 1 , size(SpecialPairs)
+
+    ! warns if NB paramater was not assigned to this atom  ...
+    flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+
+    write(51,'(2A5,2F12.5,A4)')   SpecialPairs(i)% MMSymbols(1)          , & 
+                                  SpecialPairs(i)% MMSymbols(2)          , & 
+                                  SpecialPairs(i)% Parms(1)              , &
+                                  SpecialPairs(i)% Parms(2)              , &
+                                  flag
+
+ end do
+
+ !========================================================================================================
+ ! bond parms saving ...
+ write(51, *) " "
+ write(51,"(A)") "[ bondtypes ]"               
+
+ prototype = 1
+ do m = 1 , MM % N_of_Molecules
+ 
+    if( molecule(m)%my_species /= prototype ) cycle
+ 
+    allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(m)%Nbonds) )
+ 
+    do i = 1 , molecule(m)%Nbonds
+ 
+       at1 = molecule(m)%bonds(i,1)
+       at2 = molecule(m)%bonds(i,2)
+ 
+       string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol
+ 
+       if( .NOT. any(string(1:i-1) == string(i)) ) then 
+ 
+           ! warns if paramater was not assigned to this bond ...
+           flag = merge( "<==" , "   " , sum(molecule(m)%kbond0(i,:)) == 0 )
+ 
+           funct_type = molecule(m) % funct_bond(i) 
+    
+           factor = factor2 * imol  
+           if( funct_type == "3" ) factor = factor1 * imol
+ 
+           write(51,'(3A4,F15.5,2F15.3,A3)')  atom(at1)%MMSymbol                      , &
+                                              atom(at2)%MMSymbol                      , &
+                                              funct_type                              , &
+                                              molecule(m)%kbond0(i,2) / nano_2_angs   , &
+                                              molecule(m)%kbond0(i,1) / factor        , &
+                                              molecule(m)%kbond0(i,3) * nano_2_angs   , &
+                                              flag
+       end if
+    end do
+    deallocate(string)
+ 
+    prototype = prototype + 1 
+ 
+ end do
+
+ !========================================================================================================
+ ! angle parms saving ...
+ write(51,*) " "
+ write(51,"(A)") "[ angletypes ]"
+
+ prototype = 1
+ do m = 1 , MM % N_of_Molecules
+ 
+    if( molecule(m)%my_species /= prototype ) cycle
+ 
+    allocate( character(len=3*len(atom(at1)%MMSymbol)) :: string(molecule(m)%Nangs) )
+
+    do i = 1 , molecule(m)%Nangs
+
+       at1 = molecule(m)%angs(i,1)
+       at2 = molecule(m)%angs(i,2)
+       at3 = molecule(m)%angs(i,3)
+
+       string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol
+
+       if( .NOT. any(string(1:i-1) == string(i)) ) then 
+
+           ! warns if paramater was not assigned to this angle ...
+           flag = merge( "<==" , "   " , sum(molecule(m)%kang0(i,:)) == 0 )
+
+           funct_type = molecule(m) % funct_angle(i)
+
+           factor_1 = factor1 * imol
+           factor_2 = factor2 * imol
+
+           write(51,'(4A4,2F15.3)',advance="no") atom(at1)%MMSymbol  , &
+                                                 atom(at2)%MMSymbol  , &
+                                                 atom(at3)%MMSymbol  , &
+                                                 funct_type       
+
+           select case( adjustl(molecule(m) % Angle_Type(i)) )
+
+               case ('harm') 
+
+                   write(51,'(2F15.3,A3)') molecule(m)%kang0(i,2) / deg_2_rad   , &
+                                           molecule(m)%kang0(i,1) / factor_1    , &
+                                           flag 
+
+               case('urba')
+
+                   write(51,'(4F15.3,A3)') molecule(m)%kang0(i,2) / deg_2_rad   , &
+                                           molecule(m)%kang0(i,1) / factor_1    , &
+                                           molecule(m)%kang0(i,4) / nano_2_angs , &
+                                           molecule(m)%kang0(i,3) / factor_2    , &
+                                           flag
+
+               case default
+
+                   write(*,'(A5)',advance="no") adjustl(molecule(m) % Angle_Type(i))
+                   stop " <== angle FF not supported in FF_OPT_class%output"
+
+           end select
+       end if
+    end do
+    deallocate(string)
+ 
+    prototype = prototype + 1 
+ 
+ end do
+
+ !========================================================================================================
+ ! dihedral parms saving ...
+ write(51,*) " "
+ write(51,"(A)") "[ dihedraltypes ]"
+
+ prototype = 1
+ do m = 1 , MM % N_of_Molecules
+ 
+    if( molecule(m)%my_species /= prototype ) cycle
+
+    allocate( character(len=4*len(atom(at1)%MMSymbol)+len(molecule(m)%Dihedral_Type)) :: string(molecule(m)%Ndiheds) )
+    do i = 1 , molecule(m)%Ndiheds
+
+       at1 = molecule(m)%diheds(i,1)
+       at2 = molecule(m)%diheds(i,2)
+       at3 = molecule(m)%diheds(i,3)
+       at4 = molecule(m)%diheds(i,4)
+
+       string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol//molecule(m)%Dihedral_Type(i)
+
+       if( (.NOT. any(string(1:i-1) == string(i))) .OR. (.NOT. any(molecule(m)%kdihed0(1:i-1,1) == molecule(m)%kdihed0(i,1))) ) then 
+
+           ! warns if paramater was not assigned to this dihedral ...
+           flag = merge( "<==" , "   " , sum(abs(molecule(m)%kdihed0(i,:))) == 0 )
+
+           funct_dih = molecule(m) % funct_dihed(i)
+
+           factor = factor1 * imol
+
+           write(51,'(4A4,I5)',advance="no") atom(at1)%MMSymbol                  , &
+                                             atom(at2)%MMSymbol                  , &
+                                             atom(at3)%MMSymbol                  , &
+                                             atom(at4)%MMSymbol                  , &
+                                             funct_dih      
+
+           select case( adjustl(molecule(m) % Dihedral_Type(i)) )
+
+               case ('cos' , 'imp')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
+
+                   write(51,'(3F12.5,A3)') molecule(m)%kdihed0(i,1) / deg_2_rad  , &
+                                           molecule(m)%kdihed0(i,2) / factor     , &  
+                                           molecule(m)%kdihed0(i,3)              , &
+                                           flag
+
+               case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
+                             ! Eq. 4.61 (GMX 5.0.5 manual)
+
+                   write(51,'(6F12.5,A3)') molecule(m)%kdihed0(i,1) / factor     , &
+                                           molecule(m)%kdihed0(i,2) / factor     , &  
+                                           molecule(m)%kdihed0(i,3) / factor     , &
+                                           molecule(m)%kdihed0(i,4) / factor     , & 
+                                           molecule(m)%kdihed0(i,5) / factor     , &
+                                           molecule(m)%kdihed0(i,6) / factor     , &
+                                           flag
+
+               case ('harm') ! V = 1/2.k[cos(phi) - cos(phi0)]²
+                        ! factor1 = 1.0d26      <== Factor used to correct the units 
+                        ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
+                        ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
+
+                   write(51,'(6F12.5,A3)') molecule(m)%kdihed0(i,1) / factor     , &
+                                           molecule(m)%kdihed0(i,2) / factor     , &  
+                                           molecule(m)%kdihed0(i,3) / factor     , &
+                                           flag
+
+               case ('chrm')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) ; Eq. 4.60 (GMX 5.0.5 manual)
+
+
+                   multiples = count(molecule(m)%kdihed0(i,:) /= 0) 
+
+                       If( multiples <= 9 ) then   
+
+                            write(51,'(3F12.5)',advance='no') molecule(m)%kdihed0(i,1) / deg_2_rad  , &
+                                                              molecule(m)%kdihed0(i,2) / factor     , &  
+                                                              molecule(m)%kdihed0(i,3)              
+                       if( multiples >= 4 ) then    
+
+                            write(51,'(3F12.5)',advance='no') molecule(m)%kdihed0(i,4) / deg_2_rad  , &
+                                                              molecule(m)%kdihed0(i,5) / factor     , &  
+                                                              molecule(m)%kdihed0(i,6)              
+                       if( multiples >= 7 ) then    
+
+                            write(51,'(3F12.5)',advance='no') molecule(m)%kdihed0(i,7) / deg_2_rad  , &
+                                                              molecule(m)%kdihed0(i,8) / factor     , &  
+                                                              molecule(m)%kdihed0(i,9)              
+                       endif; endif; EndIf
+                   write(51,'(A3)') flag
+
+               case default
+
+                   write(*,'(A5)',advance="no") adjustl(molecule(m) % Dihedral_Type(i))
+                   stop " <== dihedral FF not supported in FF_OPT_class%output"
+
+           end select
+       end if
+    end  do
+    deallocate(string)
+    
+    prototype = prototype + 1 
+ 
+ end do
+
  !========================================================================================================
  ! charge parms saving ...
  write(51, *) " "
@@ -671,186 +903,6 @@ character(len=:) , allocatable  :: string(:)
     write(51,"(A5,F8.4,A5)") (species(j)% atom(i)% MMSymbol , species(j)% atom(i) % MM_Charge , &
                               merge("<==" , "   " , species(j)% atom(i) % MM_Charge == 0), i = 1,species(j)% N_of_atoms)
  end do
-
- !========================================================================================================
- ! bond parms saving ...
- write(51, *) " "
- write(51,"(A)") "[ bondtypes ]"               
-
- allocate( character(len=2*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nbonds) )
- do i = 1 , molecule(1)%Nbonds
-
-    at1 = molecule(1)%bonds(i,1)
-    at2 = molecule(1)%bonds(i,2)
-
-    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol
-
-    if( .NOT. any(string(1:i-1) == string(i)) ) then 
-
-        ! warns if paramater was not assigned to this bond ...
-        flag = merge( "<==" , "   " , sum(molecule(1)%kbond0(i,:)) == 0 )
-
-        funct_type = molecule(1) % funct_bond(i) 
- 
-        factor = factor2 * imol  
-        if( funct_type == "3" ) factor = factor1 * imol
-
-        write(51,'(3A4,F15.5,2F15.3,A3)')  atom(at1)%MMSymbol                      , &
-                                           atom(at2)%MMSymbol                      , &
-                                           funct_type                              , &
-                                           molecule(1)%kbond0(i,2) / nano_2_angs   , &
-                                           molecule(1)%kbond0(i,1) / factor        , &
-                                           molecule(1)%kbond0(i,3) * nano_2_angs   , &
-                                           flag
-    end if
- end do
- deallocate(string)
- !========================================================================================================
- ! angle parms saving ...
- write(51,*) " "
- write(51,"(A)") "[ angletypes ]"
-
- allocate( character(len=3*len(atom(at1)%MMSymbol)) :: string(molecule(1)%Nangs) )
- do i = 1 , molecule(1)%Nangs
-
-    at1 = molecule(1)%angs(i,1)
-    at2 = molecule(1)%angs(i,2)
-    at3 = molecule(1)%angs(i,3)
-
-    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol
-
-    if( .NOT. any(string(1:i-1) == string(i)) ) then 
-
-        ! warns if paramater was not assigned to this angle ...
-        flag = merge( "<==" , "   " , sum(molecule(1)%kang0(i,:)) == 0 )
-
-        funct_type = molecule(1) % funct_angle(i)
-
-        factor_1 = factor1 * imol
-        factor_2 = factor2 * imol
-
-        write(51,'(4A4,2F15.3)',advance="no") atom(at1)%MMSymbol  , &
-                                              atom(at2)%MMSymbol  , &
-                                              atom(at3)%MMSymbol  , &
-                                              funct_type       
-
-        select case( adjustl(molecule(1) % Angle_Type(i)) )
-
-            case ('harm') 
-
-                write(51,'(2F15.3,A3)') molecule(1)%kang0(i,2) / deg_2_rad   , &
-                                        molecule(1)%kang0(i,1) / factor_1    , &
-                                        flag 
-
-            case('urba')
-
-                write(51,'(4F15.3,A3)') molecule(1)%kang0(i,2) / deg_2_rad   , &
-                                        molecule(1)%kang0(i,1) / factor_1    , &
-                                        molecule(1)%kang0(i,4) / nano_2_angs , &
-                                        molecule(1)%kang0(i,3) / factor_2    , &
-                                        flag
-
-            case default
-
-                write(*,'(A5)',advance="no") adjustl(molecule(1) % Angle_Type(i))
-                stop " <== angle FF not supported in FF_OPT_class%output"
-
-        end select
-    end if
- end do
- deallocate(string)
- !========================================================================================================
- ! dihedral parms saving ...
- write(51,*) " "
- write(51,"(A)") "[ dihedraltypes ]"
-
- allocate( character(len=4*len(atom(at1)%MMSymbol)+len(molecule(1)%Dihedral_Type)) :: string(molecule(1)%Ndiheds) )
- do i = 1 , molecule(1)%Ndiheds
-
-    at1 = molecule(1)%diheds(i,1)
-    at2 = molecule(1)%diheds(i,2)
-    at3 = molecule(1)%diheds(i,3)
-    at4 = molecule(1)%diheds(i,4)
-
-    string(i) = atom(at1)%MMSymbol//atom(at2)%MMSymbol//atom(at3)%MMSymbol//atom(at4)%MMSymbol//molecule(1)%Dihedral_Type(i)
-
-    if( .NOT. any(string(1:i-1) == string(i)) ) then 
-
-        ! warns if paramater was not assigned to this dihedral ...
-        flag = merge( "<==" , "   " , sum(abs(molecule(1)%kdihed0(i,:))) == 0 )
-
-        funct_dih = molecule(1) % funct_dihed(i)
-
-        factor = factor1 * imol
-
-        write(51,'(4A4,I5)',advance="no") atom(at1)%MMSymbol                  , &
-                                          atom(at2)%MMSymbol                  , &
-                                          atom(at3)%MMSymbol                  , &
-                                          atom(at4)%MMSymbol                  , &
-                                          funct_dih      
-
-        select case( adjustl(molecule(1) % Dihedral_Type(i)) )
-
-            case ('cos' , 'imp')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] ; Eq. 4.60 (GMX 5.0.5 manual)
-
-                write(51,'(3F12.5,A3)') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
-                                        molecule(1)%kdihed0(i,2) / factor     , &  
-                                        molecule(1)%kdihed0(i,3)              , &
-                                        flag
-
-            case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
-                          ! Eq. 4.61 (GMX 5.0.5 manual)
-
-                write(51,'(6F12.5,A3)') molecule(1)%kdihed0(i,1) / factor     , &
-                                        molecule(1)%kdihed0(i,2) / factor     , &  
-                                        molecule(1)%kdihed0(i,3) / factor     , &
-                                        molecule(1)%kdihed0(i,4) / factor     , & 
-                                        molecule(1)%kdihed0(i,5) / factor     , &
-                                        molecule(1)%kdihed0(i,6) / factor     , &
-                                        flag
-
-            case ('harm') ! V = 1/2.k[cos(phi) - cos(phi0)]²
-                     ! factor1 = 1.0d26      <== Factor used to correct the unis readed fom Gromacs
-                     ! kdihed0(:,1) = xi_0   ==> angle (deg) * deg_2_rad
-                     ! kdihed0(:,2) = K_(xi) ==> force constant (kcal.mol⁻¹.rad⁻²) * factor1 * imol * cal_2_J
-
-                write(51,'(6F12.5,A3)') molecule(1)%kdihed0(i,1) / factor     , &
-                                        molecule(1)%kdihed0(i,2) / factor     , &  
-                                        molecule(1)%kdihed0(i,3) / factor     , &
-                                        flag
-
-            case ('chrm')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) ; Eq. 4.60 (GMX 5.0.5 manual)
-
-
-                multiples = count(molecule(1)%kdihed0(i,:) /= 0) 
-
-                    If( multiples <= 9 ) then   
-
-                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,1) / deg_2_rad  , &
-                                                           molecule(1)%kdihed0(i,2) / factor     , &  
-                                                           molecule(1)%kdihed0(i,3)              
-                    if( multiples >= 4 ) then    
-
-                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,4) / deg_2_rad  , &
-                                                           molecule(1)%kdihed0(i,5) / factor     , &  
-                                                           molecule(1)%kdihed0(i,6)              
-                    if( multiples >= 7 ) then    
-
-                         write(51,'(3F12.5)',advance='no') molecule(1)%kdihed0(i,7) / deg_2_rad  , &
-                                                           molecule(1)%kdihed0(i,8) / factor     , &  
-                                                           molecule(1)%kdihed0(i,9)              
-                    endif; endif; EndIf
-                write(51,'(A3)') flag
-
-            case default
-
-                write(*,'(A5)',advance="no") adjustl(molecule(1) % Dihedral_Type(i))
-                stop " <== dihedral FF not supported in FF_OPT_class%output"
-
-        end select
-    end if
- end  do
- deallocate(string)
 !========================================================================================================
 
  close(51)

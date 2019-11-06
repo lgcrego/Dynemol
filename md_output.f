@@ -132,7 +132,7 @@ real*8  , intent(in)    :: dt
 integer :: i , l 
 
 ! saving latest atomic velocities for future use ... 
-open(11, file='velocity_MM.out', status='unknown')
+open(unit=11, file='velocity_MM.out', action='write', status='unknown')
     do i = 1 , MM % N_of_atoms
         write(11,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
     end do
