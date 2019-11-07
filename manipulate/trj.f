@@ -59,7 +59,7 @@ end select
 ! select frame OR trajectory ...
 do
     write(*,'(/a)') ' (1)  = edit trajectory with AD-HOC'
-    write(*,'(/a)') ' (2)  = Translation Operation'
+    write(*,'(/a)') ' (2)  = Translation Operation (only on first frame)'
     write(*,'(/a)') ' (3)  = select frame '      
     write(*,'(/a)') ' (4)  = save PDB trajectory '
     write(*,'(/a)') ' (5)  = re-GROUP molecules ( may need to use AD-HOC & Translation before; first frame must be united )'

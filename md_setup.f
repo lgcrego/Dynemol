@@ -81,7 +81,7 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
        end select
        eps = FF(i) % eps * FF(j) % eps
 
-       If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
+       If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
 
           read_loop: do  k = 1, size(SpecialPairs)
 

@@ -33,15 +33,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "Genetic_Alg"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -89,14 +89,14 @@ logical :: dynamic
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 100                         ! <== step for saving backup files
+  step_security = 10000                       ! <== step for saving backup files
                                               ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d0                               ! <== final time in PICOseconds
-  n_t  =  10000!00                             ! <== number of time steps
+  t_f  =  4.0d1                               ! <== final time in PICOseconds
+  n_t  =  100000                              ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
@@ -221,3 +221,4 @@ end subroutine Define_Environment
 !
 !
 end module parameters_m
+

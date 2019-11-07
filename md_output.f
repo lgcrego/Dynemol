@@ -137,7 +137,7 @@ open(unit=11, file='velocity_MM.out', action='write', status='unknown')
         write(11,*) atom(i) % vel(1),  atom(i) % vel(2), atom(i) % vel(3) 
     end do
 close(11)
-stop 
+ 
 ! config.pdb ... 
 
  CALL ReGroupMolecule

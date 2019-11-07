@@ -398,14 +398,14 @@ do i = 1 , MM % N_of_molecules
             end select
             eps   =  atom(ati) % eps * atom(atj) % eps
 
-            If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
+            If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
 
                read_loop: do  n = 1, size(SpecialPairs)
 
-                  flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                          ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-                  flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                          ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+                  flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+                  flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
 
                   if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
                      sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq 
@@ -485,7 +485,7 @@ If( allocated(SpecialMorse) ) then
        end do
    end do
 
-endIf
+end If
 
 !
 !====================================================================

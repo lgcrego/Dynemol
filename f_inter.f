@@ -97,7 +97,7 @@ do i = 1 , MM % N_of_atoms
 end do
 !$OMP end parallel do
 
-pikap = 0.5d0 * vrecut + rsqpi * KAPPA * coulomb * factor3
+pikap = HALF * vrecut + rsqpi * KAPPA * coulomb * factor3
 
 !$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms

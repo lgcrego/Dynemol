@@ -5,7 +5,7 @@ module GA_QCModel_m
     use f95_precision
     use blas95
     use lapack95
-    use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_ , CG_
+    use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_
     use Semi_Empirical_Parms    , only : element => atom  
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
