@@ -21,6 +21,7 @@ module MM_ERG_class_m
         integer                  :: ITMAX_MM = 4000             ! <== 100-300 is a good compromise of accuracy and safety
         real*8                   :: BracketSize_MM = 1.d-2      ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_MM = .true.
+        character(len=72)        :: my_message
     contains
         procedure :: cost => energy
         procedure :: cost_variation => forces
@@ -55,6 +56,7 @@ me % BracketSize = me % BracketSize_MM
 me % profiling   = me % profiling_MM
 me % accuracy    = mid_prec
 me % driver      = driver_MM
+me % message     = me % my_message
 
 If( driver_MM == "Parametrize" ) me % profiling = .false.
 

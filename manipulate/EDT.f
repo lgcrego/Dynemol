@@ -275,13 +275,14 @@ real*8 , allocatable :: pm(:)
 
 !local parameters ...
 real*8 , parameter   :: ThreeFourth = three/four
+real*8 , parameter   :: TwoThird = two/three
 
 allocate( pm(trj(1)%N_of_atoms) )
 
 ! fixing atoms to the original unit-cell ; THIS IS ONLY FOR EXTENDED SURFACES 
 do j = 1 , size(trj)
 do i = 1 , 3
-    where( dabs(trj(j)%atom%xyz(i)-trj(1)%atom%xyz(i)) > ThreeFourth*trj(1)%box(i) ) 
+    where( dabs(trj(j)%atom%xyz(i)-trj(1)%atom%xyz(i)) > TwoThird*trj(1)%box(i) ) 
 
         pm = sign( 1.d0 , trj(1)%atom%xyz(i) - trj(j)%atom%xyz(i) )
 

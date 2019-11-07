@@ -303,6 +303,10 @@ MM_erg = MM_OPT( )
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 
+Print 30, MM_erg% message
+
+include 'formats.h'
+
 end subroutine Optimize_Structure
 !
 !

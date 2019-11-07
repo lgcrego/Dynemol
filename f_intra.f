@@ -310,7 +310,7 @@ do i = 1 , MM % N_of_molecules
             eps   =  atom(ati) % eps14 * atom(atj) % eps14 
 
 
-            If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (K,L) is a SpecialPair ... 
+            If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (I,J) is a SpecialPair ... 
 
                read_loop1: do  n = 1, size(SpecialPairs14)
 
