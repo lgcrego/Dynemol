@@ -120,6 +120,7 @@ SOURCE2 = constants_m.o \
 		  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
+                  checklist.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \

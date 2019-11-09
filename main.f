@@ -2,6 +2,7 @@ Program qdynamo
 
 use type_m
 use constants_m
+use parameter_checklist      
 use parameters_m            , only : Define_Environment , driver , nuclear_matter
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -27,6 +28,8 @@ call GPU_Init(0,1)
 
 CAll Define_Environment
    
+CALL checklist
+
 If( driver /= "avrg_confgs") CALL system( "./env.sh" )
 
 CALL read_EHT_parameters
