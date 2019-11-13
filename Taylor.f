@@ -255,15 +255,15 @@ do n = 1 , n_part
     If( eh_tag(n) == "XX" ) cycle
 
     If( it == 1 ) then
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
         write(52,12) "#" , QDyn%fragments , "total"
 
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+        open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
 
     else
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )        
+        open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )        
     end If
 
     ! dumps el-&-hl populations ...    

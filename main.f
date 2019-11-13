@@ -3,7 +3,7 @@ Program qdynamo
 use type_m
 use constants_m
 use parameter_checklist      
-use parameters_m            , only : Define_Environment , driver , nuclear_matter
+use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
@@ -30,7 +30,7 @@ CAll Define_Environment
    
 CALL checklist
 
-If( driver /= "avrg_confgs") CALL system( "./env.sh" )
+If( .not. restart ) CALL system( "./env.sh" )
 
 CALL read_EHT_parameters
 

@@ -81,7 +81,7 @@ end do
 
 TDOS%average = TDOS%average + TDOS%func
 
-! occupation of PDOS(nr) ...
+! occupation of TDOS(nr) ...
 TDOS%occupation(1) = two * TDOS%peaks(1)
 do k = 2 , npoints 
     TDOS%occupation(k) = TDOS%occupation(k-1) + two*TDOS%peaks(k) 

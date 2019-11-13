@@ -473,9 +473,9 @@ select case( instance )
         CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
         If( t == t_i ) then
-            open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "replace" )
+            open( unit = 51 , file = "dyn_trunk/dipole_dyn.dat" , status = "replace" )
         else
-            open( unit = 51 , file = "tmp_data/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+            open( unit = 51 , file = "dyn_trunk/dipole_dyn.dat" , status = "unknown", action = "write" , position = "append" )
         end If
         write(51,'(5F10.5)') t , (Total_DP(i) , i=1,3) , sqrt( sum(Total_DP*Total_DP) )
         close(51)
@@ -512,16 +512,16 @@ do n = 1 , n_part
 
     If( it == 1 ) then
 
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+        open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
         write(52,11) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
         write(52,12) "#" , QDyn%fragments , "total"
 
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+        open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
 
     else
 
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
+        open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
+        open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
 
     end If
  
