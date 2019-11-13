@@ -84,11 +84,12 @@ SOURCE2 = constants_m.o \
                   MPI_defs.o \
 		  OPT_parent.o \
 		  parameters_MM.o \
+                  checklist.o
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-          IdentifyNonBonded.o \
+                  IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \

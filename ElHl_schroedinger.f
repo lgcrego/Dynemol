@@ -6,7 +6,7 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , restart , DensityMatrix , CT_dump_step
+                                         Coulomb_ , DensityMatrix , driver
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -18,13 +18,15 @@
  use Auto_Correlation_m         , only : MO_Occupation
 
 
-    public :: Simple_dynamics , DeAllocate_QDyn
+    public :: Simple_dynamics , DeAllocate_QDyn , RunningStat
 
     private
 
     ! module variables ...
-    Complex*16 , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Real*8     , ALLOCATABLE , dimension(:,:,:) :: Pops(:,:,:)
+    Complex*16   , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Real*8       , ALLOCATABLE , dimension(:,:,:) :: Pops
+    type(f_time)                                  :: Mean_QDyn , aux
+    integer                                       :: iter = 0 
 
  contains
 !
@@ -97,7 +99,6 @@ CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zer
 Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
 QDyn%dyn(1,:,:) = Pops(1,:,:)
-CALL dump_QDyn( QDyn , 1 , UNI )
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -140,11 +141,9 @@ DO it = it_init , n_t
     CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 
-    ! save populations ...
+    ! get populations ...
     Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
-
     QDyn%dyn(it,:,:) = Pops(it,:,:)
-    if( mod(it,CT_dump_step) == 0 ) CALL dump_QDyn( QDyn , it , UNI )
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
@@ -163,9 +162,28 @@ DO it = it_init , n_t
 
 END DO
 
-! sum population dynamics over frames ...
-QDyn%dyn = D_zero
-QDyn%dyn = QDyn%dyn + Pops
+! saving populations & all that jazz ...
+select case (driver) 
+
+       case( "q_dynamics" ) 
+           ! dump final populations ...
+           CALL dump_QDyn( QDyn , UNI )
+
+       case( "avrg_confgs" ) 
+
+           CALL RunningStat( Qdyn )
+
+           ! deliver on-the-fly averages back to calling routine ...
+           Qdyn% dyn = Mean_Qdyn% dyn
+
+           ! dump on-the-fly averages in here ...
+           CALL dump_QDyn( QDyn , UNI )
+
+       case default
+           Print*, " >>> Check your driver options <<< :" , driver
+           stop
+
+end select 
 
 deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -176,48 +194,93 @@ end subroutine Simple_dynamics
 !
 !
 !
-!========================================
- subroutine dump_Qdyn( Qdyn , it , UNI )
-!========================================
+!=========================================
+ subroutine RunningStat( Qdyn , instance )
+!=========================================
+implicit none
+type(f_time)            , intent(inout) :: QDyn
+character    , optional , intent(in)    :: instance
+
+! Donald Knuth’s Art of Computer Programming, Vol 2, page 232, 3rd edition 
+! M[1] = x[1] ; S[1] = 0
+! M[k] = ( (k-1)*M[k-1] + x[k] ) / k
+! S[k] = S[k-1] + (x[k] – M[k-1]) * (x[k] – M[k])
+! M[] = mean value
+! S[n]/(n-1)  = S^2 = variance
+
+!===============================================
+If( present(instance) ) then
+   Qdyn% std = sqrt( Qdyn% std/float(iter-1) )
+   ! preserving time; does not undergo std ...
+   Qdyn% std(:,0,:) = Qdyn% dyn(:,0,:)  
+  
+   return
+end If
+!===============================================
+
+iter = iter + 1
+
+If( .not. allocated(Mean_Qdyn% dyn) ) then
+    allocate( Mean_Qdyn% dyn , source = QDyn% dyn )
+    allocate( aux% dyn       , source = QDyn% dyn )
+End If
+
+aux% dyn = Mean_Qdyn% dyn
+
+Mean_Qdyn% dyn = ( (iter-1)*aux% dyn + Qdyn% dyn ) / iter
+
+If(iter == 1 ) then
+
+   Qdyn% std = D_zero
+
+else
+
+   Qdyn% std = Qdyn% std + (Qdyn% dyn - aux% dyn)*(Qdyn% dyn - Mean_Qdyn% dyn)
+
+End If
+
+end subroutine RunningStat
+!
+!
+!
+!
+!==================================
+ subroutine dump_Qdyn( Qdyn , UNI )
+!==================================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-integer         , intent(in) :: it
 type(R_eigen)   , intent(in) :: UNI
 
 ! local variables ...
-integer     :: nf , n
+integer     :: nf , n , it
 complex*16  :: wp_energy
 
 do n = 1 , n_part
 
-    if( eh_tag(n) == "XX" ) cycle
+      if( eh_tag(n) == "XX" ) cycle
+      
+      open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+      write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+      write(52,12) "#" , QDyn%fragments , "total"
+      
+      open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
 
-    wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
+      wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
+      
+      DO it = 1 , n_t
 
-    If( it == 1 ) then
+      
+          ! dumps el-&-hl populations ...
+          write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
+      
+          ! dumps el-&-hl wavepachet energies ...
+          write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+      
+      end do
 
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
-        write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-        write(52,12) "#" , QDyn%fragments , "total"
-
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
-
-    else
-
-        open( unit = 52 , file = "tmp_data/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
-        open( unit = 53 , file = "tmp_data/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
-
-    end If
-
-    ! dumps el-&-hl populations ...
-    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
-
-    ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
-
-    close(52)
-    close(53)
-
+      close(52)
+      close(53)
+      
 end do
 
 12 FORMAT(/15A10)
@@ -272,7 +335,10 @@ select case( flag )
         ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
         allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
         allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
-
+        If( driver == "avrg_confgs" ) then
+              allocate( QDyn%std( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
+        End If
+ 
         ! allocatating Net_Charte for future use ...
         allocate( Net_Charge(Extended_Cell%atoms) , source = D_zero )
 
@@ -282,27 +348,8 @@ select case( flag )
     case( "dealloc" )
 
         deallocate( QDyn%dyn , QDyn%fragments )
-
-    case( "update" )  ! <== used for saving populations of atomic orbitals ...
-
-        ! start re-building ...
-        deallocate( Qdyn%fragments , Qdyn%dyn )
-
-        N_of_fragments = size( Extended_Cell%list_of_fragments )
-
-        ! for the sake of having the DONOR or ACCEPTOR survival probability in the first column at output ...
-        A_flag = any(Extended_Cell%list_of_fragments == "A")
-        first_in_line = Extended_Cell%list_of_fragments(1)
-        If( A_flag ) then
-            where( Extended_Cell%list_of_fragments == "A" ) Extended_Cell%list_of_fragments = first_in_line
-        else
-            where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
-        end If
-        Extended_Cell%list_of_fragments(1) = merge( "A" , "D" , A_flag )
-
-        ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
-        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
-        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
+        
+        If( allocated(QDyn% std) ) deallocate(QDyn% std)
 
 end select
 

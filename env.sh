@@ -2,8 +2,8 @@
 
 if [ $# -eq 0 ]
 then 
-	rm -r -f tmp_data 2> qdynamo.err
-	mkdir tmp_data
+	rm -r -f dyn_trunk 2> qdynamo.err
+	mkdir dyn_trunk
 
 	rm -r -f dos_trunk 2> qdynamo.err
 	mkdir dos_trunk

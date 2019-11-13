@@ -1,7 +1,8 @@
  module Data_Output
 
     use type_m
-    use parameters_m        , only  : n_part ,      &
+    use parameters_m        , only  : driver ,      &
+                                      n_part ,      &
                                       spectrum ,    &
                                       survival ,    &
                                       NetCharge ,   &
@@ -144,9 +145,9 @@ end function Populations_mtx
 !
 !
 !
-!==========================================================
+!==================================================
  subroutine Dump_stuff( TDOS , PDOS , SPEC , QDyn ) 
-!==========================================================
+!==================================================
 implicit none
 type(f_grid)  , intent(in)     , optional  :: TDOS
 type(f_grid)  , intent(in)     , optional  :: PDOS(:)
@@ -180,7 +181,7 @@ If( present(PDOS) ) then
 end if
 
 ! save peak and broadened specs ...
-If( spectrum ) then
+If( present(SPEC) ) then
     OPEN( unit=3 , file='dos_trunk/spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
             write(3,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
@@ -189,7 +190,7 @@ If( spectrum ) then
 end if
 
 ! save time-dependent electron or hole populations ...
-If( survival ) then
+If( present(Qdyn) ) then
 
     N_of_fragments = size( QDyn%fragments )
 
@@ -197,15 +198,29 @@ If( survival ) then
 
             if( eh_tag(np) == "XX" ) cycle
 
-            OPEN( unit=3 , file=eh_tag(np)//"_survival.dat" , status="unknown" )
+            OPEN( unit=3 , file="dyn_trunk/"//eh_tag(np)//"_survival.dat" , status="unknown" )
 
-            write(3,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-            write(3,12) "#" , QDyn%fragments , "total"
-            do i = 1 , size( QDyn%dyn(:,1,1) )
-                write(3,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
-            end do
+                write(3,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+                write(3,12) "#" , QDyn%fragments , "total"
+                do i = 1 , size( QDyn%dyn(:,1,1) )
+                    write(3,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
+                end do
 
             CLOSE(3)
+
+            If( driver == "avrg_confgs" ) then  ! <== also save standard deviations ...
+
+                  OPEN( unit=4 , file="dyn_trunk/"//eh_tag(np)//"_std.dat" , status="unknown" )
+
+                      write(4,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+                      write(4,12) "#" , QDyn%fragments , "total"
+                      do i = 1 , size( QDyn%std(:,1,1) )
+                          write(4,13) ( QDyn%std(i,nf,np) , nf=0,N_of_fragments+1 )
+                      end do
+
+                  CLOSE(4)
+
+            End If
 
         end do
 end if
@@ -257,14 +272,14 @@ integer :: ati , i , j
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving net_charge ...
-OPEN(unit=21 , file="tmp_data/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=21 , file="dyn_trunk/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , system%atoms
     write(21,'(F9.5)',advance='no') net_charge(ati) 
 end do
 close(21)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=24 , file="tmp_data/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=24 , file="dyn_trunk/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
 If( counter == 0 ) write(24,6) 'COMPND' , System_Characteristics
 

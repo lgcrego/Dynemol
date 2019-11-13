@@ -78,7 +78,7 @@ write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 
 
 do i = 1 , sys%N_of_atoms
 
-            write(4,2)  'HETATM'                        ,  &    ! <== non-standard atom
+            write(4,2)  'ATOM  '                        ,  &    ! <== non-standard atom
                         i                               ,  &    ! <== global number
                         sys%atom(i)%MMSymbol            ,  &    ! <== atom type
                         ' '                             ,  &    ! <== alternate location indicator
@@ -425,7 +425,7 @@ else
     N_of_atoms = 0
     do
         read(unit=3,fmt=105,iostat=ioerr) keyword
-        if ( keyword == "MASTER" ) exit
+        if ( keyword == "MASTER" .or. keyword == "END" ) exit
         N_of_atoms = N_of_atoms + 1
         print*, N_of_atoms
     end do
@@ -451,7 +451,7 @@ else
 
             end do
         end if
-        if ( keyword == "MASTER" ) exit
+        if ( keyword == "MASTER" .or. keyword == "END") exit
     end do
 
     system% atom% resid = adjustl(system% atom% resid)
