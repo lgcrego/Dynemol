@@ -1,4 +1,4 @@
-MODULE parameter_checklist
+MODULE setup_checklist
 
  use type_m
  use parameters_m
@@ -30,14 +30,6 @@ select case( DRIVER )
 
 end select
 
-
-
-
-
-
-
-
-
 end subroutine checklist
 
-end MODULE parameter_checklist
+end MODULE setup_checklist

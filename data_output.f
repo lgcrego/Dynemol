@@ -281,7 +281,7 @@ close(21)
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPEN(unit=24 , file="dyn_trunk/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
-If( counter == 0 ) write(24,6) 'COMPND' , System_Characteristics
+If( counter == 0 ) write(24,6) System_Characteristics
 
 write(24,4) 'REMARK' , 'manipulated by charge-transfer'
 write(24,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t

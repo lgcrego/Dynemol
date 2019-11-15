@@ -377,7 +377,7 @@ integer ::  i , j , k , nr
 !----------------------------------------------
 
 OPEN(unit=4,file='seed.pdb',status='unknown')
-write(4,6) 'COMPND' , sys%Surface_Characteristics
+write(4,6) sys%Surface_Characteristics
 
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 

@@ -150,9 +150,12 @@ class(MM_OPT)              , intent(in) :: me
 integer         , optional , intent(in) :: iter
 
 ! local variables ...
-real*8 :: dumb
+real*8  :: dumb
+logical :: exist
 
-if( iter == 0 ) call system( "rm frames-MM.pdb" )
+inquire(file="velocity_MM.pdb", EXIST=exist)
+
+if( exist .and. iter == 0 ) call system( "rm frames-MM.pdb" )
 
 call saving_MM_frame( iter , D_zero )
 

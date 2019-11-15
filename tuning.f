@@ -49,7 +49,7 @@ univ % atom(45:46) % nr = 2
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-where( univ% atom% residue == "PDB" ) univ% atom% V_shift = +0.3d0
+where( univ% atom% residue == "PDA" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
@@ -58,11 +58,11 @@ where( univ% atom% residue == "PDB" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "PDB") univ % atom % El = .true.
+where(univ % atom % residue == "PDA") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PDB") univ % atom % Hl = .true.
+where(univ % atom % residue == "PDA") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
@@ -226,7 +226,7 @@ atom(312)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(45:46) % residue = "PDB"
+atom(45:46) % residue = "PDA"
 !----------------------------------
 !      define nr
 !----------------------------------
