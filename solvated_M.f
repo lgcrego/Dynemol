@@ -339,7 +339,7 @@ integer ::  i , k
 
 OPEN(unit=4,file='seed.pdb',status='unknown')
 
-write(4,6) 'COMPND' , sys%System_Characteristics
+write(4,6) sys%System_Characteristics
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 
 do i = 1 , sys%N_of_atoms

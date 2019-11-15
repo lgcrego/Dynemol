@@ -3,9 +3,8 @@ Program qdynamo
 use MPI
 use type_m
 use constants_m
-use parameter_checklist      
-use MPI_definitions_m       , only : launch_MPI , master , world , myid
-use parameters_m            , only : Define_Environment , driver , nuclear_matter              
+use setup_checklist      
+use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure

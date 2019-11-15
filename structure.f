@@ -401,7 +401,7 @@ close(3)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 OPEN(unit=4,file='structure.pdb',status='unknown')
-write(4,6) 'COMPND' , System_Characteristics
+write(4,6) System_Characteristics
 
 write(4,1) 'CRYST1' , a%T_xyz(1) , a%T_xyz(2) , a%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 
