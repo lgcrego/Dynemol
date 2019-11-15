@@ -84,7 +84,7 @@ SOURCE2 = constants_m.o \
                   MPI_defs.o \
 		  OPT_parent.o \
 		  parameters_MM.o \
-                  checklist.o
+		  checklist.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
@@ -122,11 +122,11 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \
-          backup_MM.o \
+                  backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-          NVE.o \
+                  NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
