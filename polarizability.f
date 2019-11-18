@@ -232,7 +232,7 @@ do ati = 1 , N_of_DP
 end do
 
 !saving Induced atomic dipole sizes ...
-OPEN(unit=31 , file="dyn_trunk/DipoleSize.inpt" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=31 , file="dyn.trunk/DipoleSize.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , N_of_DP
     write(31,'(F9.5)',advance='no') mod_p(ati) 
 end do

@@ -154,6 +154,7 @@ SOURCE2 = constants_m.o \
 		  qdynamics.o \
                   Taylor.o \
 		  ElHl_Chebyshev.o \
+                  ElHl_Chebyshev_GPU.o \
 		  AO_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \

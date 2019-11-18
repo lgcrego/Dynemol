@@ -176,7 +176,7 @@
 
 215 format(1x,'MM input format >>> ', A6 , '   <<<')
 
-218 format(/,1x,'>>> Saving detailed GA cost info to opt_trunk/GA_cost_statement <<<' )
+218 format(/,1x,'>>> Saving detailed GA cost info to opt.trunk/GA_cost_statement <<<' )
 
 220 format(/,1x,'>>> Gaussian Cube done: ', 12I6 )
 

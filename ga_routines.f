@@ -73,7 +73,7 @@ Pop_start = 1
 ! only master handles this stuff ...
 If( master ) then
 
-    open( unit=23, file='opt_trunk/GA_cost.dat', status='unknown' )
+    open( unit=23, file='opt.trunk/GA_cost.dat', status='unknown' )
 
     allocate( Old_Pop (Pop_Size , GeneSize)     )
     allocate( indx    (Pop_Size)                )

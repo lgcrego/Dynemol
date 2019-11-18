@@ -21,7 +21,7 @@ module ElHl_Chebyshev_m
     use Taylor_m           , only : Propagation, dump_Qdyn
     use Matrix_Math
 
-    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
+    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev , Build_Huckel , QuasiParticleEnergies , preprocess_from_restart
 
     private
 
@@ -146,7 +146,7 @@ allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-CALL dump_Qdyn( Qdyn , it )
+if (master) CALL dump_Qdyn( Qdyn , it )
 
 ! leaving S_matrix allocated
 

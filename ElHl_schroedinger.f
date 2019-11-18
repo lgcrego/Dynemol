@@ -259,11 +259,11 @@ do n = 1 , n_part
 
       if( eh_tag(n) == "XX" ) cycle
       
-      open( unit = 52 , file = "dyn_trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
+      open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
       write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
       write(52,12) "#" , QDyn%fragments , "total"
       
-      open( unit = 53 , file = "dyn_trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+      open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
 
       wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
       

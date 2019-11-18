@@ -178,7 +178,7 @@ REF_Alpha = [ 9.2d0 , 8.5d0 , 7.8d0 ]
 ! at last, show the cost ...
 If( present(ShowCost) ) then
 
-   open( unit=33 , file='opt_trunk/view_cost.dat' , status='unknown' )
+   open( unit=33 , file='opt.trunk/view_cost.dat' , status='unknown' )
 
    do i = 1 , me
       write(33,*) i , dabs(eval(i)) 

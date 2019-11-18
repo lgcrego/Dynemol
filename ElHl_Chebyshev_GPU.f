@@ -2,20 +2,28 @@
 module gpu_ElHl_Chebyshev_m
 
     use MPI
-    use type_m              , g_time => f_time
+    use type_m             , g_time => f_time  
     use blas95
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m         , only : myCheby, ChebyCrew, ChebyComm, KernelComm, ChebyKernelComm, master
-    use parameters_m              , only : t_i, frame_step, n_part, restart, QMMM
-    use Structure_Builder         , only : Unit_Cell
-    use Overlap_Builder           , only : Overlap_Matrix
-    use FMO_m                     , only : FMO_analysis, eh_tag
-    use Data_Output               , only : Populations
-    use Chebyshev_m               , only : dump_Qdyn
     use Matrix_Math
-    use execution_time_m
+    use MPI_definitions_m  , only : master , EnvCrew ,  myCheby ,   &       
+                                    ChebyComm , ChebyCrew ,         &  
+                                    ForceComm , ForceCrew ,         &
+                                    KernelComm , ChebyKernelComm   
+    use parameters_m       , only : t_i , frame_step , Coulomb_ ,   &
+                                    EnvField_ , n_part, driver ,    &
+                                    QMMM, CT_dump_step , HFP_Forces
+    use Structure_Builder  , only : Unit_Cell 
+    use Overlap_Builder    , only : Overlap_Matrix
+    use FMO_m              , only : FMO_analysis , eh_tag    
+    use Data_Output        , only : Populations 
+    use Hamiltonians       , only : X_ij , even_more_extended_Huckel
+    use Taylor_m           , only : Propagation, dump_Qdyn
+    use ElHl_Chebyshev_m   , only : Build_Huckel ,                  &
+                                    QuasiParticleEnergies ,         &
+                                    preprocess_from_restart
 
     public  :: gpu_ElHl_Chebyshev, gpu_preprocess_ElHl_Chebyshev
 
@@ -27,9 +35,10 @@ module gpu_ElHl_Chebyshev_m
     real*8      , parameter :: norm_error   = 1.0d-12
 
 ! module variables ...
+    logical     ,   save          :: first_call_ = .true.
     real*8      ,   save          :: save_tau
-    logical     ,   save          :: ready = .false.
-    real*8      ,   allocatable   :: h0(:,:), H_prime(:,:)
+    real*8      ,   allocatable   :: h0(:,:)
+    real*8      ,   allocatable   :: H_prime(:,:)
     real*8      ,   allocatable   :: S_matrix(:,:)
     complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
@@ -44,6 +53,7 @@ contains
 !
 !==============================================================================================================
  subroutine gpu_preprocess_ElHl_Chebyshev( system , basis , AO_bra , AO_ket , Dual_bra , Dual_ket , QDyn , it )
+! used for normal start (see interface) ...
 !==============================================================================================================
 implicit none
 type(structure) , intent(inout) :: system
@@ -56,76 +66,101 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , n , n_FMO
+integer                         :: li , M , N , err 
+integer                         :: mpi_D_R = mpi_double_precision
 real*8          , allocatable   :: wv_FMO(:)
 complex*16      , allocatable   :: ElHl_Psi(:,:)
 type(R_eigen)                   :: FMO
 
 
-n = size(basis)
+! MUST compute S_matrix before FMO analysis ...
+CALL Overlap_Matrix( system , basis , S_matrix )
 
-! compute S before FMO_analysis (important) ...
-call Overlap_Matrix( system , basis , S_matrix )
+N = size(basis)
 
-! after instantiating Overlap_matrix, processes wait outside ...
-if (.not. ChebyCrew) return
+allocate( h0(N,N), H_prime(N,N) )
 
-! calculate Hamiltonian
-allocate( h0(n,n), H_prime(n,n) )
-call Huckel( basis , S_matrix , h0 )
+!------------------------------------------------------------------------
+If( master .OR. EnvCrew ) then 
+
+   If( EnvField_ ) then
+      ! EnCrew stay in even_more_extended_Huckel ...
+      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+   Else
+      h0(:,:) = Build_Huckel( basis , S_matrix )
+   end If
+
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
+
+End If
+
+If( ForceCrew ) then
+   ! After instantiating S_matrix AND h0, ForceCrew leave to EhrenfestForce ...
+   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
+   return
+End If
+
+! Another ChebyCrew  mate ...
+If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
+!------------------------------------------------------------------------
+
+!========================================================================
 
 ! pin (for faster CPU <-> GPU transfers)
 call GPU_Pin( S_matrix, n*n*8 )
 call GPU_Pin( h0,       n*n*8 )
 call GPU_Pin( H_prime,  n*n*8 )
 
+allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
 ! prepare electron state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
 
-! place the electron state in Structure's hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-n_FMO = size(wv_FMO)
-allocate( ElHl_Psi( n, n_part ) , source=C_zero )
-ElHl_Psi(li:li+n_FMO-1,1) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
-
+  ! place the electron state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,1) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(1) == "el")
+  deallocate( wv_FMO )
 !========================================================================
 ! prepare hole state ...
-CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
+  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
 
-! place the hole state in Structure's hilbert space ...
-li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
-n_FMO = size(wv_FMO)
-ElHl_Psi(li:li+n_FMO-1,2) = dcmplx( wv_FMO(:) )
-deallocate( wv_FMO )
+  ! place the hole state in Structure's Hilbert space ...
+  li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
+  M  = size(wv_FMO)
+  ElHl_Psi(li:li+M-1,2) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(2) == "hl")
+  deallocate( wv_FMO )
 !========================================================================
 
 !==============================================
 ! prepare DUAL basis for local properties ...
 ! DUAL_bra = (C*)^T    ;    DUAL_ket = S*C ...
-DUAL_bra = dconjg( ElHl_Psi )
-call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
+  DUAL_bra = dconjg( ElHl_Psi )
+  call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
 !==============================================
 
 !==============================================
-!vector states to be propagated ...
-!Psi_bra = C^T*S       ;      Psi_ket = C ...
-allocate( Psi_t_bra( n, n_part ) )
-allocate( Psi_t_ket( n, n_part ) )
-call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix )
-Psi_t_ket = ElHl_Psi
+! vector states to be propagated ...
+! Psi_bra = C^T*S       ;      Psi_ket = C ...
+  allocate( Psi_t_bra(N,n_part) )
+  allocate( Psi_t_ket(N,n_part) )
+  call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
+  Psi_t_ket = ElHl_Psi
 !==============================================
 
 !==============================================
-AO_bra = ElHl_Psi
-AO_ket = ElHl_Psi
-CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
+! preprocess stuff for EhrenfestForce ...
+  AO_bra = ElHl_Psi 
+  AO_ket = ElHl_Psi 
+  CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
 !==============================================
 
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-if (master) call dump_Qdyn( Qdyn , it )
+if (master) CALL dump_Qdyn( Qdyn , it )
+
+! leaving S_matrix allocated
 
 end subroutine gpu_preprocess_ElHl_Chebyshev
 !
@@ -149,7 +184,7 @@ integer          , intent(in)    :: it
 ! local variables...
 logical, save :: first_call = .true.
 logical :: do_electron, do_hole
-integer :: j, N, my_part, err, mpi_status(mpi_status_size), request_H_prime, t_stuff_sent, coords_sent
+integer :: N, my_part, err, mpi_status(mpi_status_size), request_H_prime, t_stuff_sent, coords_sent, it_sync
 integer :: mpi_D_R = mpi_double_precision
 integer :: mpi_D_C = mpi_double_complex
 real*8  :: t_init , t_max , tau_max , tau , t_stuff(2)
@@ -179,10 +214,10 @@ tau_max = delta_t / h_bar
 
 
 ! begin
-100 continue
+10 continue
 
 ! compute overlap and hamiltonian
-if(.not. first_call) then    ! already calculated in preprocess
+if(.not. first_call) then  
 
     if (do_electron) then
         call MPI_Isend( system%coord, system%atoms*3, mpi_D_R, 1, 0, ChebyComm, coords_sent, err )
@@ -192,14 +227,18 @@ if(.not. first_call) then    ! already calculated in preprocess
     end if
 
     call Overlap_Matrix( system, basis, S_matrix )
-    call Huckel( basis, S_matrix, h0 )
+
+    If( Envfield_ ) then
+        it_sync = it-1  ! <== for synchronizing EnvSetUp call therein ...
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it_sync)
+    else
+        h0(:,:) = Build_Huckel( basis , S_matrix )
+    end If
 
 end if
 
-
 ! master bcasts QMMM
 call MPI_Bcast( QMMM, 1, mpi_logical, 0, ChebyComm, err )
-
 
 ! master/slave sends/receives time info
 if (do_electron) then
@@ -250,7 +289,7 @@ end if
 
 
 ! (myCheb==1) process keeps going back forever
-if (do_hole) goto 100 !begin
+if (do_hole) goto 10 !begin
 
 
 ! only master (do_electron) reaches this part of the code
@@ -271,125 +310,14 @@ call QuasiParticleEnergies( AO_bra, AO_ket, h0 )
 
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments, basis, DUAL_bra, DUAL_ket, t )
-call dump_Qdyn( Qdyn , it )
+
+if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 
 call MPI_Wait( request_H_prime, mpi_status, err )
 
+include 'formats.h'
+
 end subroutine gpu_ElHl_Chebyshev
-!
-!
-!
-!=========================================
-subroutine Huckel( basis , S_matrix , h )
-!=========================================
-implicit none
-type(STO_basis), intent(in)  :: basis(:)
-real*8,          intent(in)  :: S_matrix(:,:)
-real*8,          intent(out) :: h(:,:)
-
-! local variables ...
-real*8  :: k_eff, k_WH, c1, c2, c3, basis_j_IP, basis_j_k_WH
-integer :: i, j, n
-
-!----------------------------------------------------------
-!      building  the  HUCKEL  HAMILTONIAN
-
-n = size(basis)
-
-!$omp parallel do private(i,j,basis_j_IP,basis_j_k_WH,c1,c2,c3,k_WH,k_eff) default(shared) schedule(dynamic,1)
-do j = 1, n
-
-    basis_j_IP   = basis(j)%IP
-    basis_j_k_WH = basis(j)%k_WH
-
-    do i = 1, j-1
-
-        c1 = basis(i)%IP - basis_j_IP
-        c2 = basis(i)%IP + basis_j_IP
-        c3 = (c1/c2)**2
-
-        k_WH = (basis(i)%k_WH + basis_j_k_WH) / two
-
-        k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
-
-        h(i,j) = k_eff * S_matrix(i,j) * c2 / two
-
-    end do
-
-    h(j,j) = basis_j_IP
-
-end do
-!$omp end parallel do
-
-call Matrix_Symmetrize( h, 'U' )     
-
-end subroutine Huckel
-!
-!
-!
-!=======================================================
- subroutine QuasiParticleEnergies( AO_bra , AO_ket , H )
-!=======================================================
-implicit none
-complex*16, intent(in) :: AO_bra(:,:)
-complex*16, intent(in) :: AO_ket(:,:)
-real*8,     intent(in) :: H(:,:)
-
-!local variables ...
-integer    :: i, j, n
-complex*16 :: ket(2), erg(2)
-
-
-n = size(AO_bra, 1)
-
-erg = (0.d0, 0.d0)
-
-!$omp parallel do private(i,j,ket) default(shared) reduction(+: erg)
-do j = 1, n
-    ket = AO_ket(j,:)
-    do i = 1, n
-        erg = erg + AO_bra(i,:)*H(i,j)*ket
-    end do
-end do
-!$omp end parallel do
-
-Unit_Cell% QM_wp_erg = erg
-
-! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
-Unit_Cell% QM_erg = erg(1) - erg(2)
-
-end subroutine QuasiParticleEnergies
-!
-!
-!
-!
-!=================================================================================
- subroutine preprocess_from_restart( system , basis , DUAL_ket , AO_bra , AO_ket )
-!=================================================================================
-implicit none
-type(structure) , intent(inout) :: system
-type(STO_basis) , intent(inout) :: basis(:)
-complex*16      , intent(in)    :: DUAL_ket (:,:)
-complex*16      , intent(in)    :: AO_bra   (:,:)
-complex*16      , intent(in)    :: AO_ket   (:,:)
-
-!vector states to be propagated ...
-allocate( Psi_t_bra(size(basis),n_part) )
-allocate( Psi_t_ket(size(basis),n_part) )
-
-Psi_t_bra = DUAL_ket
-Psi_t_ket = AO_ket
-
-CALL Overlap_Matrix( system , basis , S_matrix )
-CALL Huckel( basis , S_matrix , h0 )
-
-CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
-
-! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-QMMM = .NOT. (Unit_Cell% QM_erg < D_zero)
-
-end subroutine preprocess_from_restart
-!
 !
 !
 !
