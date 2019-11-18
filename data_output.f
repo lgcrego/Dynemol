@@ -160,7 +160,7 @@ character(22)   :: string
 
 ! save TDOS ...
 If( present(TDOS) ) then
-    OPEN( unit=3 , file='dos_trunk/TDOS.dat' , status='unknown' )
+    OPEN( unit=3 , file='dos.trunk/TDOS.dat' , status='unknown' )
         do i = 1 , size(TDOS%func)
             write(3,10) TDOS%grid(i) , TDOS%average(i) , TDOS%peaks(i) , TDOS%occupation(i)
         end do
@@ -171,7 +171,7 @@ end if
 If( present(PDOS) ) then
     N_of_residues = size( PDOS )
     do nr = 1 , N_of_residues
-        string = "dos_trunk/PDOS-"//PDOS(nr)%residue//".dat"
+        string = "dos.trunk/PDOS-"//PDOS(nr)%residue//".dat"
         OPEN( unit=3 , file=string , status='unknown' )
             do i = 1 , size(PDOS(nr)%func)
                 write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i) , PDOS(nr)%peaks(i) , PDOS(nr)%occupation(i)
@@ -182,7 +182,7 @@ end if
 
 ! save peak and broadened specs ...
 If( present(SPEC) ) then
-    OPEN( unit=3 , file='dos_trunk/spectrum.dat' , status='unknown' )
+    OPEN( unit=3 , file='dos.trunk/spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
             write(3,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
         end do
@@ -198,7 +198,7 @@ If( present(Qdyn) ) then
 
             if( eh_tag(np) == "XX" ) cycle
 
-            OPEN( unit=3 , file="dyn_trunk/"//eh_tag(np)//"_survival.dat" , status="unknown" )
+            OPEN( unit=3 , file="dyn.trunk/"//eh_tag(np)//"_survival.dat" , status="unknown" )
 
                 write(3,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
                 write(3,12) "#" , QDyn%fragments , "total"
@@ -210,7 +210,7 @@ If( present(Qdyn) ) then
 
             If( driver == "avrg_confgs" ) then  ! <== also save standard deviations ...
 
-                  OPEN( unit=4 , file="dyn_trunk/"//eh_tag(np)//"_std.dat" , status="unknown" )
+                  OPEN( unit=4 , file="dyn.trunk/"//eh_tag(np)//"_std.dat" , status="unknown" )
 
                       write(4,14) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
                       write(4,12) "#" , QDyn%fragments , "total"
@@ -272,14 +272,14 @@ integer :: ati , i , j
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving net_charge ...
-OPEN(unit=21 , file="dyn_trunk/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=21 , file="dyn.trunk/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , system%atoms
     write(21,'(F9.5)',advance='no') net_charge(ati) 
 end do
 close(21)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=24 , file="dyn_trunk/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=24 , file="dyn.trunk/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
 
 If( counter == 0 ) write(24,6) System_Characteristics
 
