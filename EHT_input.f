@@ -190,19 +190,39 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) &
-    .AND.  (adjustl(basis%residue ) == EH_atom(i)%residue)  &
-    .AND. (basis%l == EH_atom(i)%l) ) 
-        
-        basis%IP        =  EH_atom(i)%IP    (0)
-        basis%Nzeta     =  EH_atom(i)%Nzeta (0)
-        basis%coef(1)   =  EH_atom(i)%coef  (0,1)
-        basis%coef(2)   =  EH_atom(i)%coef  (0,2)
-        basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
-        basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
-        basis%k_WH      =  EH_atom(i)%k_WH  (0)
+    select case( EH_atom(i)%residue(3:3) )
 
-    end where
+           case( "*" )
+                where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) &
+                .AND.  (adjustl(basis%residue(1:2) ) == EH_atom(i)%residue(1:2))  &
+                .AND. (basis%l == EH_atom(i)%l) ) 
+                    
+                    basis%IP        =  EH_atom(i)%IP    (0)
+                    basis%Nzeta     =  EH_atom(i)%Nzeta (0)
+                    basis%coef(1)   =  EH_atom(i)%coef  (0,1)
+                    basis%coef(2)   =  EH_atom(i)%coef  (0,2)
+                    basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
+                    basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
+                    basis%k_WH      =  EH_atom(i)%k_WH  (0)
+               
+                end where
+
+           case default 
+                where( (adjustl(basis%EHSymbol) == EH_atom(i)%EHSymbol) &
+                .AND.  (adjustl(basis%residue ) == EH_atom(i)%residue)  &
+                .AND. (basis%l == EH_atom(i)%l) ) 
+                    
+                    basis%IP        =  EH_atom(i)%IP    (0)
+                    basis%Nzeta     =  EH_atom(i)%Nzeta (0)
+                    basis%coef(1)   =  EH_atom(i)%coef  (0,1)
+                    basis%coef(2)   =  EH_atom(i)%coef  (0,2)
+                    basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
+                    basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
+                    basis%k_WH      =  EH_atom(i)%k_WH  (0)
+               
+                end where
+
+    end select      
 
 end do
 
@@ -221,11 +241,21 @@ integer :: i
 
 do i = 1 , size(EH_atom)
 
-    where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol) .AND. (adjustl(system%residue) == EH_atom(i)%residue)) 
-        
-        system%Nvalen = EH_atom(i)%Nvalen
+    select case( EH_atom(i)%residue(3:3) )
 
-    end where
+           case( "*" )
+                where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol)           &
+                .AND.  (adjustl(system%residue(1:2)) == EH_atom(i)%residue(1:2))) 
+                    system%Nvalen = EH_atom(i)%Nvalen
+                end where
+
+           case default 
+                where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol)           &
+                .AND.  (adjustl(system%residue) == EH_atom(i)%residue)) 
+                    system%Nvalen = EH_atom(i)%Nvalen
+                end where
+
+    end select
 
 end do
 
