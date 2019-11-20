@@ -105,8 +105,6 @@ End If
 If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 !------------------------------------------------------------------------
 
-!========================================================================
-
 ! pin (for faster CPU <-> GPU transfers)
 call GPU_Pin( S_matrix, n*n*8 )
 call GPU_Pin( h0,       n*n*8 )
