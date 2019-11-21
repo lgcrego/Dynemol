@@ -18,8 +18,9 @@
     private
 
     ! module variables ...
-    real*8 , allocatable :: DP_4_matrix(:,:,:)
-    logical              :: done = .false.
+    real*8  , allocatable :: DP_4_matrix(:,:,:)
+    integer , allocatable :: indx(:)
+    logical               :: done = .false.
 
  contains
 !
@@ -71,7 +72,7 @@ real*8                     , intent(in) :: S_matrix(:,:)
 integer         , optional , intent(in) :: it
 
 ! local variables ...
-integer               :: i , j , ia , ib , ja , jb , N
+integer               :: i , j , ia , ib , ja , jb , K , L , N
 real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) 
 logical               :: evaluate
@@ -98,7 +99,7 @@ Allocate( h(N,N) , source = D_zero )
 !$OMP parallel do &
 !$OMP   default(shared) &
 !$OMP   schedule(dynamic, 1) &
-!$OMP   private(ib, ia, Rab, jb, ja, j, i, DP_4_vector)
+!$OMP   private(ib, ia, Rab, jb, ja, j, i, K, L, DP_4_vector)
 do ib = 1, system%atoms
     do ia = ib+1, system%atoms
 
@@ -111,6 +112,9 @@ do ib = 1, system%atoms
            cycle
         end if
 
+        K = indx(ia)
+        L = indx(ib)
+
         If( evaluate ) then 
            select case (Environ_Type)
                 case('DP_MM','DP_QM')
@@ -118,9 +122,9 @@ do ib = 1, system%atoms
                 case default
                     DP_4_vector =  Q_phi( system , ia , ib )
            end select
-           DP_4_matrix(ia,ib,:) = DP_4_vector
+           DP_4_matrix(K,L,:) = DP_4_vector
         else 
-           DP_4_vector = DP_4_matrix(ia,ib,:)
+           DP_4_vector = DP_4_matrix(K,L,:)
         end if
 
         do jb = 1, atom(system%AtNo(ib))% DOS
@@ -236,13 +240,20 @@ end function GET_RAB
  implicit none
 
 ! local variables ...
- integer :: N_of_QM
+ integer :: N_of_QM , i , j
 
  N_of_QM = count(a%QMMM == "QM")
 
- If( minloc( a%QMMM , dim=1 , mask = a%QMMM == "MM" ) < N_of_QM ) then
-    stop ">> halting: block of QM atoms must precede solvent atoms if EnvField_ = T_ ; check input data <<"
- end if
+ allocate( indx(a% atoms) , source = 0 )
+
+ ! indx(:) is used to access DP_4_matrix data ...
+ j = 0
+ do i = 1 , a%atoms
+    if( a% QMMM(i) == "QM" ) then
+       j = j + 1
+       indx(i) = j
+    end if
+ end do
 
  allocate( DP_4_matrix( N_of_QM , N_of_QM , 4 ) , source = D_zero ) 
 
