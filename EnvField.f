@@ -27,7 +27,7 @@ contains
  subroutine Environment_SetUp( sys )
 !===================================
 implicit none
-type(structure) , intent(inout)  :: sys
+type(structure) , intent(in)  :: sys
 
 If( EnvField_ .and. (.not. any(sys%fragment=="S")) ) stop 'execution halted: check your option for Environ_Type in parameters.f'
 

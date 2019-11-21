@@ -16,6 +16,8 @@ module DP_potential_m
 
 ! module variables ...       
     type(dipoles) , save  :: DP_mols_pbc  
+    integer               :: N_of_Solvent_Molecules
+    integer               :: N_of_Solute_Molecules
 
 ! module parameters ...       
     real*8  , parameter   :: DP_potential_factor = 2.9979255d0  ! <== e*p(Debye)/(4*Pi*epsilon_0) : eV * Angs^2; checked twice!
@@ -28,7 +30,7 @@ contains
  subroutine Dipole_Potentials( a )
 !=================================
 implicit none
-type(structure) , intent(inout) :: a
+type(structure) , intent(in) :: a
 
 ! local variables ...
 integer       :: N_of_DP_mols
@@ -51,17 +53,17 @@ If( any(a%solute) ) then
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
     CALL Build_DP_mols( a , solute  , instance = "solute"  )
 
-    N_of_DP_mols = a%N_of_Solvent_Molecules + a%N_of_Solute_Molecules
+    N_of_DP_mols = N_of_Solvent_Molecules + N_of_Solute_Molecules
 
     CALL DeAllocate_DPs( DP_mols , N_of_DP_mols , flag = "alloc" )
 
-    DP_mols % CC( 1:a%N_of_Solvent_Molecules , :) = solvent % CC 
-    DP_mols % DP( 1:a%N_of_Solvent_Molecules , :) = solvent % DP 
-    DP_mols % nr( 1:a%N_of_Solvent_Molecules    ) = solvent % nr 
+    DP_mols % CC( 1:N_of_Solvent_Molecules , :) = solvent % CC 
+    DP_mols % DP( 1:N_of_Solvent_Molecules , :) = solvent % DP 
+    DP_mols % nr( 1:N_of_Solvent_Molecules    ) = solvent % nr 
 
-    DP_mols % CC( a%N_of_Solvent_Molecules+1:N_of_DP_mols , : ) = solute % CC
-    DP_mols % DP( a%N_of_Solvent_Molecules+1:N_of_DP_mols , : ) = solute % DP
-    DP_mols % nr( a%N_of_Solvent_Molecules+1:N_of_DP_mols     ) = solute % nr
+    DP_mols % CC( N_of_Solvent_Molecules+1:N_of_DP_mols , : ) = solute % CC
+    DP_mols % DP( N_of_Solvent_Molecules+1:N_of_DP_mols , : ) = solute % DP
+    DP_mols % nr( N_of_Solvent_Molecules+1:N_of_DP_mols     ) = solute % nr
 
     CALL DeAllocate_DPs( solvent , flag = "dealloc" )
     CALL DeAllocate_DPs( solute  , flag = "dealloc" )
@@ -70,7 +72,7 @@ else
 
     CALL Build_DP_mols( a , solvent , instance = "solvent" )
 
-    CALL DeAllocate_DPs( DP_mols , a%N_of_Solvent_Molecules , flag = "alloc" )
+    CALL DeAllocate_DPs( DP_mols , N_of_Solvent_Molecules , flag = "alloc" )
 
     DP_mols = solvent 
 
@@ -91,9 +93,9 @@ end subroutine Dipole_Potentials
  subroutine Build_DP_mols( a , molecule , instance )
 !===================================================
 implicit none
-type(structure) , intent(inout) :: a
-type(dipoles)   , intent(out)   :: molecule
-character(*)    , intent(in)    :: instance
+type(structure) , intent(in) :: a
+type(dipoles)   , intent(out):: molecule
+character(*)    , intent(in) :: instance
 
 
 ! local variables ...
@@ -112,10 +114,10 @@ select case( instance )
         first_nr = minval( a%nr , a%fragment == "S" )
         last_nr  = maxval( a%nr , a%fragment == "S" )
 
-        a%N_of_Solvent_Molecules = (last_nr - first_nr + 1)
+        N_of_Solvent_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        If( verbose ) Print 157 , a%N_of_Solvent_Molecules
+        If( verbose ) Print 157 , N_of_Solvent_Molecules
 
     case( "solute" )
 
@@ -123,10 +125,10 @@ select case( instance )
         first_nr = minval( a%nr , a%solute )
         last_nr  = maxval( a%nr , a%solute )
 
-        a%N_of_Solute_Molecules = (last_nr - first_nr + 1)
+        N_of_Solute_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        Print 158 , a%N_of_Solute_Molecules 
+        Print 158 , N_of_Solute_Molecules 
 
 end select
 
