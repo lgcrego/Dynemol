@@ -95,8 +95,8 @@ end subroutine Dipole_Potentials
 !===================================================
 implicit none
 type(structure) , intent(in) :: a
-type(dipoles)   , intent(out)   :: molecule
-character(*)    , intent(in)    :: instance
+type(dipoles)   , intent(out):: molecule
+character(*)    , intent(in) :: instance
 
 
 ! local variables ...

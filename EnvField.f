@@ -4,7 +4,7 @@ module Dielectric_Potential
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , Environ_type , verbose
+    use parameters_m            , only : PBC , EnvField_ , Environ_type , verbose
     use MD_read_m               , only : atom
     use DP_potential_m          , only : Dipole_Potentials
 
@@ -28,6 +28,8 @@ contains
 !===================================
 implicit none
 type(structure) , intent(in)  :: sys
+
+If( EnvField_ .and. (.not. any(sys%fragment=="S")) ) stop 'execution halted: check your option for Environ_Type in parameters.f'
 
 select case (Environ_Type)
 

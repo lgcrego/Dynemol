@@ -174,15 +174,15 @@ implicit none
  subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
 !----------------------------------------------------------------
  implicit none
- type(R_eigen)                           , intent(inout) :: FMO
- real*8           , ALLOCATABLE , target , intent(in)    :: CR(:,:)
- character(len=1)                        , intent(in)    :: basis_fragment(:)
- character(len=1)                        , intent(in)    :: fragment
- real*8           , ALLOCATABLE          , intent(in)    :: wv_FMO(:,:)
+ type(R_eigen)                  , intent(inout) :: FMO
+ real*8           , ALLOCATABLE , intent(in)    :: CR(:,:)
+ character(len=1)               , intent(in)    :: basis_fragment(:)
+ character(len=1)               , intent(in)    :: fragment
+ real*8           , ALLOCATABLE , intent(in)    :: wv_FMO(:,:)
 
 ! local variables ...
- real*8     , pointer  :: CR_FMO(:,:) => null()
- integer               :: ALL_size , FMO_size , i , j , p1 , p2
+ real*8  , allocatable :: CR_FMO(:,:) 
+ integer               :: ALL_size , FMO_size , i , j , p1 , p2 , k
  real*8                :: check
 
  ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
@@ -190,13 +190,19 @@ implicit none
 
  Allocate( FMO%L (FMO_size,ALL_size) , source=D_zero )
  Allocate( FMO%R (ALL_size,FMO_size) , source=D_zero )
- Allocate( CR_FMO(FMO_size,ALL_size) )
+ Allocate( CR_FMO(FMO_size,ALL_size) , source=D_zero )
 
- p1 =  minloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
- p2 =  maxloc( [(i,i=1,ALL_size)] , 1,basis_fragment == fragment )
+ k = 0 
+ do i = 1 , ALL_size
+   
+    if( basis_fragment(i) == fragment ) then
+        
+        k = k + 1
+        CR_FMO(k,:) = CR(i,:)
 
-!the fragment basis MUST correspond to a contiguous window ... 
- CR_FMO => CR(p1:p2,:)
+    end if
+
+end do
 
 !--------------------------------------------------------------------------------------
 !             writes the isolated FMO eigenfunctions in the MO basis 
@@ -229,7 +235,7 @@ implicit none
 
 !-----------------------------------------------------------------------------------------
 
- nullify( CR_FMO )
+ deallocate( CR_FMO )
 
  include 'formats.h'
 
