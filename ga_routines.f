@@ -119,8 +119,6 @@ do generation = 1 , N_generations
 
     ! Mutation_&_Crossing preserves the top-selections ...
     ! evaluate cost only for new Pop outside top_selection ...
-
-!    do i = myid + Pop_start , Pop_Size , np
     do i = myid + 1 , Pop_Size , np
 
         ! intent(in):basis ; intent(inout):GA_basis ...
@@ -138,7 +136,6 @@ do generation = 1 , N_generations
     end do
 
     ! gather data ...
-!    CALL MPI_reduce( snd_cost(Pop_start:) , cost(Pop_start:) , (Pop_size-Pop_start+1) , MPI_D_R , mpi_SUM , 0 , world , err )
     CALL MPI_reduce( snd_cost , cost , Pop_Size , MPI_D_R , mpi_SUM , 0 , world , err )
 
     Pop_start = Pop_size/2 + 1
