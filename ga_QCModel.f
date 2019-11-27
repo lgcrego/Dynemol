@@ -47,7 +47,7 @@ implicit none
 type(R_eigen)            , intent(in) :: GA
 integer                  , intent(in) :: up
 integer                  , intent(in) :: down
-real                     , intent(in) :: dE_ref
+real*8                   , intent(in) :: dE_ref
 real          , optional , intent(in) :: weight
 
 !local variables ...
@@ -114,7 +114,8 @@ end IF
 ! the total mask ...
 mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 
-population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+!population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+population = sum( GA%L(MO,:) * GA%R(:,MO) , mask ) 
 
 If( .NOT. present(slide) ) then
 
@@ -201,7 +202,8 @@ end IF
 ! the total mask ...
 mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 
-population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+!population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
+population = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
 If( .NOT. present(slide) ) then
 
@@ -238,14 +240,15 @@ end function Localize
 !
 !
 !
-!=============================================
- function MO_character( GA , basis , MO , AO )
-!=============================================
+!======================================================
+ function MO_character( GA , basis , MO , AO , y_or_n )
+!======================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
 integer                     , intent(in) :: MO
 character(len=*), optional  , intent(in) :: AO
+character(len=1), optional  , intent(in) :: y_or_n
 
 ! local variables ...
 integer               :: l , m
@@ -302,7 +305,13 @@ logical , allocatable :: mask(:)
 
  population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
- MO_character = merge( D_zero , large , population> HALF )
+ if( .not. present(y_or_n) ) then
+     MO_character = merge( D_zero , large , population > HALF )
+ elseif( y_or_n == "y" ) then
+     MO_character = merge( D_zero , large , population > HALF )
+ elseif( y_or_n == "n" ) then
+     MO_character = merge( D_zero , large , population < HALF )
+ endif
 
 deallocate( mask )
 
@@ -421,7 +430,10 @@ end select
 
 ! pre-processing ...
 bond_type = D_zero
-If( dabs(GA%R(indx1,MO)) < mid_prec .OR. dabs(GA%R(indx2,MO)) < mid_prec ) return
+If( dabs(GA%R(indx1,MO)) < mid_prec .OR. dabs(GA%R(indx2,MO)) < mid_prec ) then
+    i_ = i_ + 1 
+    return
+end If
 
 ! actual calculations start here ...
 bond_signal = sign( 1.d0 , GA%R(indx1,MO) * GA%R(indx2,MO) )
