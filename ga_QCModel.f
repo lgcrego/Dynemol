@@ -430,7 +430,10 @@ end select
 
 ! pre-processing ...
 bond_type = D_zero
-If( dabs(GA%R(indx1,MO)) < mid_prec .OR. dabs(GA%R(indx2,MO)) < mid_prec ) return
+If( dabs(GA%R(indx1,MO)) < mid_prec .OR. dabs(GA%R(indx2,MO)) < mid_prec ) then
+    i_ = i_ + 1 
+    return
+end If
 
 ! actual calculations start here ...
 bond_signal = sign( 1.d0 , GA%R(indx1,MO) * GA%R(indx2,MO) )
