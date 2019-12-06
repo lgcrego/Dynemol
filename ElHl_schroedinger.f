@@ -110,8 +110,7 @@ If( GaussianCube ) then
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-
-    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
     do n = 1 , n_part
         if( eh_tag(n) == "XX" ) cycle
@@ -147,7 +146,7 @@ DO it = it_init , n_t
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-    CALL DZgemm( 'T' , 'N' , mm , 1 , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
 
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
