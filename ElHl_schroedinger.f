@@ -6,7 +6,7 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , DensityMatrix , driver
+                                         Coulomb_ , DensityMatrix , driver , verbose
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -70,7 +70,7 @@ do n = 1 , n_part
             MO_bra( : , n ) = el_FMO%L( orbital(n) , : )
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )
 
-            Print 591, orbital(n) , el_FMO%erg(orbital(n))
+            If( verbose ) Print 591, orbital(n) , el_FMO%erg(orbital(n))
 
         case( "hl" )
 
@@ -79,11 +79,13 @@ do n = 1 , n_part
             MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )
 
-            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+            If( verbose ) Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
         end select
 end do
+
+If( n_part == 2 .AND. (.NOT. verbose) ) Print 593, orbital(1) , El_FMO%erg(orbital(1)) , orbital(2) , Hl_FMO%erg(orbital(2))
 
 ! deallocate after use ...
 deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
@@ -193,29 +195,18 @@ end subroutine Simple_dynamics
 !
 !
 !
-!=========================================
- subroutine RunningStat( Qdyn , instance )
-!=========================================
+!==============================
+ subroutine RunningStat( Qdyn )
+!==============================
 implicit none
-type(f_time)            , intent(inout) :: QDyn
-character    , optional , intent(in)    :: instance
+type(f_time) , intent(inout) :: QDyn
 
 ! Donald Knuth’s Art of Computer Programming, Vol 2, page 232, 3rd edition 
 ! M[1] = x[1] ; S[1] = 0
 ! M[k] = ( (k-1)*M[k-1] + x[k] ) / k
 ! S[k] = S[k-1] + (x[k] – M[k-1]) * (x[k] – M[k])
 ! M[] = mean value
-! S[n]/(n-1)  = S^2 = variance
-
-!===============================================
-If( present(instance) ) then
-   Qdyn% std = sqrt( Qdyn% std/float(iter-1) )
-   ! preserving time; does not undergo std ...
-   Qdyn% std(:,0,:) = Qdyn% dyn(:,0,:)  
-  
-   return
-end If
-!===============================================
+! S[n]/(n-1)  = STD^2 = variance
 
 iter = iter + 1
 

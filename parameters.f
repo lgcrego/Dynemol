@@ -33,15 +33,15 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_Cheb"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
   Survival       = T_                       
   DP_Moment      = F_                       
-  QMMM           = T_                        ! <== Hellman-Feynman-Pulay ; HFP_Forces MUST be T_ for QMMM calcs 
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
+  QMMM           = F_                        ! <== Hellman-Feynman-Pulay ; HFP_Forces MUST be T_ for QMMM calcs 
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -51,12 +51,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "structure"                 ! <== structure or trajectory
+  file_type    =  "trajectory"                ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
@@ -74,7 +74,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =  T_                          ! <== Potential produced by Environment
+  EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
   Environ_step =  10                          ! <== step for updating EnvField
 
@@ -84,7 +84,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-  frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+  frame_step   =  20                          ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
@@ -95,18 +95,18 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d0                               ! <== final time in PICOseconds
-  n_t  =  1000000                             ! <== number of time steps
+  t_f  =  1.0d-1                              ! <== final time in PICOseconds
+  n_t  =  1000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 25                         ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 65                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 26                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 66                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -117,7 +117,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -178,7 +178,9 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") 
+verbose = merge( T_ , F_ , (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "avrg_confgs") )
+
+
 
 If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
     Print*," >>> halting: " 
@@ -192,11 +194,6 @@ If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
 end if
-
-If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
-    Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
-    stop
-End If    
 
 If ( driver == "slice_Cheb" .AND. electron_state*hole_state == 0 )  &
 stop ">>> execution halted: driver=[slice_Cheb] only propagates ElHl pairs; for individual wvpckts use other drivers <<<"

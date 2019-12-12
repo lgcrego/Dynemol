@@ -13,7 +13,8 @@
                                              Induced_ ,                 & 
                                              electron_state ,           &
                                              hole_state ,               &
-                                             LCMO
+                                             LCMO ,                     &
+                                             verbose
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
     use Dielectric_Potential        , only : Q_phi
@@ -115,7 +116,7 @@
 
  deallocate( system_fragment , basis_fragment )
 
- If( master ) Print*, '>> FMO analysis done <<'
+ If( master .AND. verbose ) Print*, '>> FMO analysis done <<'
 
  include 'formats.h'
 
@@ -204,9 +205,9 @@ implicit none
 
 end do
 
-!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------
 !             writes the isolated FMO eigenfunctions in the MO basis 
-! the isolated orbitals are stored in the "ROWS of wv_FMO" and in the "COLUMNS of FMO"
+! the isolated orbitals are stored in the "ROWS of wv_FMO and FMO%L" and in the "COLUMNS of FMO%R"
 
  forall( i=1:FMO_size, j=1:ALL_size )
 
@@ -219,21 +220,19 @@ end do
 
  check = 0.d0
  do i = 1 , FMO_size
-    do j = 1 , FMO_size
-       ! %L*%R = A^T.S.C.C^T.S.A = 1
-       check = check + sum( FMO%L(i,:)*FMO%R(:,j) ) 
-    end do
+    ! %L*%R = A^T.S.C.C^T.S.A = 1
+    check = check + sum( FMO%L(i,:)*FMO%R(:,i) ) 
  end do
 
  if( dabs(check-FMO_size) < low_prec ) then
-     If( master ) Print*, '>> projection done <<'
+     If( master .AND. verbose ) Print*, '>> projection done <<'
  else
      Print * , check , myid
-     If( master ) Print 58 , check 
-     If( master ) Print*, '---> problem in projector <---'
+     Print 58 , check 
+     Print*, '---> problem in projector <---'
  end if
 
-!-----------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------
 
  deallocate( CR_FMO )
 
@@ -297,7 +296,7 @@ end do
  end do
  CLOSE(9)   
 
- If( master ) Print*, '>> eigen_FMO done <<'
+ If( master .AND. verbose ) Print*, '>> eigen_FMO done <<'
 
  end subroutine eigen_FMO
 !

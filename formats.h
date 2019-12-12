@@ -46,6 +46,8 @@
 
 592   FORMAT(/,1x,'Energy of Hl-wavepacket state(',I3,') = ',F10.5,/)
 
+593   FORMAT(/,1x,'Energy of El-wvpckt state(',I3,') = ',F10.5,10x,'Energy of Hl-wvpckt state(',I3,') = ',F10.5,/)
+
 60    FORMAT(1x,'norm of Psi(t) = ',F10.7)     
 
 61    FORMAT(1x,'>> AO_preprocess done <<')

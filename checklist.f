@@ -34,6 +34,13 @@ select case( DRIVER )
 
 end select
 
+
+If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
+    Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<"
+    stop
+End If
+
+
 end subroutine checklist
 
 end MODULE setup_checklist

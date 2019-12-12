@@ -41,44 +41,32 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-
+univ % atom (45:46) % residue = "CCC"
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-
+univ % atom(45:46) % nr = 2
 !---------------------------------------------------
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-where( univ% atom% residue == "ADN" .OR. univ% atom% residue == "THY") univ% atom% V_shift = -0.3d0
-where( univ% atom% residue == "GUA" .OR. univ% atom% residue == "CYT") univ% atom% V_shift = +0.3d0
-
+where( univ% atom% residue == "PDA" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
 !---------------------------------------------------
-where( univ% atom% residue == "Na+" ) univ% atom% QMMM = "MM"
-where( univ% atom% residue == "H2O" ) univ% atom% QMMM = "MM"
 
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-univ % atom (359:372) % El = .true.
+where(univ % atom % residue == "PDA") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-univ % atom (359:372) % Hl = .true.
+where(univ % atom % residue == "PDA") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-where( univ% atom% residue == "BKB" ) univ% atom% fragment = "Y"
-univ % atom (138:151) % fragment = "1"
-univ % atom (170:183) % fragment = "2"
-univ % atom (327:340) % fragment = "3"
-univ % atom (391:404) % fragment = "4"
-univ % atom (106:119) % fragment = "5"
-univ % atom (423:436) % fragment = "6"
-univ % atom ( 74: 87) % fragment = "7"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -199,7 +187,35 @@ select case ( instance )
 !----------------------------------
 !      define flex
 !----------------------------------
-
+atom(177)  % flex = .true.
+atom(204)  % flex = .true.
+atom(328) % flex = .true.
+atom(200)  % flex = .true.
+atom(56)   % flex = .true.
+atom(118)  % flex = .true.
+atom(186)  % flex = .true.
+atom(53)   % flex = .true.
+atom(174)  % flex = .true.
+atom(114)  % flex = .true.
+atom(176)  % flex = .true.
+atom(303)  % flex = .true.
+atom(178)  % flex = .true.
+atom(306)  % flex = .true.
+atom(179)  % flex = .true.
+atom(60)   % flex = .true.
+atom(308)  % flex = .true.
+atom(248)  % flex = .true.
+atom(256)  % flex = .true.
+atom(82 )  % flex = .true.
+atom(181)  % flex = .true.
+atom(57)   % flex = .true.
+atom(310)  % flex = .true.
+atom(121)  % flex = .true.
+atom(259)  % flex = .true.
+atom(262)  % flex = .true.
+atom(418)  % flex = .true.
+atom(312)  % flex = .true.
+!atom(429)  % flex = .true.
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -211,11 +227,11 @@ select case ( instance )
 !----------------------------------
 !      define residues
 !----------------------------------
-
+atom(45:46) % residue = "PDA"
 !----------------------------------
 !      define nr
 !----------------------------------
-
+atom(45:46) % nr = 1
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------
@@ -225,7 +241,6 @@ select case ( instance )
 !----------------------------------
 !     Selective_Dynamics 
 !----------------------------------
-
 
     case( 'SpecialBonds' )
 !----------------------------------
