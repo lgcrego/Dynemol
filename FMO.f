@@ -203,9 +203,9 @@ implicit none
 
 end do
 
-!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------
 !             writes the isolated FMO eigenfunctions in the MO basis 
-! the isolated orbitals are stored in the "ROWS of wv_FMO" and in the "COLUMNS of FMO"
+! the isolated orbitals are stored in the "ROWS of wv_FMO and FMO%L" and in the "COLUMNS of FMO%R"
 
  forall( i=1:FMO_size, j=1:ALL_size )
 
@@ -218,10 +218,8 @@ end do
 
  check = 0.d0
  do i = 1 , FMO_size
-    do j = 1 , FMO_size
-       ! %L*%R = A^T.S.C.C^T.S.A = 1
-       check = check + sum( FMO%L(i,:)*FMO%R(:,j) ) 
-    end do
+    ! %L*%R = A^T.S.C.C^T.S.A = 1
+    check = check + sum( FMO%L(i,:)*FMO%R(:,i) ) 
  end do
 
  if( dabs(check-FMO_size) < low_prec ) then
@@ -231,7 +229,7 @@ end do
      Print*, '---> problem in projector <---'
  end if
 
-!-----------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------------------
 
  deallocate( CR_FMO )
 
@@ -252,7 +250,7 @@ end do
  character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
- integer               :: N_of_FMO_electrons, i, j , N , info
+ integer               :: N_of_FMO_electrons, i, N , info
  real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
 
  N = size(basis)
