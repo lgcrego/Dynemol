@@ -76,7 +76,7 @@ logical :: dynamic
 !
   EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
-  Environ_step =  10                          ! <== step for updating EnvField
+  Environ_step =  5                           ! <== step for updating EnvField
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
