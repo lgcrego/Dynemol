@@ -33,10 +33,8 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-!  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
   DRIVER         = "MM_Dynamics"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-!  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
@@ -53,7 +51,6 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-!  file_type    =  "trajectory"                ! <== structure or trajectory
   file_type    =  "structure"                 ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
@@ -98,8 +95,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  4.0d0                               ! <== final time in PICOseconds
-  n_t  =  4000                                ! <== number of time steps
+  t_f  =  8.0d00                              ! <== final time in PICOseconds
+  n_t  =  8000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
@@ -120,7 +117,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 1 , 1 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
