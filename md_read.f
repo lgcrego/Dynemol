@@ -407,6 +407,8 @@ integer :: i
             a(i)%AtNo = 9
         case( 'AL','Al')
             a(i)%AtNo = 13
+        case( 'SI','Si')
+            a(i)%AtNo = 14
         case( 'P' )
             a(i)%AtNo = 15
         case( 'S','s')
