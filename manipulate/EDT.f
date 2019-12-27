@@ -531,7 +531,9 @@ logical                , save           :: done = .false.
 
 ! reading parameters ...
 If( .NOT. done ) then
-    write(*,'(a)') '> enter replication configuration parameters (integer)'
+    write(*,'(/a)') '> MIND: the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    Print*, " "
+    write(*,'(a)') '> Enter replication control keys (integer)'
     write(*,'(a)',advance='no') 'n_x%inicio (<= 0) = '
     read (*,'(I200)') n_x%inicio 
     write(*,'(a)',advance='no') 'n_x%fim    (>= 0) = '
@@ -556,7 +558,7 @@ allocate( temp( New_N_of_atoms ) )
 temp(1:system%N_of_atoms) = system%atom
 
 ! replicating ...
-forall( i = 1:Replication_Factor ) temp( system%N_of_atoms*(i-1)+1:system%N_of_atoms*i ) = system%atom
+forall( i = 2:Replication_Factor ) temp( system%N_of_atoms*(i-1)+1:system%N_of_atoms*i ) = system%atom
 
 counter   = 0
 S_counter = 0   ! <== solvent 

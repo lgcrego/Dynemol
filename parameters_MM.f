@@ -67,7 +67,7 @@ implicit none
   pressure_relaxation_time  = infty             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  cutoff_radius             = 70.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
+  cutoff_radius             = 50.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
   damping_Wolf              = 0.0005d0          ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
@@ -77,7 +77,6 @@ implicit none
   read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
 
   MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
-
 
   MM_log_step            =  4000                  ! <== step for saving MM results & parameters
   MM_frame_step          =  4000                  ! <== step for saving MM results & parameters

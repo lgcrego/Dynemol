@@ -77,7 +77,7 @@ logical :: dynamic
 !
   EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
-  Environ_step =  10                          ! <== step for updating EnvField
+  Environ_step =  5                           ! <== step for updating EnvField
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
@@ -96,8 +96,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d2                               ! <== final time in PICOseconds
-  n_t  =  400000                              ! <== number of time steps
+  t_f  =  8.0d00                              ! <== final time in PICOseconds
+  n_t  =  8000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
