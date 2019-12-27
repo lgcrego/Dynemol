@@ -34,7 +34,7 @@ real*8  , intent(in)    :: dt
  integer :: i
 
 IF( .NOT. done ) then 
-    open (10, file='MM_log.out', status='unknown')
+    open (10, file='log.trunk/MM_log.out', status='unknown')
     write(10,*)
     write(10,'(''!==========================================!'')')
     write(10,'(''!                                          !'')')
@@ -84,7 +84,7 @@ IF( .NOT. done ) then
 
 end IF
 
-open (10, file='MM_log.out', status='unknown', access='append')
+open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
 
     write(10,'(''<======  ###############  ==>'')')
     write(10,'(''<====  E N E R G I E S  ====>'')')
@@ -142,7 +142,7 @@ close(11)
 
  CALL ReGroupMolecule
 
- open (14, file='frames-MM.pdb', status='unknown', access='append')
+ open (14, file='frames.pdb', status='unknown', access='append')
         if( first .AND. (.NOT. restart) ) write(14,*)  "MDFlex , no title"
         write(14,995) 'TITLE'  , 'manipulated by MDFlex     t= ', frame*dt*1.d12
         write(14,991) 'CRYST1' , MM % box(1) , MM % box(2) , MM % box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
@@ -233,7 +233,7 @@ end subroutine ReGroupMolecule
  logical :: filefound
  character (len=64) :: cmd, filename
 
- filename = 'frames-MM.pdb'
+ filename = 'frames.pdb'
  inquire(file=filename, EXIST=filefound)
  if (filefound) then
    write (cmd, '("/bin/rm ", A)' ) TRIM (filename)

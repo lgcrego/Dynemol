@@ -12,7 +12,8 @@
                                              Induced_ ,                 & 
                                              electron_state ,           &
                                              hole_state ,               &
-                                             LCMO
+                                             LCMO ,                     &
+                                             verbose
     use Allocation_m                , only : Allocate_Structures ,      &
                                              Deallocate_Structures
     use Dielectric_Potential        , only : Q_phi
@@ -29,20 +30,23 @@
 
     private
 
+    type(R_eigen) :: Dual , tmp
+
+
  contains
 !
 !
 !
 !=================================================================
- subroutine FMO_analysis( system, basis, CR, FMO , MO , instance )
+ subroutine FMO_analysis( system, basis, UNI, FMO , MO , instance )
 !=================================================================
  implicit none
- type(structure)                                , intent(inout) :: system
- type(STO_basis)                                , intent(inout) :: basis(:)
- real*8             , optional  , allocatable   , intent(in)    :: CR(:,:)
- type(R_eigen)                                  , intent(out)   :: FMO
- real*8             , optional  , allocatable   , intent(inout) :: MO(:)
- character(*)       , optional                  , intent(in)    :: instance
+ type(structure)                          , intent(inout) :: system
+ type(STO_basis)                          , intent(inout) :: basis(:)
+ type(R_eigen)  , optional                , intent(in)    :: UNI
+ type(R_eigen)                            , intent(out)   :: FMO
+ real*8         , optional  , allocatable , intent(inout) :: MO(:)
+ character(*)   , optional                , intent(in)    :: instance
 
 ! local variables ...
  type(structure)               :: FMO_system
@@ -102,7 +106,7 @@
  else If( Survival ) then
 
     ! wv_FMO needed only for time-propagation of wv_FMO state ...
-    CALL projector( FMO , CR , basis%fragment , fragment , wv_FMO )
+    CALL projector( FMO , UNI , basis%fragment , fragment )
 
  end IF
 
@@ -169,52 +173,50 @@ implicit none
 !
 !
 !
-!----------------------------------------------------------------
- subroutine projector( FMO, CR, basis_fragment, fragment, wv_FMO)
-!----------------------------------------------------------------
+!----------------------------------------------------------
+ subroutine projector( FMO, UNI, basis_fragment, fragment )
+!----------------------------------------------------------
  implicit none
  type(R_eigen)                  , intent(inout) :: FMO
- real*8           , ALLOCATABLE , intent(in)    :: CR(:,:)
+ type(R_eigen)                  , intent(in)    :: UNI
  character(len=1)               , intent(in)    :: basis_fragment(:)
  character(len=1)               , intent(in)    :: fragment
- real*8           , ALLOCATABLE , intent(in)    :: wv_FMO(:,:)
 
 ! local variables ...
- real*8  , allocatable :: CR_FMO(:,:) 
- integer               :: ALL_size , FMO_size , i , j , p1 , p2 , k
- real*8                :: check
+ integer :: UNI_size , FMO_size , i , j , p1 , p2 , k
+ real*8  :: check
 
- ALL_size = size( CR(:,1) )                     ! <== basis size of the entire system
- FMO_size = size( wv_FMO(1,:) )                 ! <== basis size of the FMO system
+ UNI_size = size( UNI%R  (:,1) )   ! <== basis size of the entire system
+ FMO_size = size( Dual%R (:,1) )   ! <== basis size of the FMO system
 
- Allocate( FMO%L (FMO_size,ALL_size) , source=D_zero )
- Allocate( FMO%R (ALL_size,FMO_size) , source=D_zero )
- Allocate( CR_FMO(FMO_size,ALL_size) , source=D_zero )
+!-----------------------------------------------------------------------------
+! cast the FMO eigenvectors in UNI eigen-space
 
+ allocate( tmp%L(UNI_size,FMO_size), source=D_zero )
+ allocate( tmp%R(UNI_size,FMO_size), source=D_zero )
  k = 0 
- do i = 1 , ALL_size
-   
+ do i = 1 , UNI_size
     if( basis_fragment(i) == fragment ) then
-        
+
         k = k + 1
-        CR_FMO(k,:) = CR(i,:)
+        tmp%R(i,:) = Dual%R(k,:)
+        tmp%L(i,:) = Dual%L(:,k) 
 
     end if
+ end do
+ ! tmp is deallocated ...
+ CALL move_alloc( tmp%R , Dual%R )
+ CALL move_alloc( Tmp%L , Dual%L )
 
-end do
+!---------------------------------------------------------------------------
+!        writes the isolated FMO eigenfunctions in the MO basis 
+! orbitals are stored in the "ROWS of FMO%L" and in the "COLUMNS of FMO%R"
 
-!--------------------------------------------------------------------------------------------------
-!             writes the isolated FMO eigenfunctions in the MO basis 
-! the isolated orbitals are stored in the "ROWS of wv_FMO and FMO%L" and in the "COLUMNS of FMO%R"
+ Allocate( FMO%L (FMO_size,UNI_size) , source=D_zero )
+ Allocate( FMO%R (UNI_size,FMO_size) , source=D_zero )
 
- forall( i=1:FMO_size, j=1:ALL_size )
-
-    ! %L = A^T.S.C
-    FMO%L(i,j) = sum( wv_FMO(i,:) * CR_FMO(:,j) )
-
- end forall    
- ! %R = C^T.S.A
- FMO%R = transpose(FMO%L)
+ CALL gemm( UNI%L , Dual%R , FMO%R , 'N' , 'N' )
+ CALL gemm( Dual%L , UNI%R , FMO%L , 'T' , 'N' )
 
  check = 0.d0
  do i = 1 , FMO_size
@@ -231,7 +233,7 @@ end do
 
 !--------------------------------------------------------------------------------------------------
 
- deallocate( CR_FMO )
+ deallocate( Dual%L , Dual%R )
 
  include 'formats.h'
 
@@ -251,7 +253,7 @@ end do
 
 ! local variables ... 
  integer               :: N_of_FMO_electrons, i, N , info
- real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:)
+ real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:)
 
  N = size(basis)
 
@@ -267,7 +269,9 @@ end do
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
- CALL SYGVD(h_FMO , s_FMO , FMO%erg , 1 , 'V' , 'U' , info)
+ ALLOCATE( dumb_S(N,N) , source = s_FMO )
+
+ CALL SYGVD(h_FMO , dumb_S , FMO%erg , 1 , 'V' , 'U' , info)
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
@@ -277,7 +281,11 @@ end do
 
  wv_FMO = transpose(h_FMO)
 
- DeAllocate( s_FMO , h_FMO )
+ ALLOCATE(Dual%L(N,N) , source = wv_FMO) 
+ ALLOCATE(Dual%R(N,N)) 
+ CALL symm( s_FMO , h_FMO , Dual%R )
+
+ DeAllocate( s_FMO , h_FMO , dumb_S )
 
 ! save energies of the FMO system 
  If( present(fragment) .AND. (fragment=="H") ) then

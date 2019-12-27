@@ -65,7 +65,7 @@ do n = 1 , n_part
 
         case( "el" )
 
-            CALL FMO_analysis ( system , basis , UNI%R , el_FMO , instance="E" )
+            CALL FMO_analysis ( system , basis , UNI , el_FMO , instance="E" )
 
             MO_bra( : , n ) = el_FMO%L( orbital(n) , : )
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )
@@ -74,7 +74,7 @@ do n = 1 , n_part
 
         case( "hl" )
 
-            CALL FMO_analysis ( system , basis , UNI%R , hl_FMO , instance="H" )
+            CALL FMO_analysis ( system , basis , UNI , hl_FMO , instance="H" )
 
             MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )

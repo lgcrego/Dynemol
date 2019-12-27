@@ -204,6 +204,7 @@ do i = 1 , size(EH_atom)
                     basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
                     basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
                     basis%k_WH      =  EH_atom(i)%k_WH  (0)
+                    basis%modified  =  .true.
                
                 end where
 
@@ -219,6 +220,7 @@ do i = 1 , size(EH_atom)
                     basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
                     basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
                     basis%k_WH      =  EH_atom(i)%k_WH  (0)
+                    basis%modified  =  .true.
                
                 end where
 

@@ -155,7 +155,7 @@ logical :: exist
 
 inquire(file="velocity_MM.pdb", EXIST=exist)
 
-if( exist .and. iter == 0 ) call system( "rm frames-MM.pdb" )
+if( exist .and. iter == 0 ) call system( "rm frames.pdb" )
 
 call saving_MM_frame( iter , D_zero )
 

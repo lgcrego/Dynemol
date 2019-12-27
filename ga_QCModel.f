@@ -47,7 +47,7 @@ implicit none
 type(R_eigen)            , intent(in) :: GA
 integer                  , intent(in) :: up
 integer                  , intent(in) :: down
-real*8                   , intent(in) :: dE_ref
+real                     , intent(in) :: dE_ref
 real          , optional , intent(in) :: weight
 
 !local variables ...
