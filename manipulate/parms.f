@@ -351,6 +351,8 @@ character(len=1)    :: element
             a(i)%Symbol = 'Al' 
         case( 'Ti' , 'TI' ) 
             a(i)%Symbol = 'Ti' 
+        case( 'Si' , 'SI' ) 
+            a(i)%Symbol = 'Si' 
         case( 'Li' ) 
             a(i)%Symbol = 'Li' 
         case( 'Zn' , 'ZN' )
