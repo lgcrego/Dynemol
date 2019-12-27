@@ -8,7 +8,7 @@ module Taylor_m
     use parameters_m        , only : t_i, frame_step, n_part, restart, CT_dump_step                  
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
-    use FMO_m               , only : FMO_analysis, eh_tag                  
+    use FMO_m               , only : eh_tag                  
     use Data_Output         , only : Populations
     use Matrix_Math
 
