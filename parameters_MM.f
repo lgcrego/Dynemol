@@ -30,18 +30,23 @@ implicit none
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO
 !
-  MM % N_of_molecules = 1                   ! <== total number of molecules
-  MM % N_of_species   = 1                   ! <== total number of species
+  MM % N_of_molecules = 3                   ! <== total number of molecules
+  MM % N_of_species   = 2                   ! <== total number of species
 
   CALL allocate_species( MM % N_of_species )
 
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "P2B"      ! <== Residue label for species i ; character(len3)
-  species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 52         ! <== Number of atoms comprising a single molecule of species i
+  species(1) % residue         = "MOL"      ! <== Residue label for species i ; character(len3)
+  species(1) % N_of_molecules  = 2          ! <== Number of molecules of species i
+  species(1) % N_of_atoms      = 6          ! <== Number of atoms comprising a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
+
+  species(2) % residue         = "SFC"      ! <== Residue label for species i ; character(len3)
+  species(2) % N_of_molecules  = 1          ! <== Number of molecules of species i
+  species(2) % N_of_atoms      = 250        ! <== Number of atoms comprising a single molecule of species i
+  species(2) % flex            = F_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
 
@@ -49,33 +54,32 @@ implicit none
 ! ENVIRONMENT parameters ...
 !
 
-  thermostat                = "Nose_Hoover"     ! <== Berendsen, Nose_Hoover, Microcanonical
+  thermostat                = "Berendsen"        ! <== Berendsen, Nose_Hoover, Microcanonical
 
-  temperature               = 100.d0            ! <== Bath Temperature (K)
+  temperature               = 100.d0             ! <== Bath Temperature (K)
   pressure                  = 1.d0              ! <== Pressure
 
-  thermal_relaxation_time   = 1.d+1             ! <== Temperature coupling term with the bath
+  thermal_relaxation_time   = 1.d-1             ! <== Temperature coupling term with the bath
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
   pressure_relaxation_time  = infty             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  cutoff_radius             = 70.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
+  cutoff_radius             = 50.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
   damping_Wolf              = 0.0005d0          ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
                                                 ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
-!  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
-  driver_MM              = "MM_Optimize"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+  driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
   read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
 
   MM_input_format        = "GAFF"               ! <== GMX, NAMD, GAFF
 
 
-  MM_log_step            =  1                     ! <== step for saving MM results & parameters
-  MM_frame_step          =  1                     ! <== step for saving MM results & parameters
+  MM_log_step            =  10                    ! <== step for saving MM results & parameters
+  MM_frame_step          =  5                     ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------
