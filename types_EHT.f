@@ -158,6 +158,7 @@ module type_m
         logical          :: El
         logical          :: Hl
         logical          :: flex
+        logical          :: modified = .false.
     end type STO_basis
 
 

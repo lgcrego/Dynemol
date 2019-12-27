@@ -602,7 +602,7 @@ real*8                          :: factor , factor_1 , factor_2
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
 
- open( unit = 51 , file = "MM_parms_log.out" , status = "replace", action = "write" , position = "append" )
+ open( unit = 51 , file = "log.trunk/MM_parms_log.out" , status = "replace", action = "write" , position = "append" )
 
  !========================================================================================================
  write(51, *) " "

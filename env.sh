@@ -9,11 +9,13 @@ then
 	mkdir dos.trunk
 
 	rm -r -f MO.trunk 2> qdynamo.err
-
 	mkdir MO.trunk
 
 	mkdir opt.trunk 2> qdynamo.err
 	mv opt.trunk/view_cost.dat opt.trunk/old_view_cost.dat 2> qdynamo.err
+
+	rm -r -f log.trunk 2> qdynamo.err
+	mkdir log.trunk
 fi
 
 if [ "x$1" == 'xsave_cost_statement' ]

@@ -1,5 +1,6 @@
  module Structure_Builder
 
+    use IFPORT
     use type_m
     use constants_m
     use MPI_definitions_m           , only : master
@@ -284,8 +285,10 @@ system% BasisPointer = 0
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
 
+ If( master ) CALL EH_parm_diagnosis( system , basis )
+
 ! STO paramaters for generating Gaussian Cube Files (must be in a.u.) ... 
-If( GaussianCube .AND. (.NOT. done) ) then
+ If( GaussianCube .AND. (.NOT. done) ) then
 
     allocate( Cube_Coef(N_of_orbitals,2) , source = D_zero )
     allocate( Cube_Zeta(N_of_orbitals,2) , source = D_zero )
@@ -313,6 +316,8 @@ If( GaussianCube .AND. (.NOT. done) ) then
 ! local variables ...
 integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
 integer :: first_nr , last_nr , N_of_residue_members 
+
+call sleep(3) ! waits 3 seconds ...
 
 ! total number of orbitals ...
 N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
@@ -375,6 +380,60 @@ end subroutine diagnosis
 !
 !
 !
+!
+!=========================================
+ subroutine EH_parm_diagnosis( a , basis )
+!=========================================
+implicit none
+type(structure) , intent(in) :: a
+type(STO_basis) , intent(in) :: basis(:)
+
+!local variables ...
+integer              :: i , j , k
+character(16)        :: flag
+logical       , save :: done = .false.
+
+If( done ) return
+
+call sleep(3) ! waits 3 seconds ...
+
+open( unit=12, file='log.trunk/eht_parms.log', status='unknown' )
+
+Print*,     "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
+write(12,*) "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
+
+do i = 1 , a% atoms
+
+    ! find different (EHSymbol,residue) pairs ... 
+    if( (.NOT. any(a% MMSymbol(1:i-1) == a% MMSymbol(i))) .OR. (.NOT. any(a% residue(1:i-1) == a% residue(i))) ) then
+
+        j = minloc( basis% EHSymbol , dim=1 , mask = (basis% EHSymbol == a% MMSymbol(i)) .AND. (basis% residue == a% residue(i)))
+
+        flag = merge( "<== no OPT parms" , "                " , basis(j)%modified == .false. )
+
+        do k = 1 , 2
+            write(6*k,17) count(a% MMSymbol == a% MMSymbol(i)) , &
+                                        basis(j)% EHSymbol     , &
+                                        basis(j)% residue      , &
+                                        flag
+        end do
+
+    end if
+
+end do
+close(unit=12)
+
+done = .true.
+
+17 format(t5,I4,t19,A3,t32,A3,t39,A16)
+
+include 'formats.h'
+
+end subroutine EH_parm_diagnosis
+!
+!
+!
+!
 !==============================
  subroutine dump_diagnosis( a )
 !==============================
@@ -385,7 +444,7 @@ type(structure) , intent(in) :: a
 integer :: i , j
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN( unit=3 , file='structure.log' , status='unknown' )
+OPEN( unit=3 , file='log.trunk/structure.log' , status='unknown' )
 
 write(3,*) System_Characteristics
 
