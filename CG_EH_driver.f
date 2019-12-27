@@ -36,7 +36,7 @@ type(EH_OPT)            :: CG
 
 eval_CG_cost = .true.
 
-If( profiling ) OPEN( unit=32 , file='opt_trunk/CG.log.dat' , status='unknown' )
+If( profiling ) OPEN( unit=32 , file='opt.trunk/CG.log.dat' , status='unknown' )
 
 Top_Selection = size(GA_Selection(1,:)) 
 
@@ -49,7 +49,7 @@ do i = 1 , Top_Selection
 
     If( profiling ) then
         write(string,'(i2.2)') i
-        f_name = 'opt_trunk/CG_OPT_parms'//string//'.dat'
+        f_name = 'opt.trunk/CG_OPT_parms'//string//'.dat'
         OPEN( unit = 42 , file=f_name , status='replace' )
     end If
 

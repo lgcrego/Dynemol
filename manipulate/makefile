@@ -4,7 +4,7 @@ SUFFIX=.f
 
 FC=ifort
 SAFE = -g -traceback
-FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
+FFLAGS = -xhost -openmp -fpp -O3 -free $(SAFE)
 
 LIB    =  -liomp5
 INCS   = 

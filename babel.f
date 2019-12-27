@@ -24,6 +24,7 @@
     PUBLIC :: Read_from_XYZ , Read_from_Poscar , Read_from_PDB
     PUBLIC :: Read_PDB , Read_XYZ
     PUBLIC :: Coords_from_Universe
+    PUBLIC :: Resume_from_TRJ 
 
     type(universe)      , allocatable   , public  :: trj(:)
     real*8                              , public  :: MD_dt
@@ -246,7 +247,6 @@ forall( i=1:system%N_of_atoms ) system%atom(i)%residue = TO_UPPER_CASE( system%a
 If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( system )
 
 ! for use if atomic Symbols are not included in input.pdb ...
-! the change will be permanent after beta tests ...
 !If( sum( len_trim(system%atom%Symbol) ) == 0 ) CALL MMSymbol_2_Symbol( system%atom )
 CALL MMSymbol_2_Symbol( system%atom )
 
@@ -254,7 +254,7 @@ CALL MMSymbol_2_Symbol( system%atom )
 CALL Symbol_2_AtNo      ( system%atom )
 CALL Identify_Residues  ( system      )
 CALL Identify_Fragments ( system      )
-! the change will be permanent after beta tests ...
+
 !CALL Pack_Residues      ( system%atom , system%list_of_residues )
 
 ! vector QMMM_key is the key to exchange QM and MM atomic properties ...
@@ -755,6 +755,145 @@ end subroutine Read_XYZ
 !
 !
 !
+!========================================
+ subroutine Resume_from_TRJ ( Unit_Cell )
+!========================================
+implicit none
+type(structure) , intent(out) :: Unit_Cell
+
+! local variables ...
+integer        :: i , j , k  , openstatus , inputstatus , model , number_of_atoms
+real*8         :: dumb_xyz(3) , dumb_box(3)
+character(4)   :: keyword
+character(5)   :: MMSymbol_char
+type(universe) :: system
+
+open(unit = 31, file = 'frames-MM.pdb', status = 'old', action = 'read', iostat = openstatus)
+if (openstatus > 0) stop " *** Cannot open the file frames-MM.pdb *** "
+
+read(unit = 31, fmt = 43, iostat = inputstatus) system% System_Characteristics 
+
+!----------------------------------------------------------------------------
+! find the number of model frames ...
+model = 0
+do
+    read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+    if ( inputstatus /= 0  ) exit
+    if ( keyword == 'MODE' ) model = model + 1
+end do
+
+! return to the top of the file ...
+rewind 31
+
+!----------------------------------------------------------------------------
+! read number of atoms and time ...
+do
+    read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+    if ( keyword == 'MODE' ) exit
+end do
+
+number_of_atoms = 0
+do
+    read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+    if ( keyword == 'ATOM' ) then
+        number_of_atoms = number_of_atoms + 1
+    else
+        exit   
+    end if
+end do
+
+allocate( system% atom(number_of_atoms) )
+CALL Initialize_System( system )
+
+system% N_of_atoms = number_of_atoms
+
+!----------------------------------------------------------------------------
+! return to the top of the file ...
+rewind 31
+
+do j = 1 , model
+
+    if( j < model ) then
+
+        do
+            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+            if( keyword == 'CRYS' ) then
+                backspace 31
+                read(unit = 31, fmt = 40, iostat = inputstatus) ( dumb_box(i) , i=1,3 )
+            end if
+            if( keyword == 'MODE' ) exit
+        end do
+
+        do i = 1 , number_of_atoms
+            read(unit = 31, fmt = 37, iostat = inputstatus) ( dumb_xyz(k) , k=1,3 )
+        end do
+
+    elseif( j == model ) then ! <== last frame ...
+
+        do
+            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+            if( keyword == 'CRYS' ) then
+                backspace 31
+                read(unit = 31, fmt = 40, iostat = inputstatus) ( system% box(i) , i=1,3 )
+            end if
+            if ( keyword == 'MODE' ) exit
+        end do
+
+        do i = 1 , number_of_atoms
+            system% atom(i)% my_id = i
+            read(unit = 31, fmt = 33, iostat = inputstatus)   MMSymbol_char               ,     &
+                                                              system % atom(i) % residue ,      &
+                                                              system % atom(i) % nr ,           &
+                                                            ( system % atom(i) % xyz(k) , k=1,3 )
+
+            system % atom(i) % MMSymbol = adjustl(MMSymbol_char)
+        end do
+
+        ! convert residues to upper case ...
+        forall( i=1:number_of_atoms ) system %atom(i)% residue = TO_UPPER_CASE( system% atom(i)% residue )
+
+        CALL MMSymbol_2_Symbol  ( system% atom )
+        CALL Symbol_2_AtNo      ( system% atom )
+        ! use ad hoc tuning of EHT parameters ...
+        If( ad_hoc .and. (driver /= "MM_Dynamics") ) CALL ad_hoc_tuning( system )
+
+        system%atom % Nvalen    =  atom(system%atom%AtNo) % Nvalen
+        system%atom % polar     =  atom(system%atom%AtNo) % polar 
+    
+    end if
+
+end do
+
+close(31)
+
+! preprocessing the universe system ...
+CALL Symbol_2_AtNo      ( system%atom )
+CALL Identify_Residues  ( system )
+CALL Identify_Fragments ( system )
+
+! GROUP residues ...
+!CALL Pack_Residues( system%atom , system%list_of_residues ) 
+
+! vector QMMM_key is the key to exchange QM and MM atomic properties ...
+allocate( QMMM_key(system%N_of_atoms) , source=system%atom%my_id)
+
+CALL Coords_from_Universe( Unit_Cell , system )
+
+! save copy of the just-generated initial configuration ...
+CALL Dump_pdb( system )
+
+! Formats ...
+33 format(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
+35 format(a4)
+37 format(t31,f8.3,t39,f8.3,t47,f8.3)
+40 format(6x, 3f9.3)
+43 format(a72)
+
+end subroutine Resume_from_TRJ
+!
+!
+!
+!
 !=========================================
  subroutine input_2_frames( system , trj )
 !=========================================
@@ -786,6 +925,53 @@ end do
 forall( i = 1:n_t ) trj(i) = system
 
 end subroutine input_2_frames
+!
+!
+!
+!=======================
+subroutine Dump_pdb(sys)
+!=======================
+implicit none 
+type(universe)      , intent(inout) ::  sys
+
+! local variables ...
+integer ::  i , k 
+
+OPEN(unit=4,file='input.pdb',status='unknown')
+
+write(4,6) "Generated by Resume_from_TRJ, ",sys%System_Characteristics
+write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+
+do i = 1 , sys%N_of_atoms
+
+            write(4,2)  'HETATM'                        ,  &    ! <== non-standard atom
+                        i                               ,  &    ! <== global number
+                        sys%atom(i)%MMSymbol            ,  &    ! <== atom type
+                        ' '                             ,  &    ! <== alternate location indicator
+                        sys%atom(i)%residue             ,  &    ! <== residue name
+                        ' '                             ,  &    ! <== chain identifier
+                        sys%atom(i)%nr                  ,  &    ! <== residue sequence number
+                        ' '                             ,  &    ! <== code for insertion of residues
+                        ( sys%atom(i)%xyz(k) , k=1,3 )  ,  &    ! <== xyz coordinates 
+                        1.00                            ,  &    ! <== occupancy
+                        0.00                            ,  &    ! <== temperature factor
+                        ' '                             ,  &    ! <== segment identifier
+                        ' '                             ,  &    ! <== here only for tabulation purposes
+                        sys%atom(i)%Symbol              ,  &    ! <== chemical element symbol
+                        ' '                                     ! <== charge on the atom
+end do
+
+write(4,3) 'MASTER', 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , sys%N_of_atoms , 0 , sys%N_of_atoms , 0
+write(4,*) 'END'
+
+close(4)
+
+1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
+2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,a2)
+3 FORMAT(a6,i9,11i5)
+6 FORMAT(a32,a72)
+
+end subroutine Dump_pdb
 !
 !
 !

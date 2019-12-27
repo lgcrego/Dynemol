@@ -135,6 +135,11 @@ do generation = 1 , N_generations
     Print*, cost(1)
     write(23,*) generation , cost(1)
 
+    ! saving the temporary optimized parameters ...
+    ! intent(in):basis ; intent(inout):GA_basis ...
+    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) ) 
+    CALL Dump_OPT_parameters( GA_basis , output = "tmp" )
+
 end do
 
 close(23)
@@ -507,13 +512,23 @@ allocate( indx_EHS(N_of_EHSymbol) )
 indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
 If( present(output) .AND. output=="STDOUT" ) then
+
     Print*,""
     Print*,""
     unit_tag = 6
+
+elseIf( present(output) .AND. output=="tmp" ) then
+
+    ! creating file opt_eht_parms.output with the optimized parameters ...
+    open( unit=13, file='opt.trunk/opt_eht_parms.output', status='unknown' )
+    unit_tag = 13
+
 else
+
     ! creating file opt_eht_parms.output with the optimized parameters ...
     open( unit=13, file='opt_eht_parms.output', status='unknown' )
     unit_tag = 13
+
 end If
 
 ! print heading ...

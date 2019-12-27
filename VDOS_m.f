@@ -159,7 +159,7 @@ open(out, file='VDOS.restart', status='unknown', form='unformatted')
 write(out) v0_norm, v0_norm_mw, v0
 close(out)
 
-open(out, file='DOS_trunk/VACF.dat', status='unknown')
+open(out, file='DOS.trunk/VACF.dat', status='unknown')
 write(out,'(a)',advance='no') "# frame   VACF: total    "
 do i = 1, Nres
     write(out,'(a)',advance='no') species(i)%residue // '            '
@@ -183,7 +183,7 @@ open(in, file='VDOS.restart', status='old', form='unformatted', access='sequenti
 read(in) v0_norm, v0_norm_mw, v0
 close(in)
 
-open(out, file='DOS_trunk/VACF.dat', status='old', access='append')
+open(out, file='DOS.trunk/VACF.dat', status='old', access='append')
 
 end subroutine VDOS_restart
 !
@@ -313,9 +313,9 @@ T = 2*(t_f - t_i)*pico_2_sec/Nsamples  ! in seconds (factor 2 is to account for 
 ! write to VSD-*.dat
 do j = 0, Nres
     if (j==0) then
-        open(out, file='DOS_trunk/VSD-total.dat', status='unknown')
+        open(out, file='DOS.trunk/VSD-total.dat', status='unknown')
     else
-        open(out, file='DOS_trunk/VSD-'//trim(species(j)%residue)//'.dat', status='unknown')
+        open(out, file='DOS.trunk/VSD-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   spectral density   "
     do i = 1, Lsample
@@ -347,9 +347,9 @@ end do
 ! write to VDOS-*.dat
 do j = 0, Nres
     if (j==0) then
-        open(out, file='DOS_trunk/VDOS-total.dat', status='unknown')
+        open(out, file='DOS.trunk/VDOS-total.dat', status='unknown')
     else
-        open(out, file='DOS_trunk/VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
+        open(out, file='DOS.trunk/VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
     write(out,'(a)') "# E (eV)   VDOS"
     do i = 1, Lsample

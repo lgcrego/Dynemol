@@ -47,7 +47,7 @@ mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  3.2000 )
+eval(me) = MO_erg_diff( OPT_UNI, 115, 114,  3.2d0 )
 
 !----------------------------------------------------------------------------------------------
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
@@ -107,7 +107,7 @@ REF_Alpha = [ 9.2d0 , 8.5d0 , 7.8d0 ]
 ! at last, show the cost ...
 If( present(ShowCost) ) then
 
-   open( unit=33 , file='opt_trunk/view_cost.dat' , status='unknown' )
+   open( unit=33 , file='opt.trunk/view_cost.dat' , status='unknown' )
 
    do i = 1 , me
       write(33,*) i , dabs(eval(i)) 

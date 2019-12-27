@@ -15,7 +15,6 @@ then
 	mv opt_trunk/view_cost.dat opt_trunk/old_view_cost.dat 2> qdynamo.err
 fi
 
-var = $1
 if [ "x$1" == 'xsave_cost_statement' ]
 then
 	paste opt_trunk/view_cost.dat <(grep "eval(me)" cost_tuning_EH.f | grep -v \!) > opt_trunk/ga_cost.statement

@@ -40,16 +40,16 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-univ % atom (45:46) % residue = "CCC"
+univ % atom (52:53) % residue = "CCC"
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-univ % atom(45:46) % nr = 2
+univ % atom(52:53) % nr = 2
 !---------------------------------------------------
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-where( univ% atom% residue == "PDA" ) univ% atom% V_shift = +0.3d0
+where( univ% atom% residue == "D2B" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
@@ -58,11 +58,11 @@ where( univ% atom% residue == "PDA" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "PDA") univ % atom % El = .true.
+where(univ % atom % residue == "D2B") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PDA") univ % atom % Hl = .true.
+where(univ % atom % residue == "D2B") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
@@ -186,35 +186,43 @@ select case ( instance )
 !----------------------------------
 !      define flex
 !----------------------------------
-atom(177)  % flex = .true.
-atom(204)  % flex = .true.
-atom(328) % flex = .true.
+atom(290)  % flex = .true.
+atom(552)  % flex = .true.
+atom(375)  % flex = .true.
+atom(291)  % flex = .true.
+atom(416)  % flex = .true.
+atom(289)  % flex = .true.
+atom(577)  % flex = .true.
+atom(369)  % flex = .true.
+atom(299)  % flex = .true.
+atom(423)  % flex = .true.
+atom(294)  % flex = .true.
+atom(425)  % flex = .true.
+atom(548)  % flex = .true.
+atom(231)  % flex = .true.
+atom(551)  % flex = .true.
+atom(287)  % flex = .true.
+atom(227)  % flex = .true.
+atom(441)  % flex = .true.
+atom(419)  % flex = .true.
+atom(555)  % flex = .true.
+atom(361)  % flex = .true.
+atom(234)  % flex = .true.
+atom(531)  % flex = .true.
+atom(206)  % flex = .true.
+atom(372)  % flex = .true.
+atom(313)  % flex = .true.
+atom(317)  % flex = .true.
+atom(292)  % flex = .true.
+atom(421)  % flex = .true.
+atom(360)  % flex = .true.
+atom(519)  % flex = .true.
+atom(194)  % flex = .true.
+atom(189)  % flex = .true.
+atom(606)  % flex = .true.
+atom(605)  % flex = .true.
+atom(192)  % flex = .true.
 atom(200)  % flex = .true.
-atom(56)   % flex = .true.
-atom(118)  % flex = .true.
-atom(186)  % flex = .true.
-atom(53)   % flex = .true.
-atom(174)  % flex = .true.
-atom(114)  % flex = .true.
-atom(176)  % flex = .true.
-atom(303)  % flex = .true.
-atom(178)  % flex = .true.
-atom(306)  % flex = .true.
-atom(179)  % flex = .true.
-atom(60)   % flex = .true.
-atom(308)  % flex = .true.
-atom(248)  % flex = .true.
-atom(256)  % flex = .true.
-atom(82 )  % flex = .true.
-atom(181)  % flex = .true.
-atom(57)   % flex = .true.
-atom(310)  % flex = .true.
-atom(121)  % flex = .true.
-atom(259)  % flex = .true.
-atom(262)  % flex = .true.
-atom(418)  % flex = .true.
-atom(312)  % flex = .true.
-!atom(429)  % flex = .true.
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -226,11 +234,11 @@ atom(312)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(45:46) % residue = "PDA"
+atom(52:53) % residue = "D2B"
 !----------------------------------
 !      define nr
 !----------------------------------
-atom(45:46) % nr = 1
+atom(52:53) % nr = 1
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------

@@ -170,7 +170,7 @@ character(26)   :: string
 
 ! save TDOS ...
 If( present(TDOS) ) then
-    OPEN( unit = 33 , file = "dyn_trunk/TDOS.dat" , status = "unknown" , action = "read" )
+    OPEN( unit = 33 , file = "dyn.trunk/TDOS.dat" , status = "unknown" , action = "read" )
     read(33,14) frame
     do i = 1 , size(TDOS%func)
         read(33,10) TDOS%grid(i) , TDOS%average(i) , TDOS%peaks(i) ,  TDOS%occupation(i)
@@ -182,7 +182,7 @@ end if
 If( present(PDOS) ) then
     N_of_residues = size( PDOS )
     do nr = 1 , N_of_residues
-        string = "dyn_trunk/PDOS-"//PDOS(nr)%residue//".dat"
+        string = "dyn.trunk/PDOS-"//PDOS(nr)%residue//".dat"
         OPEN( unit = 33 , file=string , status='unknown' )
         read(33,14) frame
             do i = 1 , size(PDOS(nr)%func)
@@ -194,7 +194,7 @@ end if
 
 ! save peak and broadened specs ...
 If( present(SPEC) ) then
-    OPEN( unit = 33 , file='dyn_trunk/spectrum.dat' , status='unknown' )
+    OPEN( unit = 33 , file='dyn.trunk/spectrum.dat' , status='unknown' )
         read(33,14) frame
         do i = 1 , size(SPEC%func)
             read(33,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
@@ -211,7 +211,7 @@ If( present(QDyn) ) then
 
             if( eh_tag(n) == "XX" ) cycle
 
-            OPEN( unit = 33 , file="dyn_trunk/"//eh_tag(n)//"_survival.dat" , status="unknown" )
+            OPEN( unit = 33 , file="dyn.trunk/"//eh_tag(n)//"_survival.dat" , status="unknown" )
 
             read(33,14) frame           
             read(33,12) QDyn%fragments
