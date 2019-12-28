@@ -194,11 +194,6 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
 end if
 
-If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
-    Print*, " >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<" 
-    stop
-End If    
-
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
