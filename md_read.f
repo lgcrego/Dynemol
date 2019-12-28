@@ -4,7 +4,7 @@ module MD_read_m
     use atomicmass
     use MM_input       
     use MPI_definitions_m       , only : master
-    use parameters_m            , only : restart , ad_hoc , driver , preview
+    use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
@@ -407,6 +407,8 @@ integer :: i
             a(i)%AtNo = 9
         case( 'AL','Al')
             a(i)%AtNo = 13
+        case( 'SI','Si')
+            a(i)%AtNo = 14
         case( 'P' )
             a(i)%AtNo = 15
         case( 'S','s')
@@ -503,9 +505,11 @@ if( read_velocities ) then
 
     if( preview ) CALL convert_NAMD_velocities( MM% N_of_atoms )
 
+    inquire(file="velocity_MM.out", EXIST=exist)
+    if (exist) STOP ' >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt] << '
+
     inquire(file="velocity_MM.inpt", EXIST=exist)
     if (exist) then
-
         open(unit=33 , file='velocity_MM.inpt' , status='old' , action='read')
         do i = 1 , size(atom)
             read(33,*) atom(i) % vel(1) , atom(i) % vel(2) , atom(i) % vel(3)
@@ -514,6 +518,11 @@ if( read_velocities ) then
     else
         STOP ' >> read_velocity = .true. but file velocity_MM.inpt was not found ! << '
     endif
+
+elseif( resume ) then 
+
+       ! read_velocity flag = F_
+        STOP ' >> read_velocity = .false. in parametes_MM.f, must be true in resume simulations ! << '
 
 end if
 

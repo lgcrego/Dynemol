@@ -17,6 +17,7 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
+logical                 :: resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -34,6 +35,7 @@ logical :: dynamic
 ! ACTION	flags
 !
   DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+!  DRIVER         = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -41,7 +43,7 @@ logical :: dynamic
   Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_                        ! <== Hellman-Feynman-Pulay ; HFP_Forces MUST be T_ for QMMM calcs 
-  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -51,6 +53,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
+!  file_type    =  "structure"                 ! <== structure or trajectory
   file_type    =  "trajectory"                ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
@@ -84,18 +87,18 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-  frame_step   =  20                          ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+  frame_step   =  5                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 100                         ! <== step for saving backup files
+  step_security = 10000                       ! <== step for saving backup files
                                               ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.0d-1                              ! <== final time in PICOseconds
+  t_f  =  2.0d-1                              ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
@@ -137,16 +140,16 @@ logical :: dynamic
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  200  
-  N_generations  =  50    
-  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.5     
+  Pop_Size       =  100    
+  N_generations  =  1000
+  Pop_range      =  0.3     ! <== range of variation of parameters [0:1]
+  Mutation_rate  =  0.7     
 
   Adaptive_      =  T_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
-  Top_Selection  =  5        ! <== top selection to undergo CG_
 
   CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  5        ! <== top selection to undergo CG_
   profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
@@ -209,6 +212,9 @@ if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
 
         case( "preview" )
         preview = .true.
+
+        case( "resume" )
+        resume = .true.
 
     end select
 end if

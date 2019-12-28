@@ -9,12 +9,14 @@
                                              nnx , nny ,                &
                                              hole_state ,               &
                                              OPT_parms ,                &
-                                             GaussianCube
+                                             GaussianCube ,             &
+                                             resume
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
                                              Read_from_PDB ,            &
                                              Read_PDB ,                 &
-                                             Read_XYZ,                  &
+                                             Read_XYZ ,                 &
+                                             Resume_from_TRJ ,          &
                                              Identify_Fragments ,       &
                                              System_Characteristics ,   & 
                                              trj 
@@ -47,12 +49,21 @@ select case( file_type )
     case( "structure" )
 
         select case( file_format )
+
             case( "xyz" )
                 CALL Read_from_XYZ      ( Unit_Cell ) 
-            case( "pdb" )
-                CALL Read_from_PDB      ( Unit_Cell ) 
+
+            case( "pdb " )
+
+                If( resume ) then
+                    CALL Resume_from_TRJ ( Unit_Cell )
+                else
+                    CALL Read_from_PDB   ( Unit_Cell ) 
+                end If
+               
             case( "vasp" )
                 CALL Read_from_POSCAR   ( Unit_Cell )
+
             case default
                 print*, ">>> check file type selection <<< : " , file_format
                 stop
@@ -61,10 +72,13 @@ select case( file_type )
     case( "trajectory" )
     
         select case( file_format ) 
+
             case( "pdb" ) 
                 CALL Read_PDB   ( trj ) 
+
             case( "xyz" ) 
                 CALL Read_XYZ   ( trj )
+
             case default
                 print*, ">>> check file type selection <<< : " , file_format
                 stop
