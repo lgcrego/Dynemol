@@ -56,10 +56,10 @@ character(3) :: MMSymbols(60)
 !----------------------------------
 
 !----------------------------------
-!      define operations
+!      define operations: 
+! copy, delete, translate, rotate, group
 !----------------------------------
-where( system% atom% resid /= "RGT" ) system% atom% delete = .true.
-
+where(system % atom % resid == "MOL") system % atom % copy = .true.
 !----------------------------------
 !      define resid's
 !----------------------------------
@@ -67,6 +67,8 @@ where( system% atom% resid /= "RGT" ) system% atom% delete = .true.
 !----------------------------------
 !      define nresid's
 !----------------------------------
+
+!where(system % atom % Symbol /= "Si") system % atom %  nresid = 1
 
 !----------------------------------
 !     Selective_Dynamics
