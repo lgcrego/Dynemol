@@ -40,16 +40,16 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-univ % atom (52:53) % residue = "CCC"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-univ % atom(52:53) % nr = 2
+
 !---------------------------------------------------
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-where( univ% atom% residue == "D2B" ) univ% atom% V_shift = +0.3d0
+
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
@@ -58,14 +58,20 @@ where( univ% atom% residue == "D2B" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "D2B") univ % atom % El = .true.
+where(univ % atom % residue == "LA2") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "D2B") univ % atom % Hl = .true.
+where(univ % atom % residue == "LA2") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
+
+where( univ % atom % residue == "LA1" ) univ % atom % fragment = "a"
+where( univ % atom % residue == "LA3" ) univ % atom % fragment = "b"
+where( univ % atom % residue == "LA4" ) univ % atom % fragment = "c"
+where( univ % atom % residue == "LA5" ) univ % atom % fragment = "e"
+where( univ % atom % residue == "LA6" ) univ % atom % fragment = "f"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -186,43 +192,7 @@ select case ( instance )
 !----------------------------------
 !      define flex
 !----------------------------------
-atom(290)  % flex = .true.
-atom(552)  % flex = .true.
-atom(375)  % flex = .true.
-atom(291)  % flex = .true.
-atom(416)  % flex = .true.
-atom(289)  % flex = .true.
-atom(577)  % flex = .true.
-atom(369)  % flex = .true.
-atom(299)  % flex = .true.
-atom(423)  % flex = .true.
-atom(294)  % flex = .true.
-atom(425)  % flex = .true.
-atom(548)  % flex = .true.
-atom(231)  % flex = .true.
-atom(551)  % flex = .true.
-atom(287)  % flex = .true.
-atom(227)  % flex = .true.
-atom(441)  % flex = .true.
-atom(419)  % flex = .true.
-atom(555)  % flex = .true.
-atom(361)  % flex = .true.
-atom(234)  % flex = .true.
-atom(531)  % flex = .true.
-atom(206)  % flex = .true.
-atom(372)  % flex = .true.
-atom(313)  % flex = .true.
-atom(317)  % flex = .true.
-atom(292)  % flex = .true.
-atom(421)  % flex = .true.
-atom(360)  % flex = .true.
-atom(519)  % flex = .true.
-atom(194)  % flex = .true.
-atom(189)  % flex = .true.
-atom(606)  % flex = .true.
-atom(605)  % flex = .true.
-atom(192)  % flex = .true.
-atom(200)  % flex = .true.
+
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -234,11 +204,11 @@ atom(200)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(52:53) % residue = "D2B"
+
 !----------------------------------
 !      define nr
 !----------------------------------
-atom(52:53) % nr = 1
+
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------

@@ -341,7 +341,7 @@ character(len=2)    :: element2
     write( element2,'(A2)' ) adjustl( a(i)%MMSymbol )
 
     select case( element2 )
-        case( 'Ow','Ox','OxH','Om' )
+        case( 'Ow','Ox','OxH','Om','O_3','OH' )
             a(i)%Symbol = 'O' 
 
         case( 'Hw','HB','HC', 'GH' )
@@ -350,7 +350,7 @@ character(len=2)    :: element2
         case( 'Ix','Ic' )
             a(i)%Symbol = 'I' 
 
-        case( 'CT','YC','CM','C=','CC','CS','CTr' ) 
+        case( 'CT','YC','CM','C=','CC','CS','CTr','CA' ) 
             a(i)%Symbol = 'C' 
 
         case( 'YN','NTr','Nx' ) 
@@ -380,7 +380,7 @@ character(len=2)    :: element2
 !        case( 'Cd','CD' ) 
 !            a(i)%Symbol = 'Cd' 
 
-        case( 'SS','S', 'SG', 'SD' ) 
+        case( 'SS','S', 'SG', 'SD','SA' ) 
             a(i)%Symbol = 'S' 
 
         case( 'Pb','PB' ) 
