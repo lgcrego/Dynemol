@@ -545,21 +545,47 @@ type(STO_basis)            , intent(inout) :: OPT_basis(:)
 character(len=*), optional , intent(in)    :: output
 
 ! local variables ...
-integer               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
-integer , allocatable :: indx_EHS(:)
-integer               :: unit_tag
+integer                               :: i , j , L , AngMax , n_EHS , N_of_EHSymbol , unit_tag
+integer                 , allocatable :: aux(:)
+integer          , save , allocatable :: indx_EHS(:)
+character(len=:)        , allocatable :: string(:)
+logical                               :: done = .false.
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
 integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
 
-N_of_EHSymbol = size( GA%EHSymbol )
+!-------------------------------------------------------------------------------------
+If( .not. done ) then
+    allocate( character( len=len(OPT_basis%EHSymbol)+len(OPT_basis%residue)) :: string(size(OPT_basis)) )
+    allocate( aux(size(OPT_basis)) , source = 0 )
+    
+    j = 0
+    do i = 1 , size(OPT_basis)
+       
+        string(i) = OPT_basis(i)% EHSymbol//OPT_basis(i)% residue
+    
+        ! find different (EHSymbol,residue) pairs ... 
+        if( .NOT. any( string(1:i-1) == string(i) ) ) then
+    
+             If( any( GA% EHSymbol == OPT_basis(i)% EHSymbol ) ) then
+                 j = j + 1
+                 aux(j) = i
+             end If
+    
+        end If  
+    
+    end do
+    
+    allocate( indx_EHS(j) , source = aux(1:j) )
 
-allocate( indx_EHS(N_of_EHSymbol) )
+    deallocate( aux , string ) 
 
-! locate position of the first appearance of EHS-atoms in OPT_basis
-indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
+    done = .true. 
+end If
+N_of_EHSymbol = size(indx_EHS)
 
+!-------------------------------------------------------------------------------------
 If( present(output) .AND. output=="STDOUT" ) then
 
     Print*,""

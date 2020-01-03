@@ -403,13 +403,16 @@ type(structure) , intent(in) :: a
 type(STO_basis) , intent(in) :: basis(:)
 
 !local variables ...
-integer              :: i , j , k
-character(16)        :: flag
-logical       , save :: done = .false.
+integer                         :: i , j , k
+character(16)                   :: flag
+character(len=:) , allocatable  :: string(:)
+logical          , save         :: done = .false.
 
 If( done ) return
 
 call sleep(3) ! waits 3 seconds ...
+
+allocate( character( len=len(a%MMSymbol)+len(a%residue)) :: string(a%atoms) )
 
 open( unit=12, file='log.trunk/eht_parms.log', status='unknown' )
 
@@ -418,8 +421,10 @@ write(12,*) "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
 
 do i = 1 , a% atoms
 
+    string(i) = a% MMSymbol(i)//a% residue(i)
+
     ! find different (EHSymbol,residue) pairs ... 
-    if( (.NOT. any(a% MMSymbol(1:i-1) == a% MMSymbol(i))) .OR. (.NOT. any(a% residue(1:i-1) == a% residue(i))) ) then
+    if( .NOT. any( string(1:i-1) == string(i) ) ) then
 
         j = minloc( basis% EHSymbol , dim=1 , mask = (basis% EHSymbol == a% MMSymbol(i)) .AND. (basis% residue == a% residue(i)))
 
