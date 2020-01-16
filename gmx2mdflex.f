@@ -858,6 +858,7 @@ do a = 1 , MM % N_of_species
             flag2 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,3)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,1)) )
+
             flag3 = ( adjustl(species(a) % angle_type(n)) == adjustl(funct_angle(k)) )
 
             if ( ( flag1 .OR. flag2 ) .AND. flag3 ) then 
