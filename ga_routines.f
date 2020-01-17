@@ -52,7 +52,7 @@ real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
 integer                         :: mpi_D_R = mpi_double_precision
-integer                         :: i , generation , err , Pop_start , GeneSize
+integer                         :: i , generation , err , Pop_start , GeneSize , label
 logical                         :: done = .false.
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
@@ -151,16 +151,18 @@ do generation = 1 , N_generations
     PopStar(:) = Pop(1,:)
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
+    If( Mutate_Cross .AND. (mod(generation,6) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
+        assign 159 to label
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
+        assign 163 to label
     end If
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
     If( Adaptive_ ) then    
-        Print 159 , generation , N_generations
+        Print label , generation , N_generations
     else 
         Print 160 , generation , N_generations
     EndIf

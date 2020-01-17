@@ -444,6 +444,8 @@ close(unit=12)
 
 done = .true.
 
+call sleep(3) ! waits 3 seconds ...
+
 17 format(t5,I4,t19,A3,t32,A3,t39,A16)
 
 include 'formats.h'
