@@ -282,9 +282,11 @@ implicit none
 
  wv_FMO = transpose(h_FMO)
 
- ALLOCATE(Dual%L(N,N) , source = wv_FMO) 
- ALLOCATE(Dual%R(N,N)) 
- CALL symm( s_FMO , h_FMO , Dual%R )
+ If( driver == "slice_AO" ) then 
+     ALLOCATE(Dual%L(N,N) , source = wv_FMO) 
+     ALLOCATE(Dual%R(N,N)) 
+     CALL symm( s_FMO , h_FMO , Dual%R )
+ end IF
 
  DeAllocate( s_FMO , h_FMO , dumb_S )
 

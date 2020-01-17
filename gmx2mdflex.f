@@ -428,6 +428,8 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
         end where   
     end do
 
+    ! conversion 
+    ! factor1 = 1.0d26      <== Factor used to correct units read from Gromacs
     ! GAFF  vs  GMX  LJ parameters:
     ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
@@ -857,6 +859,7 @@ do a = 1 , MM % N_of_species
             flag2 = ( adjustl(species(a) % atom(species(a) % angs(n,1)) % MMSymbol) == adjustl(AngleSymbols(k,3)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,2)) % MMSymbol) == adjustl(AngleSymbols(k,2)) ) .AND. &
                     ( adjustl(species(a) % atom(species(a) % angs(n,3)) % MMSymbol) == adjustl(AngleSymbols(k,1)) )
+
             flag3 = ( adjustl(species(a) % angle_type(n)) == adjustl(funct_angle(k)) )
 
             if ( ( flag1 .OR. flag2 ) .AND. flag3 ) then 

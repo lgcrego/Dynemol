@@ -506,7 +506,7 @@ if( read_velocities ) then
     if( preview ) CALL convert_NAMD_velocities( MM% N_of_atoms )
 
     inquire(file="velocity_MM.out", EXIST=exist)
-    if (exist) STOP ' >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt] << '
+    if (exist .AND. resume) STOP ' >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt] << '
 
     inquire(file="velocity_MM.inpt", EXIST=exist)
     if (exist) then

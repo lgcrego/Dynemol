@@ -403,10 +403,10 @@ type(structure) , intent(in) :: a
 type(STO_basis) , intent(in) :: basis(:)
 
 !local variables ...
-integer                         :: i , j , k
-character(16)                   :: flag
+integer              :: i , j , k
+character(16)        :: flag
 character(len=:) , allocatable  :: string(:)
-logical          , save         :: done = .false.
+logical       , save :: done = .false.
 
 If( done ) return
 
