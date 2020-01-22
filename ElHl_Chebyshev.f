@@ -61,7 +61,7 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , M , N
+integer                         :: N
 type(R_eigen)                   :: UNI , AO
 
 N = size(basis)
