@@ -34,10 +34,10 @@
 !==================================================
 use Matrix_math
 implicit none
-type(structure)  , intent(in)    :: system
-type(STO_basis)  , intent(in)    :: basis(:)
-type(R_eigen)    , intent(inout) :: QM
-integer          , optional , intent(in) :: it
+type(structure)             , intent(in)    :: system
+type(STO_basis)             , intent(in)    :: basis(:)
+type(R_eigen)               , intent(inout) :: QM
+integer          , optional , intent(in)    :: it
 
 
 ! local variables ...

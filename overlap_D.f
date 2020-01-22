@@ -54,25 +54,18 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
     select case (purpose)
         case('FMO')
-            CALL Build_Overlap_Matrix(system, basis, system, basis, S_matrix)
+            CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
             CALL Generate_Periodic_Structure(system, basis, pbc_system, pbc_basis)
             CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
-            CALL Deallocate_Structures(pbc_system)
-            if (allocated(pbc_basis)) then
-                deallocate(pbc_basis)
-            end if
 
         case('Pulay') ! <== used by diagnostic through Hellman_Feynman_Pulay function
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure(system, pbc_system, pbc_basis)
             CALL Pulay_Overlap(system, basis, pbc_system, pbc_basis, S_matrix, site)
-            CALL Deallocate_Structures(pbc_system)
-            if (allocated(pbc_basis)) then
-                deallocate(pbc_basis)
-            end if
 
         case default
             ! Overlap Matrix S(a,b) of the system
@@ -93,17 +86,17 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
             NonZero  = count(S_matrix /= 0.d0)
             Sparsity = float(NonZero) / float(S_size ** 2)
 
-            CALL Deallocate_Structures(pbc_system)
-            if (allocated(pbc_basis)) then
-                deallocate(pbc_basis)
-            end if
-
             if (verbose) then
                 Print 69, Sparsity
                 Print 55
                 print*, '>> Overlap done <<'
             end if
     end select
+
+    CALL Deallocate_Structures(pbc_system)
+    if (allocated(pbc_basis)) then
+        deallocate(pbc_basis)
+    end if
 
     include 'formats.h'
 end subroutine OVERLAP_MATRIX
