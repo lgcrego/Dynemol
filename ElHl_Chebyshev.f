@@ -62,7 +62,7 @@ integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: N
-type(R_eigen)                   :: UNI , AO
+type(R_eigen)   :: AO
 
 N = size(basis)
 
@@ -84,21 +84,19 @@ else
     h0(:,:) = Build_Huckel( basis , S_matrix )
 end If
 
-CALL LocalEigenSystem( h0 , S_matrix , UNI )
-
 ! for a rigid structure once is enough ...
 If( driver == 'q_dynamics' ) necessary_ = .false.
 
 !========================================================================
 ! prepare electron state ...
-  CALL FMO_analysis( system , basis, UNI , AO=AO , instance="E" )
+  CALL FMO_analysis( system , basis, AO=AO , instance="E" )
 
   AO_bra(:,1) = dcmplx(AO%L(:,1))
   AO_ket(:,1) = dcmplx(AO%R(:,1))
   deallocate( AO%L , AO%R )
 
 ! prepare hole state ...
-  CALL FMO_analysis( system , basis, UNI , AO=AO , instance="H" )
+  CALL FMO_analysis( system , basis, AO=AO , instance="H" )
   
   AO_bra(:,2) = dcmplx(AO%L(:,2))
   AO_ket(:,2) = dcmplx(AO%R(:,2))
@@ -449,60 +447,6 @@ deallocate( H_prime )
 QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
 end subroutine preprocess_from_restart
-!
-!
-!
-!==========================================
- subroutine LocalEigenSystem( h , S , UNI )
-!==========================================
-implicit none
-real*8        , intent(in)  :: h(:,:)
-real*8        , intent(in)  :: S(:,:)
-type(R_eigen) , intent(out) :: UNI
-
-! local variables ...
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , dumb_S(:,:) , dumb_h(:,:)
-integer               :: i , j , N , info
-
-N = size(h(:,1))
-
-! should not mess with h0 and S_matrix
-Allocate( dumb_h(N,N) , source = h )
-Allocate( dumb_S(N,N) , source = S )
-
-Allocate( UNI%erg(N) )
-
-CALL SYGVD( dumb_h , dumb_S , UNI%erg , 1 , 'V' , 'L' , info )
-If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in ElHl_Chebyshev.f '
-
-!---------------------------------------------------
-! ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-!
-! RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-!
-! normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
-!---------------------------------------------------
-
-Allocate( Lv(N,N) )
-Allocate( Rv(N,N) )
-
-Lv = dumb_h
-Deallocate(dumb_h , dumb_S)
-
-ALLOCATE(UNI%L(N,N))
-! eigenvectors in the rows of UNI%L
-UNI%L = transpose(Lv)
-
-! Rv = S * Lv ...
-call Multiply( S_matrix, Lv, Rv )
-
-ALLOCATE(UNI%R(N,N))
-! eigenvectors in the columns of UNI%R
-UNI%R = Rv
-
-Deallocate( Lv , Rv )
-
-end subroutine LocalEigenSystem
 !
 !
 !

@@ -51,7 +51,6 @@
 ! local variables ...
  type(structure)               :: FMO_system
  type(STO_basis) , allocatable :: FMO_basis(:)
- type(R_eigen)                 :: dummyFMO
  integer                       :: i
  character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
@@ -100,7 +99,7 @@
 
      ! Psi_0 in local representation ... 
      ! used at Chebyshev propagator ...
-     CALL projector( dummyFMO , UNI , basis%fragment , fragment , instance = 'AO' )
+     CALL projector( basis_fragment = basis%fragment , fragment = fragment , instance = 'AO' )
 
      allocate( AO%L(UNI_size,2) , AO%R(UNI_size,2) )
 
@@ -184,85 +183,96 @@ implicit none
  subroutine projector( FMO, UNI, basis_fragment, fragment , instance )
 !=====================================================================
  implicit none
- type(R_eigen)    , intent(out) :: FMO
- type(R_eigen)    , intent(in)  :: UNI
- character(len=1) , intent(in)  :: basis_fragment(:)
- character(len=1) , intent(in)  :: fragment
- character(len=2) , intent(in)  :: instance
+ type(R_eigen)    , optional , intent(out) :: FMO
+ type(R_eigen)    , optional , intent(in)  :: UNI
+ character(len=1)            , intent(in)  :: basis_fragment(:)
+ character(len=1)            , intent(in)  :: fragment
+ character(len=2)            , intent(in)  :: instance
 
 ! local variables ...
  integer :: i , j , k
  real*8  :: check
+ real*8  , allocatable :: aux(:,:)
 
- UNI_size = size( UNI%R  (:,1) )   ! <== basis size of the entire system
- FMO_size = size( Dual%R (:,1) )   ! <== basis size of the FMO system
+ UNI_size = size( basis_fragment )   ! <== basis size of the entire system
+ FMO_size = size( Dual%R (:,1)   )   ! <== basis size of the FMO system
 
- !--------------------------------------------------------------------------
- ! cast the FMO eigenvectors in UNI eigen-space
- !--------------------------------------------------------------------------
- allocate( tmp%L(UNI_size,FMO_size), source=D_zero )
- allocate( tmp%R(UNI_size,FMO_size), source=D_zero )
- k = 0 
- do i = 1 , UNI_size
-    if( basis_fragment(i) == fragment ) then
+ select case ( instance ) 
 
-        k = k + 1
-        tmp%R(i,:) = Dual%R(k,:)
-        tmp%L(i,:) = Dual%L(:,k) 
+        case('MO') 
 
-    end if
- end do
- ! tmp is deallocated ...
- CALL move_alloc( tmp%R , Dual%R )
- CALL move_alloc( Tmp%L , Dual%L )
+                 !--------------------------------------------------------------------------
+                 ! cast the FMO eigenvectors in UNI eigen-space
+                 !--------------------------------------------------------------------------
+                 allocate( aux(FMO_size,UNI_size), source=D_zero )
+                 k = 0 
+                 do i = 1 , UNI_size
+                    if( basis_fragment(i) == fragment ) then
 
- !-------------------------------------------------------------------------
- ! isolated FMO eigenfunctions in MO basis for use in AO/MO propagator
- ! orbitals are stored in the "ROWS of FMO%L" and in the "COLUMNS of FMO%R"
- !-------------------------------------------------------------------------
- Allocate( FMO%erg(FMO_size)          , source=D_zero )
- Allocate( FMO%L  (FMO_size,UNI_size) , source=D_zero )
- Allocate( FMO%R  (UNI_size,FMO_size) , source=D_zero )
+                        k = k + 1
+                        aux(k,:) = UNI%R(i,:)
 
- CALL gemm( UNI%L , Dual%R , FMO%R , 'N' , 'N' )
- CALL gemm( Dual%L , UNI%R , FMO%L , 'T' , 'N' )
+                    end if
+                 end do
 
- forall(k=1:FMO_size) FMO%erg(k) = sum(FMO%L(k,:)*UNI%erg(:)*FMO%R(:,k))
+                 !-------------------------------------------------------------------------
+                 ! isolated FMO eigenfunctions in MO basis for use in AO/MO propagator
+                 ! orbitals are stored in the "ROWS of FMO%L" and in the "COLUMNS of FMO%R"
+                 !-------------------------------------------------------------------------
+                 Allocate( FMO%erg(FMO_size)          , source=D_zero )
+                 Allocate( FMO%L  (FMO_size,UNI_size) , source=D_zero )
+                 Allocate( FMO%R  (UNI_size,FMO_size) , source=D_zero )
 
- FMO% Fermi_state = Dual% Fermi_state
+                 CALL gemm( Dual%L , aux  , FMO%L , 'N' , 'N' )
 
+                 FMO%R = transpose(FMO%L)
+
+                 deallocate( aux )
+
+                 forall(k=1:FMO_size) FMO%erg(k) = sum(FMO%L(k,:)*UNI%erg(:)*FMO%R(:,k))
+
+                 FMO% Fermi_state = Dual% Fermi_state
+
+                 check = 0.d0
+                 do i = 1 , FMO_size
+                    ! %L*%R = A^T.S.C.C^T.S.A = 1
+                    check = check + sum( FMO%L(i,:)*FMO%R(:,i) ) 
+                 end do
+
+                 if( dabs(check-FMO_size) < low_prec ) then
+                     Print*, '>> projection done <<'
+                 else
+                     Print 58 , check 
+                     Print*, '---> problem in projector <---'
+                 end if
+              
+        case('AO') 
+
+                 !-------------------------------------------------------------------------
+                 ! isolated FMO eigenfunctions in AO basis for use in Taylor propagator
+                 ! orbitals are stored in the "ROWS of AO%L" and in the "COLUMNS of AO%R"
+                 !-------------------------------------------------------------------------
+
+                 allocate( aux(UNI_size,FMO_size), source=D_zero )
+                 k = 0
+                 do i = 1 , UNI_size
+                    if( basis_fragment(i) == fragment ) then
+
+                        k = k + 1
+                        aux(i,:) = Dual%L(:,k) 
+
+                    end if
+                 end do
+                 ! aux is deallocated ...
+                 CALL move_alloc( aux , Dual%L )
+
+                 allocate( tmp%L(FMO_size,UNI_size) , source=transpose(Dual%L) )
+                 allocate( tmp%R(UNI_size,FMO_size) , source=Dual%L            )
+
+ end select
+               
  deallocate( Dual%L , Dual%R , Dual%erg )
 
- check = 0.d0
- do i = 1 , FMO_size
-    ! %L*%R = A^T.S.C.C^T.S.A = 1
-    check = check + sum( FMO%L(i,:)*FMO%R(:,i) ) 
- end do
-
- if( dabs(check-FMO_size) < low_prec ) then
-     Print*, '>> projection done <<'
- else
-     Print 58 , check 
-     Print*, '---> problem in projector <---'
- end if
-              
- !-------------------------------------------------------------------------
- ! isolated FMO eigenfunctions in AO basis for use in Taylor propagator
- ! orbitals are stored in the "ROWS of AO%L" and in the "COLUMNS of AO%R"
- !-------------------------------------------------------------------------
- If( instance == 'AO' ) then
-       
-     allocate( tmp%L(FMO_size,UNI_size) , source=D_zero )
-     allocate( tmp%R(UNI_size,FMO_size) , source=D_zero )
-     
-     CALL gemm( FMO%L , UNI%L , tmp%L , 'N' , 'N' )
-     CALL gemm( UNI%L , FMO%R , tmp%R , 'T' , 'N' )
-
-     !not necessary in Taylor ...
-     deallocate( FMO%L , FMO%R , FMO%erg )
-
- end If
-               
  include 'formats.h'
 
  end subroutine projector
