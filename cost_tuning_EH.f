@@ -50,16 +50,16 @@ mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 50, 49, 6.4937d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 51, 49, 7.9044d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 50, 48, 8.3523d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 49, 48, 1.8585d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 51, 50, 1.4106d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 48, 47, 0.0552d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 47, 46, 0.1978d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 52, 51, 0.1260d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 53, 51, 0.1540d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 48, 46, 0.2531d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 50, 49, 6.4937 )
+eval(me) = MO_erg_diff( OPT_UNI, 51, 49, 7.9044 )
+eval(me) = MO_erg_diff( OPT_UNI, 50, 48, 8.3523 )
+eval(me) = MO_erg_diff( OPT_UNI, 49, 48, 1.8585 )
+eval(me) = MO_erg_diff( OPT_UNI, 51, 50, 1.4106 )
+eval(me) = MO_erg_diff( OPT_UNI, 48, 47, 0.0552 )
+eval(me) = MO_erg_diff( OPT_UNI, 47, 46, 0.1978 )
+eval(me) = MO_erg_diff( OPT_UNI, 52, 51, 0.1260 )
+eval(me) = MO_erg_diff( OPT_UNI, 53, 51, 0.1540 )
+eval(me) = MO_erg_diff( OPT_UNI, 48, 46, 0.2531 )
 !----------------------------------------------------------------------------------------------
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2

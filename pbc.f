@@ -279,7 +279,9 @@ end subroutine Generate_Periodic_DPs
 
  do k = 1 , size(basis)
 
-    where( (pbc_basis%EHSymbol == basis(k)%EHSymbol) .AND. (pbc_basis%l == basis(k)%l) )
+    where( (pbc_basis%EHSymbol == basis(k)%EHSymbol) &
+    .AND.  (pbc_basis%residue  == basis(k)%residue ) &
+    .AND.  (pbc_basis%l        == basis(k)%l)        )
 
         pbc_basis % IP       =  basis(k) % IP    
         pbc_basis % Nzeta    =  basis(k) % Nzeta 

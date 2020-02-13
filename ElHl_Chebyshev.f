@@ -26,16 +26,16 @@ module ElHl_Chebyshev_m
     private
 
 ! module parameters ...
-    integer     , parameter :: order        = 25
-    real*8      , parameter :: error        = 1.0d-12
-    real*8      , parameter :: norm_error   = 1.0d-12
+    integer       , parameter   :: order       = 25
+    real*8        , parameter   :: error       = 1.0d-12
+    real*8        , parameter   :: norm_error  = 1.0d-12
 
 ! module variables ...
-    logical     ,   save          :: first_call_ = .true.
-    real*8      ,   save          :: save_tau(2)
-    real*8, target, allocatable   :: h0(:,:)
-    real*8      ,   allocatable   :: S_matrix(:,:)
-    complex*16  ,   allocatable   :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
+    logical       , save        :: first_call_ = .true.
+    real*8        , save        :: save_tau(2)
+    real*8, target, allocatable :: h0(:,:)
+    real*8        , allocatable :: S_matrix(:,:)
+    complex*16    , allocatable :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
     interface preprocess_ElHl_Chebyshev
         module procedure preprocess_ElHl_Chebyshev
@@ -61,12 +61,9 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: li , M , N , err 
+integer                         :: N , err 
 integer                         :: mpi_D_R = mpi_double_precision
-real*8          , allocatable   :: wv_FMO(:)
-complex*16      , allocatable   :: ElHl_Psi(:,:)
-type(R_eigen)                   :: FMO
-
+type(R_eigen)                   :: AO
 
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
@@ -100,32 +97,27 @@ End If
 If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 !------------------------------------------------------------------------
 
-allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 !========================================================================
 ! prepare electron state ...
-  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="E" )
+  CALL FMO_analysis( system , basis, AO=AO , instance="E" )
 
-  ! place the electron state in Structure's Hilbert space ...
-  li = minloc( basis%indx , DIM = 1 , MASK = basis%El )
-  M  = size(wv_FMO)
-  ElHl_Psi(li:li+M-1,1) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(1) == "el")
-  deallocate( wv_FMO )
-!========================================================================
+  AO_bra(:,1) = dcmplx(AO%L(:,1))
+  AO_ket(:,1) = dcmplx(AO%R(:,1))
+  deallocate( AO%L , AO%R )
+
 ! prepare hole state ...
-  CALL FMO_analysis( system , basis, FMO=FMO , MO=wv_FMO , instance="H" )
-
-  ! place the hole state in Structure's Hilbert space ...
-  li = minloc( basis%indx , DIM = 1 , MASK = basis%Hl )
-  M  = size(wv_FMO)
-  ElHl_Psi(li:li+M-1,2) = merge( dcmplx(wv_FMO(:)) , C_zero , eh_tag(2) == "hl")
-  deallocate( wv_FMO )
+  CALL FMO_analysis( system , basis, AO=AO , instance="H" )
+  
+  AO_bra(:,2) = dcmplx(AO%L(:,2))
+  AO_ket(:,2) = dcmplx(AO%R(:,2))
+  deallocate( AO%L , AO%R  )
 !========================================================================
 
 !==============================================
 ! prepare DUAL basis for local properties ...
 ! DUAL_bra = (C*)^T    ;    DUAL_ket = S*C ...
-  DUAL_bra = dconjg( ElHl_Psi )
-  call op_x_ket( DUAL_ket, S_matrix , ElHl_Psi )
+  DUAL_bra = AO_bra
+  call op_x_ket( DUAL_ket, S_matrix , AO_ket )
 !==============================================
 
 !==============================================
@@ -133,14 +125,12 @@ allocate( ElHl_Psi( N , n_part ) , source=C_zero )
 ! Psi_bra = C^T*S       ;      Psi_ket = C ...
   allocate( Psi_t_bra(N,n_part) )
   allocate( Psi_t_ket(N,n_part) )
-  call bra_x_op( Psi_t_bra, ElHl_Psi , S_matrix ) 
-  Psi_t_ket = ElHl_Psi
+  call bra_x_op( Psi_t_bra, AO_bra , S_matrix ) 
+  Psi_t_ket = AO_ket
 !==============================================
 
 !==============================================
 ! preprocess stuff for EhrenfestForce ...
-  AO_bra = ElHl_Psi 
-  AO_ket = ElHl_Psi 
   CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
 !==============================================
 
