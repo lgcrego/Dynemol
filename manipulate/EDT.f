@@ -58,8 +58,8 @@ write(*,'(2/a)',advance='no') "residue # of the reference (use zero (0) to keep 
 read(*,*) nresid
 
 ! finalize copy ...
-system % atom(copies) % fragment = "F"
-system % atom(copies) % nresid   = system % atom(copies) % nresid + nresid
+system % atom(copies) % fragment = "Z"
+system % atom(copies) % nresid   = nresid + nresid
 system % N_of_atoms              = New_N_of_atoms
 
 deallocate( copies )
