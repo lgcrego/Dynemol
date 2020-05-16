@@ -59,7 +59,7 @@ read(*,*) nresid
 
 ! finalize copy ...
 system % atom(copies) % fragment = "Z"
-system % atom(copies) % nresid   = nresid + nresid
+system % atom(copies) % nresid   = nresid
 system % N_of_atoms              = New_N_of_atoms
 
 deallocate( copies )
