@@ -159,7 +159,10 @@ do i = 1 , size(EH_atom)
     flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
     flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
 
-    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in opt_eht_parms.input ; check Nzeta parameter <<<"
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+        CALL system("sed '11i>>> error in opt_eht_parms.input ; check Nzeta parameter <<<' warning.signal |cat")
+        STOP 
+    end If
  
 end do
 
