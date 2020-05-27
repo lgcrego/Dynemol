@@ -1,5 +1,5 @@
 module MD_read_m
- 
+
     use constants_m
     use atomicmass
     use MM_input       
@@ -505,7 +505,10 @@ if( read_velocities ) then
     if( preview ) CALL convert_NAMD_velocities( MM% N_of_atoms )
 
     inquire(file="velocity_MM.out", EXIST=exist)
-    if (exist .AND. resume) STOP ' >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt] << '
+    if (exist .AND. resume) then
+        CALL system("sed '11i >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt]   or   rm velocity_MM.out << ' warning.signal |cat")
+        STOP 
+    end If
 
     inquire(file="velocity_MM.inpt", EXIST=exist)
     if (exist) then
@@ -521,7 +524,8 @@ if( read_velocities ) then
 elseif( resume ) then 
 
        ! read_velocity flag = F_
-        STOP ' >> read_velocity = .false. in parametes_MM.f, must be true in resume simulations ! << '
+        CALL system("sed '11i >> read_velocity = .false. in parametes_MM.f, must be true in resume simulations ! << ' warning.signal |cat")
+        STOP 
 
 end if
 

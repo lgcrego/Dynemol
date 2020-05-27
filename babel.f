@@ -1,5 +1,6 @@
  module Babel_m
 
+    use IFPORT 
     use type_m                  
     use MM_input                , only : MM_input_format
     use parameters_m            , only : file_type,             &
@@ -189,6 +190,7 @@ integer             :: file_err , io_err
 character(len=5)    :: MMSymbol_char
 character(len=6)    :: keyword
 type(universe)      :: system        
+logical             :: TorF
 
 OPEN(unit=3 , file='input.pdb',status='old' , iostat=file_err , err=11)
 
@@ -208,7 +210,10 @@ do
     read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
     if ( keyword == "MASTER" ) exit
     N_of_atoms = N_of_atoms + 1
-    if ( N_of_atoms > 20000 ) stop " *** reading of input.pdb halted forcibly ; ckeck input.pdb file format *** "
+    if ( N_of_atoms > 20000 ) then
+       TorF = systemQQ("sed '11i *** reading of input.pdb halted forcibly ; ckeck input.pdb file format ***  ' warning.signal |cat")
+       STOP 
+    end if
 end do
 system%N_of_atoms = N_of_atoms
 
@@ -299,14 +304,17 @@ end subroutine Read_from_PDB
  integer           :: N_of_atoms , N_of_elements , N_of_cluster_atoms , N_of_Configurations
  character(len=1)  :: TorF , fragment
  character(len=3)  :: residue
- logical           :: flag
+ logical           :: flag , TF_flag
 
  real*8           , allocatable :: xyz(:,:)
  integer          , allocatable :: atom_No(:)
  character(len=2) , allocatable :: element(:) , symbol(:)
 
  open(unit = 3, file = 'poscar.in', status = 'old', action = 'read', iostat = openstatus)
- if (openstatus > 0) stop " *** Cannot open the file poscar.in *** "
+ if (openstatus > 0) then
+    TF_flag = systemQQ("sed '11i *** Cannot open the file poscar.in *** ' warning.signal |cat")
+    STOP 
+ end if
 
 ! start reading the structure characteristics
  read(3,*) System_Characteristics
@@ -418,9 +426,13 @@ real*8       :: time_1 , time_2 , delta_t
 character(1) :: test
 character(4) :: keyword
 character(5) :: MMSymbol_char
+logical      :: TorF
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
-if (openstatus > 0) stop " *** Cannot open the file frames.pdb *** "
+if (openstatus > 0) then
+    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' warning.signal |cat")
+    STOP 
+end if
 
 read(unit = 31, fmt = 43, iostat = inputstatus) System_Characteristics
 
@@ -637,10 +649,14 @@ character(1)  :: idx
 integer       :: openstatus , inputstatus , atoms , i , j , k , model 
 integer       :: j1 , j2 , n_residues 
 character(1)  :: fragment
-character(3)  :: residue
+character(3)  :: residue 
+logical       :: TorF
 
 open(unit = 13, file = 'XYZ.trj', status = 'old', action = 'read', iostat = openstatus)
-if( openstatus > 0 ) stop '*** Cannot open the file XYZ.trj ***'
+if( openstatus > 0 ) then
+    TorF = systemQQ("sed '11i *** Cannot open the file XYZ.trj *** ' warning.signal |cat")
+    STOP 
+end if
 
 ! read the number of models ...
 model = 0
@@ -767,9 +783,13 @@ real*8         :: dumb_xyz(3) , dumb_box(3)
 character(4)   :: keyword
 character(5)   :: MMSymbol_char
 type(universe) :: system
+logical        :: TorF
 
-open(unit = 31, file = 'frames-MM.pdb', status = 'old', action = 'read', iostat = openstatus)
-if (openstatus > 0) stop " *** Cannot open the file frames-MM.pdb *** "
+open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
+if (openstatus > 0) then
+    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' warning.signal |cat")
+    STOP 
+end if
 
 read(unit = 31, fmt = 43, iostat = inputstatus) system% System_Characteristics 
 
