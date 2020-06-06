@@ -406,6 +406,7 @@ type(STO_basis) , intent(in) :: basis(:)
 integer              :: i , j , k
 character(16)        :: flag
 character(len=:) , allocatable  :: string(:)
+logical              :: TorF
 logical       , save :: done = .false.
 
 If( done ) return
@@ -440,9 +441,14 @@ do i = 1 , a% atoms
     end if
 
 end do
+
+write(12,*) ""
+
 close(unit=12)
 
 done = .true.
+
+If( OPT_parms ) TorF = systemQQ("cat opt_eht_parms.input >> log.trunk/eht_parms.log")
 
 call sleep(3) ! waits 3 seconds ...
 
