@@ -46,6 +46,8 @@ CALL Read_Structure
 
 If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_Environment
 
+If( master ) CALL dump_driver_parameters_and_tuning
+
 select case ( driver )
 
     case ( "q_dynamics" )
