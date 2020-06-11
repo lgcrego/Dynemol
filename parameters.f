@@ -35,7 +35,6 @@ logical :: dynamic
 ! ACTION	flags
 !
   DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
-!  DRIVER         = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -195,7 +194,8 @@ End If
 If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
     stop ">>> conflict between QMMM and HFP_Forces; execution halted, check parameters.f <<<"
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
-    stop ">>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<"
+    CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<' warning.signal |cat")
+    stop 
 end if
 
 If ( driver == "slice_Cheb" .AND. electron_state*hole_state == 0 )  &
