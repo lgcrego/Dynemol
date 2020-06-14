@@ -44,7 +44,8 @@ contains
  type(universe)             , intent(inout) :: System
 
 ! local variables ... 
-integer         :: j , n_residues
+integer :: j , n_residues
+logical :: TorF
 
 Unit_Cell%atoms = System%N_of_Atoms
 
@@ -108,7 +109,10 @@ end select
 if( MM_input_format == "GMX" ) CALL Sort_nr( unit_cell )
 
 ! nr indices must start with 1 ...
-if( any(unit_cell % nr == 0) ) stop ">> halted: check input.pdb, nr indice = 0 found <<"
+if( any(unit_cell % nr == 0) ) then
+    TorF = systemQQ("sed '11i >> halted: check input.pdb, nr indice = 0 found <<  ' warning.signal |cat")
+    STOP 
+end if 
 
 ! unit_cell dimensions ...
 unit_cell % T_xyz =  System % box
