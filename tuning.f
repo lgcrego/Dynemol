@@ -135,18 +135,22 @@ If( any(a% El) ) then      ! <== first priority ...
     where( a% El ) a% fragment = "D"
 else If( any(a% Hl) ) then ! <== second priority, only for cationic systems ...
     where( a% Hl ) a% fragment = "A"
-else
-    if(.NOT. static .AND. electron_state /= 0 ) &
-    stop ">> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<"
+else If(.NOT. static .AND. electron_state /= 0 ) then
+        CALL system("sed '11i>> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<' warning.signal |cat")
+        stop 
 end If
 
 propagate_el = any(a% El) .EQV. (electron_state /= 0)
-If( .not. propagate_el ) &
-stop ">> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<"
+If( .not. propagate_el ) then
+        CALL system("sed '11i>> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<' warning.signal |cat")
+        stop 
+end If
 
 propagate_hl = any(a% Hl) .EQV. (hole_state /= 0)
-If( .not. propagate_hl ) &
-stop ">> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<"
+If( .not. propagate_hl ) then
+        CALL system("sed '11i>> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<' warning.signal |cat")
+        stop 
+end If
 
 end subroutine warnings
 !
