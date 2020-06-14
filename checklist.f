@@ -131,8 +131,8 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
             write(10,'(t36,"temperature = " , A6)') adjustl(number_string)
             write( number_string , '(F8.5)' ) thermal_relaxation_time
             write(10,'(t36,"relax time  = " , A7)') adjustl(number_string)
-            write(10,'(t36,"read_velocities :" , A10)') merge(".true. <==",".false.   ",read_velocities)           
         end If
+        write(10,'(t36,"read_velocities :" , A10)') merge(".true. <==",".false.   ",read_velocities)           
     end IF
     write( number_string , '(F6.2)' ) cutoff_radius
     write(10,'(" Wolf_cutoff     : " , A6)') adjustl(number_string)
