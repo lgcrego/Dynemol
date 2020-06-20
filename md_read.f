@@ -530,10 +530,20 @@ elseif( resume ) then
 end if
 
 ! check list of input data ...
-If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) &
-stop ' >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check parameters_MM.f <<<' 
-If( Unit_Cell%atoms /= MM% N_of_atoms) &
-stop ' >>> error: Unit_Cell%atoms /= MM% N_of_atoms <<<' 
+If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
+    CALL system("sed '11i >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check parameters_MM.f <<<' warning.signal |cat")
+    STOP 
+end If
+
+If( Unit_Cell%atoms /= MM% N_of_atoms ) then
+    CALL system("sed '11i >>> error: Unit_Cell%atoms /= MM% N_of_atoms <<<' warning.signal |cat")
+    STOP 
+end If
+
+If( maxval(atom%nr) < MM%N_of_species ) then
+    CALL system("sed '11i >>> # of residues must be (>=) # of species; check input.pdb and parameters_MM.f <<<' warning.signal |cat")
+    STOP 
+end If
 
 end subroutine Structure_2_MD
 !
