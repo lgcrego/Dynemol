@@ -104,7 +104,7 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
     write(10,'(" t_f             : " , A12)') adjustl(number_string)
     write(10,'(" n_t             : " ,  I0)') n_t            
 
-    if( (DRIVER(1:5) == "slice") .or.  DRIVER == "q_dynamics" ) then
+    if( (DRIVER(1:5) == "slice") .or.  DRIVER == "q_dynamics" .or. DRIVER == "avrg_confgs") then
         write(10,'(" CT_dump_step    : " , I0)') CT_dump_step   
         write(10,'(" n_part          : " , I0)') n_part         
         write(10,'(" hole_state      : " , I0)') hole_state     
