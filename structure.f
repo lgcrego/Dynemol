@@ -89,7 +89,7 @@ select case( file_type )
 
 end select
 
-Print 70, System_Characteristics
+If( master ) Print 70, System_Characteristics
 
 include 'formats.h'
 
@@ -188,6 +188,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
 
+ extended_cell % N_of_electrons = sum( extended_cell % Nvalen , extended_cell % QMMM == "QM" )
  extended_cell % N_of_Solvent_Molecules = (2*nnx+1) * (2*nny+1) * unit_cell % N_of_Solvent_Molecules
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
@@ -196,7 +197,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 
  If( OPT_parms ) CALL Include_OPT_parameters( extended_cell )
 
- if( frame == 1 ) CALL diagnosis( Extended_Cell )
+ if( frame == 1 .AND. master ) CALL diagnosis( Extended_Cell )
 
  include 'formats.h'
 
@@ -297,7 +298,7 @@ system% BasisPointer = 0
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
 
- CALL EH_parm_diagnosis( system , basis )
+ If( master ) CALL EH_parm_diagnosis( system , basis )
 
 ! STO paramaters for generating Gaussian Cube Files (must be in a.u.) ... 
  If( GaussianCube .AND. (.NOT. done) ) then
@@ -323,7 +324,7 @@ system% BasisPointer = 0
  subroutine Diagnosis( a )
 !=========================
  implicit none
- type(structure) , intent(inout) :: a
+ type(structure) , intent(in) :: a
 
 ! local variables ...
 integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
@@ -336,7 +337,6 @@ N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
 Print 120 , N_of_orbitals                       
 
 ! total number of electrons ...
-a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
 Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
