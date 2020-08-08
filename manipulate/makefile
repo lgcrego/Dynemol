@@ -4,7 +4,7 @@ SUFFIX=.f
 
 FC=ifort
 SAFE = -g -traceback
-FFLAGS = -xhost -openmp -fpp -O3 -free $(SAFE)
+FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
 
 LIB    =  -liomp5
 INCS   = 
@@ -19,7 +19,7 @@ SOURCE = types_m.o \
 		 parms.o \
 		 tuning.o \
 		 topol.o \
-		 amber.o \
+                 amber.o \
 		 RW.o \
 		 gmx.o \
 		 EDT.o \
@@ -28,6 +28,7 @@ SOURCE = types_m.o \
 		 elastic.o \
 		 correlation.o \
 		 stat.o \
+         RW_driver.o \
 		 trj.o \
 		 multiple_trj.o \
 		 occupation_bin.o \

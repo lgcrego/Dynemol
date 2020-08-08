@@ -2,6 +2,7 @@ module Trajectory_routines
 
 use types_m
 use constants_m
+use RW_driver           , only : WritingRoutines
 use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo , Pack_Residues , Identify_Residues
 use RW_routines         , only : view_XYZ , Initialize_System
 use Function_routines   , only : ad_hoc_tuning
@@ -96,6 +97,16 @@ do
             sys%Surface_Characteristics = trj(1)%Surface_Characteristics
 
             deallocate(trj)
+
+            write(*,'(/a)',advance='no') ' Save Frame (y,n) : [y] '
+            read (*,'(a)') YorN
+
+            If( YorN /= "n" ) then 
+                call WritingRoutines( sys ) 
+                stop
+            else 
+                return
+            End If
 
         case( 4 )
 

@@ -16,6 +16,7 @@ use Crystal_routines
 use Occupation
 use Aminoacids                 
 use Amber_routines
+use RW_driver       
 
 implicit none
 
@@ -199,53 +200,8 @@ structure%N_of_atoms = size(structure%atom)
 !-----------------------------------------------------------
 !       Writing the output file
 
-CALL system( "clear" )
-
-CALL diagnosis( structure )
-
-write(*,'(/a)') '>>>    Writing the output file     <<<'
-
-write(*,'(/a)') '1 : XYZ format'
-write(*,'(/a)') '2 : Yaehmop format '
-write(*,'(/a)') '3 : POSCAR format '
-write(*,'(/a)') '4 : PDB format '
-write(*,'(/a)') '5 : Urht format '
-write(*,'(/a)') '6 : DONE '
-write(*,'(/a)',advance='no') '>>>   '
-read (*,'(a)') Writing_Method
-
-select case ( Writing_Method )
-
-    case ('1')
-        CALL View_XYZ( structure )
-
-    case ('2')
-        CALL View_Yaehmop( structure )
-        CALL system("tbind seed")
-
-    case ('3')
-        CALL Save_POSCAR( structure )
-       
-    case ('4')
-        CALL Save_GROMACS( structure )
-
-    case ('5')
-        CALL Save_MD_Urht( structure )
-
-    case default
-        
-end select
-
-! total number of atoms of given type ...
-If( Writing_Method /= '3' ) then
-    do AtNo = 1 , size(atom)
-
-        N_of_atom_type = count(structure % atom % AtNo == AtNo)
-          
-        If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo) % symbol , N_of_atom_type
-
-    end do
-end If
+        call WritingRoutines( structure ) 
+!-----------------------------------------------------------
 
 121   FORMAT(1x,A2,' atoms  = ',I5)
 122   FORMAT(1x,A34,I6)
