@@ -3,7 +3,6 @@
     use IFPORT
     use type_m
     use constants_m
-    use MPI_definitions_m           , only : master
     use parameters_m                , only : file_type ,                &
                                              file_format ,              &
                                              nnx , nny ,                &
@@ -90,7 +89,7 @@ select case( file_type )
 
 end select
 
-If( master ) Print 70, System_Characteristics
+Print 70, System_Characteristics
 
 include 'formats.h'
 
@@ -189,7 +188,6 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! create_&_allocate Extended_Cell%list_of_fragments ...     
  CALL Identify_Fragments( Extended_Cell )    
 
- extended_cell % N_of_electrons = sum( extended_cell % Nvalen , extended_cell % QMMM == "QM" )
  extended_cell % N_of_Solvent_Molecules = (2*nnx+1) * (2*nny+1) * unit_cell % N_of_Solvent_Molecules
 
  extended_cell%T_xyz(1) = (2*nnx+1)*unit_cell%T_xyz(1)
@@ -198,7 +196,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 
  If( OPT_parms ) CALL Include_OPT_parameters( extended_cell )
 
- if( frame == 1 .AND. master ) CALL diagnosis( Extended_Cell )
+ if( frame == 1 ) CALL diagnosis( Extended_Cell )
 
  include 'formats.h'
 
@@ -299,7 +297,7 @@ system% BasisPointer = 0
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
 
- If( master ) CALL EH_parm_diagnosis( system , basis )
+ CALL EH_parm_diagnosis( system , basis )
 
 ! STO paramaters for generating Gaussian Cube Files (must be in a.u.) ... 
  If( GaussianCube .AND. (.NOT. done) ) then
@@ -325,7 +323,7 @@ system% BasisPointer = 0
  subroutine Diagnosis( a )
 !=========================
  implicit none
- type(structure) , intent(in) :: a
+ type(structure) , intent(inout) :: a
 
 ! local variables ...
 integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
@@ -338,6 +336,7 @@ N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
 Print 120 , N_of_orbitals                       
 
 ! total number of electrons ...
+a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
 Print 140 , a%N_of_electrons
 
 ! total number of atoms ...
@@ -404,6 +403,7 @@ type(STO_basis) , intent(in) :: basis(:)
 
 !local variables ...
 integer              :: i , j , k
+integer              :: checking_atom_count , N_of_EH_atom_type
 character(16)        :: flag
 character(len=:) , allocatable  :: string(:)
 logical              :: TorF
@@ -420,6 +420,8 @@ open( unit=12, file='log.trunk/eht_parms.log', status='unknown' )
 Print*,     "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
 write(12,*) "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
 
+checking_atom_count = 0
+
 do i = 1 , a% atoms
 
     string(i) = a% MMSymbol(i)//a% residue(i)
@@ -431,16 +433,25 @@ do i = 1 , a% atoms
 
         flag = merge( "<== no OPT parms" , "                " , basis(j)%modified == .false. )
 
+        N_of_EH_atom_type = count( (a% MMSymbol == a% MMSymbol(i)) .AND. (a% residue == a% residue(i)) )
+
         do k = 1 , 2
-            write(6*k,17) count(a% MMSymbol == a% MMSymbol(i)) , &
-                                        basis(j)% EHSymbol     , &
-                                        basis(j)% residue      , &
-                                        flag
+            write(6*k,17) N_of_EH_atom_type  , &
+                          basis(j)% EHSymbol , &
+                          basis(j)% residue  , &
+                          flag                               
         end do
+
+        checking_atom_count = checking_atom_count + N_of_EH_atom_type
 
     end if
 
 end do
+
+If ( checking_atom_count /= a%atoms ) then
+    TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' warning.signal |cat")
+    stop
+End If
 
 write(12,*) ""
 
