@@ -403,6 +403,7 @@ type(STO_basis) , intent(in) :: basis(:)
 
 !local variables ...
 integer              :: i , j , k
+integer              :: checking_atom_count , N_of_EH_atom_type
 character(16)        :: flag
 character(len=:) , allocatable  :: string(:)
 logical              :: TorF
@@ -419,6 +420,8 @@ open( unit=12, file='log.trunk/eht_parms.log', status='unknown' )
 Print*,     "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
 write(12,*) "# of atoms  |  EHSymbol  |  residue  |  OPT parms "
 
+checking_atom_count = 0
+
 do i = 1 , a% atoms
 
     string(i) = a% MMSymbol(i)//a% residue(i)
@@ -430,16 +433,25 @@ do i = 1 , a% atoms
 
         flag = merge( "<== no OPT parms" , "                " , basis(j)%modified == .false. )
 
+        N_of_EH_atom_type = count( (a% MMSymbol == a% MMSymbol(i)) .AND. (a% residue == a% residue(i)) )
+
         do k = 1 , 2
-            write(6*k,17) count(a% MMSymbol == a% MMSymbol(i)) , &
-                                        basis(j)% EHSymbol     , &
-                                        basis(j)% residue      , &
-                                        flag
+            write(6*k,17) N_of_EH_atom_type  , &
+                          basis(j)% EHSymbol , &
+                          basis(j)% residue  , &
+                          flag                               
         end do
+
+        checking_atom_count = checking_atom_count + N_of_EH_atom_type
 
     end if
 
 end do
+
+If ( checking_atom_count /= a%atoms ) then
+    TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' warning.signal |cat")
+    stop
+End If
 
 write(12,*) ""
 
