@@ -18,7 +18,7 @@ FC = ifort
 FC_ALL = -xHost -ip -align
 
 # Parallelization flags
-FC_PARALLEL = -openmp -parallel
+FC_PARALLEL = -qopenmp -parallel
 
 # Others flags for each file type *.f, *.F and *.F90
 F_FLAGS =  -O3
