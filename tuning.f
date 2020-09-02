@@ -58,20 +58,15 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "LA2") univ % atom % El = .true.
+where(univ % atom % residue == "BZN") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "LA2") univ % atom % Hl = .true.
+where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
 
-where( univ % atom % residue == "LA1" ) univ % atom % fragment = "a"
-where( univ % atom % residue == "LA3" ) univ % atom % fragment = "b"
-where( univ % atom % residue == "LA4" ) univ % atom % fragment = "c"
-where( univ % atom % residue == "LA5" ) univ % atom % fragment = "e"
-where( univ % atom % residue == "LA6" ) univ % atom % fragment = "f"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -88,6 +83,7 @@ DO i = 1 , size(univ%atom)
 
     select case(univ%atom(i)%residue)
 
+        ! this is water, this is water, this is water ...
         case( 'H2O' , 'WAT' , 'TIP' )
             univ%atom(i)%fragment = 'S'
             univ%atom(i)%solvation_hardcore = 3.d0
