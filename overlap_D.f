@@ -635,13 +635,13 @@ subroutine SPRSIN(S_matrix)
         tmp_ij(i + 1) = k + 1
     end do
 
-    length = tmp_ij(tmp_ij(1) - 1) - 1             ! <== physical size of S_pack and ija
+    length = tmp_ij(tmp_ij(1) - 1) - 1          ! <== physical size of S_pack and ija
     nnz = tmp_ij(tmp_ij(1) - 1) - 2             ! <== number of nonzero elements
 
     ! prepare S_pack and ija for new data
     deallocate( S_pack , ija )
-    allocate(S_pack(length), source = tmp_S)
-    allocate(ija(length), source = tmp_ij)
+    allocate(S_pack(length), source = tmp_S (1:length) )
+    allocate(ija(length)   , source = tmp_ij(1:length) )
 
     NOT_been_here = .false.
 end subroutine SPRSIN

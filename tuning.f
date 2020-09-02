@@ -82,6 +82,7 @@ DO i = 1 , size(univ%atom)
 
     select case(univ%atom(i)%residue)
 
+        ! this is water, this is water, this is water ...
         case( 'H2O' , 'WAT' , 'TIP' )
             univ%atom(i)%fragment = 'S'
             univ%atom(i)%solvation_hardcore = 3.d0
