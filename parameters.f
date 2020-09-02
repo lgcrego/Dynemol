@@ -34,14 +34,14 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_FSSH"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
   Survival       = T_                       
   DP_Moment      = F_                       
-  QMMM           = F_
+  QMMM           = T_
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
@@ -52,12 +52,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <== structure or trajectory
+  file_type    =  "structure"                 ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
@@ -96,18 +96,18 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  5.0d-1                              ! <== final time in PICOseconds
-  n_t  =  1000                                ! <== number of time steps
+  t_f  =  0.50d0                               ! <== final time in PICOseconds
+  n_t  =  100000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 114                        ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 15                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 115                        ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 16                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)

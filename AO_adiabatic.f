@@ -44,8 +44,7 @@ module AO_adiabatic_m
                                              Restart_Sys                      
     use MM_dynamics_m               , only : MolecularMechanics ,             &
                                              preprocess_MM , MoveToBoxCM
-    use Ehrenfest_Builder           , only : EhrenfestForce
-!    use FSSH                        , only : PSE_forces
+    use Ehrenfest_Builder           , only : EhrenfestForce , SH_Force
     use Auto_Correlation_m          , only : MO_Occupation
     use Dielectric_Potential        , only : Environment_SetUp
 
@@ -112,8 +111,8 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
-!        CALL PSE_forces     ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+!        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+        CALL SH_Force( Extended_Cell , ExCell_basis , UNI )
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...

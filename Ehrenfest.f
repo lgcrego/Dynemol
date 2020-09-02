@@ -11,7 +11,7 @@ module Ehrenfest_Builder
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: EhrenfestForce , store_Hprime
+    public :: EhrenfestForce , SH_Force , store_Hprime
 
     private
 
@@ -32,6 +32,75 @@ module Ehrenfest_Builder
     real*8  , parameter :: delta      = 1.d-8
 
 contains
+!
+!
+!
+!==========================================
+ subroutine SH_Force( system , basis , QM )
+!==========================================
+ use MD_read_m              , only  : atom
+ use parameters_m           , only  : electron_state , hole_state
+ implicit none
+ type(structure)            , intent(inout) :: system
+ type(STO_basis)            , intent(in)    :: basis(:)
+ type(R_eigen)              , intent(in)    :: QM
+
+! local variables ... 
+ integer                  :: i , j , nn 
+ integer                  :: PES(2)
+ real*8     , allocatable :: X_(:,:) 
+
+! local parameters ...
+ real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
+ logical , parameter :: T_ = .true. , F_ = .false.
+
+!================================================================================================
+! some preprocessing ...
+!================================================================================================
+PES(1) = electron_state
+PES(2) = hole_state
+
+mm = size(basis)
+nn = n_part
+
+If( .NOT. allocated(F_mtx)  ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
+If( .NOT. allocated(F_vec)  ) allocate( F_vec   (system%atoms)                , source=D_zero )
+If( .NOT. allocated(Kernel) ) then
+    allocate( grad_S  (mm,10) )
+    allocate( Kernel  (mm,mm) , source = D_zero )
+end if
+
+! preprocess overlap matrix for Pulay calculations ...
+CALL Overlap_Matrix( system , basis )
+CALL preprocess    ( system )
+
+CALL Huckel_stuff( basis , X_ )
+
+do j = 1 , mm
+do i = 1 , mm 
+   kernel(i,j) = ( X_(i,j) - QM%erg(PES(1)) ) * QM%L(PES(1),i) * QM%L(PES(1),j)   &      ! <== electron part 
+               - ( X_(i,j) - QM%erg(PES(2)) ) * QM%L(PES(2),i) * QM%L(PES(2),j)          ! <== hole part 
+end do
+end do
+
+!
+!================================================================================================
+! set all forces to zero beforehand ...
+forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
+
+! Run, Forrest, Run ...
+
+        do i = 1 , system% atoms
+            If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
+            atom(i)% Ehrenfest = Ehrenfest( system, basis, i ) * eVAngs_2_Newton 
+        end do
+
+deallocate( mask , X_ , F_vec , F_mtx )
+
+include 'formats.h'
+
+end subroutine SH_Force
+!
 !
 !
 !
