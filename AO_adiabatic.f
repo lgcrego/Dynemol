@@ -536,7 +536,15 @@ do n = 1 , n_part
 end do
 
 ! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
-Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+select case ( driver )
+
+       case("slice_FSSH") 
+       Unit_Cell% QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+
+       case default
+       Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+end select
 
 11 FORMAT(A,I9,14I10)
 12 FORMAT(/15A10)
