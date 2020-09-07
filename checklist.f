@@ -5,9 +5,12 @@ MODULE setup_checklist
  use MM_input        
 
 
- public :: checklist , dump_driver_parameters_and_tuning
+ public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
 
  private
+
+ ! module variables ... 
+ logical :: done = .false.
 
  contains
 !
@@ -179,6 +182,163 @@ close (10)
  CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
 
 end subroutine dump_driver_parameters_and_tuning
+!
+!
+!
+!================================================================
+ function Checking_Topology( bonds , angs , diheds ) result(TorF)
+!================================================================
+implicit none
+integer , intent(in) :: bonds (:,:)
+integer , intent(in) :: angs  (:,:)
+integer , intent(in) :: diheds(:,:)
+logical              :: TorF
+ 
+! local variables ... 
+integer               :: i , j , x , y , z
+integer               :: Nbonds , Nangs , Ndiheds , KeyLeft , KeyRight
+integer , allocatable :: BondKeys(:) , AngKeys(:)
+
+Nbonds  =  size(bonds (:,1)) 
+Nangs   =  size(angs  (:,1))
+Ndiheds =  size(diheds(:,1))
+
+! checking bonds topology ...
+allocate( BondKeys(Nbonds) )
+do i = 1 , Nbonds
+
+     x = bonds(i,1)  ;  y = bonds(i,2) 
+     BondKeys(i) = PairingFunction( x , y , verbose = .true. ) 
+
+end do
+
+! checking angs topology ...
+do i = 1 , Nangs
+
+     x = angs(i,1)  ;  y = angs(i,2) 
+     KeyLeft = PairingFunction(x,y) 
+     If( .not. any(KeyLeft == BondKeys) ) call error_message(i,angs,instance="ang")
+
+     x = angs(i,2)  ;  y = angs(i,3) 
+     KeyRight = PairingFunction(x,y) 
+     If( .not. any(KeyRight == BondKeys) ) call error_message(i,angs,instance="ang")
+
+     If( KeyLeft == KeyRight ) call error_message(i,angs,instance="ang")
+
+end do
+
+! checking diheds topology ...
+allocate( AngKeys(Nangs) )
+do i = 1 , Nangs
+
+     x = angs(i,1)  ;  y = angs(i,2)   ;  z = angs(i,3) 
+     AngKeys(i) = CantorPairing( x , y , z ) 
+
+end do
+
+do i = 1 , Ndiheds
+
+     x = diheds(i,1)  ;  y = diheds(i,2)   ;  z = diheds(i,3) 
+     KeyLeft = CantorPairing( x , y , z ) 
+     If( .not. any(KeyLeft == AngKeys) ) call error_message(i,diheds,instance="dihed")
+
+     x = diheds(i,2)  ;  y = diheds(i,3)   ;  z = diheds(i,4) 
+     KeyRight = CantorPairing( x , y , z ) 
+     If( .not. any(KeyRight == AngKeys) ) call error_message(i,diheds,instance="dihed")
+
+end do
+
+! prepare to leave ...
+if( done ) then  
+    TorF = .true.     ! <==  error detected
+    close(10)
+else
+    TorF = .false.    ! <==  NO error detected
+end If
+
+end function Checking_Topology
+!
+!
+!
+!
+!===============================================
+ function CantorPairing(i,j,k) result(R)
+! 3-tupling Cantor Function ...
+! f(i,j,k) = f(k,j,i)
+!===============================================
+implicit none
+integer            , intent(in) :: i,j,k
+
+! local variables ... 
+integer :: R , L , a , b
+
+! Symmetric Pairing for (i,k)-tuple ...
+a = max(i,k)  ;  b = min(i,k)
+L = a*(a+1)/2 + b 
+
+! Cantor pairing with the center pairing ...
+R = (L+j)*(L+j+1)/2 + L 
+
+end function CantorPairing
+!
+!
+!
+!===============================================
+ function PairingFunction(i,j,verbose) result(k)
+!===============================================
+implicit none
+integer            , intent(in) :: i,j
+logical , optional , intent(in) :: verbose
+
+! local variables ... 
+integer :: k , a , b
+
+If( (i == j) .and. present(verbose) ) then
+    Print 232, i , j
+    stop
+end If
+
+! the symmetric pairing satisfies f(i,j)=f(j,i) ...
+
+! Symmetric Cantor Pairing ...
+!k = (i+j)*(i+j+1)/2 + (i*j) 
+
+! Symmetric Pairing ...
+a = max(i,j)  ;  b = min(i,j)
+k = a*(a+1)/2 + b 
+
+include 'formats.h'
+
+end function PairingFunction
+!
+!
+!
+!===========================================
+ subroutine error_message(i , a , instance ) 
+!===========================================
+implicit none
+integer          , intent(in) :: i
+integer          , intent(in) :: a(:,:)
+character(len=*) , intent(in) :: instance
+
+If( .not. done ) open (10, file='log.trunk/Topology.test.log', status='unknown')
+
+select case (instance)
+
+       case("ang")
+       write(10,231) a(i,1) , a(i,2) , a(i,3) 
+
+       case("dihed")
+       write(10,233) a(i,1) , a(i,2) , a(i,3)  , a(i,4) 
+
+end select
+
+done = .true.
+
+include 'formats.h'
+
+end subroutine error_message
+!
 !
 !
 !
