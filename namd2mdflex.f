@@ -11,6 +11,7 @@ use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
 use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
+use setup_checklist        , only : Checking_Topology
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -44,6 +45,7 @@ character(10)                   :: string
 character(200)                  :: line 
 integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms
 integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers 
+logical                         :: TorF
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -256,6 +258,15 @@ do a = 1 , MM % N_of_species
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
 
         rewind 33
+
+!==============================================================================================
+
+        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
+        If( TorF ) then
+            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
+            stop
+        End If
+
 !==============================================================================================
 
         If( species(a) % Nbonds /= 0 ) then 
