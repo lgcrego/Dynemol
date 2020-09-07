@@ -189,3 +189,11 @@
 225 format(1x,'Total MM_charge in ' ,a3 ' = ',F11.6)
 
 230 format(/,1x,'>>> Saving Security Copy (ref:it/frame/t): ', 2I6 , F11.6 )
+
+231 format(/,1x,'>>> Error detected in Toplogy file .....: Angle (',I4,',',I4,',',I4,')' )
+
+232 format(/,1x,'>>>  Degenerate Pairing Function in Topology file.....: ',I4,I4)
+
+233 format(/,1x,'>>> Error detected in Toplogy file .....: Dihedral (',I4,',',I4,',',I4,',',I4,')' )
+
+

@@ -255,7 +255,17 @@ do a = 1 , MM % N_of_species
 
         end if
         rewind 33
+
 !==============================================================================================
+
+        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
+        If( TorF ) then
+            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
+            stop
+        End If
+
+!==============================================================================================
+
             ! Pairs 1-4 parameters :: reading ...
         do
             read(33,100,iostat=ioerr) keyword
