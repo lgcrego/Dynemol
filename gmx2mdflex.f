@@ -8,6 +8,7 @@ use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBo
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
+use setup_checklist        , only : Checking_Topology
 
 private
  
@@ -40,7 +41,8 @@ integer         , allocatable   :: InputIntegers(:,:)
 character(18)                   :: keyword 
 character(10)                   :: string
 character(200)                  :: line 
-integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Nbonds14 , N_of_atoms
+logical                         :: TorF
+integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , Nbonds14 , N_of_atoms
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -257,7 +259,10 @@ do a = 1 , MM % N_of_species
 
 !==============================================================================================
 
-        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
+        ! the IMPROPER dihedrals must be at the END OF THE LIST ...
+        Ntorsion = count( species(a)%dihedral_type /= "imp" )
+
+        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )
         If( TorF ) then
             CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
             stop
