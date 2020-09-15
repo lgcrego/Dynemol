@@ -44,7 +44,8 @@ module AO_adiabatic_m
                                              Restart_Sys                      
     use MM_dynamics_m               , only : MolecularMechanics ,             &
                                              preprocess_MM , MoveToBoxCM
-    use Ehrenfest_Builder           , only : EhrenfestForce , SH_Force
+    use Ehrenfest_Builder           , only : EhrenfestForce 
+    use Surface_Hopping             , only : SH_Force
     use Auto_Correlation_m          , only : MO_Occupation
     use Dielectric_Potential        , only : Environment_SetUp
 
