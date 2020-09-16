@@ -1,5 +1,6 @@
  module FMO_m
 
+    use IFPORT
     use type_m
     use f95_precision
     use blas95
@@ -54,6 +55,7 @@
  integer                       :: i
  character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
+ logical                       :: TorF
 
  CALL preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
 
@@ -80,7 +82,10 @@
  FMO_system%copy_No    =  0
 
 ! check point ...
- If( any(FMO_system%QMMM /= "QM") ) stop ">> FMO fragment contains MM atoms <<"
+ If( any(FMO_system%QMMM /= "QM") ) then
+     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' warning.signal |cat")                                  
+     stop     
+end If
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
