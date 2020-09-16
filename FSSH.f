@@ -17,10 +17,10 @@ module Surface_Hopping
     private
 
     !module variables ...
-    integer                     :: mm 
-    integer     , allocatable   :: BasisPointer(:) , DOS(:)
-    real*8      , allocatable   :: Kernel(:,:)  
-    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:)  
+    integer                     :: mm , PES(2)
+    integer     , allocatable   :: BasisPointer(:) , DOS(:) 
+    real*8      , allocatable   :: Kernel(:,:) , X_(:,:) , QL(:,:) , Phi(:,:) , erg(:)
+    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:)
     logical     , allocatable   :: mask(:,:)
 
     !module parameters ...
@@ -34,17 +34,15 @@ contains
 !==========================================
  subroutine SH_Force( system , basis , QM )
 !==========================================
- use MD_read_m              , only  : atom
- use parameters_m           , only  : electron_state , hole_state
+ use MD_read_m     , only  : atom
+ use parameters_m  , only  : electron_state , hole_state
  implicit none
- type(structure)            , intent(inout) :: system
- type(STO_basis)            , intent(in)    :: basis(:)
- type(R_eigen)              , intent(in)    :: QM
+ type(structure)   , intent(inout) :: system
+ type(STO_basis)   , intent(in)    :: basis(:)
+ type(R_eigen)     , intent(in)    :: QM
 
 ! local variables ... 
- integer                  :: i , j , nn 
- integer                  :: PES(2)
- real*8     , allocatable :: X_(:,:) 
+ integer :: i , j , nn 
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -62,8 +60,13 @@ nn = n_part
 If( .NOT. allocated(F_mtx)  ) allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
 If( .NOT. allocated(F_vec)  ) allocate( F_vec   (system%atoms)                , source=D_zero )
 If( .NOT. allocated(Kernel) ) then
-    allocate( grad_S  (mm,10) )
-    allocate( Kernel  (mm,mm) , source = D_zero )
+    allocate( Kernel (mm,mm) , source = D_zero )
+    allocate( QL     (mm,mm) , source = QM%L   )
+    allocate( erg    (mm)    , source = QM%erg )
+    allocate( Phi    (mm, 2) )
+    Phi(:,1) = QM%L(PES(1),:)
+    Phi(:,2) = QM%L(PES(2),:)
+    allocate( grad_S (mm,9 ) )
 end if
 
 ! preprocess overlap matrix for Pulay calculations ...
@@ -73,10 +76,8 @@ CALL preprocess    ( system )
 CALL Huckel_stuff( basis , X_ )
 
 do j = 1 , mm
-do i = 1 , mm 
-   kernel(i,j) = ( X_(i,j) - QM%erg(PES(1)) ) * QM%L(PES(1),i) * QM%L(PES(1),j)   &      ! <== electron part 
-               - ( X_(i,j) - QM%erg(PES(2)) ) * QM%L(PES(2),i) * QM%L(PES(2),j)          ! <== hole part 
-end do
+   kernel(:,j) = ( X_(:,j) - QM%erg(PES(1)) ) * Phi(:,1) * Phi(j,1)   &      ! <== electron part 
+               - ( X_(:,j) - QM%erg(PES(2)) ) * Phi(:,2) * Phi(j,2)          ! <== hole part 
 end do
 
 !
@@ -85,14 +86,17 @@ end do
 ! using %Ehrenfest(:) to store the SH force ...
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 
+! setup new nonadiabtic coupling vector <Psi/dPhi/dt> ...
+allocate( Rxd_NA(mm,2) , source = D_zero )
+
 ! Run, Forrest, Run ...
 
-        do i = 1 , system% atoms
-            If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
-            atom(i)% Ehrenfest = SHForce( system, basis, i ) * eVAngs_2_Newton 
-        end do
+do i = 1 , system% atoms
+    If( system%QMMM(i) == "MM" .OR. system%flex(i) == F_ ) cycle
+    atom(i)% Ehrenfest = SHForce( system, basis, i ) * eVAngs_2_Newton 
+end do
 
-deallocate( mask , X_ , F_vec , F_mtx )
+deallocate( mask , X_ , F_vec , F_mtx , QL , Phi , erg , Rxd_NA , Kernel , grad_S )
 
 include 'formats.h'
 
@@ -175,6 +179,9 @@ do xyz = 1 , 3
 
        Force(xyz) = two * sum( F_mtx(K,:,xyz) )
 
+       Rxd_NA = Rxd_NA &
+              + TransitionMatrix( grad_S(:,:DOS_atom_k) , k , DOS_atom_k , BasisPointer_k , xyz )
+
 end do 
 
 ! recover original system ...
@@ -183,6 +190,65 @@ system% coord (K,:) = tmp_coord
 deallocate(pairs)
 
 end function SHForce
+!
+!
+!
+!=============================================================================
+ function TransitionMatrix( grad_S , k , DOS_atom_k , BasisPointer_k , xyz ) &
+ result(R)
+!=============================================================================
+use MD_read_m , only: atom  
+implicit none
+real*8  , intent(in) :: grad_S(:,:)
+integer , intent(in) :: k
+integer , intent(in) :: DOS_atom_k
+integer , intent(in) :: BasisPointer_k
+integer , intent(in) :: xyz
+
+! local variables ... 
+integer               :: i , j , j1 , j2 , dima , dimb
+real*8  , allocatable :: Mat1(:,:) , A(:,:) , R1(:,:) , R2(:,:)
+real*8  , allocatable :: Mat2(:,:) , B(:,:) , R(:,:)
+
+j1 = BasisPointer_K + 1
+j2 = BasisPointer_K + DOS_atom_K
+
+dima = size(grad_S(:,1))
+dimb = size(grad_S(1,:))
+
+! temporary arrays ...
+allocate( A(dima,2) , R1(dima,2) , R2(dima,2) , R(dima,2) , Mat2(dima,dima) )
+forall(j=1:dima) Mat2(:,j) = QL(:,j)*erg(:)
+
+allocate( B(dimb,2) , Mat1(dima,dimb) )
+Mat1 = grad_S * X_(:,j1:j2)
+
+!===============================================
+CALL gemm( Mat1 , Phi(j1:j2,:) , A )
+CALL gemm( QL , A , R1 )
+
+CALL gemm( grad_S , Phi(j1:j2,:) , A ) 
+CALL gemm( Mat2 , A , R2 )
+
+R = R1 - R2
+!===============================================
+
+!===============================================
+CALL gemm( Mat1 , Phi , B , transa = 'T' ) 
+CALL gemm( QL(:,j1:j2) , B , R1 )
+
+forall( j=1:2 ) A(:,j) = Phi(:,j) * erg(PES(j))
+CALL gemm( grad_S , A , B , transa = 'T' ) 
+CALL gemm( QL(:,j1:j2) , B , R2 )
+
+R = R + (R1-R2)
+!===============================================
+
+forall( i=1:dima , j=1:2 , i/=PES(j) ) R(i,j) = atom(k)%vel(xyz) * R(i,j) / ( erg(i) - erg(PES(j)) )
+
+deallocate( Mat1 , Mat2 , A , B , R1 , R2 )
+
+end function TransitionMatrix
 !
 !
 !
