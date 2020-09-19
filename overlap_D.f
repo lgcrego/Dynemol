@@ -303,6 +303,7 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
 
     ! symmetric overlap matrix
     forall(i=1:size(b_basis)) S_matrix(i,i:size(b_basis)) = S_matrix(i:size(b_basis),i)
+
 end subroutine BUILD_OVERLAP_MATRIX
 
 
@@ -343,7 +344,7 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
 
     !$OMP parallel do schedule(static) &
     !$OMP   default(shared) private(ia, jb, ja, a, b)
-    do ia = ib + 1, a_system%atoms
+    do ia = ib , a_system%atoms
         do jb = 1, atom(b_system%AtNo(ib))%DOS
             do ja = 1, atom(a_system%AtNo(ia))%DOS
                 b = b_system%BasisPointer(ib) + jb
@@ -383,6 +384,7 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
         atom_not_moved = ALL(a_system%coord(ia,:) == a_xyz(ia,:))
         atom_not_moved = atom_not_moved .AND. ALL(b_system%coord(ib,:) == b_xyz(ib,:))
         if (atom_not_moved) then
+         print*, "if I ever stop here there is a bug because atom b has always moved before calling this routine (18/09/20)" ;stop
             cycle
         end if
 
@@ -436,6 +438,7 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
                 forall(k=1:msup) sux(k) = solnorm(k) * (rl(ma,-k,la) * rl(mb,-k,lb) + rl(ma,k,la) * rl(mb,k,lb))
 
                 a = a - a_basis(a)%copy_No * size(b_basis)
+                ! symmety in the block of atoms a and b 
                 !$OMP atomic
                 S_matrix(a,b) = S_matrix(a,b) + SUM(sux(0:msup))
                 !$OMP atomic
@@ -445,13 +448,14 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
     end do
     !$OMP end parallel do
 
-    ! symmetric overlap matrix
+    ! diagonal elements ...
     b = size(b_basis)
     !$OMP parallel do private(i) shared(S_matrix, b)
     do i = 1, b
         S_matrix(i,i) = 1
     end do
     !$OMP end parallel do
+
 end subroutine PULAY_OVERLAP
 
 
