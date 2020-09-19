@@ -113,7 +113,7 @@ do frame = frame_init , frame_final , frame_step
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
 !        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
-        CALL SH_Force( Extended_Cell , ExCell_basis , UNI )
+        CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
