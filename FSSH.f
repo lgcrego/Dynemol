@@ -112,8 +112,6 @@ do j = 1 , 2
 
 end do
 
-print*, sum(g_switch(:,1)) , sum(g_switch(:,2))
-
 deallocate( mask , X_ , F_vec , F_mtx , QL , Phi , erg , Rxd_NA , Kernel , grad_S , rho_eh )
 
 include 'formats.h'
