@@ -85,6 +85,7 @@ end subroutine MolecularMechanics
 !
 !==============================================================
 subroutine VelocityVerlet( this , t_rate , frame , Net_Charge )
+! nuclear velocities in units of m/s in atom%vel
 !==============================================================
 implicit none
 class(VV)          , intent(inout) :: this

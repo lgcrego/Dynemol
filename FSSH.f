@@ -16,6 +16,11 @@ module Surface_Hopping
 
     private
 
+    !module parameters ...
+    integer , parameter :: xyz_key(3) = [1,2,3]
+    real*8  , parameter :: delta      = 1.d-8
+    logical , parameter :: T_ = .true. , F_ = .false.
+
     !module variables ...
     integer                     :: mm , PES(2)
     integer     , allocatable   :: PB(:) , DOS(:) 
@@ -23,18 +28,16 @@ module Surface_Hopping
     real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:)
     logical     , allocatable   :: mask(:,:)
 
-    !module parameters ...
-    integer , parameter :: xyz_key(3) = [1,2,3]
-    real*8  , parameter :: delta      = 1.d-8
-    logical , parameter :: T_ = .true. , F_ = .false.
+    real*8      , allocatable   :: Omega(:,:) , pastQR(:,:) , newQR(:,:) , Omega_switch(:,:)
+    logical     , save          :: flip , done = F_
 
 contains
 !
 !
 !
-!==========================================
+!=====================================================================
  subroutine SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )
-!==========================================
+!=====================================================================
  use MD_read_m     , only  : atom
  use parameters_m  , only  : electron_state , hole_state
  implicit none
@@ -102,7 +105,6 @@ do xyz = 1 , 3
     atom(:)% Ehrenfest(xyz) = SHForce( system , basis , xyz ) * eVAngs_2_Newton 
 end do
 
-
 do j = 1 , 2 
 
    rho_eh(:,j) = real( MO_ket(:,j) * MO_bra(PES(j),j) ) 
@@ -111,6 +113,33 @@ do j = 1 , 2
    g_switch(:,j) = two*t_rate*rho_eh(:,j)*Rxd_NA(:,j)
 
 end do
+
+
+if( .not. done ) then
+    allocate( Omega_switch(mm,2 ) )
+    allocate( newQR       (mm,2 ) )
+    allocate( pastQR      (mm,mm) , source=QM%R )
+    done = T_
+else
+    do concurrent (i=1:mm) shared(QM,pastQR) local(flip)
+       flip = dot_product( QM%R(:,i) , pastQR(:,i) ) < 0
+       if(flip) pastQR(:,i) = -pastQR(:,i)
+    end do
+    newQR = QM%R(:,PES(:))
+
+    call gemm( pastQR , newQR , Omega_switch , 'T' )    
+
+    Omega_switch = two * rho_eh * Omega_switch
+
+    pastQR = QM%R
+
+    write(25,*) g_switch(14,1), Omega_switch(14,1)  
+    write(26,*) g_switch(15,1), Omega_switch(15,1)  
+    write(27,*) g_switch(17,1), Omega_switch(17,1)  
+    write(28,*) g_switch(18,1), Omega_switch(18,1)  
+end if
+
+
 
 deallocate( mask , X_ , F_vec , F_mtx , QL , Phi , erg , Rxd_NA , Kernel , grad_S , rho_eh )
 
@@ -220,10 +249,10 @@ end function SHForce
 !
 !
 !
-!=============================================================================
+!================================================================
  function TransitionMatrix( grad_Slice , k , DOSk , BPk , xyz ) &
  result(R)
-!=============================================================================
+!================================================================
 use MD_read_m , only: atom  
 implicit none
 real*8  , intent(in) :: grad_Slice(:,:)
@@ -231,6 +260,10 @@ integer , intent(in) :: k
 integer , intent(in) :: DOSk
 integer , intent(in) :: BPk
 integer , intent(in) :: xyz
+
+! local paranters ...
+! convertion factor for nuclear velocity: m/s (MM) to Ang/ps (QM)
+real*8  :: V_factor = 1.d-2  
 
 ! local variables ... 
 integer               :: i , j , j1 , j2 , dima , dimb
@@ -288,12 +321,11 @@ end if
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 do concurrent ( i=1:dima , j=1:2 , i/=PES(j) ) shared(R,erg,atom)
-   R(i,j) = atom(k)%vel(xyz) * R(i,j) / ( erg(i) - erg(PES(j)) )
+   R(i,j) = (atom(k)%vel(xyz)*V_factor) * R(i,j) / ( erg(i) - erg(PES(j)) )
 end do
 
-do j = 1 , 2
-   R( PES(j) , j ) = 0
-end do
+R( PES(1) , 1 ) = 0
+R( PES(2) , 2 ) = 0
 
 deallocate( Mat1 , Mat2 , A , B , R1 , R2 )
 
