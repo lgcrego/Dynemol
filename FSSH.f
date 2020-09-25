@@ -21,15 +21,14 @@ module Surface_Hopping
     real*8  , parameter :: delta      = 1.d-8
     logical , parameter :: T_ = .true. , F_ = .false.
 
+    character(len=7), parameter :: switch = "Dynemol"
+
     !module variables ...
     integer                     :: mm , PES(2)
     integer     , allocatable   :: PB(:) , DOS(:) 
     real*8      , allocatable   :: Kernel(:,:) , X_(:,:) , QL(:,:) , Phi(:,:) , erg(:) , rho_eh(:,:)
-    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:)
+    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:) , pastQR(:,:) 
     logical     , allocatable   :: mask(:,:)
-
-    real*8      , allocatable   :: Omega(:,:) , pastQR(:,:) , newQR(:,:) , Omega_switch(:,:)
-    logical     , save          :: flip , done = F_
 
 contains
 !
@@ -71,9 +70,9 @@ If( .NOT. allocated(Kernel) ) then
     allocate( QL     (mm,mm) , source = QM%L   )
     allocate( erg    (mm)    , source = QM%erg )
     allocate( Phi    (mm, 2) )
+    allocate( grad_S (mm,mm) )
     Phi(:,1) = QM%L(PES(1),:)
     Phi(:,2) = QM%L(PES(2),:)
-    allocate( grad_S (mm,mm) )
 end if
 allocate( rho_eh(mm,2) , g_switch(mm,2) )
 
@@ -86,7 +85,7 @@ CALL Huckel_stuff( basis , X_ )
 do concurrent (j = 1:mm) shared(kernel,X_,Phi,QM)
    kernel(:,j) = ( X_(:,j) - QM%erg(PES(1)) ) * Phi(:,1) * Phi(j,1)   &      ! <== electron part 
                - ( X_(:,j) - QM%erg(PES(2)) ) * Phi(:,2) * Phi(j,2)          ! <== hole part 
-end do
+   end do
 
 !================================================================================================
 ! using %Ehrenfest(:) to store the SH force ...
@@ -94,52 +93,33 @@ end do
 ! set all forces to zero beforehand ...
 do concurrent( i=1:system% atoms ) 
    atom(i)% Ehrenfest(:) = D_zero
-end do
+   end do
 
-! setup new nonadiabtic coupling vector <Psi/dPhi/dt> ...
+! setup nonadiabtic coupling vector <Psi/dPhi/dt>, used in Tully's method ...
 allocate( Rxd_NA(mm,2) , source = D_zero )
-
-! Run, Forrest, Run ...
 
 do xyz = 1 , 3
     atom(:)% Ehrenfest(xyz) = SHForce( system , basis , xyz ) * eVAngs_2_Newton 
-end do
+    end do
 
+! Real(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2 
-
    rho_eh(:,j) = real( MO_ket(:,j) * MO_bra(PES(j),j) ) 
    rho_eh(:,j) = rho_eh(:,j) / rho_eh( PES(j) , j )
+   end do
 
-   g_switch(:,j) = two*t_rate*rho_eh(:,j)*Rxd_NA(:,j)
+select case ( switch )
+    
+       case( "Tully" ) 
+       g_switch = two * t_rate * rho_eh * Rxd_NA
 
-end do
+       case( "Dynemol" )
+       g_switch = two * rho_eh * Omega(QM%R)
 
+       case default
+       stop "wrong FSSH switch"
 
-if( .not. done ) then
-    allocate( Omega_switch(mm,2 ) )
-    allocate( newQR       (mm,2 ) )
-    allocate( pastQR      (mm,mm) , source=QM%R )
-    done = T_
-else
-    do concurrent (i=1:mm) shared(QM,pastQR) local(flip)
-       flip = dot_product( QM%R(:,i) , pastQR(:,i) ) < 0
-       if(flip) pastQR(:,i) = -pastQR(:,i)
-    end do
-    newQR = QM%R(:,PES(:))
-
-    call gemm( pastQR , newQR , Omega_switch , 'T' )    
-
-    Omega_switch = two * rho_eh * Omega_switch
-
-    pastQR = QM%R
-
-    write(25,*) g_switch(14,1), Omega_switch(14,1)  
-    write(26,*) g_switch(15,1), Omega_switch(15,1)  
-    write(27,*) g_switch(17,1), Omega_switch(17,1)  
-    write(28,*) g_switch(18,1), Omega_switch(18,1)  
-end if
-
-
+       end select
 
 deallocate( mask , X_ , F_vec , F_mtx , QL , Phi , erg , Rxd_NA , Kernel , grad_S , rho_eh )
 
@@ -235,15 +215,16 @@ real*8                :: tmp_coord(3) , delta_b(3)
 
      ! Rxd_NA = dot_product(velocity,force_NA) for El abd Hl 
      ! summing over system%atoms (internal loop) and xyz (external loop)
-     Rxd_NA = Rxd_NA &
-            + TransitionMatrix( grad_S( : , BPk+1:BPk+DOSk ) , k , DOSk , BPk , xyz )
+     If( switch == "Tully" ) then
+         Rxd_NA = Rxd_NA + TransitionMatrix( grad_S( : , BPk+1:BPk+DOSk ) , k , DOSk , BPk , xyz )
+     end If
  
      ! recover original system ...
      system% coord (K,:) = tmp_coord
              
      deallocate(pairs)
      ! ready for next atom in system
- end do 
+end do 
    
 end function SHForce
 !
@@ -281,7 +262,7 @@ allocate( A(dima,2) , R1(dima,2) , R2(dima,2) , R(dima,2) , Mat2(dima,dima) )
 
 do concurrent (j=1:dima) shared(QL,erg,Mat2)
    Mat2(:,j) = QL(:,j)*erg(:)
-end do
+   end do
 
 allocate( B(dimb,2) , Mat1(dima,dimb) )
 Mat1 = grad_Slice * X_(:,j1:j2)
@@ -302,7 +283,7 @@ CALL gemm( QL(:,j1:j2) , B , R1 )
 
 do concurrent ( j=1:2 ) shared(erg,PES,Phi,A)
    A(:,j) = Phi(:,j) * erg(PES(j))
-end do
+   end do
 
 CALL gemm( grad_Slice , A , B , transa = 'T' ) 
 CALL gemm( QL(:,j1:j2) , B , R2 )
@@ -317,12 +298,12 @@ R = -R
 ! checklist
 if( abs( R(PES(2),1)-R(PES(1),2) > high_prec ) ) then
     Print*, "WARNING: failed high precision test in TransitionMatrix"
-end if
+    end if
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 do concurrent ( i=1:dima , j=1:2 , i/=PES(j) ) shared(R,erg,atom)
    R(i,j) = (atom(k)%vel(xyz)*V_factor) * R(i,j) / ( erg(i) - erg(PES(j)) )
-end do
+   end do
 
 R( PES(1) , 1 ) = 0
 R( PES(2) , 2 ) = 0
@@ -331,6 +312,47 @@ deallocate( Mat1 , Mat2 , A , B , R1 , R2 )
 
 end function TransitionMatrix
 !
+!
+!
+!====================
+ function Omega( QR ) 
+!====================
+implicit none
+real*8  , intent(in) :: QR(:,:)
+
+! local variables ...
+integer :: i
+real*8  , allocatable :: newQR(:,:) , Omega(:,:)
+logical               :: flip 
+logical , save        :: done = F_
+
+allocate( newQR (mm,2 ) )
+allocate( Omega (mm,2 ) )
+
+if( .not. done ) then
+    ! setup environment ...
+    allocate( pastQR (mm,mm) , source=QR )
+    done = T_
+else
+    ! calculate g_switch via Scattering Matrix (Omega): DynEMol method ...
+    do concurrent (i=1:mm) shared(QR,pastQR) local(flip)
+       flip = dot_product( QR(:,i) , pastQR(:,i) ) < 0
+       if(flip) pastQR(:,i) = -pastQR(:,i)
+       end do
+
+    newQR = QR(:,PES(:))
+
+    call gemm( pastQR , newQR , Omega , 'T' )    
+
+!    Omega_switch = two * rho_eh * Omega_switch
+
+    pastQR = QR
+
+end if
+
+deallocate( newQR )
+
+end function Omega
 !
 !
 !
