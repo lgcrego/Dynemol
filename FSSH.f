@@ -344,8 +344,6 @@ else
 
     call gemm( pastQR , newQR , Omega , 'T' )    
 
-!    Omega_switch = two * rho_eh * Omega_switch
-
     pastQR = QR
 
 end if
