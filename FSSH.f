@@ -7,7 +7,7 @@ module Surface_Hopping
     use lapack95
     use type_m
     use constants_m
-    use parameters_m            , only  : driver , verbose , n_part , QMMM
+    use parameters_m            , only  : driver, verbose, n_part, QMMM, electron_state, hole_state
     use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
@@ -17,18 +17,18 @@ module Surface_Hopping
     private
 
     !module parameters ...
-    integer , parameter :: xyz_key(3) = [1,2,3]
-    real*8  , parameter :: delta      = 1.d-8
-    logical , parameter :: T_ = .true. , F_ = .false.
+    integer , parameter   :: xyz_key(3) = [1,2,3]
+    real*8  , parameter   :: delta      = 1.d-8
+    logical , parameter   :: T_ = .true. , F_ = .false.
 
-    character(len=7), parameter :: switch = "Dynemol"
+    character(len=7), parameter :: method = "Tully"
 
     !module variables ...
-    integer                     :: mm , PES(2)
-    integer     , allocatable   :: PB(:) , DOS(:) 
-    real*8      , allocatable   :: Kernel(:,:) , X_(:,:) , QL(:,:) , Phi(:,:) , erg(:) , rho_eh(:,:)
-    real*8      , allocatable   :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:) , pastQR(:,:) 
-    logical     , allocatable   :: mask(:,:)
+    integer               :: mm , PES(2)
+    integer , allocatable :: PB(:) , DOS(:) 
+    real*8  , allocatable :: Kernel(:,:) , X_(:,:) , QL(:,:) , Phi(:,:) , erg(:) 
+    real*8  , allocatable :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:) , pastQR(:,:) 
+    logical , allocatable :: mask(:,:)
 
 contains
 !
@@ -38,7 +38,7 @@ contains
  subroutine SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )
 !=====================================================================
  use MD_read_m     , only  : atom
- use parameters_m  , only  : electron_state , hole_state
+! args
  implicit none
  type(structure)   , intent(inout) :: system
  type(STO_basis)   , intent(in)    :: basis(:)
@@ -48,39 +48,26 @@ contains
  real*8            , intent(in)    :: t_rate
 
 ! local variables ... 
- integer              :: i , j , nn , xyz
- real*8 , allocatable :: rho_eh(:,:) , g_switch(:,:)
+ integer                   :: i , j , nn , xyz
+ real*8, allocatable, save :: rho_eh(:,:) , g_switch(:,:)
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
 
-!================================================================================================
+!==================================================================
 ! some preprocessing ...
-!================================================================================================
-PES(1) = electron_state
-PES(2) = hole_state
-
+!==================================================================
 mm = size(basis)
 nn = n_part
 
-allocate( F_mtx   (system%atoms,system%atoms,3) , source=D_zero )
-allocate( F_vec   (system%atoms)                , source=D_zero )
-If( .NOT. allocated(Kernel) ) then
-    allocate( Kernel (mm,mm) , source = D_zero )
-    allocate( QL     (mm,mm) , source = QM%L   )
-    allocate( erg    (mm)    , source = QM%erg )
-    allocate( Phi    (mm, 2) )
-    allocate( grad_S (mm,mm) )
-    Phi(:,1) = QM%L(PES(1),:)
-    Phi(:,2) = QM%L(PES(2),:)
-end if
-allocate( rho_eh(mm,2) , g_switch(mm,2) )
+call setup_Module( system , basis , QM , g_switch , rho_eh )
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis )
 CALL preprocess    ( system )
 
-CALL Huckel_stuff( basis , X_ )
+Phi(:,1) = QM%L(PES(1),:)
+Phi(:,2) = QM%L(PES(2),:)
 
 do concurrent (j = 1:mm) shared(kernel,X_,Phi,QM)
    kernel(:,j) = ( X_(:,j) - QM%erg(PES(1)) ) * Phi(:,1) * Phi(j,1)   &      ! <== electron part 
@@ -88,8 +75,6 @@ do concurrent (j = 1:mm) shared(kernel,X_,Phi,QM)
    end do
 
 !================================================================================================
-! using %Ehrenfest(:) to store the SH force ...
-
 ! set all forces to zero beforehand ...
 do concurrent( i=1:system% atoms ) 
    atom(i)% Ehrenfest(:) = D_zero
@@ -98,30 +83,16 @@ do concurrent( i=1:system% atoms )
 ! setup nonadiabtic coupling vector <Psi/dPhi/dt>, used in Tully's method ...
 allocate( Rxd_NA(mm,2) , source = D_zero )
 
+! using %Ehrenfest(:) to store the SH force ...
 do xyz = 1 , 3
     atom(:)% Ehrenfest(xyz) = SHForce( system , basis , xyz ) * eVAngs_2_Newton 
     end do
 
-! Real(rho_ij)/rho_ii, j=1(el), 2(hl)
-do j = 1 , 2 
-   rho_eh(:,j) = real( MO_ket(:,j) * MO_bra(PES(j),j) ) 
-   rho_eh(:,j) = rho_eh(:,j) / rho_eh( PES(j) , j )
-   end do
+! perform FSSH step ...
+call FSSH( QM%R , MO_bra , MO_ket , t_rate , rho_eh , g_switch ) 
 
-select case ( switch )
-    
-       case( "Tully" ) 
-       g_switch = two * t_rate * rho_eh * Rxd_NA
 
-       case( "Dynemol" )
-       g_switch = two * rho_eh * Omega(QM%R)
-
-       case default
-       stop "wrong FSSH switch"
-
-       end select
-
-deallocate( mask , X_ , F_vec , F_mtx , QL , Phi , erg , Rxd_NA , Kernel , grad_S , rho_eh )
+deallocate( mask , F_vec , F_mtx , QL , erg , Rxd_NA )
 
 include 'formats.h'
 
@@ -215,7 +186,7 @@ real*8                :: tmp_coord(3) , delta_b(3)
 
      ! Rxd_NA = dot_product(velocity,force_NA) for El abd Hl 
      ! summing over system%atoms (internal loop) and xyz (external loop)
-     If( switch == "Tully" ) then
+     If( method == "Tully" ) then
          Rxd_NA = Rxd_NA + TransitionMatrix( grad_S( : , BPk+1:BPk+DOSk ) , k , DOSk , BPk , xyz )
      end If
  
@@ -344,6 +315,10 @@ else
 
     call gemm( pastQR , newQR , Omega , 'T' )    
 
+    do i=1,2
+       Omega(PES(i),i) = d_zero
+       end do
+
     pastQR = QR
 
 end if
@@ -351,6 +326,109 @@ end if
 deallocate( newQR )
 
 end function Omega
+!
+!
+!
+!===========================================================
+ subroutine FSSH( QR , MO_bra , MO_ket , t_rate , rho_eh , g_switch )
+!===========================================================
+implicit none
+! args
+real*8    , intent(in)   :: QR       (:,:)
+complex*16, intent(in)   :: MO_bra   (:,:)
+complex*16, intent(in)   :: MO_ket   (:,:)
+real*8    , intent(in)   :: t_rate
+real*8    , intent(inout):: rho_eh   (:,:)
+real*8    , intent(inout):: g_switch (:,:)
+
+! local variables
+integer              :: i , j
+real*8               :: rn
+real*8, allocatable  :: base(:,:)
+
+! this loop: Re(rho_ij)/rho_ii, j=1(el), 2(hl)
+do j = 1 , 2 
+   rho_eh(:,j) = real( MO_ket(:,j) * MO_bra(PES(j),j) ) 
+   rho_eh(:,j) = rho_eh(:,j) / rho_eh( PES(j) , j )
+   end do
+
+select case ( method )
+    
+       case( "Tully" ) 
+       g_switch = two * t_rate * rho_eh * Rxd_NA
+
+       case( "Dynemol" )
+       g_switch = two * rho_eh * Omega(QR)
+
+       case default
+       stop "wrong FSSH method"
+
+       end select
+
+
+allocate( base(0:mm,2) , source=D_zero )
+
+call random_number(rn)
+
+base(0,:) = D_zero
+do j = 1 , 2
+do i = 1 , mm
+   base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
+   if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
+       PES(j) = i     
+       cycle
+       end if
+   end do
+   end do
+
+
+
+
+
+
+
+
+
+deallocate( base ) 
+
+end subroutine FSSH
+!
+!
+!
+!==================================================================
+ subroutine setup_Module( system , basis , QM , g_switch , rho_eh )
+!==================================================================
+implicit none
+! args
+type(structure)     , intent(in)    :: system
+type(R_eigen)       , intent(in)    :: QM
+type(STO_basis)     , intent(in)    :: basis(:)
+real*8, allocatable , intent(inout) :: g_switch(:,:)
+real*8, allocatable , intent(inout) :: rho_eh(:,:)
+
+allocate( F_mtx  (system%atoms,system%atoms,3) , source=D_zero   )
+allocate( F_vec  (system%atoms)                , source=D_zero   )
+allocate( QL     (mm,mm)                       , source = QM%L   )
+allocate( erg    (mm)                          , source = QM%erg )
+
+If( .NOT. allocated(grad_S) ) then
+
+    PES(1) = electron_state
+    PES(2) = hole_state
+
+    call init_random_seed()
+
+    allocate( Kernel   (mm,mm) )
+    allocate( grad_S   (mm,mm) )
+    allocate( Phi      (mm, 2) )
+    allocate( rho_eh   (mm, 2) )
+    allocate( g_switch (mm, 2) )
+
+    CALL Huckel_stuff( basis , X_ )
+
+    end if
+
+end subroutine setup_Module
 !
 !
 !
@@ -420,6 +498,22 @@ do K = 1   , sys% atoms
 end do    
 
 end subroutine Preprocess
+!
+!
+!
+!==============================
+ subroutine init_random_seed ()
+!==============================
+implicit none
+
+!local variables ...
+integer :: seed(5)
+
+seed = [10051965,27092004,2092002,22021967,-76571]
+
+call random_seed(put=seed(1:5))
+    
+end subroutine init_random_seed
 !
 !
 end module Surface_Hopping
