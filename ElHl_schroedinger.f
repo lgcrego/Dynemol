@@ -88,7 +88,8 @@ end do
 If( n_part == 2 .AND. (.NOT. verbose) ) Print 593, orbital(1) , El_FMO%erg(orbital(1)) , orbital(2) , Hl_FMO%erg(orbital(2))
 
 ! deallocate after use ...
-deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
+if( eh_tag(1) == "el" ) deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
+if( eh_tag(2) == "hl" ) deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
 ! stop here to preview and check input and system info ...
 If( preview ) stop
