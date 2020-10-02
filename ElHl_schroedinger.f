@@ -86,7 +86,8 @@ do n = 1 , n_part
 end do
 
 ! deallocate after use ...
-deallocate( el_FMO%L , el_FMO%R , el_FMO%erg , hl_FMO%L , hl_FMO%R , hl_FMO%erg )
+if( eh_tag(1) == "el" ) deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
+if( eh_tag(2) == "hl" ) deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
 ! stop here to preview and check input and system info ...
 If( preview ) stop

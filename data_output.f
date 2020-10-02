@@ -92,10 +92,12 @@ end function Populations_vct
  real*8          , intent(in)  :: t
  real*8                        :: Populations_mtx( 0:size(QDyn_fragments)+1 , n_part)
 
+! local parameters ...
+real*8           :: ChargeSign(2) = [-1.0 , 1.0]  !<== [el,hl]
+
 ! local variables ...
-integer             :: n , nf , N_of_fragments , ati
-real*8              :: charge_El , charge_Hl
-character(len=1)    :: fragment 
+integer          :: n , nf , N_of_fragments , ati
+character(len=1) :: fragment 
 
 !-----------------------------------------------------------------------
 !              get time-dependent Populations
@@ -127,13 +129,14 @@ do n = 1 , n_part
 end do
 
 ! atomic net-charge ...
-do ati = 1 , system%atoms
-    charge_El = abs( sum( bra(:,1)*ket(:,1) , basis(:)%atom == ati ) )
-    charge_Hl = abs( sum( bra(:,2)*ket(:,2) , basis(:)%atom == ati ) )
-
-    Net_Charge(ati) = charge_HL - charge_EL
-end do
-
+Net_Charge = d_zero
+do n = 1 , n_part
+     do ati = 1 , system%atoms
+        Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
+        end do
+        end do
+print*, sum(Net_Charge)
+print*, Net_Charge ; stop
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
 
