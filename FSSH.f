@@ -37,22 +37,22 @@ contains
 !=====================================================================
  subroutine SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )
 !=====================================================================
- use MD_read_m     , only  : atom
+ use MD_read_m   , only  : atom
 ! args
  implicit none
- type(structure)   , intent(inout) :: system
- type(STO_basis)   , intent(in)    :: basis(:)
- type(R_eigen)     , intent(in)    :: QM
- complex*16        , intent(in)    :: MO_bra(:,:)
- complex*16        , intent(in)    :: MO_ket(:,:)
- real*8            , intent(in)    :: t_rate
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
+ type(R_eigen)   , intent(in)    :: QM
+ complex*16      , intent(in)    :: MO_bra(:,:)
+ complex*16      , intent(in)    :: MO_ket(:,:)
+ real*8          , intent(in)    :: t_rate
 
 ! local variables ... 
  integer                   :: i , j , nn , xyz
  real*8, allocatable, save :: rho_eh(:,:) , g_switch(:,:)
 
 ! local parameters ...
- real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
+ real*8, parameter :: eVAngs_2_Newton = 1.602176565d-9 
 
 !==================================================================
 ! some preprocessing ...
@@ -90,6 +90,15 @@ do xyz = 1 , 3
 
 ! perform FSSH step ...
 call FSSH( QM%R , MO_bra , MO_ket , t_rate , rho_eh , g_switch ) 
+
+
+
+If(pes(1) /= 16 .or. pes(2) /= 15) then
+print*, pes
+print*, g_switch(15,1), g_switch(16,1)
+print*, g_switch(15,2), g_switch(16,2)
+stop
+end if
 
 
 deallocate( mask , F_vec , F_mtx , QL , erg , Rxd_NA )
@@ -329,9 +338,9 @@ end function Omega
 !
 !
 !
-!===========================================================
+!====================================================================
  subroutine FSSH( QR , MO_bra , MO_ket , t_rate , rho_eh , g_switch )
-!===========================================================
+!====================================================================
 implicit none
 ! args
 real*8    , intent(in)   :: QR       (:,:)
@@ -380,14 +389,6 @@ do i = 1 , mm
        end if
    end do
    end do
-
-
-
-
-
-
-
-
 
 deallocate( base ) 
 
