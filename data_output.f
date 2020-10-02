@@ -135,8 +135,7 @@ do n = 1 , n_part
         Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
         end do
         end do
-print*, sum(Net_Charge)
-print*, Net_Charge ; stop
+
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
 
