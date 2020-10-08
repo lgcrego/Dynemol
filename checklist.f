@@ -4,7 +4,6 @@ MODULE setup_checklist
  use parameters_m
  use MM_input        
 
-
  public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
 
  private
@@ -21,10 +20,20 @@ subroutine checklist
 !====================
 implicit none 
 
+! local parameters ...
+logical , parameter :: T_ = .true. , F_ = .false. 
+
 ! local variables ...
 
 ! feel free to add your own dynemol-for-dummies checklist ...
 select case( DRIVER )
+
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
+       
+       If( ad_hoc == F_ .OR. Survival == F_ ) then
+           CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
+           stop 
+           end If
 
     case( "avrg_confgs" )
 
