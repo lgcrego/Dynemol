@@ -158,11 +158,11 @@ select case( DRIVER )
 
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" )
         
-        dynamic = T_ .OR. Survival 
+        dynamic = T_ 
 
     case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
 
-        dynamic = F_ .OR. Survival
+        dynamic = ( F_ .OR. Survival )
 
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
