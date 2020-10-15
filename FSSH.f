@@ -7,12 +7,12 @@ module Surface_Hopping
     use lapack95
     use type_m
     use constants_m
+    use Structure_Builder           , only : Unit_Cell 
     use parameters_m            , only  : driver, verbose, n_part, QMMM, electron_state, hole_state
-    use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
 
-    public :: SH_Force 
+    public :: SH_Force , PES
 
     private
 
@@ -24,11 +24,12 @@ module Surface_Hopping
     character(len=7), parameter :: method = "Tully"
 
     !module variables ...
-    integer               :: mm , PES(2)
+    integer               :: mm , PES(2), newPES(2) 
     integer , allocatable :: PB(:) , DOS(:) 
-    real*8  , allocatable :: Kernel(:,:) , X_(:,:) , QL(:,:) , Phi(:,:) , erg(:) 
-    real*8  , allocatable :: grad_S(:,:) , F_vec(:) , F_mtx(:,:,:) , Rxd_NA(:,:) , pastQR(:,:) 
     logical , allocatable :: mask(:,:)
+    real*8  , allocatable , dimension(:)     :: erg , F_vec 
+    real*8  , allocatable , dimension(:,:)   :: QL , Phi , X_ , Kernel , grad_S , d_NA , Rxd_NA , pastQR  
+    real*8  , allocatable , dimension(:,:,:) :: F_mtx , d_NA_El , d_NA_Hl
 
 contains
 !
@@ -49,6 +50,7 @@ contains
 
 ! local variables ... 
  integer                   :: i , j , nn , xyz
+ logical                   :: jump 
  real*8, allocatable, save :: rho_eh(:,:) , g_switch(:,:)
 
 ! local parameters ...
@@ -75,33 +77,27 @@ do concurrent (j = 1:mm) shared(kernel,X_,Phi,QM)
    end do
 
 !================================================================================================
-! set all forces to zero beforehand ...
-do concurrent( i=1:system% atoms ) 
-   atom(i)% Ehrenfest(:) = D_zero
-   end do
-
-! setup nonadiabtic coupling vector <Psi/dPhi/dt>, used in Tully's method ...
-allocate( Rxd_NA(mm,2) , source = D_zero )
-
 ! using %Ehrenfest(:) to store the SH force ...
 do xyz = 1 , 3
     atom(:)% Ehrenfest(xyz) = SHForce( system , basis , xyz ) * eVAngs_2_Newton 
     end do
 
-! perform FSSH step ...
-call FSSH( QM%R , MO_bra , MO_ket , t_rate , rho_eh , g_switch ) 
+call verify_FSSH_jump( QM%R , MO_bra , MO_ket , t_rate , rho_eh , g_switch , jump ) 
 
+! Might as well jump/ Go ahead and jump (jump) ...(10/06/20)
+If( jump ) then
 
+   call adjust_velocities( system )
 
-If(pes(1) /= 16 .or. pes(2) /= 15) then
-print*, pes
-print*, g_switch(15,1), g_switch(16,1)
-print*, g_switch(15,2), g_switch(16,2)
-stop
-end if
+   print*, PES
+   print*, newPES
+   pause
 
+   end If
 
-deallocate( mask , F_vec , F_mtx , QL , erg , Rxd_NA )
+PES = newPES
+
+deallocate( mask , F_vec , F_mtx , QL , erg , d_NA , d_NA_El , d_NA_Hl )
 
 include 'formats.h'
 
@@ -112,12 +108,18 @@ end subroutine SH_Force
 !====================================================
  function SHForce( system, basis, xyz ) result(Force)
 !====================================================
-use Semi_empirical_parms , only: atom
+use MD_read_m            , only: atom  
+use Semi_empirical_parms , only: ChemAtom => atom
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
 integer          , intent(in)    :: xyz 
+
 real*8, dimension(system%atoms)  :: Force
+
+! local paranters ...
+! convertion factor for nuclear velocity: m/s (MM) to Ang/ps (QM)
+real*8  , parameter   :: V_factor = 1.d-2  
 
 ! local variables ...
 integer :: i , j , jL , L , indx
@@ -125,21 +127,21 @@ integer :: k , ik , DOSk , BPk
 
 ! local arrays ...
 integer , allocatable :: pairs(:)
-real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) 
+real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:)
 real*8                :: tmp_coord(3) , delta_b(3) 
 
- verbose    = .false.
+ verbose = .false.
 
  grad_S = D_zero
 
  do K = 1 , system% atoms
- 
+
      If( system%QMMM(k) == "MM" .OR. system%flex(k) == F_ ) then
         cycle
      endif
  
      !force on atom site ...
-     DOSk = atom( system% AtNo(k) )% DOS
+     DOSk = ChemAtom( system% AtNo(k) )% DOS
      BPk  = system% BasisPointer(k) 
      
      allocate( pairs , source = pack([( L , L=1,system% atoms )] , mask(:,K)) )
@@ -196,9 +198,17 @@ real*8                :: tmp_coord(3) , delta_b(3)
      ! Rxd_NA = dot_product(velocity,force_NA) for El abd Hl 
      ! summing over system%atoms (internal loop) and xyz (external loop)
      If( method == "Tully" ) then
-         Rxd_NA = Rxd_NA + TransitionMatrix( grad_S( : , BPk+1:BPk+DOSk ) , k , DOSk , BPk , xyz )
+
+         d_NA = NAcoupling( grad_S(:, BPk+1:BPk+DOSk) , k , DOSk , BPk )  ! <== units = eV/Angs
+
+         d_NA_El(:,k,xyz) = d_NA(:,1)
+         d_NA_Hl(:,k,xyz) = d_NA(:,2)
+
+         ! nonadiabtic coupling vector <Psi/dPhi/dt> ...
+         Rxd_NA = Rxd_NA + atom(k)%vel(xyz)*V_factor * d_NA 
+
      end If
- 
+
      ! recover original system ...
      system% coord (K,:) = tmp_coord
              
@@ -210,26 +220,22 @@ end function SHForce
 !
 !
 !
-!================================================================
- function TransitionMatrix( grad_Slice , k , DOSk , BPk , xyz ) &
- result(R)
-!================================================================
-use MD_read_m , only: atom  
+!=====================================================
+ function NAcoupling( grad_Slice , k , DOSk , BPk ) &
+ result(d_NA)
+!=====================================================
 implicit none
-real*8  , intent(in) :: grad_Slice(:,:)
-integer , intent(in) :: k
-integer , intent(in) :: DOSk
-integer , intent(in) :: BPk
-integer , intent(in) :: xyz
-
-! local paranters ...
-! convertion factor for nuclear velocity: m/s (MM) to Ang/ps (QM)
-real*8  :: V_factor = 1.d-2  
+real*8  , intent(in)  :: grad_Slice(:,:)
+integer , intent(in)  :: k
+integer , intent(in)  :: DOSk
+integer , intent(in)  :: BPk
+! result ...
+real*8  , allocatable :: d_NA(:,:)
 
 ! local variables ... 
 integer               :: i , j , j1 , j2 , dima , dimb
 real*8  , allocatable :: Mat1(:,:) , A(:,:) , R1(:,:) , R2(:,:)
-real*8  , allocatable :: Mat2(:,:) , B(:,:) , R(:,:)
+real*8  , allocatable :: Mat2(:,:) , B(:,:) 
 
 j1 = BPk + 1
 j2 = BPk + DOSk
@@ -238,7 +244,7 @@ dima = size(grad_Slice(:,1))
 dimb = size(grad_Slice(1,:))
 
 ! temporary arrays ...
-allocate( A(dima,2) , R1(dima,2) , R2(dima,2) , R(dima,2) , Mat2(dima,dima) )
+allocate( A(dima,2) , R1(dima,2) , R2(dima,2) , d_NA(dima,2) , Mat2(dima,dima) )
 
 do concurrent (j=1:dima) shared(QL,erg,Mat2)
    Mat2(:,j) = QL(:,j)*erg(:)
@@ -254,7 +260,7 @@ CALL gemm( QL , A , R1 )
 CALL gemm( grad_Slice , Phi(j1:j2,:) , A ) 
 CALL gemm( Mat2 , A , R2 )
 
-R = R1 - R2
+d_NA = R1 - R2
 !===============================================
 
 !===============================================
@@ -268,29 +274,29 @@ do concurrent ( j=1:2 ) shared(erg,PES,Phi,A)
 CALL gemm( grad_Slice , A , B , transa = 'T' ) 
 CALL gemm( QL(:,j1:j2) , B , R2 )
 
-R = R + (R1-R2)
+d_NA = d_NA + (R1-R2)
 !===============================================
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! the minus sign guarantees consistency with the Force
-R = -R
+d_NA = -d_NA
 
 ! checklist
-if( abs( R(PES(2),1)-R(PES(1),2) > high_prec ) ) then
-    Print*, "WARNING: failed high precision test in TransitionMatrix"
+if( abs( d_NA(PES(2),1)-d_NA(PES(1),2) > high_prec ) ) then
+    Print*, "WARNING: failed high precision test in NAcoupling"
     end if
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-do concurrent ( i=1:dima , j=1:2 , i/=PES(j) ) shared(R,erg,atom)
-   R(i,j) = (atom(k)%vel(xyz)*V_factor) * R(i,j) / ( erg(i) - erg(PES(j)) )
+do concurrent ( i=1:mm , j=1:2 , i/=PES(j) ) shared(d_NA,erg)
+   d_NA(i,j) = d_NA(i,j) / ( erg(i) - erg(PES(j)) )
    end do
 
-R( PES(1) , 1 ) = 0
-R( PES(2) , 2 ) = 0
+d_NA( PES(1) , 1 ) = 0
+d_NA( PES(2) , 2 ) = 0
 
 deallocate( Mat1 , Mat2 , A , B , R1 , R2 )
 
-end function TransitionMatrix
+end function NAcoupling
 !
 !
 !
@@ -338,9 +344,9 @@ end function Omega
 !
 !
 !
-!====================================================================
- subroutine FSSH( QR , MO_bra , MO_ket , t_rate , rho_eh , g_switch )
-!====================================================================
+!=======================================================================================
+ subroutine verify_FSSH_jump( QR , MO_bra , MO_ket , t_rate , rho_eh , g_switch , jump )
+!=======================================================================================
 implicit none
 ! args
 real*8    , intent(in)   :: QR       (:,:)
@@ -349,11 +355,14 @@ complex*16, intent(in)   :: MO_ket   (:,:)
 real*8    , intent(in)   :: t_rate
 real*8    , intent(inout):: rho_eh   (:,:)
 real*8    , intent(inout):: g_switch (:,:)
+logical   , intent(out)  :: jump
 
 ! local variables
-integer              :: i , j
+integer              :: i , j 
 real*8               :: rn
 real*8, allocatable  :: base(:,:)
+
+jump = F_
 
 ! this loop: Re(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2 
@@ -381,18 +390,86 @@ call random_number(rn)
 
 base(0,:) = D_zero
 do j = 1 , 2
-do i = 1 , mm
-   base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
-   if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
-       PES(j) = i     
-       cycle
-       end if
-   end do
-   end do
+!   call random_number(rn)   !#############
+   do i = 1 , mm
+      base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
+      if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
+          select case (j)
+                 case(1) 
+                     newPES(j) = i     
+                 case(2)
+                     newPES(j) = min(i,newPES(1))
+!                     newPES(j) = i
+                 end select
+          jump = T_
+          cycle
+          end if
+      end do
+      end do
 
 deallocate( base ) 
 
-end subroutine FSSH
+end subroutine verify_FSSH_jump
+!
+!
+!
+!======================================
+ subroutine adjust_velocities( system )
+!======================================
+ use MD_read_m , only: atom  
+ implicit none
+ type(structure) , intent(inout) :: system
+ 
+ ! local parameters ...
+ real*8  , parameter :: V_factor = 1.d-2  
+ 
+ ! local variables ...
+ integer :: i , j , xyz
+ real*8  :: mass , imass , tmp , gama , dE_EH_jump , a_coef , b_coef , b24ac
+  
+ a_coef = d_zero
+ b_coef = d_zero
+ do i = 1 , system% atoms
+    If( system%QMMM(i) == "QM" .AND. system%flex(i) == T_ ) then
+        imass  = d_one / (TWO * atom(i)% mass*Dalton_2_eV)
+        do xyz = 1 , 3
+            tmp = d_NA_El(newPES(1),i,xyz) - d_NA_Hl(newPES(2),i,xyz)
+            a_coef = a_coef + imass*tmp*tmp
+            b_coef = b_coef + atom(i)%vel(xyz)*V_factor * tmp 
+            end do
+            endif
+ end do  
+ dE_EH_jump = (erg(newPES(1)) - erg(PES(1))) !- (erg(newPES(2)) - erg(PES(2)))
+ b24ac      = b_coef*b_coef - four*a_coef*dE_EH_jump
+ 
+ If( b24ac < d_zero ) then
+   ! not enough energy; revert velocities
+   do i = 1 , system% atoms
+      If( system%QMMM(i) == "QM" .AND. system%flex(i) == T_ ) then
+          atom(i)% vel = - atom(i)% vel
+          endif
+          end do
+ else
+     If( b_coef < d_zero ) then
+       gama = (b_coef + sqrt(b24ac)) / (two*a_coef)
+     else
+       gama = (b_coef - sqrt(b24ac)) / (two*a_coef)
+     endIf
+     
+     do i = 1 , system% atoms
+        If( system%QMMM(i) == "QM" .AND. system%flex(i) == T_ ) then
+            mass  = atom(i)%mass*Dalton_2_eV
+            imass = d_one / mass
+            do xyz = 1 , 3
+                tmp = d_NA_El(newPES(1),i,xyz) - d_NA_Hl(newPES(2),i,xyz)
+                atom(i)%vel(xyz) = atom(i)%vel(xyz) - imass*gama*tmp*1.d2
+                end do
+        endif
+     end do  
+ 
+ endIf    
+ 
+end subroutine adjust_velocities
 !
 !
 !
@@ -407,20 +484,26 @@ type(STO_basis)     , intent(in)    :: basis(:)
 real*8, allocatable , intent(inout) :: g_switch(:,:)
 real*8, allocatable , intent(inout) :: rho_eh(:,:)
 
-allocate( F_mtx  (system%atoms,system%atoms,3) , source=D_zero   )
-allocate( F_vec  (system%atoms)                , source=D_zero   )
-allocate( QL     (mm,mm)                       , source = QM%L   )
-allocate( erg    (mm)                          , source = QM%erg )
+allocate( F_mtx  (system%atoms,system%atoms,3) , source = d_zero )
+allocate( F_vec  (system%atoms)                , source = d_zero )
+
+allocate( d_NA_El(mm, system%atoms, 3) , source = d_zero )
+allocate( d_NA_Hl(mm, system%atoms, 3) , source = d_zero )
+allocate( QL     (mm, mm)              , source = QM%L   )
+allocate( d_NA   (mm, 2)                                 )
+allocate( erg    (mm)                  , source = QM%erg )
 
 If( .NOT. allocated(grad_S) ) then
 
     PES(1) = electron_state
     PES(2) = hole_state
+    newPES = PES
 
     call init_random_seed()
 
     allocate( Kernel   (mm,mm) )
     allocate( grad_S   (mm,mm) )
+    allocate( Rxd_NA   (mm,2)  )
     allocate( Phi      (mm, 2) )
     allocate( rho_eh   (mm, 2) )
     allocate( g_switch (mm, 2) )
@@ -428,6 +511,9 @@ If( .NOT. allocated(grad_S) ) then
     CALL Huckel_stuff( basis , X_ )
 
     end if
+
+! setup before recurrent sum ...
+Rxd_NA  = d_zero
 
 end subroutine setup_Module
 !

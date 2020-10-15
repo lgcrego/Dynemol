@@ -73,8 +73,8 @@ implicit none
 
   MM_input_format        = "GMX"                ! <== GMX, NAMD, GAFF
 
-  MM_log_step            =  1000                  ! <== step for saving MM results & parameters
-  MM_frame_step          =  500                   ! <== step for saving MM results & parameters
+  MM_log_step            =  1                    ! <== step for saving MM results & parameters
+  MM_frame_step          =  500                  ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

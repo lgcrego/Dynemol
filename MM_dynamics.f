@@ -120,9 +120,8 @@ CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 
+Unit_Cell% MD_Kin = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
+Unit_Cell% MD_Pot = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
 
 if( mod(frame,MM_log_step) == 0   ) then 
 
@@ -138,21 +137,14 @@ if( mod(frame,MM_log_step) == 0   ) then
         case( "eV" )    
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
 
-        write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
-
         case( "kj-mol" )
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-
-        write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
 
         case default
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
 
-! total energy in eV; for classical dynamics Unit_Cell%QM_erg = 0  ...
 end if
 
 ! pass nuclear configuration to QM ...
