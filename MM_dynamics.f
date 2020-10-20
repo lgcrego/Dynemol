@@ -102,7 +102,7 @@ dt = t_rate * pico_2_sec
 
 atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
 
-If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% MM(xyz)
+If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% f_MM(xyz)
 
 ! Molecular dynamics ...
 CALL this % VV1( dt )
