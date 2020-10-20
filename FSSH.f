@@ -56,9 +56,9 @@ contains
 ! local parameters ...
  real*8, parameter :: eVAngs_2_Newton = 1.602176565d-9 
 
-!==================================================================
+!========================
 ! some preprocessing ...
-!==================================================================
+!========================
 mm = size(basis)
 nn = n_part
 
@@ -77,6 +77,7 @@ do concurrent (j = 1:mm) shared(kernel,X_,Phi,QM)
    end do
 
 !================================================================================================
+
 ! using %Ehrenfest(:) to store the SH force ...
 do xyz = 1 , 3
     atom(:)% Ehrenfest(xyz) = SHForce( system , basis , xyz ) * eVAngs_2_Newton 
@@ -279,7 +280,7 @@ d_NA = d_NA + (R1-R2)
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! the minus sign guarantees consistency with the Force
-d_NA = -d_NA
+!d_NA = -d_NA
 
 ! checklist
 if( abs( d_NA(PES(2),1)-d_NA(PES(1),2) > high_prec ) ) then
@@ -373,7 +374,7 @@ do j = 1 , 2
 select case ( method )
     
        case( "Tully" ) 
-       g_switch = two * t_rate * rho_eh * Rxd_NA
+       g_switch = two * t_rate * rho_eh * (-Rxd_NA)
 
        case( "Dynemol" )
        g_switch = two * rho_eh * Omega(QR)
@@ -426,7 +427,7 @@ end subroutine verify_FSSH_jump
  ! local variables ...
  integer :: i , j , xyz
  real*8  :: mass , imass , tmp , gama , dE_EH_jump , a_coef , b_coef , b24ac
-  
+
  a_coef = d_zero
  b_coef = d_zero
  do i = 1 , system% atoms
@@ -439,7 +440,7 @@ end subroutine verify_FSSH_jump
             end do
             endif
  end do  
- dE_EH_jump = (erg(newPES(1)) - erg(PES(1))) !- (erg(newPES(2)) - erg(PES(2)))
+ dE_EH_jump = (erg(newPES(1)) - erg(PES(1))) - (erg(newPES(2)) - erg(PES(2)))
  b24ac      = b_coef*b_coef - four*a_coef*dE_EH_jump
  
  If( b24ac < d_zero ) then
@@ -449,13 +450,14 @@ end subroutine verify_FSSH_jump
           atom(i)% vel = - atom(i)% vel
           endif
           end do
+          newPES = PES
  else
      If( b_coef < d_zero ) then
        gama = (b_coef + sqrt(b24ac)) / (two*a_coef)
      else
        gama = (b_coef - sqrt(b24ac)) / (two*a_coef)
      endIf
-     
+
      do i = 1 , system% atoms
         If( system%QMMM(i) == "QM" .AND. system%flex(i) == T_ ) then
             mass  = atom(i)%mass*Dalton_2_eV
@@ -468,7 +470,7 @@ end subroutine verify_FSSH_jump
      end do  
  
  endIf    
- 
+
 end subroutine adjust_velocities
 !
 !

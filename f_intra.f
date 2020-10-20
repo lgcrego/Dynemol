@@ -498,18 +498,21 @@ pot_total = pot_total * mol * micro / MM % N_of_molecules
 ! Get total force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
     
-    atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
-                                                  atom(i) % fang(:)     +  &
-                                                  atom(i) % fdihed(:)   +  &
-                                                  atom(i) % fnonbd14(:) +  & 
-                                                  atom(i) % fnonch14(:) +  &
-                                                  atom(i) % fnonbd(:)   +  & 
-                                                  atom(i) % fMorse(:)   +  & 
-                                                  atom(i) % fnonch(:)      &
-                                                  ) * Angs_2_mts
+    atom(i)% f_MM(:) = atom(i)% f_MM(:) + (atom(i) % fbond(:)    +  &
+                                           atom(i) % fang(:)     +  &
+                                           atom(i) % fdihed(:)   +  &
+                                           atom(i) % fnonbd14(:) +  & 
+                                           atom(i) % fnonch14(:) +  &
+                                           atom(i) % fnonbd(:)   +  & 
+                                           atom(i) % fMorse(:)   +  & 
+                                           atom(i) % fnonch(:)      &
+                                          ) * Angs_2_mts
 
-    ! Append total forces with Excited State Ehrenfest terms; nonzero only if QMMM = T_ ...
-    IF( QMMM ) atom(i)% ftotal(:) = atom(i)% ftotal(:) + atom(i)% Ehrenfest(:)
+    If ( QMMM ) then
+       atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% Ehrenfest(:)
+       else
+       atom(i)% ftotal(:) = atom(i)% f_MM(:) 
+       end If
 
 end do
 

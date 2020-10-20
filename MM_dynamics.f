@@ -95,12 +95,14 @@ real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
-integer :: i
+integer :: i , xyz
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
+atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
+
+If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% MM(xyz)
 
 ! Molecular dynamics ...
 CALL this % VV1( dt )
@@ -112,9 +114,6 @@ CALL Molecular_CM
 CALL ForceInter
 
 CALL ForceIntra
-
-! QMMM coupling ...
-if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 
 CALL this% VV2( dt )
 
