@@ -374,7 +374,7 @@ real*8                        , intent(in)    :: S_matrix(:,:)
 real*8  :: a , tx1 , tx2 , tx , tz
 integer :: i , j , k , t , n
 
-if( B_ext( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction has not been implemented for By/=0 <<"
+if( B_ext( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction has not beend implemented for By/=0 <<"
 
 n = size( basis )
 k = n / 2

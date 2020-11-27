@@ -19,6 +19,7 @@ FC_ALL = -xHost -ip -align
 
 # Parallelization flags
 FC_PARALLEL = -qopenmp -parallel
+#FC_PARALLEL = -openmp -parallel
 
 # Others flags for each file type *.f, *.F and *.F90
 F_FLAGS =  -O3
@@ -120,12 +121,12 @@ SOURCE2 = constants_m.o \
 		  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
-                  checklist.o \
+          checklist.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
@@ -146,7 +147,7 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
@@ -157,11 +158,11 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -187,7 +188,7 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  Chebyshev_driver.o \
@@ -216,6 +217,7 @@ a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 
 # Program runs very slowly with this
 safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens
+#safe: FC_ALL += -g -traceback -check all -fstack-protector -assume protect_parens -implicitnone -warn all -warn -debug extended -check bounds -check uninit -ftrapuv -debug all -gen-interfaces -warn interfaces -fpe3 -fpe-all=3 -assume ieee_fpe_flags -ftz -mp -fp-model strict -fp-model precise -fp-speculation=off
 safe: CC_ALL += -traceback -fstack-protector
 safe: a
 

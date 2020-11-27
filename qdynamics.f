@@ -65,7 +65,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
- If( EnvField_ )CALL Environment_SetUp( Extended_Cell )
+ If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 

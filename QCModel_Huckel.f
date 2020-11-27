@@ -70,12 +70,12 @@ end If
 
 if( SO_coupl ) then
     CALL spin_orbit_h( basis , h_SO , S_matrix )
-    h = h + h_SO
+!    h = h + h_SO
 end if
 
 if( extmagfield ) then
     CALL MF_interaction( basis , h_MF , S_matrix )
-    h = h + h_MF
+!    h = h + h_MF
 end if
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
