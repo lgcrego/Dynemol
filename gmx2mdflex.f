@@ -3,7 +3,6 @@
 module gmx2mdflex
 
 use constants_m
-use MPI_definitions_m      , only : master
 use for_force
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
@@ -61,7 +60,7 @@ do a = 1 , MM % N_of_species
             print*, string,' file not found; terminating execution' ; stop
         end if
 
-        If( master ) write(*,'(/2a9)',advance='no') "Reading ", string
+        write(*,'(/2a9)',advance='no') "Reading ", string
 
         ! start reading the molecular structure of species(a) ...
         do
@@ -263,12 +262,10 @@ do a = 1 , MM % N_of_species
         ! the IMPROPER dihedrals must be at the END OF THE LIST ...
         Ntorsion = count( species(a)%dihedral_type /= "imp" )
 
-        If( master ) then
-            TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )
-            If( TorF ) then
-                CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
-                stop
-            End If
+        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )
+        If( TorF ) then
+            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
+            stop
         End If
 
 !==============================================================================================
@@ -339,7 +336,7 @@ do a = 1 , MM % N_of_species
 
     close(33)
 
-    If( master ) write(*,'(a9)') " << done "
+    write(*,'(a9)') " << done "
 
 end do
 

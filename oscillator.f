@@ -8,8 +8,7 @@ module Oscillator_m
     use parameters_m                , only  : empty ,               &
                                               occupied ,            &
                                               rho_range ,           &
-                                              sigma ,               &
-                                              verbose
+                                              sigma
 
     public :: Optical_Transitions   ,  Transition_Dipole_Builder
 
@@ -105,7 +104,7 @@ deallocate( SPEC_peaks , SPEC_func )
 
 deallocate( trans_DP%bra_PTR , trans_DP%ket_PTR , trans_DP%matrix , Transition_Strength )
 
-If( verbose ) print*, '>> Optical Spectrum done <<'
+print*, '>> Optical Spectrum done <<'
 
 end subroutine Optical_Transitions
 !

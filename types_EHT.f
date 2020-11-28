@@ -131,14 +131,16 @@ module type_m
 
     type STO_basis
         integer          :: indx
-        integer          :: n
-        integer          :: l
-        integer          :: m
         integer          :: atom
         integer          :: nr
         integer          :: copy_No
         integer          :: AtNo
         integer          :: Nzeta
+        integer          :: n
+        integer          :: l
+        integer          :: m
+        integer          :: s
+        real*8           :: j
         real*8           :: IP
         real*8           :: k_WH
         real*8           :: coef(1:2)

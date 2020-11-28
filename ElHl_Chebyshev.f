@@ -1,27 +1,21 @@
 module ElHl_Chebyshev_m
 
-    use MPI
-    use type_m             , g_time => f_time  
+    use type_m              , g_time => f_time  
     use blas95
     use lapack95
     use constants_m
     use ifport
-    use MPI_definitions_m  , only : master , EnvCrew ,  myCheby ,   &       
-                                    ChebyComm , ChebyCrew ,         &  
-                                    ForceComm , ForceCrew ,         &
-                                    KernelComm , ChebyKernelComm   
-    use parameters_m       , only : t_i , frame_step , Coulomb_ ,   &
-                                    EnvField_ , n_part, driver ,    &
-                                    QMMM, CT_dump_step , HFP_Forces
-    use Structure_Builder  , only : Unit_Cell 
-    use Overlap_Builder    , only : Overlap_Matrix
-    use FMO_m              , only : FMO_analysis , eh_tag    
-    use Data_Output        , only : Populations 
-    use Hamiltonians       , only : X_ij , even_more_extended_Huckel
-    use Taylor_m           , only : Propagation, dump_Qdyn
+    use parameters_m        , only : t_i , frame_step , Coulomb_ , EnvField_ , n_part, driver , QMMM , CT_dump_step , HFP_Forces
+    use Structure_Builder   , only : Unit_Cell 
+    use Overlap_Builder     , only : Overlap_Matrix
+    use FMO_m               , only : FMO_analysis , eh_tag 
+    use Data_Output         , only : Populations
+    use Hamiltonians        , only : X_ij , even_more_extended_Huckel
+    use Taylor_m            , only : Propagation, dump_Qdyn
+    use Ehrenfest_Builder   , only : store_Hprime
     use Matrix_Math
 
-    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev , Build_Huckel , QuasiParticleEnergies , preprocess_from_restart
+    public  :: ElHl_Chebyshev , preprocess_ElHl_Chebyshev 
 
     private
 
@@ -31,19 +25,25 @@ module ElHl_Chebyshev_m
     real*8        , parameter   :: norm_error  = 1.0d-12
 
 ! module variables ...
+    logical       , save        :: necessary_  = .true.
     logical       , save        :: first_call_ = .true.
     real*8        , save        :: save_tau(2)
+    real*8        , pointer     :: h(:,:)
     real*8, target, allocatable :: h0(:,:)
-    real*8        , allocatable :: S_matrix(:,:)
+    real*8        , allocatable :: S_matrix(:,:) , H_prime(:,:)
     complex*16    , allocatable :: Psi_t_bra(:,:) , Psi_t_ket(:,:)
 
     interface preprocess_ElHl_Chebyshev
         module procedure preprocess_ElHl_Chebyshev
         module procedure preprocess_from_restart
     end interface
+    
+#ifdef USE_GPU
+#  define _electron_  -1
+#  define _hole_      +1
+#endif
 
 contains
-!
 !
 !
 !==========================================================================================================
@@ -61,41 +61,31 @@ type(g_time)    , intent(inout) :: QDyn
 integer         , intent(in)    :: it
 
 !local variables ...
-integer                         :: N , err 
-integer                         :: mpi_D_R = mpi_double_precision
-type(R_eigen)                   :: AO
+integer                         :: N
+type(R_eigen)   :: AO
+
+N = size(basis)
+
+#ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    allocate( S_matrix(N,N) )
+    call GPU_Pin(S_matrix, N*N*8)
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#endif
 
 ! MUST compute S_matrix before FMO analysis ...
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-N = size(basis)
-
 allocate( h0(N,N) , source = D_zero )
 
-!------------------------------------------------------------------------
-If( master .OR. EnvCrew ) then 
+If( EnvField_ ) then
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+else
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+end If
 
-   If( EnvField_ ) then
-      ! EnCrew stay in even_more_extended_Huckel ...
-      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
-   Else
-      h0(:,:) = Build_Huckel( basis , S_matrix )
-   end If
-
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
-
-End If
-
-If( ForceCrew ) then
-   ! After instantiating S_matrix AND h0, ForceCrew leave to EhrenfestForce ...
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
-   return
-End If
-
-! Another ChebyCrew  mate ...
-If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
-!------------------------------------------------------------------------
+! for a rigid structure once is enough ...
+If( driver == 'q_dynamics' ) necessary_ = .false.
 
 !========================================================================
 ! prepare electron state ...
@@ -132,13 +122,35 @@ If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
 !==============================================
 ! preprocess stuff for EhrenfestForce ...
   CALL QuasiParticleEnergies(AO_bra, AO_ket, H0)
+
+  CALL syInvert( S_matrix, return_full ) ! <== S_matrix content is destroyed and S_inv is returned
+#define S_inv S_matrix
+
+  allocate( H(N,N) )
+  h => h0
+
+! allocate and compute H' = S_inv * H ...
+  allocate( H_prime(N,N) , source = D_zero )
+  CALL syMultiply( S_inv , h , H_prime )
+ 
+  CALL store_Hprime( N , H_prime )
 !==============================================
 
 ! save populations(time=t_i) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-if (master) CALL dump_Qdyn( Qdyn , it )
+CALL dump_Qdyn( Qdyn , it )
 
-! leaving S_matrix allocated
+!==============================================
+! clean and exit ...
+If( driver /= 'q_dynamics' ) then
+    deallocate( h0 )
+    nullify( h )
+end if
+#ifndef USE_GPU
+deallocate( H_prime )
+#endif
+#undef S_inv
+!==============================================
 
 end subroutine preprocess_ElHl_Chebyshev
 !
@@ -160,109 +172,90 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer :: N , err , mpi_status(mpi_status_size)
-integer :: req1 , req2 , it_sync
-integer :: mpi_D_R = mpi_double_precision
-integer :: mpi_D_C = mpi_double_complex
-real*8  :: t_init , t_max , tau_max , tau(2) , t_stuff(2)
-
-real*8  , pointer :: h(:,:)
-real*8  , save , allocatable :: H_prime(:,:) , S_inv(:,:)
-
-N = size(basis)
+integer :: j , N , it_sync
+real*8  :: t_max , tau_max , tau(2) , t_init
 
 t_init = t
+
 ! max time inside slice ...
-t_max = delta_t*frame_step*(it-1)
+t_max = delta_t*frame_step*(it-1)  
 ! constants of evolution ...
 tau_max = delta_t / h_bar
 
-If( master ) then ! <== Electron wpckt Dynamics ...
+! trying to adapt time step for efficient propagation ...
+tau(:) = merge( tau_max , save_tau(:) * 1.15d0 , first_call_ )
+! but tau should be never bigger than tau_max ...
+tau(:) = merge( tau_max , tau(:) , tau(:) > tau_max )
 
-    if(first_call_) allocate( H(N,N) , H_prime(N,N) , S_inv(N,N) )
+N = size(basis)
 
-    ! trying to adapt time step for efficient propagation ...
-    tau(1) = merge( tau_max , save_tau(1) * 1.15d0 , first_call_ )
-    ! but tau should be never bigger than tau_max ...
-    tau(1) = merge( tau_max , tau(1) , tau(1) > tau_max )
+if(first_call_) then           ! allocate matrices
+#ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    allocate( H(N,N) )         ! no need of H_prime in the cpu: will be calculated in the gpu
+    call GPU_Pin( H, N*N*8 )
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#else
+    allocate( H(N,N) , H_prime(N,N) )
+#endif
+end if
 
-    t_stuff = [ t_init , t_max ]
-    CALL MPI_ISend( t_stuff , 2 , mpi_D_R , 1 , 0 , ChebyComm , req1 , err )
-    CALL MPI_Request_Free( req1 , err )
+If ( necessary_ ) then ! <== not necessary for a rigid structures ...
 
-    ! compute S  and H0 ...
+    ! compute S and S_inverse ...
     CALL Overlap_Matrix( system , basis , S_matrix )
 
-    If( Envfield_ ) then
+    allocate( h0(N,N) , source = D_zero )
+    
+    If( EnvField_ ) then
         it_sync = it-1  ! <== for synchronizing EnvSetUp call therein ...
-        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it_sync )
+        h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it_sync)
     else
         h0(:,:) = Build_Huckel( basis , S_matrix )
     end If
 
-    h => h0
-
-    ! S_matrix content is destroyed and S_inv is returned
-    CALL syInvert( S_matrix, return_full )   
-    S_inv = S_matrix
-
-    ! compute H' = S_inv * H ...
-    CALL syMultiply( S_inv , h , H_prime )
-
-    CALL MPI_BCAST( QMMM , 1 , mpi_logical , 0 , ChebyComm , err )
-    If( QMMM ) then
-         ! for using in Ehrenfest; Chebyshev also delivers data to Ehrenfest ...
-         CALL MPI_BCAST( AO_bra , 2*N , mpi_D_C , 0 , KernelComm , err )
-         CALL MPI_BCAST( AO_ket , 2*N , mpi_D_C , 0 , KernelComm , err )
-
-         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , req2 , err )
-    else
-         ! otherwise, only Hole Dynamics get it ...
-         CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyComm , req2 , err )
-    end If
-
-    !===================
-    ! Electron Dynamics
-    !===================
-    ! proceed evolution of ELECTRON wapacket with best tau ...
-    CALL Propagation( N, H_prime, Psi_t_bra(:,1), Psi_t_ket(:,1), t_init, t_max, tau(1), save_tau(1) )
-
-else If( myCheby == 1 ) then  ! <== Hole wpckt Dynamics ...
-
-    do  ! <== myCheby = 1 dwells in here Forever ...
-
-         CALL MPI_Recv( t_stuff , 2 , mpi_D_R , 0 , mpi_any_tag , ChebyComm , mpi_status , err )
-         CALL MPI_BCAST( QMMM , 1 , mpi_logical , 0 , ChebyComm , err )
-
-         tau(2) = merge( tau_max , save_tau(2) * 1.15d0 , first_call_ )
-         tau(2) = merge( tau_max , tau(2) , tau(2) > tau_max )
-
-         Allocate( H_prime(N,N) )
-
-         If( QMMM ) then
-              CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyKernelComm , req2 , err )
-         else
-              CALL MPI_IBCAST( H_prime , N*N , mpi_D_R , 0 , ChebyComm , req2 , err )
-         end If
-         CALL MPI_Wait( req2 , mpi_status , err ) 
-
-         !===================
-         !  Hole   Dynamics
-         !===================
-         ! proceed evolution of HOLE wapacket with best tau ...
-         CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_stuff(1) , t_stuff(2) , tau(2) , save_tau(2) )
-
-         CALL MPI_Send( Psi_t_bra(:,2) , N , mpi_D_C , 0 , 0 , ChebyComm , err )
-         CALL MPI_Send( Psi_t_ket(:,2) , N , mpi_D_C , 0 , 0 , ChebyComm , err )
-
-         deallocate( H_prime ) 
-
-    end do  !<== Return to Forever ...
+    CALL syInvert( S_matrix, return_full )   ! S_matrix content is destroyed and S_inv is returned
+#define S_inv S_matrix
 
 end If
 
-CALL MPI_Recv( Psi_t_bra(:,2) , N , mpi_D_C , 1 , mpi_any_tag , ChebyComm , mpi_status , err )
-CALL MPI_Recv( Psi_t_ket(:,2) , N , mpi_D_C , 1 , mpi_any_tag , ChebyComm , mpi_status , err )
+!=======================================================================
+!           Electron Hamiltonian : upper triangle ...
+!=======================================================================
+
+h => h0
+
+#ifndef USE_GPU
+! allocate and compute H' = S_inv * H ...
+If (.not. allocated(H_prime) ) allocate( H_prime(N,N) )
+call syMultiply( S_inv , h , H_prime )
+#endif
+
+If( eh_tag(1) == "el" ) then  ! <== proceed evolution of ELECTRON wapacket with best tau ...
+#ifdef USE_GPU
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    call PropagationElHl_gpucaller(_electron_, Coulomb_, N, S_inv(1,1), h(1,1), Psi_t_bra(1,1), Psi_t_ket(1,1), t_init, t_max, tau(1), save_tau(1))
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#else
+    CALL Propagation( N , H_prime , Psi_t_bra(:,1) , Psi_t_ket(:,1) , t_init , t_max, tau(1) , save_tau(1) )
+#endif
+End If
+
+!=======================================================================
+!            Hole Hamiltonian : lower triangle ...
+!=======================================================================
+
+If( eh_tag(2) == "hl" ) then  ! <==  proceed evolution of HOLE wapacket with best tau ...
+#ifdef USE_GPU
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    call PropagationElHl_gpucaller(_hole_, Coulomb_, N, S_inv, h, Psi_t_bra(1,2), Psi_t_ket(1,2), t_init, t_max, tau(2), save_tau(2))
+    !GGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#else
+    CALL Propagation( N , H_prime , Psi_t_bra(:,2) , Psi_t_ket(:,2) , t_init , t_max , tau(2) , save_tau(2) )
+#endif
+End If
+
+!=======================================================================
 
 t = t_init + (delta_t*frame_step)
 
@@ -272,17 +265,26 @@ DUAL_ket = Psi_t_bra
 
 ! prepare Slater basis for FORCE properties ...
 call op_x_ket( AO_bra, S_inv, Psi_t_bra )
-AO_bra = dconjg(AO_bra) 
+AO_bra = dconjg(AO_bra)
 AO_ket = Psi_t_ket
 
 CALL QuasiParticleEnergies( AO_bra , AO_ket , H )
+CALL store_Hprime( N , H_prime ) 
 
 ! save populations(time) ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 
-nullify( h )
+! clean and exit ...
+If( driver /= 'q_dynamics' ) then
+    deallocate( h0 )
+    nullify( h )
+end if
+#ifndef USE_GPU
+deallocate( H_prime )
+#endif
+#undef S_inv
 
 first_call_ = .false.
 
@@ -342,7 +344,7 @@ mm = size(AO_bra(:,1))
 erg_el = (0.d0,0.d0)
 erg_hl = (0.d0,0.d0)
 
-If( eh_tag(1) == "el" ) then
+If( eh_tag(1) == "el" ) then  
     !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_el )
     do j = 1 , mm
         do i = 1 , mm
@@ -352,7 +354,8 @@ If( eh_tag(1) == "el" ) then
     !$OMP end parallel do  
 End If
 
-If( eh_tag(2) == "hl" ) then
+
+If( eh_tag(2) == "hl" ) then  
     !$OMP parallel do private(i,j) default(shared) reduction(+ : erg_hl)
     do j = 1 , mm
         do i = 1 , mm
@@ -384,10 +387,26 @@ complex*16      , intent(in)    :: AO_bra   (:,:)
 complex*16      , intent(in)    :: AO_ket   (:,:)
 
 !local variables ...
-integer :: N , err
-integer :: mpi_D_R = mpi_double_precision
+integer :: N
 
 N = size(basis)
+
+#ifdef USE_GPU
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+    allocate( S_matrix(N,N) )
+    call GPU_Pin(S_matrix, N*N*8)
+!GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+#endif
+
+CALL Overlap_Matrix( system , basis , S_matrix )
+
+allocate( h0(N,N) , source = D_zero )
+
+If( EnvField_ ) then
+    h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
+else
+    h0(:,:) = Build_Huckel( basis , S_matrix )
+end If
 
 !vector states to be propagated ...
 allocate( Psi_t_bra(N,n_part) )
@@ -396,36 +415,33 @@ allocate( Psi_t_ket(N,n_part) )
 Psi_t_bra = DUAL_ket
 Psi_t_ket = AO_ket
 
-CALL Overlap_Matrix( system , basis , S_matrix )
-
-allocate( h0(N,N) , source = D_zero )
-
-!------------------------------------------------------------------------
-If( master .OR. EnvCrew ) then 
-
-   If( EnvField_ ) then
-      ! EnCrew stay in even_more_extended_Huckel ...
-      h0(:,:) = even_more_extended_Huckel( system , basis , S_matrix )
-   Else
-      h0(:,:) = Build_Huckel( basis , S_matrix )
-   end If
-
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
-
-End If
-
-If( ForceCrew ) then
-   ! After instantiating S_matrix AND h0, ForceCrew leave to EhrenfestForce ...
-   CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ForceComm , err )
-   return
-End If
-
-! Another ChebyCrew  mate ...
-If( myCheby == 1 ) CALL MPI_BCAST( h0 , N*N , mpi_D_R , 0 , ChebyComm , err )
-!------------------------------------------------------------------------
-
 CALL QuasiParticleEnergies(AO_bra, AO_ket, h0)
+
+!==============================================
+! preprocess stuff for EhrenfestForce ...
+
+  CALL syInvert( S_matrix, return_full ) ! <== S_matrix content is destroyed and S_inv is returned
+#define S_inv S_matrix
+
+  allocate( H(N,N) )
+  h => h0
+
+! allocate and compute H' = S_inv * H ...
+  allocate( H_prime(N,N) , source = D_zero )
+  CALL syMultiply( S_inv , h , H_prime )
+
+  CALL store_Hprime( N , H_prime )
+!==============================================
+
+!==============================================
+! clean and exit ...
+deallocate( h0 )
+nullify( h )
+#ifndef USE_GPU
+deallocate( H_prime )
+#endif
+#undef S_inv
+!==============================================
 
 ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
 QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
@@ -435,3 +451,4 @@ end subroutine preprocess_from_restart
 !
 !
 end module ElHl_Chebyshev_m
+

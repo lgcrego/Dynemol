@@ -12,12 +12,13 @@ module diagnostic_m
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
+ use QCModel_Huckel             , only : EigenSystem
  use Structure_Builder          , only : Unit_Cell ,            &
                                          Extended_Cell ,        &
                                          Generate_Structure ,   &
                                          Basis_Builder ,        &
                                          ExCell_basis
- use GA_QCModel_m               , only : Mulliken , GA_Eigen
+ use GA_QCModel_m               , only : Mulliken
  use DP_main_m                  , only : Dipole_Matrix
  use Dielectric_Potential       , only : Environment_SetUp
  use Oscillator_m               , only : Optical_Transitions
@@ -64,7 +65,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 !.........................................................
 
  CALL Generate_Structure(1)
-
+     
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
  If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
@@ -73,15 +74,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
- ! this Eigen is MPI free ...
- CALL GA_Eigen( Extended_Cell, ExCell_basis, UNI )
-
- ! save energies of the TOTAL system 
- OPEN(unit=9,file='system-ergs.dat',status='unknown')
-     do i = 1 , size(ExCell_basis)
-         write(9,*) i , UNI%erg(i)
-     end do
- CLOSE(9) 
+ CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
  CALL Total_DOS( UNI%erg , TDOS )
 
@@ -93,13 +86,13 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
- Print*, " " 
- Print*, "dE1 = ", UNI%erg(115) - UNI%erg(114) ,   2.6470
- Print*, "dE2 = ", UNI%erg(114) - UNI%erg(113) ,   0.3040
- Print*, "dE3 = ", UNI%erg(115) - UNI%erg(113) ,   2.9510
- Print*, "dE4 = ", UNI%erg(113) - UNI%erg(112) ,   0.8950
- Print*, "dE5 = ", UNI%erg(112) - UNI%erg(111) ,   0.4360
- Print*, "dE6 = ", UNI%erg(117) - UNI%erg(116) ,   1.6000
+! Print*, " " 
+! Print*, "dE1 = ", UNI%erg(123) - UNI%erg(122) ,   2.8670
+! Print*, "dE2 = ", UNI%erg(122) - UNI%erg(121) ,   0.0930
+! Print*, "dE3 = ", UNI%erg(123) - UNI%erg(121) ,   2.9600
+! Print*, "dE4 = ", UNI%erg(121) - UNI%erg(120) ,   1.0970
+! Print*, "dE5 = ", UNI%erg(120) - UNI%erg(119) ,   0.2020
+! Print*, "dE6 = ", UNI%erg(125) - UNI%erg(124) ,   1.6310
  
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 

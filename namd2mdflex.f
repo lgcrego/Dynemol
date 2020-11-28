@@ -6,12 +6,12 @@ use iso_fortran_env
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
-use MPI_definitions_m      , only : master
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
 use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
+use setup_checklist        , only : Checking_Topology
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -45,6 +45,7 @@ character(10)                   :: string
 character(200)                  :: line 
 integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms
 integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers 
+logical                         :: TorF
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -63,7 +64,7 @@ do a = 1 , MM % N_of_species
             print*, string,' file not found; terminating execution' ; stop
         end if
 
-        If( master ) write(*,'(/2a9)',advance='no') "Reading ", string
+        write(*,'(/2a9)',advance='no') "Reading ", string
 
         ! start reading the molecular structure of species(a) ...
         do
@@ -260,12 +261,10 @@ do a = 1 , MM % N_of_species
 
 !==============================================================================================
 
-        If( master ) then
-            TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
-            If( TorF ) then
-                CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
-                stop
-            End If
+        TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
+        If( TorF ) then
+            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
+            stop
         End If
 
 !==============================================================================================
@@ -296,7 +295,7 @@ do a = 1 , MM % N_of_species
 
     close(33)
 
-    If( master ) write(*,'(a9)') " << done "
+    write(*,'(a9)') " << done "
 
 end do
 

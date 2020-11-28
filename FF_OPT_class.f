@@ -172,7 +172,7 @@ class(FF_OPT) , intent(inout)  :: me
 real*8                         :: cost
 
 ! local variables ...
-integer         :: i , j , info = 0
+integer         :: i , j , info
 real*8          :: energy 
     
 ! reset forces ...
@@ -189,7 +189,7 @@ forall( i=1:molecule(1)%nangs   , j=1:size(molecule(1)%kang0  (1,:)) ) molecule(
 forall( i=1:molecule(1)%ndiheds , j=1:size(molecule(1)%kdihed0(1,:)) ) molecule(1)%kdihed0(i,j) =  dihed(i,j)%PTR
 
 ! tracking the correct normal mode order ...
-If( method == "NormalModes" ) CALL normal_modes( info )
+CALL normal_modes( info )
 
 If( info /= 0 ) then ; cost = real_large ; return ; end If
 

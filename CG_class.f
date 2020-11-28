@@ -86,7 +86,7 @@ If( .NOT. allocated(CG_basis) ) allocate( CG_basis(size(me%basis)) , source = me
 call modify_EHT_parameters( me )
 
 info = 0
-CALL GA_eigen( Extended_Cell , me%basis , CG_UNI )
+CALL GA_eigen( Extended_Cell , me%basis , CG_UNI , info )
 
 If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , me%basis , CG_UNI%L ,CG_UNI%R , CG_DP )
 

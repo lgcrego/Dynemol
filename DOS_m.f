@@ -3,7 +3,7 @@ module DOS_m
     use type_m
     use omp_lib    
     use constants_m
-    use parameters_m            , only  : sigma , DOS_range , verbose
+    use parameters_m            , only  : sigma , DOS_range        
     use Semi_Empirical_Parms    , only  : the_chemical_atom => atom
 
     public  :: Total_DOS , Partial_DOS
@@ -92,7 +92,7 @@ TDOS%occupation = sub_occupation + TDOS%occupation
 
 DEALLOCATE( peaks , DOS_partial )
 
-If( verbose ) print*, '>> TDOS done <<'
+print*, '>> TDOS done <<'
 
 end subroutine Total_DOS
 !
@@ -182,7 +182,7 @@ PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
 
 DEALLOCATE( atom , list_of_DOS_states )
 
-If( verbose ) print*, '>> ',PDOS(nr)%residue,' PDOS done <<'
+print*, '>> ',PDOS(nr)%residue,' PDOS done <<'
 
 end subroutine Partial_DOS
 !

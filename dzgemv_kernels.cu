@@ -54,7 +54,6 @@
 #include "magma_operators.h"
 #include <stdio.h>
 
-
 //-------------------------------------
 // From operators.h:
 
@@ -66,11 +65,8 @@ __device__ static __inline__ double             conj_if(int _if_, double x){retu
 /*************************************************************/
 /**
  *   Atomic add on double precision, as suggested by the CUDA programming Guide
- *   CUDA 8 has myatomicAdd, ealier version don't
  **/
-
-//#if __CUDA_VER_MAJOR__ < 8
-__device__ static __inline__ double myatomicAdd(double* address, double val)
+__device__ static __inline__ double atomicAdd(double* address, double val)
 {
     unsigned long long int* address_as_ull = (unsigned long long int*)address;
     unsigned long long int old = *address_as_ull, assumed;
@@ -80,18 +76,15 @@ __device__ static __inline__ double myatomicAdd(double* address, double val)
     } while (assumed != old);
     return __longlong_as_double(old);
 }
-//#endif
 
 /**
  *   Atomic add for double complex ('Z' precision)
  **/
-
-__device__ static __inline__ void myatomicAdd(cuDoubleComplex* address, cuDoubleComplex val)
+__device__ static __inline__ void atomicAdd(cuDoubleComplex* address, cuDoubleComplex val)
 {
-    myatomicAdd( (double*) (&(*address).x) ,val.x);
-    myatomicAdd( (double*) (&(*address).y) ,val.y);
+    atomicAdd( (double*) (&(*address).x) ,val.x);
+    atomicAdd( (double*) (&(*address).y) ,val.y);
 }
-
 
 //-------------------------------------
 // From gemv2_core.cuh:
@@ -261,7 +254,7 @@ gemvn(int n, T1 alpha, T1 *A, int lda, T2 *x, T1  beta, T2 *y, int mod_r, int mo
         for(int k = 0; k < tcol; k++)
             res_1_ += la[k * nb + tx];
         // use atomics
-        myatomicAdd(&y[tx], (alpha*res_1_));
+        atomicAdd(&y[tx], (alpha*res_1_));
         //y[tx] = alpha * res_1_ ;
     }
 }
@@ -487,10 +480,10 @@ gemvt(int n, T1 alpha, T1 *A, int lda, T2 *x, T1  beta, T2 *y, int mod_r, int mo
         // use atomics
         if(mod_c != 0)
         {
-            if(blkc == gridDim.x-1) {if(tx < mod_c)myatomicAdd(&y[tx], (alpha*res_1_));}
-            else myatomicAdd(&y[tx], (alpha*res_1_));
+            if(blkc == gridDim.x-1) {if(tx < mod_c)atomicAdd(&y[tx], (alpha*res_1_));}
+            else atomicAdd(&y[tx], (alpha*res_1_));
         }
-        else {myatomicAdd(&y[tx], (alpha*res_1_));}
+        else {atomicAdd(&y[tx], (alpha*res_1_));}
     }
 }
 
@@ -595,13 +588,13 @@ int kblas_dzscal_async(int n, double alpha, cuDoubleComplex *x, cuDoubleComplex 
 #else
 
 #define dzgemvn_nb               (64)
-#define dzgemvn_ntcol            (8)
+#define dzgemvn_ntcol    		(8)
 #define dzgemvn_ept              (2)
 #define dzgemvn_width    (dzgemvn_ntcol*dzgemvn_ept)
 #define dzgemvn_by               (1)
 
 #define dzgemvt_nb               (64)
-#define dzgemvt_ntcol            (8)
+#define dzgemvt_ntcol    		(8)
 #define dzgemvt_ept              (2)
 #define dzgemvt_width    (dzgemvt_ntcol*dzgemvt_ept)
 #define dzgemvt_by               (1)
@@ -789,13 +782,13 @@ int kblas_dzgemv2_driver(   char trans, int n,
 
 
 extern "C"
-int kblas_dzgemv2_async(char trans, int n,
+int kblas_dzgemv2_async(	char trans, int n,
 						double alpha, double *dA, int lda, 
 						cuDoubleComplex *dX,
 						double  beta, cuDoubleComplex *dY,
 						cudaStream_t stream)
 {
-	return kblas_dzgemv2_driver(trans, n, alpha, dA, lda, dX, beta, dY, stream);
+	return kblas_dzgemv2_driver(	trans, n, alpha, dA, lda, dX, beta, dY, stream);
 }
 
 extern "C"

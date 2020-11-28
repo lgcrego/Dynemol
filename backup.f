@@ -1,9 +1,7 @@
 module Backup_m
 
-    use MPI 
     use type_m
     use blas95
-    use MPI_definitions_m    , only : master , EnvCrew
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
@@ -92,7 +90,7 @@ CALL Generate_Structure( frame )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-if( EnvField_ .AND. (master .OR. EnvCrew) ) then
+if( EnvField_ ) then
 
     CALL Dipole_Matrix  ( Extended_Cell , ExCell_basis )
 
@@ -104,8 +102,6 @@ if( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
 end If
 
-! KernelCrew and ForceCrew: only calculate S_matrix and return; 
-! EnvCrew: follow to even_more_extended_Huckel ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
 

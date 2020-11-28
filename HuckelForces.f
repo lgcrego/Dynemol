@@ -250,7 +250,7 @@ real*8           , intent(out) :: erg(:)
 ! local variables ...
 real*8  , ALLOCATABLE :: h(:,:) 
 real*8  , ALLOCATABLE :: S_matrix(:,:)
-integer               :: info
+integer               :: i , j , info
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 

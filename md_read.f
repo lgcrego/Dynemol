@@ -1,9 +1,8 @@
 module MD_read_m
- 
+
     use constants_m
     use atomicmass
     use MM_input       
-    use MPI_definitions_m       , only : master
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -297,7 +296,7 @@ end do
 !call debug_MM( atom )
 !========================================================================================= 
 
-If( master ) CALL MM_diagnosis( )
+CALL MM_diagnosis( )
 
 end subroutine Build_MM_Environment
 !

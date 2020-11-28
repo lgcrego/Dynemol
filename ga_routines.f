@@ -1,10 +1,8 @@
 module GA_m
 
-    use mpi
     use type_m
     use constants_m
     use MM_types                , only : LogicalKey
-    use MPI_definitions_m       , only : master , world , myid , np , slave
     use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
@@ -48,12 +46,10 @@ type(STO_basis)                 , intent(inout) :: basis(:)
 type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) , snd_cost(:) , PopStar(:)
+real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
-integer                         :: mpi_D_R = mpi_double_precision
-integer                         :: i , generation , err , Pop_start , GeneSize , label
-logical                         :: done = .false.
+integer                         :: i , generation , info , Pop_start , GeneSize
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
@@ -67,59 +63,38 @@ CALL Read_GA_key( basis )
 GeneSize = GA%GeneSize
 
 ! Initial Populations ...
-allocate( Pop(Pop_Size , GeneSize) )
+allocate( Pop     (Pop_Size , GeneSize) )
+allocate( Old_Pop (Pop_Size , GeneSize) )
+allocate( indx    (Pop_Size)               )
+
+CALL random_seed
+
 Pop_start = 1
+CALL generate_RND_Pop( Pop_start , Pop )       
 
-! only master handles this stuff ...
-If( master ) then
+! this keeps the input EHT parameters in the population ...
+Pop(1,:) = D_zero
 
-    open( unit=23, file='opt.trunk/GA_cost.dat', status='unknown' )
+indx = [ ( i , i=1,Pop_Size ) ]
 
-    allocate( Old_Pop (Pop_Size , GeneSize)     )
-    allocate( indx    (Pop_Size)                )
-    allocate( PopStar (GeneSize)                ) 
-
-    CALL generate_RND_Pop( Pop_start , Pop )       
-
-    ! this keeps the input EHT parameters in the population ...
-    Pop(1,:) = D_zero
-
-    indx = [ ( i , i=1,Pop_Size ) ]
-
-end If
 !-----------------------------------------------
 
 ! create new basis ...
 allocate( GA_basis (size(basis)) )
 GA_basis = basis
 
-allocate( cost    (Pop_size), source=D_zero ) 
-allocate( snd_cost(Pop_size) )
+allocate( cost(Pop_size) )
 
 ! enable on the fly evaluation cost ...
 Adaptive_GA%mode = Adaptive_
 
 do generation = 1 , N_generations
 
-99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
-    If( done ) then ! <== slaves pack and leave ...
-        deallocate( GA_basis , cost , snd_cost , Pop )
-        return
-    End If
-
-    CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
-    ! for on_the_fly cost evaluation ...
-    CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
-    CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
-
     ! sharing these variables with ga_QCModel ...
     Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
 
-    snd_cost = D_zero
-
-    ! Mutation_&_Crossing preserves the top-selections ...
-    ! evaluate cost only for new Pop outside top_selection ...
-    do i = myid + 1 , Pop_Size , np
+    !do i = Pop_start , Pop_Size
+     do i = 1 , Pop_Size
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
@@ -130,17 +105,10 @@ do generation = 1 , N_generations
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
-        ! population cost ...
-        snd_cost(i) = evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
+!       gather data and evaluate population cost ...
+        cost(i) =  evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
-
-    ! gather data ...
-    CALL MPI_reduce( snd_cost , cost , Pop_Size , MPI_D_R , mpi_SUM , 0 , world , err )
-
-    Pop_start = Pop_size/2 + 1
-
-    If ( slave ) goto 99
 
 !   select the fittest ...    
     CALL sort2(cost,indx)
@@ -148,37 +116,29 @@ do generation = 1 , N_generations
     Old_Pop = Pop
     Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
 
-    PopStar(:) = Pop(1,:)
+    Pop_start = Pop_size/2 + 1
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross .AND. (mod(generation,6) /= 0) ) then
+    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
-        assign 159 to label
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
-        assign 163 to label
     end If
 
     indx = [ ( i , i=1,Pop_Size ) ]
 
-    If( Adaptive_ ) then    
-        Print label , generation , N_generations
-    else 
+    If( Adaptive_ ) then
+        Print 159 , generation , N_generations
+    else
         Print 160 , generation , N_generations
     EndIf
     Print*, cost(1)
     write(23,*) generation , cost(1)
 
-
     ! saving the temporary optimized parameters ...
     ! intent(in):basis ; intent(inout):GA_basis ...
-    CALL modify_EHT_parameters( basis , GA_basis , PopStar(:) ) 
+    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) ) 
     CALL Dump_OPT_parameters( GA_basis , output = "tmp" )
-
-    If( generation == N_generations ) then
-         done = .true.
-         CALL MPI_Bcast( done , 1 , mpi_logical , 0 ,world , err ) 
-    end If
 
 end do
 
@@ -186,8 +146,6 @@ close(23)
 
 ! switch-off on the fly evaluation cost ...
 Adaptive_GA%mode = .false.
-
-deallocate( cost , snd_cost , indx , Old_Pop ) 
 
 !----------------------------------------------------------------
 ! Prepare grid of parameters for CG fine tuning optimization ...
@@ -216,7 +174,7 @@ If( CG_ ) then
 else
 
     ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-    CALL modify_EHT_parameters( basis , GA_basis , PopStar )
+    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
@@ -230,7 +188,7 @@ end if
 CALL Dump_OPT_parameters( OPT_basis )
 
 deallocate( GA_UNI%L , GA_UNI%R , GA_UNI%erg )
-deallocate( Pop ) 
+deallocate( Pop , indx , Old_Pop ) 
 
 include 'formats.h'
 
@@ -466,7 +424,7 @@ implicit none
 type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
-integer :: i , j , ioerr , n , N_of_EHSymbol , err , size_EHSymbol
+integer :: i , j , ioerr , err , n , N_of_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)
@@ -483,30 +441,23 @@ N_of_EHSymbol = n - 1
 allocate( GA%EHSymbol    ( N_of_EHSymbol) )
 allocate( GA%key      (7 , N_of_EHSymbol) )
 
-! future use in bcasting ...
-size_EHSymbol = len(GA%EHSymbol(1)) * N_of_EHSymbol
-
 ! read the input-GA ...
 rewind 3
 read(3,*) dumb
 
-If( master ) then
-    Print 40 
-    Print 41
-    do j = 1 , N_of_EHSymbol
+Print 40 
+Print 41
+do j = 1 , N_of_EHSymbol
 
-        read(3,42)   GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+    read(3,42)   GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
-        write(*,421) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
+    write(*,421) GA%EHSymbol(j) , ( GA%key(i,j) , i=1,7 )
 
-    end do
+end do
 
-    CLOSE(3)
+CLOSE(3)
 
-    Print 43
-end If
-CALL MPI_BCAST( GA%EHSymbol , size_EHSymbol   , mpi_CHARACTER , 0 , world , err )
-CALL MPI_BCAST( GA%key      , 7*N_of_EHSymbol , mpi_INTEGER   , 0 , world , err )
+Print 43
 
 GA%GeneSize = sum( [ ( count(GA%key(1:3,j)==1) * count(GA%key(4:7,j)==1) , j=1,N_of_EHSymbol ) ] )
 
@@ -523,13 +474,11 @@ do j = 1 , N_of_EHSymbol
 
 end do
 
-If(master) then
-   If( OPT_parms ) then
-        Print*, ">> OPT_parms being used as input <<"
-   else
-        Print*, ">> OPT_parms were not used <<"
-   end if
-end If
+If( OPT_parms ) then
+     Print*, ">> OPT_parms being used as input <<"
+else
+     Print*, ">> OPT_parms were not used <<"
+end if
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
@@ -547,47 +496,21 @@ type(STO_basis)            , intent(inout) :: OPT_basis(:)
 character(len=*), optional , intent(in)    :: output
 
 ! local variables ...
-integer                               :: i , j , L , AngMax , n_EHS , N_of_EHSymbol , unit_tag
-integer                 , allocatable :: aux(:)
-integer          , save , allocatable :: indx_EHS(:)
-character(len=:)        , allocatable :: string(:)
-logical                               :: done = .false.
+integer               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
+integer , allocatable :: indx_EHS(:)
+integer               :: unit_tag
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
 integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
 
-!-------------------------------------------------------------------------------------
-If( .not. done ) then
-    allocate( character( len=len(OPT_basis%EHSymbol)+len(OPT_basis%residue)) :: string(size(OPT_basis)) )
-    allocate( aux(size(OPT_basis)) , source = 0 )
-    
-    j = 0
-    do i = 1 , size(OPT_basis)
-       
-        string(i) = OPT_basis(i)% EHSymbol//OPT_basis(i)% residue
-    
-        ! find different (EHSymbol,residue) pairs ... 
-        if( .NOT. any( string(1:i-1) == string(i) ) ) then
-    
-             If( any( GA% EHSymbol == OPT_basis(i)% EHSymbol ) ) then
-                 j = j + 1
-                 aux(j) = i
-             end If
-    
-        end If  
-    
-    end do
-    
-    allocate( indx_EHS(j) , source = aux(1:j) )
+N_of_EHSymbol = size( GA%EHSymbol )
 
-    deallocate( aux , string ) 
+allocate( indx_EHS(N_of_EHSymbol) )
 
-    done = .true. 
-end If
-N_of_EHSymbol = size(indx_EHS)
+! locate position of the first appearance of EHS-atoms in OPT_basis
+indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
 
-!-------------------------------------------------------------------------------------
 If( present(output) .AND. output=="STDOUT" ) then
 
     Print*,""

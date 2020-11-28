@@ -5,7 +5,7 @@ use type_m
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
-real*8                  :: t_i , t_f , sigma
+real*8                  :: t_i , t_f , sigma , B_ext(3)
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
@@ -17,7 +17,7 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: resume
+logical                 :: SO_coupl , extmagfield , resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -34,16 +34,18 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "diagnostic"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
-  QMMM           = F_                        ! <== Hellman-Feynman-Pulay ; HFP_Forces MUST be T_ for QMMM calcs 
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parameters.input.dat"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  QMMM           = F_
+  SO_coupl       = T_                        ! <== Spin-orbit coupling
+  extmagfield    = T_                        ! <== Is there external magnetic field (B_ext parameter)?
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -52,8 +54,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-!  file_type    =  "structure"                 ! <== structure or trajectory
-  file_type    =  "trajectory"                ! <== structure or trajectory
+  file_type    =  "structure"                ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
@@ -78,7 +79,7 @@ logical :: dynamic
 !
   EnvField_    =  F_                          ! <== Potential produced by Environment
   Environ_Type =  "Ch_MM"                     ! <== point charges: Ch_MM ; dipoles: { DP_QM , DP_MM } ...
-  Environ_step =  10                          ! <== step for updating EnvField
+  Environ_step =  5                           ! <== step for updating EnvField
 
   Coulomb_     =  F_                          ! <== use dipole potential for solvent molecules
 
@@ -86,7 +87,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-  frame_step   =  5                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+  frame_step   =  1                           ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
@@ -97,18 +98,18 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  2.0d-1                              ! <== final time in PICOseconds
+  t_f  =  5.0d-1                              ! <== final time in PICOseconds
   n_t  =  1000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 65                         ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 114                        ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 66                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 115                        ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -119,7 +120,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 1 , 1 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -136,18 +137,23 @@ logical :: dynamic
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
+!           EXTERNAL MAGNETIC FIELD parameters
+!
+  B_ext = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. It not have been implemented to B_ext(2) /= 0 <== Complex operators
+
+!--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  100    
-  N_generations  =  1000
-  Pop_range      =  0.3     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.7     
+  Pop_Size       =  200  
+  N_generations  =  50    
+  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
+  Mutation_rate  =  0.5     
 
   Adaptive_      =  T_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
-  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  CG_            =  T_       ! <== use conjugate gradient method after genetic algorithm
   Top_Selection  =  5        ! <== top selection to undergo CG_
   profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
@@ -156,7 +162,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
         
         dynamic = T_ 
 
@@ -180,9 +186,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = merge( T_ , F_ , (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "avrg_confgs") )
-
-
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "slice_FSSH") 
 
 If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
     Print*," >>> halting: " 
@@ -197,9 +201,6 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<' warning.signal |cat")
     stop 
 end if
-
-If ( driver == "slice_Cheb" .AND. electron_state*hole_state == 0 )  &
-stop ">>> execution halted: driver=[slice_Cheb] only propagates ElHl pairs; for individual wvpckts use other drivers <<<"
 
 If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
@@ -227,3 +228,4 @@ end subroutine Define_Environment
 !
 !
 end module parameters_m
+

@@ -1,8 +1,7 @@
 module Semi_Empirical_Parms
 
     use type_m
-    use parameters_m                , only : OPT_parms
-    use MPI_definitions_m           , only : master
+    use parameters_m    , only  : OPT_parms
 
     type(EHT) , public , protected :: atom(300) 
     type(EHT) , allocatable , save :: EH_atom(:)
@@ -160,14 +159,17 @@ do i = 1 , size(EH_atom)
     flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
     flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
 
-    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in opt_eht_parms.input ; check Nzeta parameter <<<"
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+        CALL system("sed '11i>>> error in opt_eht_parms.input ; check Nzeta parameter <<<' warning.signal |cat")
+        STOP 
+    end If
  
 end do
 
 close(3)
 
-If( master ) Print 44
-If( master ) Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
+Print 44
+Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
 ! transform zetas to units of Angs^{-1} ...
 forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 

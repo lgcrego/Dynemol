@@ -46,8 +46,6 @@
 
 592   FORMAT(/,1x,'Energy of Hl-wavepacket state(',I3,') = ',F10.5,/)
 
-593   FORMAT(/,1x,'Energy of El-wvpckt state(',I3,') = ',F10.5,10x,'Energy of Hl-wvpckt state(',I3,') = ',F10.5,/)
-
 60    FORMAT(1x,'norm of Psi(t) = ',F10.7)     
 
 61    FORMAT(1x,'>> AO_preprocess done <<')
@@ -110,15 +108,13 @@
 
 158   FORMAT(/,1x,'N_of_Solute_Molecules in DP_field = ',I4/)
 
-159   FORMAT(/,1x,'AdaptiveCost_GA / Mutation-Xing : ',I5,' /',I5)
+159   FORMAT(/,1x,'AdaptiveCost_GA : ',I5,' /',I5)
 
-160   FORMAT(/,1x,'Cost_GA : ',I5,' /',I5)
+160   FORMAT(/,1x,'Custo_GA : ',I5,' /',I5)
 
-161   FORMAT(/,1x,'Cost_GA : ',I4,' /',I4 , F15.4 , a25)
+161   FORMAT(/,1x,'Custo_GA : ',I4,' /',I4 , F15.4 , a25)
 
 162   FORMAT(/,1x,'Custo_CG : ',I5,' /',I5)
-
-163   FORMAT(/,1x,'AdaptiveCost_GA /     RND_Pop   : ',I5,' /',I5)
 
 165   FORMAT(1x,'========= ',A20,' =========')
 
@@ -174,7 +170,7 @@
 
 209 format(1x,'van der Walls 1-4 scale = ',F7.4)
 
-210 format(/,1x,'OPT cost/original cost = ',F20.4,' / ',F20.4)
+210 format(/,1x,'OPT cost/original cost = ',F16.4,' / ',F16.4)
 
 214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
 

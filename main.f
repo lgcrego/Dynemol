@@ -1,10 +1,8 @@
 Program qdynamo
 
-use MPI
 use type_m
 use constants_m
 use setup_checklist      
-use MPI_definitions_m       , only : launch_MPI , master , world , myid
 use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -18,27 +16,21 @@ use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
-use Ehrenfest_Builder       , only : EhrenfestForce
 
 ! local variables ...
-integer :: err
 
-CALL Define_Environment
-
-! Initialize MPI if necessary ...
-call launch_MPI
-
-! Initialize GPU if necessary ...
-CALL GPU_Init(myid,1)
+! Initialize GPU if necessary 
+call GPU_Init(0,1)
 
 !========================================================
 !                   DRIVER ROUTINE
 !========================================================
 
-If( master ) then 
-    CALL checklist
-    If( .not. restart ) CALL system( "./env.sh" )
-end If
+CAll Define_Environment
+   
+CALL checklist
+
+If( .not. restart ) CALL system( "./env.sh" )
 
 CALL read_EHT_parameters
 
@@ -46,14 +38,14 @@ CALL Read_Structure
 
 If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_Environment
 
-If( master ) CALL dump_driver_parameters_and_tuning
+CALL dump_driver_parameters_and_tuning
 
 select case ( driver )
 
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "slice_AO" , "slice_Cheb" )
+    case ( "slice_AO" , "slice_FSSH" , "slice_Cheb" )
         CALL QMDynamicSlice_driver
 
     case ( "avrg_confgs" )
@@ -94,10 +86,6 @@ select case ( driver )
 end select
 
 include 'formats.h'
-
-! Finalize MPI if necessary 
-Call mpi_barrier( world , err )
-call MPI_FINALIZE(err)
 
 ! Finalize GPU if necessary 
 call GPU_Finalize

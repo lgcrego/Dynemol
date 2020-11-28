@@ -33,7 +33,7 @@ end If
 
 select case ( DRIVER )
 
-    case( "slice_AO" )
+    case( "slice_AO" , "slice_FSSH" )
 
         CALL AO_adiabatic ( QDyn , it )
 

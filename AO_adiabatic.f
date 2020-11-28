@@ -3,13 +3,9 @@
 ! Subroutine for computing time evolution adiabatic on the AO
 module AO_adiabatic_m
 
-    use MPI
     use type_m
     use constants_m
     use blas95
-    use MPI_definitions_m           , only : master , world , myid,           &
-                                             KernelComm , KernelCrew ,        &
-                                             ForceComm , ForceCrew , EnvCrew 
     use parameters_m                , only : t_i , n_t , t_f , n_part ,       &
                                              frame_step , nuclear_matter ,    &
                                              EnvField_ , DP_Moment ,          &
@@ -38,7 +34,7 @@ module AO_adiabatic_m
     use TD_Dipole_m                 , only : wavepacket_DP                                        
     use Polarizability_m            , only : Build_Induced_DP
     use Solvated_M                  , only : Prepare_Solvated_System 
-    use QCModel_Huckel              , only : EigenSystem                                                 
+    use QCModel_Huckel              , only : EigenSystem , S_root_inv 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
     use Data_Output                 , only : Populations ,                    &
@@ -49,6 +45,7 @@ module AO_adiabatic_m
     use MM_dynamics_m               , only : MolecularMechanics ,             &
                                              preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder           , only : EhrenfestForce
+!    use FSSH                        , only : PSE_forces
     use Auto_Correlation_m          , only : MO_Occupation
     use Dielectric_Potential        , only : Environment_SetUp
 
@@ -77,9 +74,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer         :: frame , frame_init , frame_final , frame_restart , err
-integer         :: mpi_D_R = mpi_double_precision
-integer         :: mpi_D_C = mpi_double_complex
+integer         :: j , frame , frame_init , frame_final , frame_restart
 real*8          :: t_rate 
 type(universe)  :: Solvated_System
 
@@ -116,20 +111,12 @@ do frame = frame_init , frame_final , frame_step
 
     ! calculate for use in MM ...
     If( QMMM ) then
-
         Net_Charge_MM = Net_Charge
-
-        CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
-        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-        CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
-        CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
-
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-
+        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+!        CALL PSE_forces     ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
-    !============================================================================
     CALL U_ad(t_rate)  ! <== adiabatic component of the propagation ; 1 of 2 ... 
 
     ! DUAL representation for efficient calculation of survival probabilities ...
@@ -182,10 +169,7 @@ do frame = frame_init , frame_final , frame_step
     end select
 
     CALL Generate_Structure( frame )
-
-    ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
-    If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-
+    
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
     If( EnvField_ ) CALL DP_stuff( "EnvField" )
@@ -226,8 +210,7 @@ implicit none
 type(f_time)    , intent(out)   :: QDyn
 
 ! local variables
-integer         :: hole_save , n , err
-integer         :: mpi_D_R = mpi_double_precision
+integer         :: hole_save , n 
 type(universe)  :: Solvated_System
 
 ! preprocessing stuff .....................................................
@@ -252,7 +235,7 @@ select case ( nuclear_matter )
       
     case default
 
-        If( master ) Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
+        Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
         stop
 
 end select
@@ -261,16 +244,20 @@ CALL Generate_Structure( 1 )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
+mm = size(ExCell_basis) ; nn = n_part
+
+CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+                          
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( EnvField_ .AND. (master .OR. EnvCrew) ) then
+If( EnvField_ ) then
 
     hole_save  = hole_state
     hole_state = 0
     static     = .true. 
 
     ! Environ potential in the static GS configuration ...
-    CALL Environment_SetUp( Extended_Cell )
+    CALL Environment_SetUp  ( Extended_Cell )
 
     hole_state = hole_save
     static     = .false.
@@ -279,27 +266,7 @@ If( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
 end If
 
-! ForceCrew only calculate S_matrix and return ; EnvCrew stay in hamiltonians.f ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
-
-! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
-If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-
-mm = size(ExCell_basis) ; nn = n_part
-
-If( KernelCrew ) then
-        allocate( UNI%erg (mm)    )
-        allocate( UNI%L   (mm,mm) )
-        allocate( UNI%R   (mm,mm) )
-end if
-CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-
-CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-                          
-! done for KernelCrew ; KernelCrew dwells in EhrenfestForce ...
-If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 do n = 1 , n_part                         
@@ -312,7 +279,7 @@ do n = 1 , n_part
             MO_bra( : , n ) = el_FMO%L( orbital(n) , : )    
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )   
 
-            If( master ) Print 591, orbital(n) , el_FMO%erg(orbital(n))
+            Print 591, orbital(n) , el_FMO%erg(orbital(n))
        
         case( "hl" )
 
@@ -321,9 +288,8 @@ do n = 1 , n_part
             MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
-            If( master ) Print 592, orbital(n) , hl_FMO%erg(orbital(n))
-            If( (orbital(n) > hl_FMO%Fermi_State) .and.  master ) Print*,'>>> warning: hole state above the Fermi level <<<'
-
+            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+            If( (orbital(n) > hl_FMO%Fermi_State) ) print*,'>>> warning: hole state above the Fermi level <<<'
 
         end select
 end do
@@ -354,11 +320,8 @@ End If
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
-! ForceCrew is on stand-by for this ...
-CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-
 !..........................................................................
+
 include 'formats.h'
 
 end subroutine Preprocess
@@ -392,10 +355,17 @@ implicit none
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate)
-! asymmetric orthogonalization ...
+select case (driver)
 
-  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
-  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+       case("slice_FSSH") ! <== Lowdin orthogonalization ...
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+           MO_bra = conjg(MO_ket)
+
+       case default       ! <== asymmetrical orthogonalization ...
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+
+end select
 
 end subroutine U_nad
 !
@@ -406,11 +376,29 @@ end subroutine U_nad
 !=======================
 implicit none
 
-! dual basis for evaluating local properties ...
-! asymmetrical orthogonalization ...
+real*8 , allocatable :: aux(:,:)
 
-  CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-  CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+! dual basis for evaluating local properties ...
+select case (driver)
+
+       case("slice_FSSH") ! <== Lowdin orthogonalization ...
+
+           If( it == 1 ) then
+               allocate( aux(mm,mm) )
+               call symm( S_root_inv , UNI%R , aux )
+               UNI%R = aux
+               deallocate( aux , S_root_inv )
+           end If
+
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+           DUAL_bra = conjg(DUAL_ket)
+
+       case default       ! <== asymmetrical orthogonalization ...
+
+           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+           CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+
+end select
 
 end subroutine DUAL_wvpckts
 !
@@ -568,50 +556,25 @@ implicit none
 type(f_time)    , intent(out) :: QDyn
 integer         , intent(out) :: frame_restart
 
-integer :: err
-integer :: mpi_D_R = mpi_double_precision
-
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
-If( master .OR. KernelCrew ) then
-    CALL Restart_State( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
-    allocate( phase(size(MO_bra(:,1))) )
-end If
+CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
 
-Call mpi_barrier( world , err )
+allocate( phase(size(MO_bra(:,1))) )
 
 CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , UNI )
 
 mm = size(ExCell_basis)
 nn = n_part
 
-! done for ForceCrew ; ForceCrew dwell in EhrenfestForce ...
-If( ForceCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-
-If( KernelCrew ) then
-        allocate( UNI%erg (mm)    )
-        allocate( UNI%L   (mm,mm) )
-        allocate( UNI%R   (mm,mm) )
-end if
-CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-
-! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
-If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
-
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 If( Induced_ ) then
      CALL Build_Induced_DP( instance = "allocate" )
      CALL DP_stuff ( "Induced_DP" )
 end If
 
-! ForceCrew is on stand-by for this ...
-CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-
 end subroutine Restart_stuff
-!
 !
 !
 end module AO_adiabatic_m

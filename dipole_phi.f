@@ -4,7 +4,6 @@ module DP_potential_m
     use constants_m
     use blas95
     use f95_precision
-    use MPI_definitions_m       , only : master
     use parameters_m            , only : PBC , Environ_type , verbose
     use MD_read_m               , only : atom
     use DP_FMO_m                , only : DP_FMO_analysis
@@ -118,7 +117,7 @@ select case( instance )
         N_of_Solvent_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        If( master .AND. verbose ) Print 157 , N_of_Solvent_Molecules
+        If( verbose ) Print 157 , N_of_Solvent_Molecules
 
     case( "solute" )
 
@@ -129,7 +128,7 @@ select case( instance )
         N_of_Solute_Molecules = (last_nr - first_nr + 1)
 
         ! consistency check ...
-        If( master .AND. verbose ) Print 158 , N_of_Solute_Molecules 
+        Print 158 , N_of_Solute_Molecules 
 
 end select
 

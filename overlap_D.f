@@ -3,7 +3,7 @@
 module Overlap_Builder
     use type_m
     use constants_m
-    use parameters_m,         only : verbose, PBC, static
+    use parameters_m,         only : verbose, PBC, static , SO_coupl , extmagfield
     use PBC_m,                only : Generate_Periodic_Structure
     use Semi_Empirical_Parms, only : atom
     use Allocation_m,         only : DeAllocate_Structures
@@ -41,31 +41,30 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     ! local
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
-    integer                      :: NonZero, S_size
+    real*8         , allocatable :: S_tmp(:,:)
+    integer                      :: NonZero, S_size , n
     real*8                       :: Sparsity
 
     CALL util_overlap
 
     S_size = SUM(atom(system%AtNo)%DOS, system%QMMM == "QM")
 
-    if (.NOT. allocated(S_matrix)) then
-        allocate(S_matrix(S_size,S_size))
-    end if
+    allocate( S_tmp( S_size , S_size ) )
 
     select case (purpose)
         case('FMO')
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_tmp)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
             CALL Generate_Periodic_Structure(system, basis, pbc_system, pbc_basis)
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_tmp)
 
         case('Pulay') ! <== used by diagnostic through Hellman_Feynman_Pulay function
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure(system, pbc_system, pbc_basis)
-            CALL Pulay_Overlap(system, basis, pbc_system, pbc_basis, S_matrix, site)
+            CALL Pulay_Overlap(system, basis, pbc_system, pbc_basis, S_tmp, site)
 
         case default
             ! Overlap Matrix S(a,b) of the system
@@ -81,9 +80,9 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix , recycle = .true. )
+            CALL Build_Overlap_Matrix( system, basis(1:S_size), pbc_system, pbc_basis, S_tmp , recycle = .true. )
 
-            NonZero  = count(S_matrix /= 0.d0)
+            NonZero  = count(S_tmp /= 0.d0)
             Sparsity = float(NonZero) / float(S_size ** 2)
 
             if (verbose) then
@@ -98,6 +97,27 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
         deallocate(pbc_basis)
     end if
 
+    if( not(SO_coupl) .AND. not(extmagfield) ) then
+
+        if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) )
+
+        S_matrix = S_tmp
+
+    else
+
+        S_size = 2 * S_size
+
+        if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) , source = 0.0d0 )
+
+        n = S_size / 2
+
+        S_matrix(     1 :      n ,     1 :      n ) = S_tmp( 1 : n , 1 : n )
+        S_matrix( n + 1 : S_size , n + 1 : S_size ) = S_tmp( 1 : n , 1 : n )
+
+    end if
+
+    deallocate( S_tmp )
+    
     include 'formats.h'
 end subroutine OVERLAP_MATRIX
 

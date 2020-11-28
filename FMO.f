@@ -1,10 +1,10 @@
  module FMO_m
 
+    use IFPORT
     use type_m
     use f95_precision
     use blas95
     use lapack95
-    use MPI_definitions_m           , only : master , myid
     use parameters_m                , only : driver ,                   &
                                              n_part ,                   &
                                              Survival ,                 &
@@ -55,6 +55,7 @@
  integer                       :: i
  character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
+ logical                       :: TorF
 
  CALL preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
 
@@ -81,7 +82,10 @@
  FMO_system%copy_No    =  0
 
 ! check point ...
- If( any(FMO_system%QMMM /= "QM") ) stop ">> FMO fragment contains MM atoms <<"
+ If( any(FMO_system%QMMM /= "QM") ) then
+     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' warning.signal |cat")                                  
+     stop     
+end If
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
@@ -125,7 +129,7 @@
 
  deallocate( system_fragment , basis_fragment )
 
- If( master .AND. verbose ) Print*, '>> FMO analysis done <<'
+ Print*, '>> FMO analysis done <<'
 
  include 'formats.h'
 
@@ -335,7 +339,7 @@ implicit none
  end do
  CLOSE(9)   
 
- If( master .AND. verbose ) Print*, '>> eigen_FMO done <<'
+ Print*, '>> eigen_FMO done <<'
 
  end subroutine eigen_FMO
 !

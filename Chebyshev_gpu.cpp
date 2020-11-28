@@ -26,9 +26,9 @@
 #endif
 
 #ifdef GPU_TIMING
- #include "magma_auxiliary.h"
- #define time_init()  double __my_time = magma_wtime()
- #define time_end(S)  __my_time = magma_wtime()-__my_time; printf("time %s: %.4f\n", S,__my_time); fflush(stdout)
+ #define get_wtime magma_wtime
+ #define time_init()  double __my_time = get_wtime()
+ #define time_end(S)  __my_time = get_wtime()-__my_time; printf("Time %s: %.4f\n", S,__my_time); fflush(stdout)
 #else
  #define time_init()  /* No timing */
  #define time_end(S)  /* No timing */
@@ -38,16 +38,6 @@
 #define IDX( i, j, LD ) ((i) + (j)*(LD))
 
 // Short names to copy functions
-#define cudaDcopy( DST, SRC, N, DIRECTION ) cudaMemcpy( (void*) DST, (const void*) SRC, (N)*sizeof(double), DIRECTION );
-#define cudaDcopy_D2H( DST, SRC, N )        cudaDcopy( DST, SRC, N, cudaMemcpyDeviceToHost );
-#define cudaDcopy_H2D( DST, SRC, N )        cudaDcopy( DST, SRC, N, cudaMemcpyHostToDevice );
-#define cudaDcopy_D2D( DST, SRC, N )        cudaDcopy( DST, SRC, N, cudaMemcpyDeviceToDevice );
-
-#define cudaDcopyAsync( DST, SRC, N, DIRECTION, STREAM ) cudaMemcpyAsync( (void*) DST, (const void*) SRC, (N)*sizeof(double), DIRECTION, STREAM );
-#define cudaDcopyAsync_D2H( DST, SRC, N, STREAM )        cudaDcopyAsync( DST, SRC, N, cudaMemcpyDeviceToHost, STREAM );
-#define cudaDcopyAsync_H2D( DST, SRC, N, STREAM )        cudaDcopyAsync( DST, SRC, N, cudaMemcpyHostToDevice, STREAM );
-#define cudaDcopyAsync_D2D( DST, SRC, N, STREAM )        cudaDcopyAsync( DST, SRC, N, cudaMemcpyDeviceToDevice, STREAM );
-
 #define cudaZcopy( DST, SRC, N, DIRECTION ) cudaMemcpy( (void*) DST, (const void*) SRC, (N)*sizeof(cuDoubleComplex), DIRECTION );
 #define cudaZcopy_D2H( DST, SRC, N )        cudaZcopy( DST, SRC, N, cudaMemcpyDeviceToHost );
 #define cudaZcopy_H2D( DST, SRC, N )        cudaZcopy( DST, SRC, N, cudaMemcpyHostToDevice );
@@ -56,7 +46,8 @@
 #define cudaZcopyAsync( DST, SRC, N, DIRECTION, STREAM ) cudaMemcpyAsync( (void*) DST, (const void*) SRC, (N)*sizeof(cuDoubleComplex), DIRECTION, STREAM );
 #define cudaZcopyAsync_D2H( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyDeviceToHost, STREAM );
 #define cudaZcopyAsync_H2D( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyHostToDevice, STREAM );
-#define cudaZcopyAsync_D2D( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyDeviceToDevice, STREAM );  
+#define cudaZcopyAsync_D2D( DST, SRC, N, STREAM )        cudaZcopyAsync( DST, SRC, N, cudaMemcpyDeviceToDevice, STREAM );
+
 
 //-------------------------------------------------------------------
 // Useful macros to economize code and improve readability:
@@ -196,22 +187,6 @@ extern "C" int kblas_dzgemv2_oop_async(
     double beta, cuDoubleComplex *dY,
     cuDoubleComplex *dZ, cudaStream_t stream);
 
-extern void hadamard_minus(
-    const int n,
-    const int m,
-    const double * const x,
-    const double * const y,
-    double       * const z,
-    const cudaStream_t stream );
-
-extern void calculate_A(
-    const int n,
-    const int ld,
-    const cuDoubleComplex * const __restrict__ bra,
-    const cuDoubleComplex * const __restrict__ ket,
-    double                * const __restrict__ A,
-    const cudaStream_t stream );
-
 
 //-------------------
 // Prototypes
@@ -231,35 +206,17 @@ void propagation_gpucaller_(
 
 extern "C"
 void propagationelhl_gpucaller_(
-    const int       * const __restrict__ N,
-    const double    * const __restrict__ h_S,        // in host
+    const int       * const __restrict__ particle,
+    const void      * const __restrict__ logical_coulomb,
+    const int       * const __restrict__ n,
+    const double    * const __restrict__ h_Sinv,     // in host
     const double    * const __restrict__ h_h,        // in host
-    double          * const __restrict__ h_H,        // in host
-    cuDoubleComplex * const __restrict__ h_AO_bra,   // in host
-    cuDoubleComplex * const __restrict__ h_AO_ket,   // in host
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
     const double    * const __restrict__ t_init,
     const double    * const __restrict__ t_max,
     double          * const __restrict__ tau,
     double          * const __restrict__ save_tau );
-
-extern "C"
-void ehrenfestkernel_gpu_(
-    const int       * const __restrict__ N,
-    const double    * const __restrict__ h_H,        // in host
-    const double    * const __restrict__ h_A,        // in host
-    const double    * const __restrict__ h_X,        // in host
-    double          * const __restrict__ h_K );      // in host
-
-extern "C" 
-void ehrenfestkernel2_gpu_(
-    const int             * const __restrict__ N,
-    const cuDoubleComplex * const __restrict__ h_bra,      // in host
-    const cuDoubleComplex * const __restrict__ h_ket,      // in host
-    const double          * const __restrict__ h_H,        // in host
-    const double          * const __restrict__ h_X,        // in host
-    double                * const __restrict__ h_K );      // in host
 
 //...................
 // internal:
@@ -351,10 +308,9 @@ void chebyshev_gpu(
     const double t_init,
     cuDoubleComplex * const __restrict__ PSI_bra,  // in device
     cuDoubleComplex * const __restrict__ PSI_ket,  // in device
-    const double    * const __restrict__ H)        // in device 
+    const double    * const __restrict__ H)        // in device
 {
     time_init();
-    DEBUG( printf("chebyshev_gpu: start\n"); fflush(stdout); );
 
     cudaError_t stat;
 
@@ -425,21 +381,17 @@ void chebyshev_gpu(
 
         cudaStreamSynchronize( stream[2] );   // wait for d_coeff to be copied
         // <tmp_bra| = sum(k=0,k_ref) c_k*<bra_k|
-        setStream( bra );
-        cublasZgemv( myHandle, CUBLAS_OP_N, n, k_ref, &z_one, bras, ld, d_coeff, 1, &z_zero, tmp_bra, 1 );
         // |tmp_ket> = sum(k=0,k_ref) c_k*|ket_k>
-        setStream( ket );
-        cublasZgemv( myHandle, CUBLAS_OP_N, n, k_ref, &z_one, kets, ld, d_coeff, 1, &z_zero, tmp_ket, 1 );
-//         acummulate_vec_ax_async( n, ld, k_ref, d_coeff, bras, tmp_bra, stream[bra_stream] );
-//         acummulate_vec_ax_async( n, ld, k_ref, d_coeff, kets, tmp_ket, stream[ket_stream] );
+        acummulate_vec_ax_async( n, ld, k_ref, d_coeff, bras, tmp_bra, stream[bra_stream] );
+        acummulate_vec_ax_async( n, ld, k_ref, d_coeff, kets, tmp_ket, stream[ket_stream] );
 
         // check charge conservation
-        // norm = |<tmp_bra|tmp_ket>|^2
+        //  norm = |<tmp_bra|tmp_ket>|^2
         setStream( bra );                              // queue after tmp_bra
         cudaStreamSynchronize( stream[ket_stream] );   // wait for tmp_ket
         cublasZdotc( myHandle, n, tmp_bra, 1, tmp_ket, 1, &z_norm );    // implicit synchronization here
         const double norm = cuCabs(z_norm);
-        
+
         if( fabs(norm - norm_ref) < norm_tolerance )
         {
             braCopy( tmp_bra, PSI_bra );            // <PSI_bra| = <tmp_bra|
@@ -480,7 +432,6 @@ void chebyshev_gpu(
     cudaFree( d_coeff );
     cudaFreeHost( coeff );
 
-    DEBUG( printf("chebyshev_gpu: exit\n"); fflush(stdout); );
     time_end("chebyshev_gpu");
 }
 
@@ -646,12 +597,11 @@ void coefficient( const double tau, const int k_max, cuDoubleComplex * const coe
 
 //-------------------------------------------------------------------
 void propagationelhl_gpucaller_(
-    const int       * const __restrict__ N,
-    const double    * const __restrict__ h_S,        // in host
+    const int       * const __restrict__ particle,
+    const void      * const __restrict__ logical_coulomb,
+    const int       * const __restrict__ n,
+    const double    * const __restrict__ h_Sinv,     // in host
     const double    * const __restrict__ h_h,        // in host
-    double          * const __restrict__ h_H,        // in host
-    cuDoubleComplex * const __restrict__ h_AO_bra,   // in host
-    cuDoubleComplex * const __restrict__ h_AO_ket,   // in host
     cuDoubleComplex * const __restrict__ h_PSI_bra,  // in host
     cuDoubleComplex * const __restrict__ h_PSI_ket,  // in host
     const double    * const __restrict__ t_init,
@@ -661,230 +611,130 @@ void propagationelhl_gpucaller_(
 {
     time_init();
 
-    static bool first_call = true;
     cudaError_t stat;
 
-    const int n  = *N;
-    const int ld = ((n + 31)/32)*32;  // making leading dimension multiple of 32
+    const int electron      = -1,
+              hole          = +1,
+              electron_only =  0;
 
-    cudaEvent_t S_inverted, brakets_copied, H_done;
-    cudaEventCreateWithFlags( &S_inverted,     cudaEventDisableTiming );
-    cudaEventCreateWithFlags( &brakets_copied, cudaEventDisableTiming );
-    cudaEventCreateWithFlags( &H_done,         cudaEventDisableTiming );
+    const bool coulomb = *(reinterpret_cast<const bool*>(logical_coulomb));
 
-    static double *H = nullptr;
-    static double *S = nullptr;
-    static double *h = nullptr;
-    static cuDoubleComplex *bra = nullptr, *ket = nullptr;
+    const int m  = *n;
+    const int ld = ((m + 31)/32)*32;  // making leading dimension multiple of 32
 
-    if (first_call)
+    static double *d_H = nullptr;
+    static double *d_Sinv = nullptr;
+
+    cuDoubleComplex *d_PSI_bra, *d_PSI_ket;
+    stat = cudaMalloc((void **) &d_PSI_bra, ld*sizeof(cuDoubleComplex));  SAFE(stat);
+    stat = cudaMalloc((void **) &d_PSI_ket, ld*sizeof(cuDoubleComplex));  SAFE(stat);
+
+    if(*particle == electron_only)
     {
-        stat = cudaMalloc((void **) &bra, ld*sizeof(cuDoubleComplex));  SAFE(stat);
-        stat = cudaMalloc((void **) &ket, ld*sizeof(cuDoubleComplex));  SAFE(stat);
-        stat = cudaMalloc((void **) &S, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &h, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &H, n*ld*sizeof(double));           SAFE(stat);
+        // In this case, S_inv holds S and the inversion is done in the GPU.
+
+        double *d_h;
+
+        stat = cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_h,    ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_H,    ld*m*sizeof(double));  SAFE(stat);
+
+        // Copy S and h to the GPU
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_Sinv, m, (void *)d_Sinv, ld, stream[0]);
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h,    m, (void *)d_h,    ld, stream[2]);
+
+        // Invert S
+        cudaStreamSynchronize( stream[0] );         // wait S to be copied
+        gpu_dgeInvert( d_Sinv, m, ld, stream[0] );  // implicit synchronization here
+        
+        // H = Sinv*h
+        cublasSetStream( myHandle, stream[2] );     // queue after h copy
+        cudaStreamSynchronize( stream[0] );         // wait Sinv to be done
+        cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, m, m, &d_one, d_Sinv, ld, d_h, ld, &d_zero, d_H, ld);
+
+        // Copy bra/ket to the GPU (potentially overlaping with cublasDsymm)
+        cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+        cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
+
+        cudaStreamSynchronize( stream[2] );  // wait H to be done
+        cudaFree( d_h );
+        cudaFree( d_Sinv );
+        d_Sinv = nullptr;
+    }
+    else if(*particle == electron)
+    {
+        double *d_h;
+        stat = cudaMalloc((void **) &d_Sinv, ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_h,    ld*m*sizeof(double));  SAFE(stat);
+        stat = cudaMalloc((void **) &d_H,    ld*m*sizeof(double));  SAFE(stat);
+
+        // Copy Sinv and h to the GPU
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_Sinv, m, (void *)d_Sinv, ld, stream[0]);
+        cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h,    m, (void *)d_h,    ld, stream[0]);
+
+        // Copy bra/ket to the GPU
+        cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+        cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
+
+        // H = Sinv*h
+        cublasSetStream( myHandle, stream[0] );
+        cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, m, m, &d_one, d_Sinv, ld, d_h, ld, &d_zero, d_H, ld);
+
+        cudaStreamSynchronize( stream[0] );
+        if(!coulomb)
+        {
+            cudaFree( d_Sinv );
+            d_Sinv = nullptr;
+        }
+        cudaFree( d_h );
+    }
+    else if(*particle == hole)
+    {
+        if(coulomb)
+        {    
+            double *d_h;
+            stat = cudaMalloc((void **) &d_h, ld*m*sizeof(double));  SAFE(stat);
+
+            cublasSetMatrixAsync( m, m, sizeof(double), (void *)h_h, m, (void *)d_h, ld, stream[0]);
+
+            // Copy bra/ket to the GPU
+            cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+            cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
+
+            cublasSetStream( myHandle, stream[0] );
+            cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, m, m, &d_one, d_Sinv, ld, d_h, ld, &d_zero, d_H, ld);
+
+            cudaStreamSynchronize( stream[0] );
+            cudaFree( d_h );
+            cudaFree( d_Sinv );
+            d_Sinv = nullptr;
+        }
+        else
+        {
+            // Copy bra/ket to the GPU
+            cudaZcopyAsync_H2D( d_PSI_bra, h_PSI_bra, m, stream[1] );
+            cudaZcopyAsync_H2D( d_PSI_ket, h_PSI_ket, m, stream[1] );
+        }
     }
 
-    // Copy S and h to the GPU
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_S, n, (void *)S, ld, stream[0]);
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_h, n, (void *)h, ld, stream[1]);
+    cudaStreamSynchronize( stream[1] );   // wait for d_PSI_bra/ket to be copied
 
-    // Copy bra/ket to the GPU
-    // waiting for this copy to finish below
-    cudaZcopyAsync_H2D( bra, h_PSI_bra, n, stream[2] );
-    cudaZcopyAsync_H2D( ket, h_PSI_ket, n, stream[2] );
-    cudaEventRecord( brakets_copied, stream[2]);
+    chebyshev_gpu( m, ld, *tau, save_tau, *t_max, *t_init, d_PSI_bra, d_PSI_ket, d_H );    SAFE(cudaGetLastError());
 
-//    cudaDeviceSynchronize();
+    cudaZcopy_D2H( h_PSI_bra, d_PSI_bra, m );
+    cudaZcopy_D2H( h_PSI_ket, d_PSI_ket, m );
 
-    // Sinv = S^(-1)
-    double *Sinv = S;
-    gpu_dgeInvert( Sinv, n, ld, stream[0] );  // implicit synchronization here
-    cudaEventRecord( S_inverted, stream[0]);  // is this really needed? magma trf/tri are syncronous
-
-    // H = Sinv*h
-    cublasSetStream( myHandle, stream[1] );            // queue after h copy
-    cudaStreamWaitEvent( stream[1], S_inverted, 0 );   // wait in stream[1] for Sinv to be done
-    cublasDsymm( myHandle, CUBLAS_SIDE_LEFT, CUBLAS_FILL_MODE_UPPER, n, n, &d_one, Sinv, ld, h, ld, &d_zero, H, ld);
-    cudaEventRecord( H_done, stream[1]);
-
-    // copy H back to the CPU
-    cudaStreamWaitEvent( stream[2], H_done, 0 );   // wait in stream[2] for H to be done
-    cublasGetMatrixAsync( n, n, sizeof(double), (void *)H, ld, (void *)h_H, n, stream[2]);
-
-    // wait for things to complete before calling chebyshev_gpu()
-    cudaEventSynchronize( brakets_copied );  // wait for bra/ket to be copied to the GPU
-    cudaEventSynchronize( H_done );          // wait H to be done
-
-    // propagate particle
-    chebyshev_gpu( n, ld, *tau, save_tau, *t_max, *t_init, bra, ket, H );    SAFE(cudaGetLastError());
-    // in sync. here
-
-    // copy propagated bra/ket back to the CPU
-    cudaZcopyAsync_D2H( h_PSI_ket, ket, n, stream[0] );
-    cudaZcopyAsync_D2H( h_PSI_bra, bra, n, stream[1] );
-
-    // just a nickname to re-use the ket vector and save one allocation
-    cuDoubleComplex *AO_bra = ket;
-    
-    // AO_bra = bra * S^(-1)
-    kblas_dzgemv2_async( 'n', n, d_one, Sinv, ld, bra, d_zero, AO_bra, stream[0] );
-
-    // copy AO_bra to the CPU
-    cudaZcopyAsync_D2H( h_AO_bra, AO_bra, n, stream[0] );
-
-    // wait bra/ket to be copied
-    cudaStreamSynchronize( stream[1] );
-    cudaStreamSynchronize( stream[0] );
- 
-    // destroy events
-    cudaEventDestroy( S_inverted );
-    cudaEventDestroy( brakets_copied );
-    cudaEventDestroy( H_done );
+    if(*particle == hole || *particle == electron_only)
+    {
+        cudaFree( d_H );
+        d_H = nullptr;
+    }
+    cudaFree( d_PSI_bra );
+    cudaFree( d_PSI_ket );
 
     cublasSetStream( myHandle, cublas_default );
 
-    first_call = false;
     time_end("Propagation");
 }
 
-
-
-
-//===================================================================
-//-------------------------------------------------------------------
-void ehrenfestkernel_gpu_(
-    const int       * const __restrict__ N,
-    const double    * const __restrict__ h_H,        // in host
-    const double    * const __restrict__ h_A,        // in host
-    const double    * const __restrict__ h_X,        // in host
-    double          * const __restrict__ h_K )       // in host
-{
-    time_init();
-    
-    static bool first_call = true;
-    cudaError_t stat;
-
-    const int n  = *N;
-    const int ld = ((n + 31)/32)*32;  // making leading dimension multiple of 32
-    
-    cudaEvent_t done;
-    cudaEventCreateWithFlags( &done, cudaEventDisableTiming );
-    
-    static double *H = nullptr;
-    static double *A = nullptr;
-    static double *X = nullptr;
-    static double *K = nullptr;
-    
-    if (first_call)
-    {
-        stat = cudaMalloc((void **) &H, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &A, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &X, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &K, n*ld*sizeof(double));           SAFE(stat);
-        first_call = false;
-    }
-    
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_H, n, (void *)H, ld, stream[0]);
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_A, n, (void *)A, ld, stream[0]);
-    
-    // B = H' * A   (storing B in K to save memory)
-    cublasSetStream( myHandle, stream[0] );
-//     cublasDsymm( myHandle, CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_UPPER, n, n, &d_one, A, ld, H, ld, &d_zero, K, ld);
-    cublasDgemm( myHandle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &d_one, H, ld, A, ld, &d_zero, K, ld);
-    cudaEventRecord( done, stream[0]);
-    
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_X, n, (void *)X, ld, stream[1]);
-    
-    // K = X * A - B
-    cudaStreamWaitEvent( stream[1], done, 0 );
-    hadamard_minus(n, ld, X, A, K, stream[1]);
-    
-    cublasGetMatrixAsync( n, n, sizeof(double), (void *)K, ld, (void *)h_K, n, stream[1]);
-    
-//     cudaStreamSynchronize( stream[0] );
-    cudaStreamSynchronize( stream[1] );
-    cudaEventDestroy( done );
-    
-    time_end("EhrenfestKernel");
-}
-
-
-//-------------------------------------------------------------------
-void ehrenfestkernel2_gpu_(
-    const int             * const __restrict__ N,
-    const cuDoubleComplex * const __restrict__ h_bra,      // in host
-    const cuDoubleComplex * const __restrict__ h_ket,      // in host
-    const double          * const __restrict__ h_H,        // in host
-    const double          * const __restrict__ h_X,        // in host
-    double                * const __restrict__ h_K )       // in host
-{
-    time_init();
-    
-    static bool first_call = true;
-    cudaError_t stat;
-
-    const int n  = *N;
-    const int ld = ((n + 31)/32)*32;  // making leading dimension multiple of 32
-    
-    cudaEvent_t A_done, X_done;
-    cudaEventCreateWithFlags( &A_done, cudaEventDisableTiming );
-    cudaEventCreateWithFlags( &X_done, cudaEventDisableTiming );
-    
-    cuDoubleComplex *bra = nullptr;
-    cuDoubleComplex *ket = nullptr;
-    static double *H = nullptr;
-    static double *A = nullptr;
-    static double *X = nullptr;
-    static double *K = nullptr;
-    
-    if (first_call)
-    {
-        stat = cudaMalloc((void **) &H, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &A, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &X, n*ld*sizeof(double));           SAFE(stat);
-        stat = cudaMalloc((void **) &K, n*ld*sizeof(double));           SAFE(stat);
-        first_call = false;
-    }
-    stat = cudaMalloc((void **) &bra, 2*ld*sizeof(cuDoubleComplex));    SAFE(stat);
-    stat = cudaMalloc((void **) &ket, 2*ld*sizeof(cuDoubleComplex));    SAFE(stat);
-    
-    // copy bra/ket from host (CPU) to device (GPU)
-    cublasSetMatrixAsync( n, 2, sizeof(double), (void *)h_bra, n, (void *)bra, ld, stream[0]);
-    cublasSetMatrixAsync( n, 2, sizeof(double), (void *)h_ket, n, (void *)ket, ld, stream[0]);
-    
-    // ρ = Re{ ket(j,1)*bra(i,1) -  ket(j,2)*bra(i,2) }  ∀ i, j
-    // A = (ρ + ρ^T) / 2
-    calculate_A(n, ld, bra, ket, A, stream[0]);
-    cudaEventRecord( A_done, stream[0]);
-    
-    // copy H from host to device
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_H, n, (void *)H, ld, stream[1]);
-    
-    // B = H' * A   (storing the result B in matrix K to save memory, that is, K==B)
-    cublasSetStream( myHandle, stream[1] );
-    cudaStreamWaitEvent( stream[1], A_done, 0 );
-//     cublasDsymm( myHandle, CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_UPPER, n, n, &d_one, A, ld, H, ld, &d_zero, K, ld);
-    cublasDgemm( myHandle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &d_one, H, ld, A, ld, &d_zero, K, ld);
-    
-    // copy X from host to device
-    cublasSetMatrixAsync( n, n, sizeof(double), (void *)h_X, n, (void *)X, ld, stream[0]);
-    cudaEventRecord( X_done, stream[0]);
-    
-    // K = X * A - B
-    cudaStreamWaitEvent( stream[1], X_done, 0 );
-    hadamard_minus(n, ld, X, A, K, stream[1]);
-    
-    // copy K from device to host
-    cublasGetMatrixAsync( n, n, sizeof(double), (void *)K, ld, (void *)h_K, n, stream[1]);
-    
-    cudaStreamSynchronize( stream[1] );
-    cudaEventDestroy( A_done );
-    cudaEventDestroy( X_done );
-    cudaFree( bra );
-    cudaFree( ket );
-    
-    time_end("EhrenfestKernel");
-}
 #endif

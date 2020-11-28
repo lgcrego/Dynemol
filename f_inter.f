@@ -70,8 +70,7 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
-!$OMP parallel  default(shared)
-!$OMP do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp)
+!$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
 do i = 1 , MM % N_of_atoms 
 
     nresid = atom(i) % nr
@@ -96,11 +95,11 @@ do i = 1 , MM % N_of_atoms
         end do
     end if
 end do
-!$OMP end do
+!$OMP end parallel do
 
 pikap = HALF * vrecut + rsqpi * KAPPA * coulomb * factor3
 
-!$OMP do private(i,nresid,j1,j2,j,erfkrq) reduction( + : vself )
+!$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
     vself  = vself + pikap * atom(i) % charge * atom(i) % charge
@@ -121,8 +120,7 @@ do i = 1 , MM % N_of_atoms
        end do
     endif
 end do
-!$OMP end do
-!$OMP end parallel 
+!$OMP end parallel do
 
 eintra = eintra + vself
 
