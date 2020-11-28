@@ -68,4 +68,8 @@ MODULE constants_m
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors
 
+!   Physical constants...
+    real*8 , parameter :: mu_B = 7.788381801226d-5 ! Bohr magneton, in eV / T
+    real*8 , parameter :: g_S  = 2.0023192d0       ! spin gyromagnetic ratio
+
 END MODULE constants_m

@@ -5,7 +5,7 @@ use type_m
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
-real*8                  :: t_i , t_f , sigma
+real*8                  :: t_i , t_f , sigma , B_ext(3)
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
@@ -17,7 +17,7 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: resume
+logical                 :: SO_coupl , extmagfield , resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -34,16 +34,18 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "diagnostic"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
+  SO_coupl       = T_                        ! <== Spin-orbit coupling
+  extmagfield    = T_                        ! <== Is there external magnetic field (B_ext parameter)?
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -52,7 +54,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <== structure or trajectory
+  file_type    =  "structure"                ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
@@ -133,6 +135,11 @@ logical :: dynamic
   occupied  =  real_interval( -15.50d0 , -9.501d0 )       
 
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
+
+!--------------------------------------------------------------------
+!           EXTERNAL MAGNETIC FIELD parameters
+!
+  B_ext = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. It not have been implemented to B_ext(2) /= 0 <== Complex operators
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters

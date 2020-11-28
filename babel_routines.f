@@ -87,6 +87,8 @@ integer :: i
             a(i)%AtNo = 30 
         case( 'SE','Se' ) 
             a(i)%AtNo = 34 
+        case( 'BR','Br' ) 
+            a(i)%AtNo = 35 
         case( 'Ru' ) 
             a(i)%AtNo = 44 
         case( 'CD','Cd' )

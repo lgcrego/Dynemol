@@ -9,6 +9,8 @@
                                              hole_state ,               &
                                              OPT_parms ,                &
                                              GaussianCube ,             &
+                                             SO_coupl ,                 &
+                                             extmagfield ,              &
                                              resume
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
@@ -235,13 +237,15 @@ integer :: copy , nr_sum , ix , iy , k , n
 system% BasisPointer = 0
 
 ! total number of orbitals ...
- N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
+N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
+if( SO_coupl ) N_of_orbitals = 2 * N_of_orbitals
 
 ! building AO basis ...  
- allocate( basis(N_of_orbitals) )
 
- k = 1
- do i = 1 , system%atoms
+allocate( basis(N_of_orbitals) )
+
+k = 1
+do i = 1 , system%atoms
 
     If( system% QMMM(i) /= "QM" ) cycle
 
@@ -292,7 +296,67 @@ system% BasisPointer = 0
 
         end do
     end do
- end do
+end do
+
+if( SO_coupl .OR. extmagfield ) then
+
+    i = N_of_orbitals / 2
+     
+    basis( i + 1 : N_of_orbitals ) % atom               = basis( 1 : i ) % atom
+    basis( i + 1 : N_of_orbitals ) % AtNo               = basis( 1 : i ) % AtNo
+    basis( i + 1 : N_of_orbitals ) % nr                 = basis( 1 : i ) % nr
+    basis( i + 1 : N_of_orbitals ) % copy_No            = basis( 1 : i ) % copy_No
+    basis( i + 1 : N_of_orbitals ) % symbol             = basis( 1 : i ) % symbol
+    basis( i + 1 : N_of_orbitals ) % fragment           = basis( 1 : i ) % fragment
+    basis( i + 1 : N_of_orbitals ) % EHSymbol           = basis( 1 : i ) % EHSymbol
+    basis( i + 1 : N_of_orbitals ) % residue            = basis( 1 : i ) % residue
+    basis( i + 1 : N_of_orbitals ) % solute             = basis( 1 : i ) % solute
+    basis( i + 1 : N_of_orbitals ) % DPF                = basis( 1 : i ) % DPF
+    basis( i + 1 : N_of_orbitals ) % El                 = basis( 1 : i ) % El
+    basis( i + 1 : N_of_orbitals ) % Hl                 = basis( 1 : i ) % Hl
+    basis( i + 1 : N_of_orbitals ) % flex               = basis( 1 : i ) % flex
+    basis( i + 1 : N_of_orbitals ) % hardcore           = basis( 1 : i ) % hardcore
+    basis( i + 1 : N_of_orbitals ) % V_shift            = basis( 1 : i ) % V_shift
+    basis( i + 1 : N_of_orbitals ) % solvation_hardcore = basis( 1 : i ) % solvation_hardcore
+
+    basis( i + 1 : N_of_orbitals ) % n = basis( 1 : i ) % n
+    basis( i + 1 : N_of_orbitals ) % l = basis( 1 : i ) % l
+    basis( i + 1 : N_of_orbitals ) % m = basis( 1 : i ) % m
+
+    basis( 1 : i ) % s                 = 1
+    basis( i + 1 : N_of_orbitals ) % s = - 1
+
+    basis( 1 : N_of_orbitals ) % j = dfloat( basis( 1 : N_of_orbitals ) % l ) + HALF * dfloat( basis( 1 : N_of_orbitals ) % s )
+
+    basis( i + 1 : N_of_orbitals ) % IP      = basis( 1 : i ) % IP
+    basis( i + 1 : N_of_orbitals ) % Nzeta   = basis( 1 : i ) % Nzeta
+    basis( i + 1 : N_of_orbitals ) % coef(1) = basis( 1 : i ) % coef(1)
+    basis( i + 1 : N_of_orbitals ) % coef(2) = basis( 1 : i ) % coef(2)
+    basis( i + 1 : N_of_orbitals ) % zeta(1) = basis( 1 : i ) % zeta(1)
+    basis( i + 1 : N_of_orbitals ) % zeta(2) = basis( 1 : i ) % zeta(2)
+    basis( i + 1 : N_of_orbitals ) % k_WH    = basis( 1 : i ) % k_WH
+
+    basis( i + 1 : N_of_orbitals ) % x = basis( 1 : i ) % x
+    basis( i + 1 : N_of_orbitals ) % y = basis( 1 : i ) % y
+    basis( i + 1 : N_of_orbitals ) % z = basis( 1 : i ) % z
+
+    basis( i + 1 : N_of_orbitals ) % indx = basis( 1 : i ) % indx
+
+!    k = N_of_orbitals + 1
+    
+!    do i = 1 , system%atoms
+
+!        If( system% QMMM(i) /= "QM" ) cycle
+
+!        system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
+
+!        AtNo = system%AtNo(i)
+        
+!        k = k + 2 * atom(AtNo)%AngMax + 1
+        
+!    end do
+
+end if
 
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
