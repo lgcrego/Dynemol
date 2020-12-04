@@ -136,9 +136,9 @@ logical :: dynamic
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
 
 !--------------------------------------------------------------------
-!           EXTERNAL MAGNETIC FIELD parameters
+!           EXTERNAL MAGNETIC FIELD 
 !
-  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. Not implemented for B_field(2) /= 0 <== Complex operators
+  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. y-component must be zero to avoid complex hamiltonian 
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
