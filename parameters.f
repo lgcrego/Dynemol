@@ -138,7 +138,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           EXTERNAL MAGNETIC FIELD parameters
 !
-  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. It not have been implemented to B_field(2) /= 0 <== Complex operators
+  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. Not implemented for B_field(2) /= 0 <== Complex operators
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
