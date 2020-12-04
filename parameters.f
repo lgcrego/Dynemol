@@ -5,7 +5,7 @@ use type_m
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
-real*8                  :: t_i , t_f , sigma , B_ext(3)
+real*8                  :: t_i , t_f , sigma , B_field(3)
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
@@ -17,7 +17,7 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: SO_coupl , extmagfield , resume
+logical                 :: SOC , resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -42,8 +42,7 @@ logical :: dynamic
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  SO_coupl       = F_                        ! <== Spin-orbit coupling
-  extmagfield    = F_                        ! <== Is there external magnetic field (B_ext parameter)?
+  SOC            = T_                        ! <== Spin-orbit coupling
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
@@ -139,7 +138,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           EXTERNAL MAGNETIC FIELD parameters
 !
-  B_ext = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. It not have been implemented to B_ext(2) /= 0 <== Complex operators
+  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. It not have been implemented to B_field(2) /= 0 <== Complex operators
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters

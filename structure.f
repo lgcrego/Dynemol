@@ -9,8 +9,7 @@
                                              hole_state ,               &
                                              OPT_parms ,                &
                                              GaussianCube ,             &
-                                             SO_coupl ,                 &
-                                             extmagfield ,              &
+                                             SOC ,                      &
                                              resume
     use Babel_m                     , only : Read_from_XYZ ,            &
                                              Read_from_Poscar ,         &
@@ -238,7 +237,7 @@ system% BasisPointer = 0
 
 ! total number of orbitals ...
 N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
-if( SO_coupl ) N_of_orbitals = 2 * N_of_orbitals
+if( SOC ) N_of_orbitals = 2 * N_of_orbitals
 
 ! building AO basis ...  
 
@@ -298,7 +297,7 @@ do i = 1 , system%atoms
     end do
 end do
 
-if( SO_coupl ) then
+if( SOC ) then
 
     i = N_of_orbitals / 2
      
