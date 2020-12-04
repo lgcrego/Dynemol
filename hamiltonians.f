@@ -13,7 +13,7 @@
     use polarizability_m      , only : Induced_DP_phi
     use Semi_Empirical_Parms  , only : atom
 
-    public :: X_ij , even_more_extended_Huckel , Huckel_with_FIELDS , spin_orbit_h , MF_interaction
+    public :: X_ij , even_more_extended_Huckel , Huckel_with_FIELDS , spin_orbit_h
 
     private
 
@@ -223,8 +223,8 @@ real*8          , allocatable , intent(inout) :: h(:,:)
 real*8                        , intent(in)    :: S_matrix(:,:)
 
 ! local variables ...
-real*8  :: sum1 , sum2 , eps
-integer :: i , j , k , c , l , l1 , l2 , n
+real*8  :: a , sum1 , sum2 , eps , tx1 , tx2 , tx , tz 
+integer :: i , j , k , c , l , l1 , l2 , n , t
 
 !----------------------------------------------------------
 !     building the coupling spin-orbit HAMILTONIAN
@@ -359,66 +359,55 @@ do i = 1 , n
 
 end do
 
-end subroutine spin_orbit_h
-!
-!
-!
-!=================================================
- subroutine MF_interaction( basis , h , S_matrix )
-!=================================================
-type(STO_basis)               , intent(in)    :: basis(:)
-real*8          , allocatable , intent(inout) :: h(:,:)
-real*8                        , intent(in)    :: S_matrix(:,:)
+if( B_fild /= D_zero ) then
 
-! local variables ...
-real*8  :: a , tx1 , tx2 , tx , tz 
-integer :: i , j , k , t , n
+    if( B_field( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction not implemented for By/=0 <<"
 
-if( B_field( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction has not beend implemented for By/=0 <<"
+    k = n / 2
 
-n = size( basis )
-k = n / 2
+    do i = 1 , n
 
-allocate( h ( n , n ) , source = 0.0d0 )
+        do j = i , n
 
-do i = 1 , n
+            tx = D_zero
+            if( B_field( 1 ) /= D_zero ) then
 
-    do j = i , n
+                tx1 = D_zero
+                tx2 = D_zero
 
-        tx = D_zero
-        if( B_field( 1 ) /= D_zero ) then
+                if( i < n ) then
 
-            tx1 = D_zero
-            tx2 = D_zero
+                    t   = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m + 1 )
+                    a   = dsqrt( dfloat( t ) )
+                    tx1 = a * S_matrix( j , i + 1 )
 
-            if( i < n ) then
-                t = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m + 1 )
-                a = dsqrt( dfloat( t ) )
-                tx1 = a * S_matrix( j , i + 1 )
+                end if
+
+                if( i > 1 ) then
+
+                    t   = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m - 1 )
+                    a   = dsqrt( dfloat( t ) )
+                    tx2 = a * S_matrix( j , i - 1 )
+                    
+                end if
+
+                t  = basis( i ) % s
+                tx = tx1 + tx2 + key * g_S * S_matrix( j , i + t * k )
+
             end if
 
-            if( i > 1 ) then
-                t = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m - 1 )
-                a = dsqrt( dfloat( t ) )
-                tx2 = a * S_matrix( j , i - 1 )
-            end if
+            tz = D_zero
+            if( B_field( 3 ) /= D_zero ) tz = ( two * dfloat( basis( i ) % m ) + g_S * dfloat( basis( i ) % s ) ) * S_matrix( j , i )
 
-            t  = basis( i ) % s
-            tx = tx1 + tx2 + key * g_S * S_matrix( j , i + t * k )
+            h( j , i ) = h( j , i ) + HALF * mu_B * ( tx * B_field( 1 ) + tz * B_field( 3 ) )
 
-        end if
-
-        tz = D_zero
-
-        if( B_field( 3 ) /= D_zero ) tz = ( two * dfloat( basis( i ) % m ) + g_S * dfloat( basis( i ) % s ) ) * S_matrix( j , i )
-
-        h( j , i ) = HALF * mu_B * ( tx * B_field( 1 ) + tz * B_field( 3 ) )
+        end do
 
     end do
 
-end do
+end if
 
-end subroutine MF_interaction
+end subroutine spin_orbit_h
 !
 !
 !

@@ -10,7 +10,7 @@
     use constants_m
     use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC 
     use Overlap_Builder  , only : Overlap_Matrix
-    use Hamiltonians     , only : X_ij , even_more_extended_Huckel , spin_orbit_h , MF_interaction
+    use Hamiltonians     , only : X_ij , even_more_extended_Huckel , spin_orbit_h
     use Matrix_Math
 
     public :: EigenSystem , S_root_inv 
@@ -42,7 +42,7 @@ integer          , optional , intent(in)    :: it
 
 ! local variables ...
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8  , ALLOCATABLE :: h(:,:) , h_SO(:,:) , h_MF(:,:) , S_matrix(:,:) , S_root(:,:)
+real*8  , ALLOCATABLE :: h(:,:) , h_spin(:,:) , h_MF(:,:) , S_matrix(:,:) , S_root(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
 integer               :: i , N , info 
 logical , save        :: first_call_ = .true.
@@ -69,16 +69,10 @@ end If
 
 if( SOC ) then
 
-! h_SO vai se chamar h_spin e vai incluir efeitos SOC e B_field
-
-    CALL spin_orbit_h( basis , h_SO , S_matrix )
-    h = h + h_SO
+    CALL spin_orbit_h( basis , h_spin , S_matrix )
+    h = h + h_spin
+    
 end if
-
-!if( B_field ) then
-!    CALL MF_interaction( basis , h_MF , S_matrix )
-!    h = h + h_MF
-!end if
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 if ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
