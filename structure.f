@@ -232,6 +232,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 ! local variables ...
  integer :: k , i , l , m , s , AtNo , N_of_orbitals
  integer :: spin = 0
+ logical :: first_time = .true.
 
 ! garbage collection ... 
 system% BasisPointer = 0
@@ -256,7 +257,7 @@ do s = spin , -spin , -2
    
       AtNo = system%AtNo(i)
    
-      system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
+      If( first_time )system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
    
       do l = 0 , atom(AtNo)%AngMax
    
@@ -303,6 +304,7 @@ do s = spin , -spin , -2
          end do
       end do
    end do 
+   first_time = .false.
 end do
 
 ! during GACG cannot use opt_eht_paremeters ...
