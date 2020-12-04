@@ -42,8 +42,8 @@ logical :: dynamic
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  SO_coupl       = T_                        ! <== Spin-orbit coupling
-  extmagfield    = T_                        ! <== Is there external magnetic field (B_ext parameter)?
+  SO_coupl       = F_                        ! <== Spin-orbit coupling
+  extmagfield    = F_                        ! <== Is there external magnetic field (B_ext parameter)?
   OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 

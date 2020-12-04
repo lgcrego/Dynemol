@@ -44,8 +44,7 @@ integer          , optional , intent(in)    :: it
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
 real*8  , ALLOCATABLE :: h(:,:) , h_SO(:,:) , h_MF(:,:) , S_matrix(:,:) , S_root(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
-real*8                :: suml , sums , sumj
-integer               :: i , j , k , l1 , l2 , N , info 
+integer               :: i , N , info 
 logical , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -182,21 +181,9 @@ end select
 ! save energies of the TOTAL system ...
 OPEN(unit=9,file='system-ergs.dat',status='unknown')
     do i = 1 , N
-        suml = 0.0d0
-        sums = 0.0d0
-        sumj = 0.0d0
-        do j = 1 , N
-            suml = suml + QM % L( i , j ) * QM % R( j , i ) * dfloat( basis( j ) % l )
-            sums = sums + QM % L( i , j ) * QM % R( j , i ) * HALF * dfloat( basis( j ) % s )
-            sumj = sumj + QM % L( i , j ) * QM % R( j , i ) * basis( j ) % j
-        end do
-!        if( mod(i,2) == 0 ) then
-!            write(9,fmt='(i5,4f14.8,i5,a5,i5,f14.8)') i, QM%erg(i), suml, sums, sumj, i, "-->", i - 1, QM % erg( i ) - QM % erg( i - 1 )
-!        else
-            write(9,fmt='(i5,4f14.8,i5,a5,i5,f14.8)') i, QM%erg(i), suml, sums, sumj
-!        end if
+        write(9,*) i , QM%erg(i)
     end do
-CLOSE(9)  
+close(9)
 
 If( verbose ) Print*, '>> EigenSystem done <<'
 
