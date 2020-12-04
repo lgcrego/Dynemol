@@ -231,13 +231,17 @@ integer :: copy , nr_sum , ix , iy , k , n
 
 ! local variables ...
  integer :: k , i , l , m , AtNo , N_of_orbitals
+ integer :: spin = 0
 
 ! garbage collection ... 
 system% BasisPointer = 0
 
 ! total number of orbitals ...
 N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
-if( SOC ) N_of_orbitals = 2 * N_of_orbitals
+if( SOC ) then
+    N_of_orbitals = 2 * N_of_orbitals
+    spin = 1
+end if
 
 ! building AO basis ...  
 
@@ -252,110 +256,54 @@ do i = 1 , system%atoms
 
     system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
 
-    do l = 0 , atom(AtNo)%AngMax
+    do s = spin , -spin , -2
 
-        do m = -l , +l
+       do l = 0 , atom(AtNo)%AngMax
 
-            basis(k) % atom                =  i
-            basis(k) % AtNo                =  AtNo
-            basis(k) % nr                  =  system % nr       (i)
-            basis(k) % copy_No             =  system % copy_No  (i)
-            basis(k) % symbol              =  system % symbol   (i)
-            basis(k) % fragment            =  system % fragment (i)
-            basis(k) % EHSymbol            =  system % MMSymbol (i)
-            basis(k) % residue             =  system % residue  (i)
-            basis(k) % solute              =  system % solute   (i)
-            basis(k) % DPF                 =  system % DPF      (i)
-            basis(k) % El                  =  system % El       (i)
-            basis(k) % Hl                  =  system % Hl       (i)
-            basis(k) % flex                =  system % flex     (i)
-            basis(k) % hardcore            =  system % hardcore (i)
-            basis(k) % V_shift             =  system % V_shift  (i)
-            basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
+           do m = -l , +l
 
-            basis(k) % n        =  atom(AtNo) % Nquant(l)
-            basis(k) % l        =  l
-            basis(k) % m        =  m
+               basis(k) % atom                =  i
+               basis(k) % AtNo                =  AtNo
+               basis(k) % nr                  =  system % nr       (i)
+               basis(k) % copy_No             =  system % copy_No  (i)
+               basis(k) % symbol              =  system % symbol   (i)
+               basis(k) % fragment            =  system % fragment (i)
+               basis(k) % EHSymbol            =  system % MMSymbol (i)
+               basis(k) % residue             =  system % residue  (i)
+               basis(k) % solute              =  system % solute   (i)
+               basis(k) % DPF                 =  system % DPF      (i)
+               basis(k) % El                  =  system % El       (i)
+               basis(k) % Hl                  =  system % Hl       (i)
+               basis(k) % flex                =  system % flex     (i)
+               basis(k) % hardcore            =  system % hardcore (i)
+               basis(k) % V_shift             =  system % V_shift  (i)
+               basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
-            basis(k) % IP       =  atom(AtNo) % IP    (l)
-            basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
-            basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
-            basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
-            basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
-            basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
-            basis(k) % k_WH     =  system % k_WH(i)
+               basis(k) % n        =  atom(AtNo) % Nquant(l)
+               basis(k) % l        =  l
+               basis(k) % m        =  m
+               basis(k) % s        =  s
 
-            basis(k) % x        =  system % coord (i,1)
-            basis(k) % y        =  system % coord (i,2)
-            basis(k) % z        =  system % coord (i,3)
+               basis(k) % IP       =  atom(AtNo) % IP    (l)
+               basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
+               basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
+               basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
+               basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
+               basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
+               basis(k) % k_WH     =  system % k_WH(i)
 
-            basis(k) % indx     = k
+               basis(k) % x        =  system % coord (i,1)
+               basis(k) % y        =  system % coord (i,2)
+               basis(k) % z        =  system % coord (i,3)
 
-            k = k + 1
+               basis(k) % indx     = k
 
-        end do
-    end do
+               k = k + 1
+
+           end do
+       end do
+    end do 
 end do
-
-if( SOC ) then
-
-    i = N_of_orbitals / 2
-     
-    basis( i + 1 : N_of_orbitals ) % atom               = basis( 1 : i ) % atom
-    basis( i + 1 : N_of_orbitals ) % AtNo               = basis( 1 : i ) % AtNo
-    basis( i + 1 : N_of_orbitals ) % nr                 = basis( 1 : i ) % nr
-    basis( i + 1 : N_of_orbitals ) % copy_No            = basis( 1 : i ) % copy_No
-    basis( i + 1 : N_of_orbitals ) % symbol             = basis( 1 : i ) % symbol
-    basis( i + 1 : N_of_orbitals ) % fragment           = basis( 1 : i ) % fragment
-    basis( i + 1 : N_of_orbitals ) % EHSymbol           = basis( 1 : i ) % EHSymbol
-    basis( i + 1 : N_of_orbitals ) % residue            = basis( 1 : i ) % residue
-    basis( i + 1 : N_of_orbitals ) % solute             = basis( 1 : i ) % solute
-    basis( i + 1 : N_of_orbitals ) % DPF                = basis( 1 : i ) % DPF
-    basis( i + 1 : N_of_orbitals ) % El                 = basis( 1 : i ) % El
-    basis( i + 1 : N_of_orbitals ) % Hl                 = basis( 1 : i ) % Hl
-    basis( i + 1 : N_of_orbitals ) % flex               = basis( 1 : i ) % flex
-    basis( i + 1 : N_of_orbitals ) % hardcore           = basis( 1 : i ) % hardcore
-    basis( i + 1 : N_of_orbitals ) % V_shift            = basis( 1 : i ) % V_shift
-    basis( i + 1 : N_of_orbitals ) % solvation_hardcore = basis( 1 : i ) % solvation_hardcore
-
-    basis( i + 1 : N_of_orbitals ) % n = basis( 1 : i ) % n
-    basis( i + 1 : N_of_orbitals ) % l = basis( 1 : i ) % l
-    basis( i + 1 : N_of_orbitals ) % m = basis( 1 : i ) % m
-
-    basis( 1 : i ) % s                 = 1
-    basis( i + 1 : N_of_orbitals ) % s = - 1
-
-    basis( 1 : N_of_orbitals ) % j = dfloat( basis( 1 : N_of_orbitals ) % l ) + HALF * dfloat( basis( 1 : N_of_orbitals ) % s )
-
-    basis( i + 1 : N_of_orbitals ) % IP      = basis( 1 : i ) % IP
-    basis( i + 1 : N_of_orbitals ) % Nzeta   = basis( 1 : i ) % Nzeta
-    basis( i + 1 : N_of_orbitals ) % coef(1) = basis( 1 : i ) % coef(1)
-    basis( i + 1 : N_of_orbitals ) % coef(2) = basis( 1 : i ) % coef(2)
-    basis( i + 1 : N_of_orbitals ) % zeta(1) = basis( 1 : i ) % zeta(1)
-    basis( i + 1 : N_of_orbitals ) % zeta(2) = basis( 1 : i ) % zeta(2)
-    basis( i + 1 : N_of_orbitals ) % k_WH    = basis( 1 : i ) % k_WH
-
-    basis( i + 1 : N_of_orbitals ) % x = basis( 1 : i ) % x
-    basis( i + 1 : N_of_orbitals ) % y = basis( 1 : i ) % y
-    basis( i + 1 : N_of_orbitals ) % z = basis( 1 : i ) % z
-
-    basis( i + 1 : N_of_orbitals ) % indx = basis( 1 : i ) % indx
-
-!    k = N_of_orbitals + 1
-    
-!    do i = 1 , system%atoms
-
-!        If( system% QMMM(i) /= "QM" ) cycle
-
-!        system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
-
-!        AtNo = system%AtNo(i)
-        
-!        k = k + 2 * atom(AtNo)%AngMax + 1
-        
-!    end do
-
-end if
 
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )

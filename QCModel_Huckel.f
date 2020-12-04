@@ -68,10 +68,8 @@ else
 end If
 
 if( SOC ) then
-
     CALL spin_orbit_h( basis , h_spin , S_matrix )
     h = h + h_spin
-    
 end if
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
