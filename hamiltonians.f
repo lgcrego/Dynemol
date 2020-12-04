@@ -6,7 +6,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m          , only : EnvField_ , Induced_ , Environ_type , Environ_step , B_ext
+    use parameters_m          , only : EnvField_ , Induced_ , Environ_type , Environ_step , B_field
     use Dielectric_Potential  , only : Q_phi
     use DP_potential_m        , only : DP_phi
     use DP_main_m             , only : DP_matrix_AO
@@ -374,7 +374,7 @@ real*8                        , intent(in)    :: S_matrix(:,:)
 real*8  :: a , tx1 , tx2 , tx , tz
 integer :: i , j , k , t , n
 
-if( B_ext( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction has not beend implemented for By/=0 <<"
+if( B_field( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction has not beend implemented for By/=0 <<"
 
 n = size( basis )
 k = n / 2
@@ -386,7 +386,7 @@ do i = 1 , n
     do j = i , n
 
         tx = D_zero
-        if( B_ext( 1 ) /= D_zero ) then
+        if( B_field( 1 ) /= D_zero ) then
 
             tx1 = D_zero
             tx2 = D_zero
@@ -409,9 +409,9 @@ do i = 1 , n
         end if
 
         tz = D_zero
-        if( B_ext( 3 ) /= D_zero ) tz = ( 2.0d0 * dfloat( basis( i ) % m ) + g_S * dfloat( basis( i ) % s ) ) * S_matrix( j , i )
+        if( B_field( 3 ) /= D_zero ) tz = ( 2.0d0 * dfloat( basis( i ) % m ) + g_S * dfloat( basis( i ) % s ) ) * S_matrix( j , i )
 
-        h( j , i ) = HALF * mu_B * ( tx * B_ext( 1 ) + tz * B_ext( 3 ) )
+        h( j , i ) = HALF * mu_B * ( tx * B_field( 1 ) + tz * B_field( 3 ) )
 
     end do
 

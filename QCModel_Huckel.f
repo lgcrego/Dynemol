@@ -8,7 +8,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SO_coupl , extmagfield
+    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC 
     use Overlap_Builder  , only : Overlap_Matrix
     use Hamiltonians     , only : X_ij , even_more_extended_Huckel , spin_orbit_h , MF_interaction
     use Matrix_Math
@@ -68,15 +68,18 @@ else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
 
-if( SO_coupl ) then
+if( SOC ) then
+
+! h_SO vai se chamar h_spin e vai incluir efeitos SOC e B_field
+
     CALL spin_orbit_h( basis , h_SO , S_matrix )
     h = h + h_SO
 end if
 
-if( extmagfield ) then
-    CALL MF_interaction( basis , h_MF , S_matrix )
-    h = h + h_MF
-end if
+!if( B_field ) then
+!    CALL MF_interaction( basis , h_MF , S_matrix )
+!    h = h + h_MF
+!end if
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 if ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
@@ -219,7 +222,7 @@ real*8  , allocatable   :: h(:,:)
 !      building  the  HUCKEL  HAMILTONIAN
 N = size(basis)
 
-if( SO_coupl ) then
+if( SOC ) then
     N2 = 2 * size(basis)
     ALLOCATE( h(N2,N2) , source = D_zero )
 else
@@ -234,7 +237,7 @@ do j = 1 , N
     end do
 end do
 
-if( SO_coupl ) then
+if( SOC ) then
  
     do j = N + 1 , N2
         do i = j , N2

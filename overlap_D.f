@@ -3,7 +3,7 @@
 module Overlap_Builder
     use type_m
     use constants_m
-    use parameters_m,         only : verbose, PBC, static , SO_coupl , extmagfield
+    use parameters_m,         only : verbose, PBC, static , SOC
     use PBC_m,                only : Generate_Periodic_Structure
     use Semi_Empirical_Parms, only : atom
     use Allocation_m,         only : DeAllocate_Structures
@@ -97,7 +97,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
         deallocate(pbc_basis)
     end if
 
-    if( not(SO_coupl) .AND. not(extmagfield) ) then
+    if( not(SOC) ) then
 
         if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) )
 
