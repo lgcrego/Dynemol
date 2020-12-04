@@ -230,7 +230,7 @@ integer :: copy , nr_sum , ix , iy , k , n
  logical         , optional    , intent(in)    :: GACG_flag
 
 ! local variables ...
- integer :: k , i , l , m , AtNo , N_of_orbitals
+ integer :: k , i , l , m , s , AtNo , N_of_orbitals
  integer :: spin = 0
 
 ! garbage collection ... 
@@ -248,61 +248,61 @@ end if
 allocate( basis(N_of_orbitals) )
 
 k = 1
-do i = 1 , system%atoms
+do s = spin , -spin , -2
 
-    If( system% QMMM(i) /= "QM" ) cycle
-
-    AtNo = system%AtNo(i)
-
-    system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
-
-    do s = spin , -spin , -2
-
-       do l = 0 , atom(AtNo)%AngMax
-
-           do m = -l , +l
-
-               basis(k) % atom                =  i
-               basis(k) % AtNo                =  AtNo
-               basis(k) % nr                  =  system % nr       (i)
-               basis(k) % copy_No             =  system % copy_No  (i)
-               basis(k) % symbol              =  system % symbol   (i)
-               basis(k) % fragment            =  system % fragment (i)
-               basis(k) % EHSymbol            =  system % MMSymbol (i)
-               basis(k) % residue             =  system % residue  (i)
-               basis(k) % solute              =  system % solute   (i)
-               basis(k) % DPF                 =  system % DPF      (i)
-               basis(k) % El                  =  system % El       (i)
-               basis(k) % Hl                  =  system % Hl       (i)
-               basis(k) % flex                =  system % flex     (i)
-               basis(k) % hardcore            =  system % hardcore (i)
-               basis(k) % V_shift             =  system % V_shift  (i)
-               basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
-
-               basis(k) % n        =  atom(AtNo) % Nquant(l)
-               basis(k) % l        =  l
-               basis(k) % m        =  m
-               basis(k) % s        =  s
-
-               basis(k) % IP       =  atom(AtNo) % IP    (l)
-               basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
-               basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
-               basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
-               basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
-               basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
-               basis(k) % k_WH     =  system % k_WH(i)
-
-               basis(k) % x        =  system % coord (i,1)
-               basis(k) % y        =  system % coord (i,2)
-               basis(k) % z        =  system % coord (i,3)
-
-               basis(k) % indx     = k
-
-               k = k + 1
-
-           end do
-       end do
-    end do 
+   do i = 1 , system%atoms
+   
+      If( system% QMMM(i) /= "QM" ) cycle
+   
+      AtNo = system%AtNo(i)
+   
+      system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
+   
+      do l = 0 , atom(AtNo)%AngMax
+   
+         do m = -l , +l
+   
+             basis(k) % atom                =  i
+             basis(k) % AtNo                =  AtNo
+             basis(k) % nr                  =  system % nr       (i)
+             basis(k) % copy_No             =  system % copy_No  (i)
+             basis(k) % symbol              =  system % symbol   (i)
+             basis(k) % fragment            =  system % fragment (i)
+             basis(k) % EHSymbol            =  system % MMSymbol (i)
+             basis(k) % residue             =  system % residue  (i)
+             basis(k) % solute              =  system % solute   (i)
+             basis(k) % DPF                 =  system % DPF      (i)
+             basis(k) % El                  =  system % El       (i)
+             basis(k) % Hl                  =  system % Hl       (i)
+             basis(k) % flex                =  system % flex     (i)
+             basis(k) % hardcore            =  system % hardcore (i)
+             basis(k) % V_shift             =  system % V_shift  (i)
+             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
+   
+             basis(k) % n        =  atom(AtNo) % Nquant(l)
+             basis(k) % l        =  l
+             basis(k) % m        =  m
+             basis(k) % s        =  s
+   
+             basis(k) % IP       =  atom(AtNo) % IP    (l)
+             basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
+             basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
+             basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
+             basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
+             basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
+             basis(k) % k_WH     =  system % k_WH(i)
+   
+             basis(k) % x        =  system % coord (i,1)
+             basis(k) % y        =  system % coord (i,2)
+             basis(k) % z        =  system % coord (i,3)
+   
+             basis(k) % indx     = k
+   
+             k = k + 1
+   
+         end do
+      end do
+   end do 
 end do
 
 ! during GACG cannot use opt_eht_paremeters ...
