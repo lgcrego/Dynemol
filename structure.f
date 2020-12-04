@@ -298,7 +298,7 @@ do i = 1 , system%atoms
     end do
 end do
 
-if( SO_coupl .OR. extmagfield ) then
+if( SO_coupl ) then
 
     i = N_of_orbitals / 2
      

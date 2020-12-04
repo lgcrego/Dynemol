@@ -97,7 +97,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
         deallocate(pbc_basis)
     end if
 
-    if( not(SO_coupl) .AND. not(extmagfield) ) then
+    if( not(SO_coupl) ) then
 
         if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) )
 
