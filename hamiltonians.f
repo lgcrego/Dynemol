@@ -351,7 +351,7 @@ do i = 1 , n
             end do
 
             h( j , i ) = sum1 + sum2
-!            h( j , i ) = 0.4d0 * h( j , i ) ! older jobs used the W factor...
+!            h( j , i ) = 0.4d0 * h( j , i ) ! older publications used the W factor...
 
         end if
 
@@ -459,7 +459,7 @@ select case( basis % AtNo )
 
     case default
 
-        print'("Problem with the spin-orbit coupling constants: Hamiltonians.f --> SCO_constant ")'
+        print'("Problem with the spin-orbit coupling constants: Hamiltonians.f --> SOC_constant ")'
 
 end select
 
