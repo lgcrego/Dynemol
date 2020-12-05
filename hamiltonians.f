@@ -253,7 +253,7 @@ do i = 1 , n
                 k = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m + 1 )
                 
                 h( j , i ) = HALF * eps * dsqrt( dfloat( k ) )
-                h( i , j ) = h( j , i ) ! It's unecessary, but is easiest compute the terms with orbitals in different sitios
+                h( i , j ) = h( j , i ) ! It's unecessary, but it's easer to compute the terms with orbitals in different sitios
 
             end if
 
@@ -351,7 +351,7 @@ do i = 1 , n
             end do
 
             h( j , i ) = sum1 + sum2
-!            h( j , i ) = 0.4d0 * h( j , i )
+!            h( j , i ) = 0.4d0 * h( j , i ) ! older jobs used the W factor...
 
         end if
 
@@ -359,7 +359,7 @@ do i = 1 , n
 
 end do
 
-if( B_fild /= D_zero ) then
+if( B_field( 1 ) /= D_zero .OR. B_field( 3 ) /= D_zero ) then
 
     if( B_field( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction not implemented for By/=0 <<"
 
