@@ -231,8 +231,11 @@ integer :: copy , nr_sum , ix , iy , k , n
 
 ! local variables ...
  integer :: k , i , l , m , s , AtNo , N_of_orbitals
- integer :: spin = 0
- logical :: first_time = .true.
+ integer :: spin
+ logical :: first_time
+
+spin = 0
+first_time = .true.
 
 ! garbage collection ... 
 system% BasisPointer = 0
@@ -306,6 +309,14 @@ do s = spin , -spin , -2
    end do 
    first_time = .false.
 end do
+
+if( SOC ) then
+
+    k = N_of_orbitals / 2
+
+    basis( k + 1 : N_of_orbitals ) = basis( 1 : k )
+    
+end if
 
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
