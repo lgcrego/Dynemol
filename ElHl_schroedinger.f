@@ -6,7 +6,8 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , DensityMatrix , driver
+                                         Coulomb_ , DensityMatrix , driver , SOC
+ use tuning_m                   , only : spin_tag 
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -252,35 +253,41 @@ type(f_time)    , intent(in) :: QDyn
 type(R_eigen)   , intent(in) :: UNI
 
 ! local variables ...
-integer     :: nf , n , it
-complex*16  :: wp_energy
+integer                       :: nf , n , it , n_spin , spin
+complex*16                    :: wp_energy
+character(len=:) ,allocatable :: f_name
 
-do n = 1 , n_part
+n_spin = merge(2,1,SOC)
 
-      if( eh_tag(n) == "XX" ) cycle
-      
-      open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
-      write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-      write(52,12) "#" , QDyn%fragments , "total"
-      
-      open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+do spin = 1 , n_spin
 
-      wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
-      
-      DO it = 1 , n_t
+   do n = 1 , n_part
+   
+         if( eh_tag(n) == "XX" ) cycle
 
-      
-          ! dumps el-&-hl populations ...
-          write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
-      
-          ! dumps el-&-hl wavepachet energies ...
-          write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
-      
-      end do
+         call FileName( f_name , n , spin , instance="dens" )
+         open( unit = 52 , file = f_name , status = "replace" , action = "write" , position = "append" )
+         write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+         write(52,12) "#" , QDyn%fragments , "total"
 
-      close(52)
-      close(53)
-      
+         call FileName( f_name , n , spin , instance="erg" )
+         open( unit = 53 , file = f_name , status = "replace" , action = "write" , position = "append" )
+         wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
+         
+         DO it = 1 , n_t
+         
+             ! dumps el-&-hl populations ...
+             write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
+         
+             ! dumps el-&-hl wavepachet energies ...
+             write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+         
+         end do
+   
+         close(52)
+         close(53)
+         
+   end do
 end do
 
 12 FORMAT(/15A10)
@@ -354,6 +361,50 @@ select case( flag )
 end select
 
 end subroutine DeAllocate_QDyn
+!
+!
+!
+!===============================================
+subroutine FileName( f_name , n , s , instance )
+!===============================================
+implicit none
+character(len=:) , allocatable , intent(out) :: f_name
+integer                        , intent(in)  :: n
+integer                        , intent(in)  :: s
+character(len=*)               , intent(in)  :: instance
+
+! s stands for spin flag ...
+! n stands for n_part flag ...
+
+select case ( instance )
+
+       case ("dens")
+            if( spin_tag(s) == "XX" ) then
+                allocate( character(len=21) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_dens.dat" 
+            elseif( spin_tag(s) == "up" ) then
+                allocate( character(len=24) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_dens_up.dat" 
+            elseif( spin_tag(s) == "dw" ) then
+                allocate( character(len=26) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_dens_down.dat" 
+            end If
+
+       case ("erg") 
+            if( spin_tag(s) == "XX" ) then
+                allocate( character(len=23) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg.dat" 
+            elseif( spin_tag(s) == "up" ) then
+                allocate( character(len=26) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_up.dat" 
+            elseif( spin_tag(s) == "dw" ) then
+                allocate( character(len=28) :: f_name )
+                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_down.dat" 
+            end If
+
+end select
+
+end subroutine FileName
 !
 !
 !

@@ -192,4 +192,4 @@
 
 233 format(/,1x,'>>> Error detected in Toplogy file .....: Dihedral (',I4,',',I4,',',I4,',',I4,')' )
 
-
+234 format('#      erg         S-up      S-down       S-up       S-down      Occup. ')

@@ -3,7 +3,7 @@ module DOS_m
     use type_m
     use omp_lib    
     use constants_m
-    use parameters_m            , only  : sigma , DOS_range        
+    use parameters_m            , only  : sigma , DOS_range , SOC       
     use Semi_Empirical_Parms    , only  : the_chemical_atom => atom
 
     public  :: Total_DOS , Partial_DOS
@@ -20,18 +20,19 @@ module DOS_m
 !
 !
 !
-!===================================================
-subroutine  Total_DOS( erg , TDOS , internal_sigma )
-!===================================================
+!==========================================================
+subroutine  Total_DOS( QM , basis , TDOS , internal_sigma )
+!==========================================================
 implicit none
-real*8        , ALLOCATABLE , intent(in)    :: erg(:)
-type(f_grid)                , intent(inout) :: TDOS
-real*8        , OPTIONAL    , intent(in)    :: internal_sigma
+type(R_eigen)             , intent(in)    :: QM
+type(STO_basis)           , intent(in)    :: basis(:)
+type(f_grid)              , intent(inout) :: TDOS
+real*8        , OPTIONAL  , intent(in)    :: internal_sigma
 
 ! local variables ...
 real*8  , allocatable :: erg_MO(:) , peaks(:) , DOS_partial(:)
-real*8                :: sgm , sub_occupation
-integer               :: i1 , i2 , npoints, k ,j 
+real*8                :: sgm , sub_occupation , SpinProject
+integer               :: i1 , i2 , npoints, k , j , indx , spin , s
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -46,15 +47,15 @@ two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
 ! states in the range [DOS_range%inicio,DOS_range%fim]
-i1 = maxloc(erg , 1 , erg <  DOS_range%inicio) + 1
-i2 = maxloc(erg , 1 , erg <= DOS_range%fim   ) 
+i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) + 1
+i2 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1
 
 allocate( erg_MO(n_of_DOS_states) )
 
 ! find the energies in the range [DOS_range%inicio,DOS_range%fim]
-erg_MO = erg( i1 : i2 )
+erg_MO = QM%erg( i1 : i2 )
 
 allocate( peaks      (npoints) )
 allocate( DOS_partial(npoints) )
@@ -62,33 +63,70 @@ allocate( DOS_partial(npoints) )
 forall(k=1:npoints) TDOS%grid(k) = (k-1)*step + DOS_range%inicio
 
 ! the total density of states
-TDOS%peaks(:) = 0.d0
-TDOS%func (:) = 0.d0
+TDOS%peaks2 = 0.d0
+TDOS%func2  = 0.d0
 
-do j = 1 , n_of_DOS_states
+spin = merge(1,0,SOC)
 
-    peaks = 0.d0
-    where( dabs(TDOS%grid-erg_MO(j)) < (step/two) ) peaks = D_one
+do S = spin , -spin , -2
 
-    TDOS%peaks = TDOS%peaks + peaks
+    indx = i1-1
 
-    DOS_partial = 0.d0
-    where( ((TDOS%grid-erg_MO(j))**2/two_sigma2) < 25.d0 ) DOS_partial = gauss_norm*exp( -(TDOS%grid-erg_MO(j))**2 / two_sigma2 )
+    do j = 1 , n_of_DOS_states
+    
+        indx = indx + 1
 
-    TDOS%func(:) = TDOS%func(:) + DOS_partial(:)
+        peaks = 0.d0
+        where( dabs(TDOS%grid-erg_MO(j)) < (step/two) ) peaks = D_one
+    
+        DOS_partial = 0.d0
+        where( ((TDOS%grid-erg_MO(j))**2/two_sigma2) < 25.d0 ) DOS_partial = gauss_norm*exp( -(TDOS%grid-erg_MO(j))**2 / two_sigma2 )
+
+        select case ( S )
+           case(0)
+               TDOS%peaks2(:,1) = TDOS%peaks2(:,1) + peaks
+               TDOS%func2(:,1)  = TDOS%func2 (:,1) + DOS_partial(:)
+
+           case(1)  
+               SpinProject = sum( QM%L(indx,:)*QM%R(:,indx) , basis(:)%s == S )
+               TDOS%peaks2(:,1) = TDOS%peaks2(:,1) + SpinProject * peaks
+               TDOS%func2(:,1)  = TDOS%func2(:,1)  + SpinProject * DOS_partial(:)
+
+           case(-1)  
+               SpinProject = sum( QM%L(indx,:)*QM%R(:,indx) , basis(:)%s == S )
+               TDOS%peaks2(:,2) = TDOS%peaks2(:,2) - SpinProject * peaks
+               TDOS%func2(:,2)  = TDOS%func2(:,2)  - SpinProject * DOS_partial(:)
+
+           end select
+    end do
 
 end do
 
-TDOS%average = TDOS%average + TDOS%func
+TDOS%average2 = TDOS%average2 + TDOS%func2
 
 ! occupation of TDOS(nr) ...
-TDOS%occupation(1) = two * TDOS%peaks(1)
-do k = 2 , npoints 
-    TDOS%occupation(k) = TDOS%occupation(k-1) + two*TDOS%peaks(k) 
-end do
-sub_occupation  = two * (i1 - 1)
+select case(spin)
 
-TDOS%occupation = sub_occupation + TDOS%occupation
+       case(0)
+           TDOS%occupation(1) = two * TDOS%peaks2(1,1)
+           do k = 2 , npoints 
+               TDOS%occupation(k) = TDOS%occupation(k-1) + two*TDOS%peaks2(k,1) 
+           end do
+           sub_occupation  = two * (i1 - 1) ! <== occupation below DOS window
+           
+           TDOS%occupation = sub_occupation + TDOS%occupation
+
+       case(1)
+           TDOS%occupation(1) = TDOS%peaks2(1,1) + abs(TDOS%peaks2(1,2))
+           do k = 2 , npoints 
+              TDOS%occupation(k) = TDOS%occupation(k-1) +     TDOS%peaks2(k,1)   ! <== spin up
+              TDOS%occupation(k) = TDOS%occupation(k)   + abs(TDOS%peaks2(k,2))  ! <== spin down
+           end do
+           sub_occupation  = (i1 - 1) ! <== occupation below DOS window
+           
+           TDOS%occupation = sub_occupation + TDOS%occupation
+
+       end select 
 
 DEALLOCATE( peaks , DOS_partial )
 

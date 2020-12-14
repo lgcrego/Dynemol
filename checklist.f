@@ -81,8 +81,10 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
 
         write(10,'(" QMMM            :" , A10)') merge(".true. <==",".false.   ",QMMM)            
         write(10,'(" OPT_parms       :" , A10)') merge(".true. <==",".false.   ",OPT_parms)       
-        write(10,'(" SPECTRUM        :" , A10)') merge(".true. <==",".false.   ",SPECTRUM)        
-        write(10,'(" Alpha_Tensor    :" , A10)') merge(".true. <==",".false.   ",Alpha_Tensor)    
+
+        If( SOC          ) write(10,'(" SOC             :" , A10)') ".true. <=="
+        If( SPECTRUM     ) write(10,'(" SPECTRUM        :" , A10)') ".true. <=="
+        If( Alpha_Tensor ) write(10,'(" Alpha_Tensor    :" , A10)') ".true. <=="    
 
         tag = merge("no ","yes",GaussianCube)       
         write(10 , '(" GaussianCube    :" , A10)' , advance=tag) merge(".true. <==",".false.   ",GaussianCube)    
@@ -94,9 +96,9 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
         If( NetCharge ) &
             write(10,'(" CH_and_DP_step = " , I0)') CH_and_DP_step      
 
-        write(10,'(" DensityMatrix   :" , A10)') merge(".true. <==",".false.   ",DensityMatrix)   
-        write(10,'(" AutoCorrelation :" , A10)') merge(".true. <==",".false.   ",AutoCorrelation) 
-        write(10,'(" VDOS_           :" , A10)') merge(".true. <==",".false.   ",VDOS_)           
+        If( DensityMatrix   ) write(10,'(" DensityMatrix   :" , A10)') ".true. <=="
+        If( AutoCorrelation ) write(10,'(" AutoCorrelation :" , A10)') ".true. <=="
+        If( VDOS_           ) write(10,'(" VDOS_           :" , A10)') ".true. <=="
 
         tag = merge("no ","yes",EnvField_)       
         write(10 , '(" EnvField_       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",EnvField_)       

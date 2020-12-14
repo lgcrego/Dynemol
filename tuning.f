@@ -2,15 +2,15 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m       , only : T_ , F_ , static , electron_state , hole_state , n_part , Survival
+    use parameters_m       , only : T_ , F_ , static , electron_state , hole_state , n_part , Survival , SOC
 
-    public :: ad_hoc_tuning , eh_tag , orbital 
+    public :: ad_hoc_tuning , eh_tag , spin_tag , orbital 
 
     private
 
     ! module variables ...
     integer      , allocatable :: orbital(:)
-    character(2) , allocatable :: eh_tag(:)
+    character(2) , allocatable :: eh_tag(:) , spin_tag(:)
 
     contains
 !
@@ -58,15 +58,16 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % El = .true.
+where(univ % atom % residue == "BP1") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
+where(univ % atom % residue == "ION") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-
+where(univ % atom % residue == "BP2") univ % atom % fragment = "2"
+where(univ % atom % residue == "BP3") univ % atom % fragment = "3"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -125,6 +126,14 @@ If( Survival ) then
    End If
 
 end If
+
+! spin states ...
+allocate( spin_tag(2) ) 
+If( SOC ) then
+   spin_tag = ["up","dw"]
+   else
+   spin_tag = ["XX","XX"]
+   end If
 
 !default: %El => DONOR
 If( any(a% El) ) then      ! <== first priority ...

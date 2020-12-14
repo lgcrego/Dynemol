@@ -76,7 +76,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
- CALL Total_DOS( UNI%erg , TDOS )
+ CALL Total_DOS( UNI , ExCell_basis , TDOS )
 
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            

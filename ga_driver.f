@@ -73,7 +73,7 @@ CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
 ! calculations with new parameters ...
 CALL GA_eigen( Extended_Cell, OPT_basis, UNI )
 
-CALL Total_DOS( UNI%erg, TDOS )
+CALL Total_DOS( UNI, OPT_basis , TDOS )
 
 do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
