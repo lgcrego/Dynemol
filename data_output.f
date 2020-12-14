@@ -3,6 +3,7 @@
     use type_m
     use parameters_m        , only  : driver ,      &
                                       n_part ,      &
+                                      SOC ,         &
                                       spectrum ,    &
                                       survival ,    &
                                       NetCharge ,   &
@@ -157,15 +158,22 @@ type(f_grid)  , intent(in)     , optional  :: SPEC
 type(f_time)  , intent(in)     , optional  :: QDyn
 
 ! local variables ...
-integer         :: i , nr , nf , np , N_of_residues , N_of_fragments
+integer         :: i , j , nr , nf , np , N_of_residues , N_of_fragments
 character(22)   :: string
 
 ! save TDOS ...
 If( present(TDOS) ) then
     OPEN( unit=3 , file='dos.trunk/TDOS.dat' , status='unknown' )
-        do i = 1 , size(TDOS%func)
-            write(3,10) TDOS%grid(i) , TDOS%average(i) , TDOS%peaks(i) , TDOS%occupation(i)
-        end do
+        If( .not. SOC ) then
+            do i = 1 , size(TDOS%grid)
+                write(3,10) TDOS%grid(i) , TDOS%average2(i,1) , TDOS%peaks2(i,1) , TDOS%occupation(i)
+            end do
+        else
+            write(3,234)  ! <== header
+            do i = 1 , size(TDOS%grid)
+                write(3,15) TDOS%grid(i) , (TDOS%average2(i,j),j=1,2) , (TDOS%peaks2(i,j),j=1,2) , TDOS%occupation(i)
+            end do
+        end If
     CLOSE(3)
 end if
 
@@ -231,7 +239,10 @@ end if
 11   FORMAT(3F13.9)
 12   FORMAT(/15A10)
 13   FORMAT(F11.6,14F10.5)
-14 FORMAT(A,I9,14I10)
+14   FORMAT(A,I9,14I10)
+15   FORMAT(6F12.5)
+
+include 'formats.h'
 
 end subroutine Dump_stuff
 !

@@ -113,7 +113,7 @@ do frame = frame_init , size(trj) , frame_step
     CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
     ! TDOS += avrg
-    CALL Total_DOS( UNI%erg , TDOS , internal_sigma )                                             
+    CALL Total_DOS( UNI , ExCell_basis , TDOS , internal_sigma )                                             
 
     do nr = 1 , N_of_residues
         ! PDOS += avrg

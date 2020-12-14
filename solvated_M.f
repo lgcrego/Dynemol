@@ -426,13 +426,13 @@ select case( flag )
 
     case( "alloc" )
         allocate( TDOS%grid       (npoints) , source = 0.d0 )
-        allocate( TDOS%func       (npoints) , source = 0.d0 )
-        allocate( TDOS%peaks      (npoints) , source = 0.d0 )
+        allocate( TDOS%func2      (npoints,2) , source = 0.d0 )
+        allocate( TDOS%peaks2     (npoints,2) , source = 0.d0 )
         allocate( TDOS%occupation (npoints) , source = 0.d0 )
-        allocate( TDOS%average    (npoints) , source = 0.d0 )
+        allocate( TDOS%average2    (npoints,2) , source = 0.d0 )
 
     case( "dealloc" )
-        deallocate( TDOS%grid , TDOS%func , TDOS%peaks , TDOS%occupation , TDOS%average )
+        deallocate( TDOS%grid , TDOS%func2 , TDOS%peaks2 , TDOS%occupation , TDOS%average2 )
 
 end select
 

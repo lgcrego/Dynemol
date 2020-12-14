@@ -234,13 +234,13 @@ integer :: copy , nr_sum , ix , iy , k , n
  integer :: spin
  logical :: first_time
 
-spin = 0
 first_time = .true.
 
 ! garbage collection ... 
 system% BasisPointer = 0
 
 ! total number of orbitals ...
+spin = 0
 N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
 if( SOC ) then
     N_of_orbitals = 2 * N_of_orbitals
@@ -248,7 +248,6 @@ if( SOC ) then
 end if
 
 ! building AO basis ...  
-
 allocate( basis(N_of_orbitals) )
 
 k = 1
@@ -309,14 +308,6 @@ do s = spin , -spin , -2
    end do 
    first_time = .false.
 end do
-
-if( SOC ) then
-
-    k = N_of_orbitals / 2
-
-    basis( k + 1 : N_of_orbitals ) = basis( 1 : k )
-    
-end if
 
 ! during GACG cannot use opt_eht_paremeters ...
  If( OPT_parms .AND. (.NOT. present(GACG_flag)) ) CALL Include_OPT_parameters( basis )
