@@ -79,21 +79,13 @@ CALL Read_Command_Lines_Arguments( MOnum )
  CALL Total_DOS( UNI , ExCell_basis , TDOS )
 
  do nr = 1 , N_of_residues
-    CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
+    CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr )            
  end do
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
-! Print*, " " 
-! Print*, "dE1 = ", UNI%erg(123) - UNI%erg(122) ,   2.8670
-! Print*, "dE2 = ", UNI%erg(122) - UNI%erg(121) ,   0.0930
-! Print*, "dE3 = ", UNI%erg(123) - UNI%erg(121) ,   2.9600
-! Print*, "dE4 = ", UNI%erg(121) - UNI%erg(120) ,   1.0970
-! Print*, "dE5 = ", UNI%erg(120) - UNI%erg(119) ,   0.2020
-! Print*, "dE6 = ", UNI%erg(125) - UNI%erg(124) ,   1.6310
- 
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 
      ! use this to check the orbitals separately ... 

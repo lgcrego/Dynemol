@@ -164,16 +164,16 @@ character(22)   :: string
 ! save TDOS ...
 If( present(TDOS) ) then
     OPEN( unit=3 , file='dos.trunk/TDOS.dat' , status='unknown' )
-        If( .not. SOC ) then
-            do i = 1 , size(TDOS%grid)
-                write(3,10) TDOS%grid(i) , TDOS%average2(i,1) , TDOS%peaks2(i,1) , TDOS%occupation(i)
-            end do
-        else
-            write(3,234)  ! <== header
-            do i = 1 , size(TDOS%grid)
-                write(3,15) TDOS%grid(i) , (TDOS%average2(i,j),j=1,2) , (TDOS%peaks2(i,j),j=1,2) , TDOS%occupation(i)
-            end do
-        end If
+    If( .not. SOC ) then
+        do i = 1 , size(TDOS%grid)
+            write(3,10) TDOS%grid(i) , TDOS%average2(i,1) , TDOS%peaks2(i,1) , TDOS%occupation(i)
+        end do
+    else
+        write(3,234)  ! <== header
+        do i = 1 , size(TDOS%grid)
+            write(3,15) TDOS%grid(i) , (TDOS%average2(i,j),j=1,2) , (TDOS%peaks2(i,j),j=1,2) , TDOS%occupation(i)
+        end do
+    end If
     CLOSE(3)
 end if
 
@@ -183,9 +183,16 @@ If( present(PDOS) ) then
     do nr = 1 , N_of_residues
         string = "dos.trunk/PDOS-"//PDOS(nr)%residue//".dat"
         OPEN( unit=3 , file=string , status='unknown' )
+        If( .not. SOC ) then
             do i = 1 , size(PDOS(nr)%func)
-                write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average(i) , PDOS(nr)%peaks(i) , PDOS(nr)%occupation(i)
+                write(3,10) PDOS(nr)%grid(i) , PDOS(nr)%average2(i,1) , PDOS(nr)%peaks2(i,1) , PDOS(nr)%occupation(i)
             end do
+        else
+            write(3,234)  ! <== header
+            do i = 1 , size(PDOS(nr)%func)
+                write(3,15) PDOS(nr)%grid(i) , (PDOS(nr)%average2(i,j),j=1,2) , (PDOS(nr)%peaks2(i,j),j=1,2) , PDOS(nr)%occupation(i)
+            end do
+        end If
         CLOSE(3)
     end do
 end if
