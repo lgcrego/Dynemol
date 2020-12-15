@@ -30,9 +30,10 @@ type(f_grid)              , intent(inout) :: TDOS
 real*8        , OPTIONAL  , intent(in)    :: internal_sigma
 
 ! local variables ...
-real*8  , allocatable :: erg_MO(:) , peaks(:) , DOS_partial(:)
+real*8  , allocatable :: erg_MO(:) , peaks(:) , func(:)
 real*8                :: sgm , sub_occupation , SpinProject
-integer               :: i1 , i2 , npoints, k , j , indx , spin , s
+integer               :: i1 , i2 , npoints, k , j , indx
+integer               :: spin , S
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -57,8 +58,8 @@ allocate( erg_MO(n_of_DOS_states) )
 ! find the energies in the range [DOS_range%inicio,DOS_range%fim]
 erg_MO = QM%erg( i1 : i2 )
 
-allocate( peaks      (npoints) )
-allocate( DOS_partial(npoints) )
+allocate( peaks (npoints) )
+allocate( func  (npoints) )
 
 forall(k=1:npoints) TDOS%grid(k) = (k-1)*step + DOS_range%inicio
 
@@ -79,23 +80,23 @@ do S = spin , -spin , -2
         peaks = 0.d0
         where( dabs(TDOS%grid-erg_MO(j)) < (step/two) ) peaks = D_one
     
-        DOS_partial = 0.d0
-        where( ((TDOS%grid-erg_MO(j))**2/two_sigma2) < 25.d0 ) DOS_partial = gauss_norm*exp( -(TDOS%grid-erg_MO(j))**2 / two_sigma2 )
+        func = 0.d0
+        where( ((TDOS%grid-erg_MO(j))**2/two_sigma2) < 25.d0 ) func = gauss_norm*exp( -(TDOS%grid-erg_MO(j))**2 / two_sigma2 )
 
         select case ( S )
            case(0)
                TDOS%peaks2(:,1) = TDOS%peaks2(:,1) + peaks
-               TDOS%func2(:,1)  = TDOS%func2 (:,1) + DOS_partial(:)
+               TDOS%func2(:,1)  = TDOS%func2 (:,1) + func(:)
 
            case(1)  
                SpinProject = sum( QM%L(indx,:)*QM%R(:,indx) , basis(:)%s == S )
                TDOS%peaks2(:,1) = TDOS%peaks2(:,1) + SpinProject * peaks
-               TDOS%func2(:,1)  = TDOS%func2(:,1)  + SpinProject * DOS_partial(:)
+               TDOS%func2(:,1)  = TDOS%func2(:,1)  + SpinProject * func(:)
 
            case(-1)  
                SpinProject = sum( QM%L(indx,:)*QM%R(:,indx) , basis(:)%s == S )
                TDOS%peaks2(:,2) = TDOS%peaks2(:,2) - SpinProject * peaks
-               TDOS%func2(:,2)  = TDOS%func2(:,2)  - SpinProject * DOS_partial(:)
+               TDOS%func2(:,2)  = TDOS%func2(:,2)  - SpinProject * func(:)
 
            end select
     end do
@@ -104,7 +105,7 @@ end do
 
 TDOS%average2 = TDOS%average2 + TDOS%func2
 
-! occupation of TDOS(nr) ...
+! occupation of TDOS ...
 select case(spin)
 
        case(0)
@@ -128,7 +129,7 @@ select case(spin)
 
        end select 
 
-DEALLOCATE( peaks , DOS_partial )
+DEALLOCATE( peaks , func )
 
 print*, '>> TDOS done <<'
 
@@ -136,20 +137,23 @@ end subroutine Total_DOS
 !
 !
 !
-!=================================================================
-subroutine  Partial_DOS( system, QM , PDOS , nr , internal_sigma )
-!=================================================================
+!==========================================================================
+subroutine  Partial_DOS( system , basis , QM , PDOS , nr , internal_sigma )
+!==========================================================================
 implicit none
 type(structure)             , intent(in)    :: system
+type(STO_basis)             , intent(in)    :: basis(:)
 type(R_eigen)               , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma
 
 ! local variables ...
-real*8  , allocatable :: tmp_PDOS_peaks(:) , tmp_PDOS_func(:) 
-real*8                :: sgm , sub_occupation
-integer               :: i , i1 , i2 , j , n_of_atoms , npoints , k , l 
+real*8  , allocatable :: erg_MO(:) , peaks(:) , func(:) 
+real*8                :: sgm , sub_occupation , Project
+integer               :: i ,  k , i1 , i2 , j , indx , npoints
+integer               :: spin , S
+logical , allocatable :: mask(:)
 
 if( present(internal_sigma) ) then 
     sgm = internal_sigma
@@ -163,156 +167,103 @@ gauss_norm = 1.d0 !  / (sgm*sqrt2PI)    <== for gauss_norm = 1 the gaussians are
 two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
-! number of states in the range [DOS_range%inicio,DOS_range%fim] ...
+! states in the range [DOS_range%inicio,DOS_range%fim] ...
 i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) + 1
 i2 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1
 
-allocate( list_of_DOS_states(n_of_DOS_states) )
+allocate( erg_MO(n_of_DOS_states) )
 
-! states in the range [DOS_range%inicio,DOS_range%fim] ...
-forall( i=1:n_of_DOS_states ) list_of_DOS_states(i) = i1 + (i-1)
+! find the energies in the range [DOS_range%inicio,DOS_range%fim]
+erg_MO = QM%erg( i1 : i2 )
 
-! reads the list of atoms ...
-allocate( atom(system%atoms) , source=I_zero ) 
-j=1
-do i = 1 , system%atoms
-    ! only quantum species contribute to PDOS ...
-    if( (system%residue(i) == PDOS(nr)%residue) .AND. (system%QMMM(i) == "QM") ) then
-        atom(j) = i
-        j = j + 1
-    end if
-end do
-
-! number of atoms of species residue ...
-n_of_atoms = j-1
+allocate( peaks (npoints)     , source = D_zero  )
+allocate( func  (npoints)     , source = D_zero  )
+allocate( mask  (size(basis)) , source = .false. )
 
 forall(k=1:npoints) PDOS(nr)%grid(k) = (k-1)*step + DOS_range%inicio
 
-allocate( tmp_PDOS_peaks (npoints) , source = D_zero )
-allocate( tmp_PDOS_func  (npoints) , source = D_zero )
+! the total density of states
+PDOS(nr)%peaks2 = 0.d0
+PDOS(nr)%func2  = 0.d0
 
-!$OMP parallel 
-    !$OMP DO reduction(+ : tmp_PDOS_peaks , tmp_PDOS_func )
-    do l = 1 , n_of_atoms
+spin = merge(1,0,SOC)
 
-        CALL tmp_PDOS( system , QM , l , PDOS(nr)%grid , tmp_PDOS_peaks , tmp_PDOS_func )
+do S = spin , -spin , -2
+
+    indx = i1-1
+
+    do j = 1 , n_of_DOS_states
+    
+        indx = indx + 1
+
+        peaks = 0.d0
+        where( dabs(PDOS(nr)%grid-erg_MO(j)) < (step/two) ) peaks = D_one
+    
+        func = 0.d0
+        where( ((PDOS(nr)%grid-erg_MO(j))**2/two_sigma2) < 25.d0 ) func = gauss_norm*exp( -(PDOS(nr)%grid-erg_MO(j))**2 / two_sigma2 )
+
+        select case ( S )
+           case(0)
+               Project = sum( QM%L(indx,:)*QM%R(:,indx) , basis(:)%residue == PDOS(nr)%residue ) 
+               PDOS(nr)%peaks2(:,1) = PDOS(nr)%peaks2(:,1) + Project * peaks
+               PDOS(nr)%func2(:,1)  = PDOS(nr)%func2 (:,1) + Project * func(:)
+
+           case(1)  
+               mask = ( basis(:)%residue == PDOS(nr)%residue ) .AND. ( basis(:)%S == S )
+               Project = sum( QM%L(indx,:)*QM%R(:,indx) , mask )
+               PDOS(nr)%peaks2(:,1) = PDOS(nr)%peaks2(:,1) + Project * peaks
+               PDOS(nr)%func2(:,1)  = PDOS(nr)%func2 (:,1) + Project * func(:)
+
+           case(-1)  
+               mask = ( basis(:)%residue == PDOS(nr)%residue ) .AND. ( basis(:)%S == S )
+               Project = sum( QM%L(indx,:)*QM%R(:,indx) , mask )
+               PDOS(nr)%peaks2(:,2) = PDOS(nr)%peaks2(:,2) - Project * peaks
+               PDOS(nr)%func2(:,2)  = PDOS(nr)%func2 (:,2) - Project * func(:)
+
+           end select
 
     end do
-    !$OMP END DO
-!$OMP end parallel
 
-PDOS(nr)%peaks = tmp_PDOS_peaks
-PDOS(nr)%func  = tmp_PDOS_func
+end do
 
-deallocate( tmp_PDOS_peaks , tmp_PDOS_func )
+PDOS(nr)%average2 = PDOS(nr)%average2 + PDOS(nr)%func2
 
-PDOS(nr)%average = PDOS(nr)%average + PDOS(nr)%func
+deallocate( peaks , func )
 
 ! occupation of PDOS(nr) ...
-PDOS(nr)%occupation(1) = two * PDOS(nr)%peaks(1)
-do k = 2 , npoints 
-    PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k-1) + two*PDOS(nr)%peaks(k) 
-end do
-sub_occupation = underneath_occupation( system , QM , atom , list_of_DOS_states(1) )
-PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
+select case(spin)
 
-DEALLOCATE( atom , list_of_DOS_states )
+       case(0)
+           PDOS(nr)%occupation(1) = two * PDOS(nr)%peaks2(1,1)
+           do k = 2 , npoints 
+               PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k-1) + two*PDOS(nr)%peaks2(k,1) 
+           end do
+           sub_occupation  = two * (i1 - 1) ! <== occupation below DOS window
+           
+           PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
+
+       case(1)
+           PDOS(nr)%occupation(1) = PDOS(nr)%peaks2(1,1) + abs(PDOS(nr)%peaks2(1,2))
+           do k = 2 , npoints 
+              PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k-1) +     PDOS(nr)%peaks2(k,1)   ! <== spin up
+              PDOS(nr)%occupation(k) = PDOS(nr)%occupation(k)   + abs(PDOS(nr)%peaks2(k,2))  ! <== spin down
+           end do
+
+           ! occupation below DOS window
+           sub_occupation = 0.d0
+           do j = 1 , i1-1
+              sub_occupation = sub_occupation + sum( QM%L(j,:)*QM%R(:,j) , basis(:)%residue == PDOS(nr)%residue ) 
+           end do
+           
+           PDOS(nr)%occupation = sub_occupation + PDOS(nr)%occupation
+
+       end select 
 
 print*, '>> ',PDOS(nr)%residue,' PDOS done <<'
 
 end subroutine Partial_DOS
-!
-!
-!
-!=====================================================================================
-subroutine tmp_PDOS( system , QM , l , tmp_PDOS_grid , tmp_PDOS_peaks, tmp_PDOS_func ) 
-!=====================================================================================
-implicit none
-type(structure)  , intent(in)   :: system
-type(R_eigen)    , intent(in)   :: QM
-integer          , intent(in)   :: l
-real*8           , intent(in)   :: tmp_PDOS_grid  (:)
-real*8           , intent(out)  :: tmp_PDOS_peaks (:)
-real*8           , intent(out)  :: tmp_PDOS_func  (:)
-
-! local variables ...
-real*8           :: projection , erg_MO 
-integer          :: i , j , n , i1 , i2 , grid_size
-
-grid_size = size( tmp_PDOS_grid )
-
-i1 = system%BasisPointer(atom(l)) + 1
-i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
-
-do n = 1 , n_of_DOS_states
-
-    j = list_of_DOS_states(n)
-
-    projection = 0.d0
-    do i = i1 , i2
-        projection = projection + QM%L(j,i)*QM%R(i,j)
-    end do
-
-    erg_MO = QM%erg(j) 
-
-    do i = 1 , grid_size
-
-        if(dabs(tmp_PDOS_grid(i)-erg_MO) < (step/two) ) tmp_PDOS_peaks(i) = tmp_PDOS_peaks(i) + projection 
-
-        if( ((tmp_PDOS_grid(i)-erg_MO)**2/two_sigma2) < 25.d0 ) &
-        tmp_PDOS_func(i) = tmp_PDOS_func(i) + projection*gauss_norm*exp( -(tmp_PDOS_grid(i)-erg_MO)**2 / two_sigma2 )
-
-    end do    
-
-end do
-
-end subroutine tmp_PDOS
-!
-!
-!
-!==========================================================
- function  underneath_occupation( system, QM , atom , top )
-!==========================================================
-implicit none
-type(structure)             , intent(in)    :: system
-type(R_eigen)               , intent(in)    :: QM
-integer       , OPTIONAL    , intent(in)    :: atom(:)
-integer                     , intent(in)    :: top
-
-! local variables ...
-real*8                :: underneath_occupation
-real*8  , allocatable :: state_projection(:) 
-integer               :: j , l , i1 , i2 , n_of_atoms 
-
-! state projection up to highest underneath state ...
-allocate( state_projection(top-1) , source = 0.d0 )
-
-! number of atoms of species = residue ...
-n_of_atoms = size(atom)
-
-do j = 1 , top-1
-
-    do l = 1 , n_of_atoms
-        if( atom(l) /= 0 ) then
-
-            i1 = system%BasisPointer(atom(l)) + 1
-            i2 = system%BasisPointer(atom(l)) + the_chemical_atom(system%AtNo(atom(l)))%DOS 
-
-            state_projection(j) = state_projection(j) + sum( QM%L(j,i1:i2)*QM%R(i1:i2,j) )
-        
-        end if
-    end do
-
-end do
-
-! occupation of states up to state (top-1) ...
-underneath_occupation = two * sum(state_projection)
-
-deallocate( state_projection )
-
-end function underneath_occupation
 !
 !
 !

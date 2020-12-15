@@ -468,9 +468,12 @@ select case( flag )
         do i = 1 , N_of_residues
             allocate( PDOS(i)%grid       (npoints) , source = 0.d0 )
             allocate( PDOS(i)%func       (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%func2      (npoints,2) , source = 0.d0 )
             allocate( PDOS(i)%peaks      (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%peaks2     (npoints,2) , source = 0.d0 )
             allocate( PDOS(i)%occupation (npoints) , source = 0.d0 )
             allocate( PDOS(i)%average    (npoints) , source = 0.d0 )
+            allocate( PDOS(i)%average2   (npoints,2) , source = 0.d0 )
 
             if( allocated(trj) ) then
                 PDOS(i) % residue = trj(1) % list_of_residues(i) 

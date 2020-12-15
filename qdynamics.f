@@ -72,7 +72,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
  CALL Total_DOS( UNI , ExCell_basis , TDOS )
 
  do nr = 1 , N_of_residues
-    CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
+    CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr )            
  end do
 
  If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )

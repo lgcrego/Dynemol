@@ -181,7 +181,6 @@ SOURCE2 = constants_m.o \
 		  CG_MM_driver.o \
 		  vibes_driver.o \
 		  solvated_M.o \
-		  DOS_tool.o \
 		  backup.o \
 		  auto_correlation.o \
 		  ElHl_schroedinger.o \

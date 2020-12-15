@@ -117,7 +117,7 @@ do frame = frame_init , size(trj) , frame_step
 
     do nr = 1 , N_of_residues
         ! PDOS += avrg
-        CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr , internal_sigma )            
+        CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr , internal_sigma )            
     end do
 
     If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
