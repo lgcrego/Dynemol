@@ -137,7 +137,7 @@ If( driver == 'q_dynamics' ) necessary_ = .false.
 !==============================================
 
 ! save populations(time=t_i) ...
-QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+QDyn%dyn(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn , it )
 
 !==============================================
@@ -272,7 +272,7 @@ CALL QuasiParticleEnergies( AO_bra , AO_ket , H )
 CALL store_Hprime( N , H_prime ) 
 
 ! save populations(time) ...
-QDyn%dyn(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+QDyn%dyn(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
 
 if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn , it )
 

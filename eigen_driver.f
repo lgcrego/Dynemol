@@ -3,7 +3,7 @@ module QMDynamicSlice_driver_m
 
     use type_m
     use constants_m
-    use parameters_m                , only : survival , driver , n_part
+    use parameters_m                , only : survival , driver , n_part , SOC
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
     use AO_adiabatic_m              , only : AO_adiabatic
@@ -22,8 +22,8 @@ contains
 implicit none
 
 ! local variables ...
-integer                :: it 
-real*8  , allocatable  :: QDyn_temp(:,:,:)
+integer                :: it , n_spin
+real*8  , allocatable  :: QDyn_temp(:,:,:,:)
 type(f_time)           :: QDyn
 
 If( .NOT. survival ) then
@@ -46,8 +46,10 @@ select case ( DRIVER )
 
 end select
 
-! prepare data for survival probability ...
-allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 , n_part ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 , : ) )
+n_spin = merge(2,1,SOC)
+
+! this maneuver is used for "restart-jobs", because it/=nt at the end in this case ...
+allocate ( QDyn_temp( it , 0:size(QDyn%fragments)+1 , n_part , n_spin ) , source=QDyn%dyn( 1:it , 0:size(QDyn%fragments)+1 , : , : ) )
 CALL move_alloc( from=QDyn_temp , to=QDyn%dyn )
 
 CALL Dump_stuff( QDyn=QDyn ) 

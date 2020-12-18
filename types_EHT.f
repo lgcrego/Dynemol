@@ -240,8 +240,8 @@ module type_m
 
 
     type f_time
-        real*8       , allocatable   :: dyn(:,:,:)     ! <== dyn( time , fragments , el/hl )
-        real*8       , allocatable   :: std(:,:,:)     ! <== std( time , fragments , el/hl )
+        real*8       , allocatable   :: dyn(:,:,:,:)     ! <== dyn( time , fragments , el/hl , spin )
+        real*8       , allocatable   :: std(:,:,:,:)     ! <== std( time , fragments , el/hl , spin )
         character(1) , allocatable   :: fragments(:)
         character(3) , allocatable   :: residues(:)
     end type f_time

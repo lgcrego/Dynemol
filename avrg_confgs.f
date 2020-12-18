@@ -8,7 +8,7 @@ module Sampling_m
                                       survival , nuclear_matter ,    &
                                       DP_Moment , EnvField_ ,        &
                                       file_type , sigma , n_part ,   &
-                                      restart
+                                      restart , SOC
     use Babel_m              , only : System_Characteristics ,       &
                                       Coords_from_Universe ,         &
                                       trj
@@ -33,7 +33,7 @@ module Sampling_m
     use Schroedinger_m       , only : Simple_dynamics ,              &
                                       DeAllocate_QDyn ,              &
                                       RunningStat 
-    use Data_Output          , only : Dump_stuff
+    use Data_Output          , only : Dump_stuff , FileName
 
 
     public :: Avrg_Confgs 
@@ -165,8 +165,9 @@ type(f_grid)    , optional  , intent(out)   :: SPEC
 type(f_time)    , optional  , intent(out)   :: QDyn
 
 ! local variables ...
-integer         :: i , n , nr , nf , np , N_of_residues , N_of_fragments
-character(26)   :: string
+integer          :: i , nr , nf , np , N_of_residues , N_of_fragments , n_spin , spin
+character(26)    :: string
+character(len=:) ,  allocatable :: f_name
 
 ! save TDOS ...
 If( present(TDOS) ) then
@@ -204,25 +205,28 @@ end if
 
 ! save time-dependent electron or hole populations ...
 If( present(QDyn) ) then
+   N_of_fragments = size( QDyn%fragments )
+   n_spin         = merge(2,1,SOC)
+   
+   do spin = 1 , n_spin
+   
+      do np = 1 , n_part
+   
+           If( eh_tag(np) == "XX" ) cycle
+   
+           call FileName( f_name , np , spin , instance="dens" )
+           open( unit = 33 , file = f_name , status = "unknown" )
+               read(33,14) frame           
+               read(33,12) QDyn%fragments
+               DO i = 1 , size( QDyn%dyn(:,1,1,1) )
+                   read(33,13) ( QDyn%dyn(i,nf,np,spin) , nf=0,N_of_fragments+1 )
+               end do
+           close(33)
 
-    N_of_fragments = size( QDyn%fragments )
+           end do
+           end do
 
-        do np = 1 , n_part
-
-            if( eh_tag(n) == "XX" ) cycle
-
-            OPEN( unit = 33 , file="dyn.trunk/"//eh_tag(n)//"_survival.dat" , status="unknown" )
-
-            read(33,14) frame           
-            read(33,12) QDyn%fragments
-            do i = 1 , size( QDyn%dyn(:,1,1) )
-                read(33,13) ( QDyn%dyn(i,nf,np) , nf=0,N_of_fragments+1 )
-            end do
-
-            CLOSE(33)
-
-        end do
-end if
+           end if
 
 10   FORMAT(4F12.5)
 11   FORMAT(3F13.9)

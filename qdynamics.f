@@ -79,7 +79,8 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  If( survival ) CALL Simple_dynamics( Extended_Cell , ExCell_basis , UNI , QDyn )
 
- CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn )
+! CALL Dump_stuff( TDOS , PDOS , SPEC , QDyn )
+ CALL Dump_stuff( TDOS , PDOS , SPEC )
 
  CALL DeAllocate_TDOS( TDOS , flag="dealloc" )
  CALL DeAllocate_PDOS( PDOS , flag="dealloc" )
