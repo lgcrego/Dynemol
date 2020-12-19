@@ -41,11 +41,12 @@ integer          , optional , intent(in)    :: it
 
 
 ! local variables ...
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8  , ALLOCATABLE :: h(:,:) , h_spin(:,:) , h_MF(:,:) , S_matrix(:,:) , S_root(:,:)
-real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
-integer               :: i , N , info 
-logical , save        :: first_call_ = .true.
+complex*16 , ALLOCATABLE :: h_spin(:,:)
+real*8     , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8     , ALLOCATABLE :: h(:,:)  , S_matrix(:,:) , S_root(:,:)
+real*8     , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
+integer                  :: i , N , info 
+logical    , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -69,7 +70,7 @@ end If
 
 if( SOC ) then
     CALL spin_orbit_h( basis , h_spin , S_matrix )
-    h = h + h_spin
+!    h = h + h_spin
 end if
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
