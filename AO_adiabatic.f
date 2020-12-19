@@ -16,7 +16,7 @@ module AO_adiabatic_m
                                              DensityMatrix, AutoCorrelation,  &
                                              CT_dump_step, Environ_step,      &
                                              driver, HFP_Forces ,             &
-                                             step_security
+                                             step_security , SOC
     use Babel_m                     , only : Coords_from_Universe, trj, MD_dt                            
     use Allocation_m                , only : Allocate_UnitCell ,              &
                                              DeAllocate_UnitCell ,            &
@@ -38,7 +38,8 @@ module AO_adiabatic_m
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
     use Data_Output                 , only : Populations ,                    &
-                                             Net_Charge                       
+                                             Net_Charge ,                     &
+                                             FileName                      
     use Backup_m                    , only : Security_Copy ,                  &
                                              Restart_state ,                  &
                                              Restart_Sys                      
@@ -123,7 +124,7 @@ do frame = frame_init , frame_final , frame_step
     CALL DUAL_wvpckts
  
     ! save populations(t + t_rate)  and  update Net_Charge ...
-    QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
+    QDyn%dyn(it,:,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t )
 
     if( mod(it,CT_dump_step) == 0 ) CALL dump_Qdyn( Qdyn )
 
@@ -303,7 +304,7 @@ UNI% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_
 CALL DUAL_wvpckts
  
 ! save populations ...
-QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+QDyn%dyn(it,:,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
 CALL dump_Qdyn( Qdyn )
 
 If( GaussianCube ) CALL Send_to_GaussianCube( it )
@@ -501,40 +502,45 @@ implicit none
 type(f_time)    , intent(in) :: QDyn
 
 ! local variables ...
-integer    :: nf , n
-complex*16 :: wp_energy(n_part)
+integer                       :: nf , n , spin , n_spin
+complex*16                    :: wp_energy(n_part)
+character(len=:) ,allocatable :: f_name
 
-do n = 1 , n_part
+n_spin = merge(2,1,SOC)
 
-    if( eh_tag(n) == "XX" ) cycle
+do spin = 1 , n_spin
+   do n = 1 , n_part
+   
+         if( eh_tag(n) == "XX" ) cycle
 
-    wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+         wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
 
-    If( it == 1 ) then
+         If( it == 1 ) then
+             call FileName( f_name , n , spin , instance="dens" )
+             open( unit = 52 , file = f_name , status = "replace" , action = "write" , position = "append" )
+             write(52,11) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+             write(52,12) "#" , QDyn%fragments , "total"
 
-        open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
-        write(52,11) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-        write(52,12) "#" , QDyn%fragments , "total"
+             call FileName( f_name , n , spin , instance="erg" )
+             open( unit = 53 , file = f_name , status = "replace" , action = "write" , position = "append" )
+         else   
+             call FileName( f_name , n , spin , instance="dens" )
+             open( unit = 52 , file = f_name , status = "unknown" , action = "write" , position = "append" )
+             call FileName( f_name , n , spin , instance="erg" )
+             open( unit = 53 , file = f_name , status = "unknown" , action = "write" , position = "append" )
+         end If
 
-        open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+         ! dumps el-&-hl populations ...
+         write(52,13) ( QDyn%dyn(it,nf,n,spin) , nf=0,size(QDyn%fragments)+1 )
+         
+         ! dumps el-&-hl wavepachet energies ...
+         write(53,14) QDyn%dyn(it,0,n,spin) , real( wp_energy(n) ) , dimag( wp_energy(n) )         
 
-    else
-
-        open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
-        open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )
-
-    end If
- 
-    ! dumps el-&-hl populations ...
-    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
-
-    ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
-
-    close(52)
-    close(53)
-
-end do
+         close(52)
+         close(53)
+         
+         end do
+         end do
 
 ! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
 Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )

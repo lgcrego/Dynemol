@@ -5,11 +5,11 @@ module Taylor_m
     use blas95
     use lapack95
     use ifport
-    use parameters_m        , only : t_i, frame_step, n_part, restart, CT_dump_step                  
+    use parameters_m        , only : t_i, frame_step, n_part, restart, CT_dump_step , SOC
     use Structure_Builder   , only : Unit_Cell                                      
     use Overlap_Builder     , only : Overlap_Matrix
     use FMO_m               , only : eh_tag                  
-    use Data_Output         , only : Populations
+    use Data_Output         , only : Populations , FileName
     use Matrix_Math
 
     public  :: Propagation, dump_Qdyn
@@ -248,34 +248,42 @@ type(g_time)    , intent(in) :: QDyn
 integer         , intent(in) :: it 
 
 ! local variables ...
-integer :: nf , n
+integer                       :: nf , n , spin , n_spin
+character(len=:) ,allocatable :: f_name
 
-do n = 1 , n_part
+n_spin = merge(2,1,SOC)
 
-    If( eh_tag(n) == "XX" ) cycle
+do spin = 1 , n_spin
+   do n = 1 , n_part
+   
+         if( eh_tag(n) == "XX" ) cycle
 
-    If( it == 1 ) then
-        open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat" , status = "replace" , action = "write" , position = "append" )
-        write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-        write(52,12) "#" , QDyn%fragments , "total"
+         If( it == 1 ) then
+             call FileName( f_name , n , spin , instance="dens" )
+             open( unit = 52 , file = f_name , status = "replace" , action = "write" , position = "append" )
+             write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
+             write(52,12) "#" , QDyn%fragments , "total"
 
-        open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "replace" , action = "write" , position = "append" )
+             call FileName( f_name , n , spin , instance="erg" )
+             open( unit = 53 , file = f_name , status = "replace" , action = "write" , position = "append" )
+         else   
+             call FileName( f_name , n , spin , instance="dens" )
+             open( unit = 52 , file = f_name , status = "unknown" , action = "write" , position = "append" )
+             call FileName( f_name , n , spin , instance="erg" )
+             open( unit = 53 , file = f_name , status = "unknown" , action = "write" , position = "append" )
+         end If
 
-    else
-        open( unit = 52 , file = "dyn.trunk/"//eh_tag(n)//"_survival.dat"  , status = "unknown", action = "write" , position = "append" )
-        open( unit = 53 , file = "dyn.trunk/"//eh_tag(n)//"_wp_energy.dat" , status = "unknown", action = "write" , position = "append" )        
-    end If
-
-    ! dumps el-&-hl populations ...    
-    write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
-
-    ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real( Unit_Cell% QM_wp_erg(n) ) , dimag( Unit_Cell% QM_wp_erg(n) )
-
-    close(52)
-    close(53)
-
-end do
+         ! dumps el-&-hl populations ...
+         write(52,13) ( QDyn%dyn(it,nf,n,spin) , nf=0,size(QDyn%fragments)+1 )
+         
+         ! dumps el-&-hl wavepachet energies ...
+         write(53,14) QDyn%dyn(it,0,n,spin) , real( Unit_Cell% QM_wp_erg(n) ) , dimag( Unit_Cell% QM_wp_erg(n) )
+         
+         close(52)
+         close(53)
+         
+         end do
+         end do
 
 12 FORMAT(/15A10)
 13 FORMAT(F11.6,14F10.5)

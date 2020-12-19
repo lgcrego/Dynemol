@@ -7,13 +7,12 @@
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
                                          Coulomb_ , DensityMatrix , driver , SOC
- use tuning_m                   , only : spin_tag 
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : FMO_analysis , orbital , eh_tag
  use DP_main_m                  , only : Dipole_Moment
- use Data_Output                , only : Populations , Net_Charge
+ use Data_Output                , only : Populations , Net_Charge , FileName
  use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
  use Backup_m                   , only : Security_Copy , Restart_state
  use Auto_Correlation_m         , only : MO_Occupation
@@ -24,10 +23,11 @@
     private
 
     ! module variables ...
-    Complex*16   , ALLOCATABLE , dimension(:,:)   :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Real*8       , ALLOCATABLE , dimension(:,:,:) :: Pops
-    type(f_time)                                  :: Mean_QDyn , aux
-    integer                                       :: iter = 0 
+    Complex*16   , ALLOCATABLE , dimension(:,:)     :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Real*8       , ALLOCATABLE , dimension(:,:,:,:) :: Pops
+    type(f_time)                                    :: Mean_QDyn , aux
+    integer                                         :: n_spin
+    integer                                         :: iter = 0 
 
  contains
 !
@@ -51,7 +51,7 @@ type(R_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
-allocate( Pops( n_t , 0:size(system%list_of_fragments)+1 , n_part ) )
+allocate( Pops(n_t , 0:size(system%list_of_fragments)+1 , n_part , n_spin) )
 
 mm = size(basis) ; nn = n_part
 
@@ -98,9 +98,9 @@ CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zer
 CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 
 ! save populations ...
-Pops(1,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+Pops(1,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
-QDyn%dyn(1,:,:) = Pops(1,:,:)
+QDyn%dyn(1,:,:,:) = Pops(1,:,:,:)
 
 If( DensityMatrix ) then
     If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -143,8 +143,8 @@ DO it = it_init , n_t
     CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
 
     ! get populations ...
-    Pops(it,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
-    QDyn%dyn(it,:,:) = Pops(it,:,:)
+    Pops(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
+    QDyn%dyn(it,:,:,:) = Pops(it,:,:,:)
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
@@ -213,7 +213,7 @@ character    , optional , intent(in)    :: instance
 If( present(instance) ) then
    Qdyn% std = sqrt( Qdyn% std/float(iter-1) )
    ! preserving time; does not undergo std ...
-   Qdyn% std(:,0,:) = Qdyn% dyn(:,0,:)  
+   Qdyn% std(:,0,:,:) = Qdyn% dyn(:,0,:,:)  
   
    return
 end If
@@ -253,11 +253,9 @@ type(f_time)    , intent(in) :: QDyn
 type(R_eigen)   , intent(in) :: UNI
 
 ! local variables ...
-integer                       :: nf , n , it , n_spin , spin
+integer                       :: nf , n , it , spin
 complex*16                    :: wp_energy
 character(len=:) ,allocatable :: f_name
-
-n_spin = merge(2,1,SOC)
 
 do spin = 1 , n_spin
 
@@ -277,10 +275,10 @@ do spin = 1 , n_spin
          DO it = 1 , n_t
          
              ! dumps el-&-hl populations ...
-             write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 )
+             write(52,13) ( QDyn%dyn(it,nf,n,spin) , nf=0,size(QDyn%fragments)+1 )
          
              ! dumps el-&-hl wavepachet energies ...
-             write(53,14) QDyn%dyn(it,0,n) , real(wp_energy) , dimag(wp_energy)
+             write(53,14) QDyn%dyn(it,0,n,spin) , real(wp_energy) , dimag(wp_energy)
          
          end do
    
@@ -308,9 +306,11 @@ type(f_time)  , intent(inout) :: QDyn
 character(*)  , intent(in)    :: flag
 
 ! local variable ...
-integer      :: N_of_fragments
+integer      :: N_of_fragments 
 character(1) :: first_in_line
 logical      :: A_flag
+
+n_spin = merge(2,1,SOC)
 
 select case( flag )
 
@@ -340,10 +340,10 @@ select case( flag )
         Extended_Cell%list_of_fragments(1) = merge( "A" , "D" , A_flag )
 
         ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
-        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )
-        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
+        allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments)    ) , source = Extended_Cell % list_of_fragments )
+        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part , n_spin ) , source = 0.d0                              )
         If( driver == "avrg_confgs" ) then
-              allocate( QDyn%std( n_t , 0:N_of_fragments+1 , n_part       ) , source = 0.d0                              )
+              allocate( QDyn%std( n_t , 0:N_of_fragments+1 , n_part , n_spin ) , source = 0.d0                              )
         End If
  
         ! allocatating Net_Charte for future use ...
@@ -361,50 +361,6 @@ select case( flag )
 end select
 
 end subroutine DeAllocate_QDyn
-!
-!
-!
-!===============================================
-subroutine FileName( f_name , n , s , instance )
-!===============================================
-implicit none
-character(len=:) , allocatable , intent(out) :: f_name
-integer                        , intent(in)  :: n
-integer                        , intent(in)  :: s
-character(len=*)               , intent(in)  :: instance
-
-! s stands for spin flag ...
-! n stands for n_part flag ...
-
-select case ( instance )
-
-       case ("dens")
-            if( spin_tag(s) == "XX" ) then
-                allocate( character(len=21) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_dens.dat" 
-            elseif( spin_tag(s) == "up" ) then
-                allocate( character(len=24) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_dens_up.dat" 
-            elseif( spin_tag(s) == "dw" ) then
-                allocate( character(len=26) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_dens_down.dat" 
-            end If
-
-       case ("erg") 
-            if( spin_tag(s) == "XX" ) then
-                allocate( character(len=23) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg.dat" 
-            elseif( spin_tag(s) == "up" ) then
-                allocate( character(len=26) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_up.dat" 
-            elseif( spin_tag(s) == "dw" ) then
-                allocate( character(len=28) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_down.dat" 
-            end If
-
-end select
-
-end subroutine FileName
 !
 !
 !

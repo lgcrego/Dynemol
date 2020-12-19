@@ -230,8 +230,7 @@ integer :: copy , nr_sum , ix , iy , k , n
  logical         , optional    , intent(in)    :: GACG_flag
 
 ! local variables ...
- integer :: k , i , l , m , s , AtNo , N_of_orbitals
- integer :: spin
+ integer :: k , i , l , m , s , spin , AtNo , N_of_orbitals
  logical :: first_time
 
 first_time = .true.

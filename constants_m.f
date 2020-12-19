@@ -19,8 +19,8 @@ MODULE constants_m
     real*8     , parameter :: TWELVE = 12.d0
     real*8     , parameter :: ThreeQuarters = 3.d0/4.d0
     real*8     , parameter :: a_Bohr = 0.52917720859d0
-    real*8     , parameter :: Hartree_2_eV=27.21138386d0        
-    real*8     , parameter :: h_bar=6.58264d-4                      ! <== Planck's  constant  (eV * ps)
+    real*8     , parameter :: Hartree_2_eV = 27.21138386d0        
+    real*8     , parameter :: h_bar = 6.58264d-4                    ! <== Planck's  constant  (eV * ps)
     real*8     , parameter :: debye_inv  = 2.0819436d-1             ! <== e[C]*d[Angs] = p[Debye] * 0.20819436
     real*8     , parameter :: debye_2_au = 0.393430294d0            ! <== converts Debye units to atomic units (a.u.)
     real*8     , parameter :: low_prec   = 1.1d-7
