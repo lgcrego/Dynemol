@@ -219,47 +219,100 @@ end function Huckel_with_FIELDS
  subroutine spin_orbit_h( basis , h , S_matrix )
 !===============================================
 type(STO_basis)               , intent(in)    :: basis(:)
-real*8          , allocatable , intent(inout) :: h(:,:)
+complex*16      , allocatable , intent(inout) :: h(:,:)
 real*8                        , intent(in)    :: S_matrix(:,:)
 
 ! local variables ...
-real*8  :: a , sum1 , sum2 , eps , tx1 , tx2 , tx , tz 
-integer :: i , j , k , c , l , l1 , l2 , n , t
+complex*16 :: sum1 , sum2 , ty1 , ty2 , ty
+real*8     :: a , eps , tx1 , tx2 , tx , tz 
+integer    :: i , j , k , c , l , l1 , l2 , n , t , atom
 
 !----------------------------------------------------------
 !     building the coupling spin-orbit HAMILTONIAN
 
 n = size( basis )
 
-allocate( h ( n , n ) , source = 0.0d0 )
+allocate( h ( n , n ) , source = C_zero )
 
 ! orbitals i and j in the same sitio ...
-do i = 1 , n
+atom = 0
+j    = n / 2
+do i = 1 , j
 
-    do j = i , n
+    if( basis( i ) % l /= 0 .AND. basis( i ) % atom /= atom ) then
 
-        if( basis( i ) % atom == basis( j ) % atom .AND. basis( i ) % l == basis( j ) % l ) then
+        atom = basis( i ) % atom
 
-            if( basis( i ) % s == basis( j ) % s .AND. basis( i ) % m == basis( j ) % m ) then
-                
-                CALL SOC_constant( basis( i ) , eps )
-                    
-                h( i , i ) = HALF * eps * dfloat( basis( i ) % m ) * dfloat( basis( i ) % s )
+        CALL SOC_constant( basis( i ) , eps )
 
-            elseif( basis( i ) % s /= basis( j ) % s .AND. basis( j ) % m == basis( i ) % m + 1 ) then
-                
-                CALL SOC_constant( basis( i ) , eps )
+        a = HALF * eps
 
-                k = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m + 1 )
-                
-                h( j , i ) = HALF * eps * dsqrt( dfloat( k ) )
-                h( i , j ) = h( j , i ) ! It's unecessary, but it's easer to compute the terms with orbitals in different sitios
+        ! <i,up|SL|j,up> terms, with i,j={p-orbitals}...
+        h( i + 2 , i ) = - a * zi
+        h( i , i + 2 ) = - h( i + 2 , i )
 
-            end if
+        ! <i,up|SL|j,down> and <i,down|SL|j,up> terms, with i,j={p-orbitals}...
+        h( i + j + 1 , i ) =   a * zi
+        h( i , i + j + 1 ) = - h( i + j + 1 , i )
+        h( i + j , i + 1 ) = - a * zi
+        h( i + 1 , i + j ) = - h( i + j , i + 1 )
+        h( i + j + 2 , i + 1 ) = - a
+        h( i + 1 , i + j + 2 ) =   h( i + j + 2 , i + 1 )
+        h( i + j + 1 , i + 2 ) =   a
+        h( i + 2 , i + j + 1 ) =   h( i + j + 1 , i + 2 )
+
+        ! <i,down|SL|j,down> terms, with i,j={p-orbitals}...
+        h( i + j + 2 , i + j ) =   a * zi
+        h( i + j , i + j + 2 ) = - h( i + j + 2 , i + j )
+
+        if( basis( i ) % n > 2 ) then
+
+            CALL SOC_constant( basis( i + 3 ) , eps )
+
+            a = HALF * eps
+            b = dsqrt( THREE )
+
+            ! <i,up|SL|j,up> terms, with i,j={d-orbitals}...
+            h( i + 7 , i + 3 ) = - TWO * a * zi
+            h( i + 3 , i + 7 ) = - h( i + 7 , i + 3 )
+            h( i + 6 , i + 4 ) = - a * zi
+            h( i + 4 , i + 6 ) = - h( i + 6 , i + 4 )
+
+            ! <i,up|SL|j,down> and <i,down|SL|j,up> terms, with i,j={d-orbitals}...
+            h( i + j + 4 , i + 3 ) =   a
+            h( i + 3 , i + j + 4 ) =   h( i + j + 4 , i + 3 )
+            h( i + j + 6 , i + 3 ) =   a * zi
+            h( i + 3 , i + j + 6 ) = - h( i + j + 6 , i + 3 )
+            h( i + j + 3 , i + 4 ) = - a
+            h( i + 4 , i + j + 3 ) =   h( i + j + 3 , i + 4 )
+            h( i + j + 5 , i + 4 ) =   a * b * zi
+            h( i + 4 , i + j + 5 ) = - h( i + j + 5 , i + 4 )
+            h( i + j + 7 , i + 4 ) =   a * zi
+            h( i + 4 , i + j + 7 ) = - h( i + j + 7 , i + 4 )
+            h( i + j + 4 , i + 5 ) = - a * b * zi
+            h( i + 5 , i + j + 4 ) = - h( i + j + 4 , i + 5 )
+            h( i + j + 6 , i + 5 ) = - a * b
+            h( i + 5 , i + j + 6 ) =   h( i + j + 6 , i + 5 )
+            h( i + j + 3 , i + 6 ) = - a * zi
+            h( i + 6 , i + j + 3 ) = - h( i + j + 3 , i + 6 )
+            h( i + j + 5 , i + 6 ) =   a * b
+            h( i + 6 , i + j + 5 ) =   h( i + j + 5 , i + 6 )
+            h( i + j + 7 , i + 6 ) = - a
+            h( i + 6 , i + j + 7 ) =   h( i + j + 7 , i + 6 )
+            h( i + j + 4 , i + 7 ) = - a * zi
+            h( i + 7 , i + j + 4 ) = - h( i + j + 4 , i + 7 )
+            h( i + j + 6 , i + 7 ) =   a
+            h( i + 7 , i + j + 6 ) =   h( i + j + 6 , i + 7 )
+
+            ! <i,down|SL|j,down> terms, with i,j={d-orbitals}...
+            h( i + j + 7 , i + j + 3 ) =   TWO * a * zi
+            h( i + j + 3 , i + j + 7 ) = - h( i + j + 7 , i + j + 3 )
+            h( i + j + 6 , i + j + 4 ) =   a * zi
+            h( i + j + 4 , i + j + 6 ) = - h( i + j + 6 , i + j + 4 )
 
         end if
 
-    end do
+    end if
 
 end do
 
@@ -271,46 +324,6 @@ do i = 1 , n
         if( basis( j ) % atom /= basis( i ) % atom ) then
 
             ! first sum ...
-            if( basis( j ) % s == 1 ) then
-
-                l1 = 1
-                l2 = n / 2
-
-            elseif( basis( j ) % s == - 1 ) then
-
-                l1 = n / 2 + 1
-                l2 = n
-
-            end if
-
-            sum1 = 0.0d0
-            do k = l1 , l2
-
-                if( basis( k ) % atom == basis( i ) % atom .AND. basis( k ) % l == basis( i ) % l ) then
-
-                    select case( basis( i ) % l )
-
-                        case( 0 )
-
-                            sum1 = S_matrix( k , j ) * h( k , i )
-
-                        case( 1 )
-
-                            sum1 = dot_product( S_matrix( k : k + 2 , j ) , h( k : k + 2 , i ) )
-
-                        case( 2 )
-
-                            sum1 = dot_product( S_matrix( k : k + 4 , j ) , h( k : k + 4 , i ) )
-
-                    end select
-
-                    exit
-
-                end if
-
-            end do
-
-            ! second sum ...
             if( basis( i ) % s == 1 ) then
 
                 l1 = 1
@@ -323,24 +336,56 @@ do i = 1 , n
 
             end if
 
-            sum2 = 0.0d0
+            sum1 = 0.0d0
             do k = l1 , l2
 
-                if( basis( k ) % atom == basis( j ) % atom .AND. basis( k ) % l == basis( j ) % l ) then
+                if( basis( j ) % l /= 0 .AND. basis( k ) % atom == basis( j ) % atom .AND. basis( k ) % l == basis( j ) % l ) then
 
                     select case( basis( j ) % l )
 
-                        case( 0 )
-
-                            sum2 = S_matrix( k , i ) * h( k , j )
-
                         case( 1 )
 
-                            sum2 = dot_product( S_matrix( k : k + 2 , i ) , h( k : k + 2 , j ) )
+                            sum1 = dot_product( S_matrix( k : k + 2 , i ) , h( k : k + 2 , j ) )
 
                         case( 2 )
 
-                            sum2 = dot_product( S_matrix( k : k + 4 , i ) , h( k : k + 4 , j ) )
+                            sum1 = dot_product( S_matrix( k : k + 4 , i ) , h( k : k + 4 , j ) )
+
+                    end select
+
+                    exit
+
+                end if
+
+            end do
+
+            ! second sum ...
+            if( basis( j ) % s == 1 ) then
+
+                l1 = 1
+                l2 = n / 2
+
+            elseif( basis( j ) % s == - 1 ) then
+
+                l1 = n / 2 + 1
+                l2 = n
+
+            end if
+
+            sum2 = 0.0d0
+            do k = l1 , l2
+
+                if( basis( i ) % l /= 0 .AND. basis( k ) % atom == basis( i ) % atom .AND. basis( k ) % l == basis( i ) % l ) then
+
+                    select case( basis( i ) % l )
+
+                        case( 1 )
+
+                            sum2 = dot_product( S_matrix( k : k + 2 , j ) , h( k : k + 2 , i ) )
+
+                        case( 2 )
+
+                            sum2 = dot_product( S_matrix( k : k + 4 , j ) , h( k : k + 4 , i ) )
 
                     end select
 
@@ -359,9 +404,7 @@ do i = 1 , n
 
 end do
 
-if( B_field( 1 ) /= D_zero .OR. B_field( 3 ) /= D_zero ) then
-
-    if( B_field( 2 ) /= D_zero ) stop ">> Error: Magnetic field interaction not implemented for By/=0 <<"
+if( B_field( 1 ) /= D_zero .OR. B_field( 2 ) /= D_zero .OR. B_field( 3 ) /= D_zero ) then
 
     k = n / 2
 
@@ -396,10 +439,37 @@ if( B_field( 1 ) /= D_zero .OR. B_field( 3 ) /= D_zero ) then
 
             end if
 
+            ty = D_zero
+            if( B_field( 2 ) /= D_zero ) then
+
+                ty1 = D_zero
+                ty2 = D_zero
+
+                if( i < n ) then
+
+                    t   = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m + 1 )
+                    a   = dsqrt( dfloat( t ) )
+                    ty1 = - a * S_matrix( j , i + 1 ) * zi
+
+                end if
+
+                if( i > 1 ) then
+
+                    t   = basis( i ) % l * ( basis( i ) % l + 1 ) - basis( i ) % m * ( basis( i ) % m - 1 )
+                    a   = dsqrt( dfloat( t ) )
+                    ty2 = - a * S_matrix( j , i - 1 ) * zi
+                    
+                end if
+
+                t  = basis( i ) % s
+                ty = ty1 - tx2 + key * g_S * S_matrix( j , i + t * k ) * zi
+
+            end if
+
             tz = D_zero
             if( B_field( 3 ) /= D_zero ) tz = ( two * dfloat( basis( i ) % m ) + g_S * dfloat( basis( i ) % s ) ) * S_matrix( j , i )
 
-            h( j , i ) = h( j , i ) + HALF * mu_B * ( tx * B_field( 1 ) + tz * B_field( 3 ) )
+            h( j , i ) = h( j , i ) + HALF * mu_B * ( tx * B_field( 1 ) + ty * B_field( 2 ) + tz * B_field( 3 ) )
 
         end do
 
@@ -427,18 +497,13 @@ real*8          , intent(inout) :: eps
 
 select case( basis % AtNo )
 
-    case( 1 )
-
-        if( basis % l == 0 ) eps = 0.0d0
-
     case( 6 )
 
-        if( basis % l == 0 ) eps = 0.0d0
-        if( basis % l == 1 ) eps = 453.50d-6 ! Ref. 2
+!        if( basis % l == 1 ) eps = 453.50d-6 ! Ref. 2
+        if( basis % l == 1 ) eps = 0.5d0 ! TESTE
 
     case( 7 )
 
-        if( basis % l == 0 ) eps = 0.0d0
         if( basis % l == 1 ) eps = 649.48d-6 ! Ref. 2
 
     case( 35 )
@@ -448,9 +513,10 @@ select case( basis % AtNo )
 
     case( 44 )
 
-        if( basis % l == 0 ) eps = 0.0d0
-        if( basis % l == 1 ) eps = 13.95d-3  ! Ref. 2 <== Revise it...
-        if( basis % l == 2 ) eps = 0.12398d0 ! Ref. 1
+!        if( basis % l == 1 ) eps = 13.95d-3  ! Ref. 2 <== Revise it...
+!        if( basis % l == 2 ) eps = 0.12398d0 ! Ref. 1
+        if( basis % l == 1 ) eps = 0.6d0 ! TESTE
+        if( basis % l == 2 ) eps = 0.9d0 ! TESTE
 
     case( 53 )
 

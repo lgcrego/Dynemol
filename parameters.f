@@ -34,17 +34,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
   SOC            = T_                        ! <== Spin-orbit coupling
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -138,7 +138,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           EXTERNAL MAGNETIC FIELD 
 !
-  B_field = [ 0.0d0 , 0.0d0 , 5.0d-3 ] ! in Tesla. y-component must be zero to avoid complex hamiltonian 
+  B_field = [ 0.0d0 , 0.0d0 , 0.0d0 ] ! in Tesla
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
