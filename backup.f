@@ -57,7 +57,7 @@ complex*16                      , intent(in)    :: DUAL_ket (:,:)
 complex*16                      , intent(in)    :: AO_bra   (:,:)
 complex*16                      , intent(in)    :: AO_ket   (:,:)
 integer                         , intent(in)    :: frame
-type(R_eigen)                   , intent(out)   :: UNI_el
+type(C_eigen)                   , intent(out)   :: UNI_el
 
 ! local variables ...
 type(universe) :: Solvated_System

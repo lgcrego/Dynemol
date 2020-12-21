@@ -38,7 +38,7 @@
  implicit none
  type(structure) , intent(inout) :: system
  type(STO_basis) , intent(inout) :: basis(:)
- type(R_eigen)   , intent(in)    :: UNI
+ type(C_eigen)   , intent(in)    :: UNI
  type(f_time)    , intent(inout) :: QDyn
 
 ! local variables ...
@@ -47,7 +47,7 @@ integer                          :: it , n , it_init
 real*8                           :: t , t_rate
 real*8                           :: Total_DP(3)
 complex*16      , ALLOCATABLE    :: phase(:)
-type(R_eigen)                    :: el_FMO , hl_FMO
+type(C_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
@@ -102,10 +102,10 @@ Pops(1,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i 
 
 QDyn%dyn(1,:,:,:) = Pops(1,:,:,:)
 
-If( DensityMatrix ) then
-    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
-    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
-End If
+!If( DensityMatrix ) then
+!    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
+!    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
+!End If
 
 !   save the initial GaussianCube file ...
 If( GaussianCube ) then
@@ -159,7 +159,7 @@ DO it = it_init , n_t
 
     end If
 
-    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
+!    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
 END DO
 
@@ -250,7 +250,7 @@ end subroutine RunningStat
 !==================================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-type(R_eigen)   , intent(in) :: UNI
+type(C_eigen)   , intent(in) :: UNI
 
 ! local variables ...
 integer                       :: nf , n , it , spin

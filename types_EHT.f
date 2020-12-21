@@ -168,6 +168,7 @@ module type_m
         complex*16 , allocatable :: R(:,:)
         complex*16 , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
+        real*8                   :: time
         integer                  :: Fermi_state
     end type C_eigen
 

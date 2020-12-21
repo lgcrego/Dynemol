@@ -41,6 +41,11 @@ CC_PARALLEL = -qopenmp
 # Others
 CC_FLAGS = -O2 $(CC_PARALLEL)
 
+#######################
+# SPIN-ORBIT COUPLING #
+#######################
+# Uncomment the line below when using Sin-Orbit Coupling
+#SPIN = -DUSE_SOC 
 
 #######################
 # CUDA CONFIGURATIONS #
@@ -246,16 +251,16 @@ vtune: debug
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
 .f.o:
-	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) $(SPIN) -c $<
 
 .F90.o:
-	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) $(SPIN) -c $<
 
 .cpp.o:
-	$(CC) $(CC_ALL) -align -fno-exceptions -restrict $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+	$(CC) $(CC_ALL) -align -fno-exceptions -restrict $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) $(SPIN) -c $<
 
 .cu.o:
-	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) $(SPIN) -c $<
 
 
 clean:

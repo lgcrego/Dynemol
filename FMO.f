@@ -32,7 +32,8 @@
     private
 
     integer       :: UNI_size , FMO_size 
-    type(R_eigen) :: Dual , tmp
+    type(C_eigen) :: Dual 
+    type(C_eigen) :: tmp
 
  contains
 !
@@ -44,9 +45,9 @@
  implicit none
  type(structure)           , intent(inout) :: system
  type(STO_basis)           , intent(inout) :: basis(:)
- type(R_eigen)  , optional , intent(in)    :: UNI
- type(R_eigen)  , optional , intent(out)   :: FMO
- type(R_eigen)  , optional , intent(inout) :: AO
+ type(C_eigen)  , optional , intent(in)    :: UNI
+ type(C_eigen)  , optional , intent(out)   :: FMO
+ type(C_eigen)  , optional , intent(inout) :: AO
  character(*)   , optional , intent(in)    :: instance
 
 ! local variables ...
@@ -91,7 +92,7 @@ end If
 
  CALL eigen_FMO( FMO_system , FMO_basis , fragment )
 
- If ( LCMO ) CALL LCMO_Builder( Dual%L, Dual%erg , instance )
+! If ( LCMO ) CALL LCMO_Builder( Dual%L, Dual%erg , instance )
 ! the following subroutine can be used to check the LCMO states ... 
 ! call check_casida_builder( FMO_system , FMO_basis , Dual%L, Dual%erg )
 
@@ -188,8 +189,8 @@ implicit none
  subroutine projector( FMO, UNI, basis_fragment, fragment , instance )
 !=====================================================================
  implicit none
- type(R_eigen)    , optional , intent(out) :: FMO
- type(R_eigen)    , optional , intent(in)  :: UNI
+ type(C_eigen)    , optional , intent(out) :: FMO
+ type(C_eigen)    , optional , intent(in)  :: UNI
  character(len=1)            , intent(in)  :: basis_fragment(:)
  character(len=1)            , intent(in)  :: fragment
  character(len=2)            , intent(in)  :: instance
@@ -197,7 +198,7 @@ implicit none
 ! local variables ...
  integer :: i , j , k
  real*8  :: check
- real*8  , allocatable :: aux(:,:)
+ complex*16 , allocatable :: aux(:,:)
 
  UNI_size = size( basis_fragment )   ! <== basis size of the entire system
  FMO_size = size( Dual%R (:,1)   )   ! <== basis size of the FMO system
@@ -209,7 +210,7 @@ implicit none
                  !--------------------------------------------------------------------------
                  ! cast the FMO eigenvectors in UNI eigen-space
                  !--------------------------------------------------------------------------
-                 allocate( aux(FMO_size,UNI_size), source=D_zero )
+                 allocate( aux(FMO_size,UNI_size), source=C_zero )
                  k = 0 
                  do i = 1 , UNI_size
                     if( basis_fragment(i) == fragment ) then
@@ -225,10 +226,10 @@ implicit none
                  ! orbitals are stored in the "ROWS of FMO%L" and in the "COLUMNS of FMO%R"
                  !-------------------------------------------------------------------------
                  Allocate( FMO%erg(FMO_size)          , source=D_zero )
-                 Allocate( FMO%L  (FMO_size,UNI_size) , source=D_zero )
-                 Allocate( FMO%R  (UNI_size,FMO_size) , source=D_zero )
+                 Allocate( FMO%L  (FMO_size,UNI_size) , source=C_zero )
+                 Allocate( FMO%R  (UNI_size,FMO_size) , source=C_zero )
 
-                 CALL gemm( Dual%L , aux  , FMO%L , 'N' , 'N' )
+                 CALL dzgemm( Dual%L , aux  , FMO%L , 'N' , 'N' )
 
                  FMO%R = transpose(FMO%L)
 
@@ -258,7 +259,7 @@ implicit none
                  ! orbitals are stored in the "ROWS of AO%L" and in the "COLUMNS of AO%R"
                  !-------------------------------------------------------------------------
 
-                 allocate( aux(UNI_size,FMO_size), source=D_zero )
+                 allocate( aux(UNI_size,FMO_size), source=C_zero )
                  k = 0
                  do i = 1 , UNI_size
                     if( basis_fragment(i) == fragment ) then
@@ -294,11 +295,11 @@ implicit none
 
 ! local variables ... 
  integer               :: N_of_FMO_electrons, i, N , info
- real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:)
+ real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) , aux_R(:,:)
 
  N = size(basis)
 
- ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  Dual%erg(N) )
+ ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  Dual%erg(N) , aux_R(N,N) )
 
  CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
@@ -316,12 +317,14 @@ implicit none
 
  If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
 
- ALLOCATE(Dual%L(N,N) , source = transpose(h_FMO)) 
  ALLOCATE(Dual%R(N,N)) 
+ ALLOCATE(Dual%L(N,N)) 
+ Dual%L = cmplx( transpose(h_FMO) , D_zero ) 
 
- CALL symm( s_FMO , h_FMO , Dual%R )
+ CALL symm( s_FMO , h_FMO , aux_R )
+ Dual%R = cmplx( aux_R , D_zero )
 
- DeAllocate( s_FMO , h_FMO , dumb_S )
+ DeAllocate( s_FMO , h_FMO , dumb_S , aux_R )
 
  Dual% Fermi_state = sum(system%Nvalen)/two + mod( sum(system%Nvalen) , 2 )
 

@@ -56,7 +56,7 @@ module AO_adiabatic_m
     private
 
     ! module variables ...
-    type(R_eigen)                              :: UNI , el_FMO , hl_FMO
+    type(C_eigen)                              :: UNI , el_FMO , hl_FMO
     Complex*16 , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16 , allocatable , dimension(:)    :: phase
     real*8     , allocatable , dimension(:)    :: Net_Charge_MM
@@ -113,7 +113,7 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+!        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
 !        CALL PSE_forces     ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
     end If
 
@@ -185,10 +185,10 @@ do frame = frame_init , frame_final , frame_step
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
-    If( DensityMatrix ) then
-        If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
-        If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
-    End If
+!    If( DensityMatrix ) then
+!        If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
+!        If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
+!    End If
 
     Print*, frame 
 
@@ -313,10 +313,10 @@ If( DP_Moment    ) CALL DP_stuff( "DP_matrix" )
 
 If( DP_Moment    ) CALL DP_stuff( "DP_moment" )
 
-If( DensityMatrix ) then
-    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
-    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
-End If
+!If( DensityMatrix ) then
+!    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
+!    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
+!End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
@@ -384,15 +384,15 @@ select case (driver)
 
        case("slice_FSSH") ! <== Lowdin orthogonalization ...
 
-           If( it == 1 ) then
-               allocate( aux(mm,mm) )
-               call symm( S_root_inv , UNI%R , aux )
-               UNI%R = aux
-               deallocate( aux , S_root_inv )
-           end If
-
-           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-           DUAL_bra = conjg(DUAL_ket)
+!           If( it == 1 ) then
+!               allocate( aux(mm,mm) )
+!               call symm( S_root_inv , UNI%R , aux )
+!               UNI%R = aux
+!               deallocate( aux , S_root_inv )
+!           end If
+!
+!           CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
+!           DUAL_bra = conjg(DUAL_ket)
 
        case default       ! <== asymmetrical orthogonalization ...
 
@@ -471,7 +471,7 @@ select case( instance )
 
     case( "DP_moment" )
 
-        CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
+!        CALL Dipole_Moment( Extended_Cell , ExCell_basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
         If( t == t_i ) then
             open( unit = 51 , file = "dyn.trunk/dipole_dyn.dat" , status = "replace" )
