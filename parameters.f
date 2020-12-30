@@ -34,7 +34,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_AO"                ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_FSSH"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -96,8 +96,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  5.0d-1                              ! <== final time in PICOseconds
-  n_t  =  100000                              ! <== number of time steps
+  t_f  =  0.50d0                               ! <== final time in PICOseconds
+  n_t  =  100000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 

@@ -7,7 +7,6 @@ module Ehrenfest_Builder
     use type_m
     use constants_m
     use parameters_m            , only  : driver , verbose , n_part , QMMM
-    use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
     use Allocation_m            , only  : DeAllocate_Structures    
 

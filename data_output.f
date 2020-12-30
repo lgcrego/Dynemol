@@ -131,10 +131,10 @@ end do
 ! atomic net-charge ...
 Net_Charge = d_zero
 do n = 1 , n_part
-     do ati = 1 , system%atoms
-        Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
-        end do
-        end do
+   do ati = 1 , system%atoms
+      Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
+      end do
+      end do
 
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
