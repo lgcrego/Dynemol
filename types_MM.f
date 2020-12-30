@@ -26,6 +26,7 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: fnonch(3)
         real*8                              :: fcoupling(3)
         real*8                              :: Ehrenfest(3)
+        real*8                              :: f_MM(3)
         real*8                              :: ftotal(3)
         real*8                              :: fch(3)
         real*8                              :: fsr(3)

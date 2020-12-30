@@ -17,21 +17,21 @@ MODULE constants_m
     real*8     , parameter :: FIVE   = 5.d0
     real*8     , parameter :: SIX    = 6.d0
     real*8     , parameter :: TWELVE = 12.d0
-    real*8     , parameter :: ThreeQuarters = 3.d0/4.d0
-    real*8     , parameter :: a_Bohr = 0.52917720859d0
-    real*8     , parameter :: Hartree_2_eV=27.21138386d0        
-    real*8     , parameter :: h_bar=6.58264d-4                      ! <== Planck's  constant  (eV * ps)
-    real*8     , parameter :: debye_inv  = 2.0819436d-1             ! <== e[C]*d[Angs] = p[Debye] * 0.20819436
-    real*8     , parameter :: debye_2_au = 0.393430294d0            ! <== converts Debye units to atomic units (a.u.)
-    real*8     , parameter :: low_prec   = 1.1d-7
-    real*8     , parameter :: mid_prec   = 1.d-10
-    real*8     , parameter :: high_prec  = 1.d-14
-    real*8     , parameter :: large      = 1.d+6
-    real*8     , parameter :: real_large = 1.d+10
-    real*8     , parameter :: infty      = 1.d+30
-    real*8     , parameter :: deg_2_rad  = PI / 180.0d0
-    real*8     , parameter :: rad_2_deg  = 180.0d0 / PI
-    real*8     , parameter :: cutoff_Angs = 12.d0                   ! <== cutoff radius for overlap related calculations  
+    real*8     , parameter :: ThreeQuarters= 3.d0/4.d0
+    real*8     , parameter :: a_Bohr       = 0.52917720859d0
+    real*8     , parameter :: Hartree_2_eV = 27.21138386d0        
+    real*8     , parameter :: h_bar        = 6.58264d-4              ! <== Planck's  constant  (eV * ps)
+    real*8     , parameter :: debye_inv    = 2.0819436d-1            ! <== e[C]*d[Angs] = p[Debye] * 0.20819436
+    real*8     , parameter :: debye_2_au   = 0.393430294d0           ! <== converts Debye units to atomic units (a.u.)
+    real*8     , parameter :: low_prec     = 1.d-7
+    real*8     , parameter :: mid_prec     = 1.d-10
+    real*8     , parameter :: high_prec    = 1.d-14
+    real*8     , parameter :: large        = 1.d+6
+    real*8     , parameter :: real_large   = 1.d+10
+    real*8     , parameter :: infty        = 1.d+30
+    real*8     , parameter :: deg_2_rad    = PI / 180.0d0
+    real*8     , parameter :: rad_2_deg    = 180.0d0 / PI
+    real*8     , parameter :: cutoff_Angs  = 12.d0                   ! <== cutoff radius for overlap related calculations  
 
     complex*16 , parameter :: zi = (0.d0,1.d0)
 
@@ -44,6 +44,9 @@ MODULE constants_m
     real*8     , parameter :: D_one =  1.d0
     integer    , parameter :: I_one =  1
 
+    logical    , parameter :: yes = .true.
+    logical    , parameter :: no  = .false.
+
 !   Molecular dynamics constants ...
     real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
     real*8  , parameter :: rsqpi       = 0.56418958354d0            ! sqrt(pi)
@@ -53,6 +56,7 @@ MODULE constants_m
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
     real*8  , parameter :: coulomb     = 230.7113d0                 ! e^2/(4.pi.epsilon_0) x 1.E+20 N.m^2
     real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
+    real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
     real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit

@@ -155,11 +155,13 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
+
+            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+            QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
+
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
-            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
 
         case default
 
@@ -188,6 +190,8 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
+
+    CALL QMMM_erg_status( frame )
 
     Print*, frame 
 
@@ -536,8 +540,20 @@ do n = 1 , n_part
 
 end do
 
-! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
-Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+! QM_erg = E_occ - E_empty ; to be used as switch for QMMM forces ...
+select case ( driver )
+
+       case("slice_FSSH") 
+!       If( it == 1) then
+!           Unit_Cell% QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+!           else
+!           Unit_Cell% QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+!           end If
+
+       case default
+       Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+       end select
 
 11 FORMAT(A,I9,14I10)
 12 FORMAT(/15A10)
@@ -545,6 +561,59 @@ Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 14 FORMAT(3F12.6)
 
 end subroutine dump_Qdyn
+!
+!
+!
+!===================================
+ subroutine QMMM_erg_status( frame )
+!===================================
+use MM_input , only : Units_MM , MM_log_step
+implicit none
+integer, intent(in):: frame
+
+! local variables ...
+integer    :: n
+complex*16 :: wp_energy(n_part)
+
+! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
+select case ( driver )
+
+       case("slice_FSSH") 
+!       If( it == 1) then
+!           Unit_Cell% QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+!           else
+!           Unit_Cell% QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+!           end If
+
+       case default
+
+          do n = 1 , n_part
+              if( eh_tag(n) == "XX" ) cycle
+              wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+              end do
+          Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+       end select
+
+Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
+
+if( mod(frame,MM_log_step) == 0 ) then 
+
+  select case (Units_MM)
+
+    case( "eV" )    
+        write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
+        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
+
+    case( "kj-mol" )
+        write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
+        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
+
+        end select
+
+end if
+
+end subroutine  QMMM_erg_status 
 !
 !
 !

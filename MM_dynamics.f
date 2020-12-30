@@ -85,6 +85,7 @@ end subroutine MolecularMechanics
 !
 !==============================================================
 subroutine VelocityVerlet( this , t_rate , frame , Net_Charge )
+! nuclear velocities in units of m/s in atom%vel
 !==============================================================
 implicit none
 class(VV)          , intent(inout) :: this
@@ -94,17 +95,19 @@ real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
-integer :: i
+integer :: i , xyz
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
+atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
+
+If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% f_MM(xyz)
 
 ! Molecular dynamics ...
 CALL this % VV1( dt )
 
-CALL move_to_box_CM
+if( driver /= "slice_FSSH" ) CALL move_to_box_CM
 
 CALL Molecular_CM
 
@@ -112,16 +115,12 @@ CALL ForceInter
 
 CALL ForceIntra
 
-! QMMM coupling ...
-if( QMMM ) CALL QMMM_FORCE( Net_Charge )
-
 CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 
+Unit_Cell% MD_Kin = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
+Unit_Cell% MD_Pot = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
 
 if( mod(frame,MM_log_step) == 0   ) then 
 
@@ -137,21 +136,14 @@ if( mod(frame,MM_log_step) == 0   ) then
         case( "eV" )    
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
 
-        write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
-
         case( "kj-mol" )
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-
-        write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
 
         case default
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
 
-! total energy in eV; for classical dynamics Unit_Cell%QM_erg = 0  ...
 end if
 
 ! pass nuclear configuration to QM ...
