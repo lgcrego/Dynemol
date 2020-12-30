@@ -107,7 +107,7 @@ If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% f_MM(xyz)
 ! Molecular dynamics ...
 CALL this % VV1( dt )
 
-CALL move_to_box_CM
+if( driver /= "slice_FSSH" ) CALL move_to_box_CM
 
 CALL Molecular_CM
 

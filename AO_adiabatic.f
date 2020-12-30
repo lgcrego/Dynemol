@@ -6,49 +6,49 @@ module AO_adiabatic_m
     use type_m
     use constants_m
     use blas95
-    use parameters_m                , only : t_i , n_t , t_f , n_part ,       &
-                                             frame_step , nuclear_matter ,    &
-                                             EnvField_ , DP_Moment ,          &
-                                             Induced_ , QMMM , restart ,      &
-                                             GaussianCube , static ,          &
-                                             GaussianCube_step , preview ,    &
-                                             hole_state , electron_state ,    &
-                                             DensityMatrix, AutoCorrelation,  &
-                                             CT_dump_step, Environ_step,      &
-                                             driver, HFP_Forces ,             &
-                                             step_security
-    use Babel_m                     , only : Coords_from_Universe, trj, MD_dt                            
-    use Allocation_m                , only : Allocate_UnitCell ,              &
-                                             DeAllocate_UnitCell ,            &
-                                             DeAllocate_Structures ,          &
-                                             Allocate_Brackets                
-    use Structure_Builder           , only : Unit_Cell ,                      &
-                                             Extended_Cell ,                  &
-                                             Generate_Structure ,             &
-                                             Basis_Builder ,                  &
-                                             ExCell_basis                     
-    use FMO_m                       , only : FMO_analysis ,                   &
-                                             orbital , eh_tag                 
-    use DP_main_m                   , only : Dipole_Matrix ,                  &
-                                             Dipole_Moment
-    use TD_Dipole_m                 , only : wavepacket_DP                                        
-    use Polarizability_m            , only : Build_Induced_DP
-    use Solvated_M                  , only : Prepare_Solvated_System 
-    use QCModel_Huckel              , only : EigenSystem , S_root_inv 
-    use Schroedinger_m              , only : DeAllocate_QDyn
-    use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations ,                    &
-                                             Net_Charge                       
-    use Backup_m                    , only : Security_Copy ,                  &
-                                             Restart_state ,                  &
-                                             Restart_Sys                      
-    use MM_dynamics_m               , only : MolecularMechanics ,             &
-                                             preprocess_MM , MoveToBoxCM
-    use Ehrenfest_Builder           , only : EhrenfestForce 
-    use Surface_Hopping             , only : SH_Force , PES
-    use Auto_Correlation_m          , only : MO_Occupation
-    use Dielectric_Potential        , only : Environment_SetUp
-
+    use parameters_m            , only: t_i , n_t , t_f , n_part ,       &
+                                        frame_step , nuclear_matter ,    &
+                                        EnvField_ , DP_Moment ,          &
+                                        Induced_ , QMMM , restart ,      &
+                                        GaussianCube , static ,          &
+                                        GaussianCube_step , preview ,    &
+                                        hole_state , electron_state ,    &
+                                        DensityMatrix, AutoCorrelation,  &
+                                        CT_dump_step, Environ_step,      &
+                                        driver, HFP_Forces ,             &
+                                        step_security
+    use Babel_m                 , only: Coords_from_Universe, trj, MD_dt                            
+    use Allocation_m            , only: Allocate_UnitCell ,              &
+                                        DeAllocate_UnitCell ,            &
+                                        DeAllocate_Structures ,          &
+                                        Allocate_Brackets                
+    use Structure_Builder       , only: Unit_Cell ,                      &
+                                        Extended_Cell ,                  &
+                                        Generate_Structure ,             &
+                                        Basis_Builder ,                  &
+                                        ExCell_basis                     
+    use FMO_m                   , only: FMO_analysis ,                   &
+                                        orbital , eh_tag                 
+    use DP_main_m               , only: Dipole_Matrix ,                  &
+                                        Dipole_Moment
+    use TD_Dipole_m             , only: wavepacket_DP                                        
+    use Polarizability_m        , only: Build_Induced_DP
+    use Solvated_M              , only: Prepare_Solvated_System 
+    use QCModel_Huckel          , only: EigenSystem , S_root_inv 
+    use Schroedinger_m          , only: DeAllocate_QDyn
+    use Psi_Squared_Cube_Format , only: Gaussian_Cube_Format
+    use Data_Output             , only: Populations ,                    &
+                                        Net_Charge                       
+    use Backup_m                , only: Security_Copy ,                  &
+                                        Restart_state ,                  &
+                                        Restart_Sys                      
+    use MM_dynamics_m           , only: MolecularMechanics ,             &
+                                        preprocess_MM , MoveToBoxCM
+    use Ehrenfest_Builder       , only: EhrenfestForce 
+    use Surface_Hopping         , only: SH_Force , PES
+    use Auto_Correlation_m      , only: MO_Occupation
+    use Dielectric_Potential    , only: Environment_SetUp
+    use decoherence_m           , only: apply_decoherence
 
     public :: AO_adiabatic
 
@@ -74,9 +74,10 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer         :: j , frame , frame_init , frame_final , frame_restart
-real*8          :: t_rate 
-type(universe)  :: Solvated_System
+integer        :: j , frame , frame_init , frame_final , frame_restart
+real*8         :: t_rate 
+type(universe) :: Solvated_System
+logical        :: triggered
 
 it = 1
 t  = t_i
@@ -112,12 +113,15 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-!        CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
-        CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
+        If( driver == "slice_FSSH" ) then
+            CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
+            else
+            CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+            end if
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
-    CALL U_ad(t_rate)  ! <== adiabatic component of the propagation ; 1 of 2 ... 
+    CALL U_ad(t_rate) ! <== adiabatic component of the propagation ; 1 of 2 ... 
 
     ! DUAL representation for efficient calculation of survival probabilities ...
     CALL DUAL_wvpckts
@@ -158,6 +162,9 @@ do frame = frame_init , frame_final , frame_step
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
+            if( driver == "slice_FSSH" ) then
+                QMMM = QMMM .OR. (triggered == yes)
+                end if
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
@@ -181,7 +188,7 @@ do frame = frame_init , frame_final , frame_step
 
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
-    CALL U_nad  ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
+    CALL U_nad(t_rate) ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -190,7 +197,7 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL QMMM_erg_status( frame )
+    CALL QMMM_erg_status( frame , triggered )
 
     Print*, frame 
 
@@ -323,6 +330,8 @@ End If
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
+
+Unit_Cell% QM_erg = update_QM_erg()
 !..........................................................................
 
 include 'formats.h'
@@ -351,10 +360,11 @@ end forall
 
 end subroutine U_ad
 !
-!=================
- subroutine U_nad
-!=================
+!==========================
+ subroutine U_nad( t_rate )
+!==========================
 implicit none
+real*8  , intent(in) :: t_rate 
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate)
@@ -364,7 +374,9 @@ select case (driver)
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
            MO_bra = conjg(MO_ket)
 
-       case default       ! <== asymmetrical orthogonalization ...
+           CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PES , t_rate )
+
+       case("slice_AO")   ! <== asymmetrical orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
@@ -396,7 +408,7 @@ select case (driver)
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            DUAL_bra = conjg(DUAL_ket)
 
-       case default       ! <== asymmetrical orthogonalization ...
+       case("slice_AO")   ! <== asymmetrical orthogonalization ...
 
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -539,21 +551,6 @@ do n = 1 , n_part
 
 end do
 
-! QM_erg = E_occ - E_empty ; to be used as switch for QMMM forces ...
-select case ( driver )
-
-       case("slice_FSSH") 
-       If( it == 1) then
-           Unit_Cell% QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-           else
-           Unit_Cell% QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-           end If
-
-       case default
-       Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
-
-       end select
-
 11 FORMAT(A,I9,14I10)
 12 FORMAT(/15A10)
 13 FORMAT(F11.6,14F10.5)
@@ -563,43 +560,27 @@ end subroutine dump_Qdyn
 !
 !
 !
-!===================================
- subroutine QMMM_erg_status( frame )
-!===================================
+!===============================================
+ subroutine QMMM_erg_status( frame , triggered )
+!===============================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
-integer, intent(in):: frame
+integer, intent(in)    :: frame
+logical, intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
+real*8     :: Frontier_gap
 complex*16 :: wp_energy(n_part)
 
-! QM_erg = E_occ - E_empty ; to be used in MM_dynamics energy balance ...
-select case ( driver )
+triggered = no
 
-       case("slice_FSSH") 
-       If( it == 1) then
-           Unit_Cell% QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-           else
-           Unit_Cell% QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-           end If
-
-       case default
-
-          do n = 1 , n_part
-              if( eh_tag(n) == "XX" ) cycle
-              wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-              end do
-          Unit_Cell% QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
-
-       end select
-
-Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
+! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
+Unit_Cell% QM_erg    =  update_QM_erg()
+Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
 
 if( mod(frame,MM_log_step) == 0 ) then 
-
   select case (Units_MM)
-
     case( "eV" )    
         write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
         write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
@@ -608,11 +589,47 @@ if( mod(frame,MM_log_step) == 0 ) then
         write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
         write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
 
-        end select
-
+    end select
 end if
 
+Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+
+if( Unit_Cell% MD_Kin > Frontier_Gap ) triggered = yes
+
 end subroutine  QMMM_erg_status 
+!
+!
+!
+!=========================
+ function update_QM_erg &
+ result(QM_erg)
+!=========================
+implicit none
+
+! local variables ...
+integer    :: n
+real*8     :: QM_erg
+complex*16 :: wp_energy(n_part)
+
+select case ( driver )
+
+       case("slice_FSSH") 
+       If( it == 1) then
+           QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+           else
+           QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+           end If
+
+       case("slice_AO")
+           do n = 1 , n_part
+               if( eh_tag(n) == "XX" ) cycle
+               wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+               end do
+           QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+       end select
+
+end function update_QM_erg
 !
 !
 !

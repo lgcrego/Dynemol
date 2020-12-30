@@ -151,6 +151,7 @@ SOURCE2 = constants_m.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
+          decoherence.o \
 		  Ehrenfest.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
