@@ -45,7 +45,8 @@ module AO_adiabatic_m
     use MM_dynamics_m           , only: MolecularMechanics ,             &
                                         preprocess_MM , MoveToBoxCM
     use Ehrenfest_Builder       , only: EhrenfestForce 
-    use Surface_Hopping         , only: SH_Force , PES
+    use Surface_Hopping         , only: SH_Force , PES ,                 &
+                                        verify_FSSH_jump
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use decoherence_m           , only: apply_decoherence
@@ -165,7 +166,7 @@ do frame = frame_init , frame_final , frame_step
             if( driver == "slice_FSSH" ) then
                 QMMM = QMMM .OR. (triggered == yes)
                 end if
-
+print*, QMMM
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -197,7 +198,7 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL QMMM_erg_status( frame , triggered )
+    CALL QMMM_erg_status( frame , t_rate , triggered )
 
     Print*, frame 
 
@@ -373,7 +374,7 @@ select case (driver)
        case("slice_FSSH") ! <== Lowdin orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
            MO_bra = conjg(MO_ket)
-
+print*, PES
            CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PES , t_rate )
 
        case("slice_AO")   ! <== asymmetrical orthogonalization ...
@@ -561,17 +562,19 @@ end subroutine dump_Qdyn
 !
 !
 !===============================================
- subroutine QMMM_erg_status( frame , triggered )
+ subroutine QMMM_erg_status( frame , t_rate , triggered )
 !===============================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
 integer, intent(in)    :: frame
+real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
 real*8     :: Frontier_gap
 complex*16 :: wp_energy(n_part)
+logical    :: jump
 
 triggered = no
 
@@ -581,7 +584,6 @@ Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_er
 
 if( mod(frame,MM_log_step) == 0 ) then 
   select case (Units_MM)
-
     case( "eV" )    
         write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
         write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
@@ -593,9 +595,15 @@ if( mod(frame,MM_log_step) == 0 ) then
     end select
 end if
 
-Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+if( PES(1) == PES(2) ) then
 
-if( Unit_Cell% MD_Kin > Frontier_Gap ) triggered = yes
+   call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
+   
+   Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+   
+   if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
+
+end if
 
 end subroutine  QMMM_erg_status 
 !
@@ -631,6 +639,7 @@ select case ( driver )
        end select
 
 end function update_QM_erg
+!
 !
 !
 !

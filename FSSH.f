@@ -12,14 +12,12 @@ module Surface_Hopping
     use Overlap_Builder , only: Overlap_Matrix
     use Allocation_m    , only: DeAllocate_Structures    
 
-    public :: SH_Force , PES
+    public :: SH_Force , verify_FSSH_jump , PES
 
     private
 
     !module parameters ...
     logical , parameter :: T_ = .true. , F_ = .false.
-
-    character(len=7), parameter :: method = "Tully"
 
     !module variables ...
     integer                                  :: mm , PES(2) , newPES(2) , Fermi
@@ -69,8 +67,7 @@ If( jump ) then
        do xyz = 1 , 3
           atom(:)% Ehrenfest(xyz) = stored_PES_Force(:,xyz)
           end do
-   end if
-
+          end If
 end If
 
 deallocate( mask , F_vec , F_mtx , QL , erg , d_NA , d_NA_El , d_NA_Hl )
@@ -354,6 +351,9 @@ else
 
     call gemm( pastQR , newQR , Omega , 'T' )    
 
+    !change sign for hole wvpckt ...
+    Omega(:,2) = -Omega(:,2)
+
     do i=1,2
        Omega(PES(i),i) = d_zero
        end do
@@ -368,16 +368,17 @@ end function Omega
 !
 !
 !
-!===================================================================
- subroutine verify_FSSH_jump( QR , MO_bra , MO_ket , t_rate , jump )
-!===================================================================
+!============================================================================
+ subroutine verify_FSSH_jump( QR , MO_bra , MO_ket , t_rate , jump , method )
+!============================================================================
 implicit none
 ! args
-real*8     , intent(in)  :: QR     (:,:)
-complex*16 , intent(in)  :: MO_bra (:,:)
-complex*16 , intent(in)  :: MO_ket (:,:)
-real*8     , intent(in)  :: t_rate
-logical    , intent(out) :: jump
+real*8                  , intent(in)  :: QR     (:,:)
+complex*16              , intent(in)  :: MO_bra (:,:)
+complex*16              , intent(in)  :: MO_ket (:,:)
+real*8                  , intent(in)  :: t_rate
+logical                 , intent(out) :: jump
+character(*) , optional , intent(in)  :: method
 
 ! local variables
 integer              :: i , j 
@@ -394,19 +395,12 @@ do j = 1 , 2
    rho_eh(:,j) = rho_eh(:,j) / rho_eh( PES(j) , j )
    end do
 
-select case ( method )
-    
-       case( "Tully" ) 
-       forall( j=1:2 ) g_switch(:,j) = two * t_rate * rho_eh(:,j) * Rxd_NA(:,j) * sgn(j)
-!       g_switch = two * t_rate * rho_eh * Rxd_NA
-
-       case( "Dynemol" )
-       g_switch = two * rho_eh * Omega(QR)
-
-       case default
-       stop "wrong FSSH method"
-
-       end select
+! both methods are equivalent ...
+if ( present(method) .AND. method == "Dynemol" ) then
+   g_switch(:,:) = two * rho_eh * Omega(QR)
+else
+   forall( j=1:2 ) g_switch(:,j) = two * t_rate * rho_eh(:,j) * Rxd_NA(:,j) * sgn(j)
+end if
 
 allocate( base(0:mm,2) , source=D_zero )
 
@@ -566,7 +560,7 @@ allocate( d_NA   (mm, 2)                                 )
 allocate( erg    (mm)                  , source = QM%erg )
 
 ! preprocess overlap matrix for Pulay calculations ...
-CALL Overlap_Matrix( system , basis )
+CALL Overlap_Matrix( system , basis ) 
 CALL preprocess( system )
 
 If( .NOT. allocated(grad_S) ) then
