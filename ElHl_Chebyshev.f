@@ -62,7 +62,7 @@ integer         , intent(in)    :: it
 
 !local variables ...
 integer                         :: N
-type(R_eigen)   :: AO
+type(C_eigen)   :: AO
 
 N = size(basis)
 

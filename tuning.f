@@ -40,6 +40,10 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
+univ % atom(  1 ) % residue = "ION"
+univ % atom(  2 : 21 ) % residue = "BP1"
+univ % atom( 22 : 41 ) % residue = "BP2"
+univ % atom( 42 : 61 ) % residue = "BP3"
 
 !-----------------------------------
 !      define %nr
@@ -59,15 +63,24 @@ integer :: i
 !      define %El   : mandatory !!
 !---------------------------------------------------
 where(univ % atom % residue == "BP1") univ % atom % El = .true.
+!where(univ % atom % residue == "CH1") univ % atom % El = .true.
+
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
 where(univ % atom % residue == "ION") univ % atom % Hl = .true.
+!where(univ % atom % residue == "CH1") univ % atom % Hl = .true.
+
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
+where(univ % atom % residue == "ION") univ % atom % fragment = "I"
+where(univ % atom % residue == "BP1") univ % atom % fragment = "1"
 where(univ % atom % residue == "BP2") univ % atom % fragment = "2"
 where(univ % atom % residue == "BP3") univ % atom % fragment = "3"
+!where(univ % atom % residue == "CH1") univ % atom % fragment = "1"
+!where(univ % atom % residue == "CCC") univ % atom % fragment = "C"
+!where(univ % atom % residue == "CH2") univ % atom % fragment = "2"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -78,6 +91,8 @@ where(univ % atom % residue == "BP3") univ % atom % fragment = "3"
 !   Cluster     =   C 
 !   Passivator  =   P 
 !   ghost       =   #
+!   spin Up     =   +
+!   spin Down   =   -
 !--------------------------------------------
 
 DO i = 1 , size(univ%atom)
@@ -130,10 +145,10 @@ end If
 ! spin states ...
 allocate( spin_tag(2) ) 
 If( SOC ) then
-   spin_tag = ["up","dw"]
-   else
-   spin_tag = ["XX","XX"]
-   end If
+    spin_tag = ["up","dw"]
+else
+    spin_tag = ["XX","XX"]
+end If
 
 !default: %El => DONOR
 If( any(a% El) ) then      ! <== first priority ...

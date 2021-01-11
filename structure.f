@@ -221,13 +221,14 @@ integer :: copy , nr_sum , ix , iy , k , n
 !
 !
 !
-!=======================================================
- subroutine Basis_Builder( system , basis , GACG_flag )
-!=======================================================
+!============================================================
+ subroutine Basis_Builder( system , basis , GACG_flag , FMO )
+!============================================================
  implicit none
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)
  logical         , optional    , intent(in)    :: GACG_flag
+ logical         , optional    , intent(in)    :: FMO
 
 ! local variables ...
  integer :: k , i , l , m , s , spin , AtNo , N_of_orbitals
@@ -241,7 +242,7 @@ system% BasisPointer = 0
 ! total number of orbitals ...
 spin = 0
 N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
-if( SOC ) then
+if( SOC .AND. not(present(FMO)) ) then
     N_of_orbitals = 2 * N_of_orbitals
     spin = 1
 end if

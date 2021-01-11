@@ -44,7 +44,7 @@ implicit none
  integer                        :: i , nr , N_of_residues
  integer         , allocatable  :: MOnum(:)
  real*8                         :: DP(3)
- type(R_eigen)                  :: UNI
+ type(C_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 
@@ -68,7 +68,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
      
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
+! If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
 
  If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
@@ -82,9 +82,9 @@ CALL Read_Command_Lines_Arguments( MOnum )
     CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr )            
  end do
 
- If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
+! If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
- If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
+! If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 

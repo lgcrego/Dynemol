@@ -132,16 +132,16 @@ do ns = 1 , n_spin
         end do
         ! total populations ...
         Populations_mtx( N_of_fragments+1 , n , ns ) = pop_Slater( basis , bra(:,n) , ket(:,n) , S=ns )
-        end do
-        end do
+    end do
+end do
 
 ! atomic net-charge ...
 Net_Charge = d_zero
 do n = 1 , n_part
-     do ati = 1 , system%atoms
+    do ati = 1 , system%atoms
         Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
-        end do
-        end do
+    end do
+end do
 
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
@@ -286,7 +286,8 @@ pop = C_zero
 if( present(fragment) ) then
     pop = sum( za(:) * zb(:) , mask = (basis%fragment == fragment) .AND. (basis%S == spin(S)) )
 else
-    pop = sum( za(:) * zb(:) )
+    pop = sum( za(:) * zb(:) , mask = (basis%S == spin(S)) )
+!    pop = sum( za(:) * zb(:) )
 end if
 
 pop_Slater = real( pop )

@@ -29,24 +29,23 @@ logical , parameter :: T_ = .true. , F_ = .false.
 select case( DRIVER )
 
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
-       
-       If( ad_hoc == F_ .OR. Survival == F_ ) then
-           CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
-           stop 
-           end If
+      
+        If( ad_hoc == F_ .OR. Survival == F_ ) then
+            CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
+            stop 
+         end If
 
     case( "avrg_confgs" )
 
-       If( file_type      /= "trajectory"   ) stop ">>> Mind: if DRIVER=^avrg_confgs^: file_type must be ^trajectory^; check parameters.f"
-       If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^avrg_confgs^: nuclear_matter must be ^extended_sys^; check parameters.f"
+        If( file_type      /= "trajectory"   ) stop ">>> Mind: if DRIVER=^avrg_confgs^: file_type must be ^trajectory^; check parameters.f"
+        If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^avrg_confgs^: nuclear_matter must be ^extended_sys^; check parameters.f"
 
     case( "Genetic_Alg" )
 
-       If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: nuclear_matter must be ^extended_sys^; check parameters.f"
-       If( EnvField_      == .true.         ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: flag ^EnvField_ = F_^; check parameters.f"
+        If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: nuclear_matter must be ^extended_sys^; check parameters.f"
+        If( EnvField_      == .true.         ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: flag ^EnvField_ = F_^; check parameters.f"
 
 end select
-
 
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     CALL system("sed '11i >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<' warning.signal |cat")

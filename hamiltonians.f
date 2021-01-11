@@ -243,7 +243,7 @@ do i = 1 , j
 
         atom = basis( i ) % atom
 
-        CALL SOC_constant( basis( i ) , eps )
+        CALL SOC_constant( basis( i ) % AtNo , 1 , eps )
 
         a = HALF * eps
 
@@ -265,9 +265,9 @@ do i = 1 , j
         h( i + j + 2 , i + j ) =   a * zi
         h( i + j , i + j + 2 ) = - h( i + j + 2 , i + j )
 
-        if( basis( i ) % n > 2 ) then
+        if( basis( i + 3 ) % l == 2 ) then
 
-            CALL SOC_constant( basis( i + 3 ) , eps )
+            CALL SOC_constant( basis( i ) % AtNo , 2 , eps )
 
             a = HALF * eps
             b = dsqrt( THREE )
@@ -336,7 +336,7 @@ do i = 1 , n
 
             end if
 
-            sum1 = 0.0d0
+            sum1 = C_zero
             do k = l1 , l2
 
                 if( basis( j ) % l /= 0 .AND. basis( k ) % atom == basis( j ) % atom .AND. basis( k ) % l == basis( j ) % l ) then
@@ -345,11 +345,14 @@ do i = 1 , n
 
                         case( 1 )
 
-                            sum1 = dot_product( S_matrix( k : k + 2 , i ) , h( k : k + 2 , j ) )
+                            sum1 = h( j , k     ) * S_matrix( k     , i ) + h( j , k + 1 ) * S_matrix( k + 1 , i ) + &
+                                   h( j , k + 2 ) * S_matrix( k + 2 , i )
 
                         case( 2 )
 
-                            sum1 = dot_product( S_matrix( k : k + 4 , i ) , h( k : k + 4 , j ) )
+                            sum1 = h( j , k     ) * S_matrix( k     , i ) + h( j , k + 1 ) * S_matrix( k + 1 , i ) + &
+                                   h( j , k + 2 ) * S_matrix( k + 2 , i ) + h( j , k + 3 ) * S_matrix( k + 3 , i ) + &
+                                   h( j , k + 4 ) * S_matrix( k + 4 , i )
 
                     end select
 
@@ -372,7 +375,7 @@ do i = 1 , n
 
             end if
 
-            sum2 = 0.0d0
+            sum2 = C_zero
             do k = l1 , l2
 
                 if( basis( i ) % l /= 0 .AND. basis( k ) % atom == basis( i ) % atom .AND. basis( k ) % l == basis( i ) % l ) then
@@ -381,11 +384,14 @@ do i = 1 , n
 
                         case( 1 )
 
-                            sum2 = dot_product( S_matrix( k : k + 2 , j ) , h( k : k + 2 , i ) )
+                            sum2 = S_matrix( j , k     ) * h( k     , i ) + S_matrix( j , k + 1 ) * h( k + 1 , i ) + &
+                                   S_matrix( j , k + 2 ) * h( k + 2 , i )
 
                         case( 2 )
 
-                            sum2 = dot_product( S_matrix( k : k + 4 , j ) , h( k : k + 4 , i ) )
+                            sum2 = S_matrix( j , k     ) * h( k     , i ) + S_matrix( j , k + 1 ) * h( k + 1 , i ) + &
+                                   S_matrix( j , k + 2 ) * h( k + 2 , i ) + S_matrix( j , k + 3 ) * h( k + 3 , i ) + &
+                                   S_matrix( j , k + 4 ) * h( k + 4 , i )
 
                     end select
 
@@ -481,12 +487,13 @@ end subroutine spin_orbit_h
 !
 !
 !
-!======================================
- subroutine SOC_constant( basis , eps )
-!======================================
+!=========================================
+ subroutine SOC_constant( AtNo , l , eps )
+!=========================================
 implicit none
-type(STO_basis) , intent(in)    :: basis
-real*8          , intent(inout) :: eps
+integer , intent(in)    :: AtNo
+integer , intent(in)    :: l
+real*8  , intent(inout) :: eps
 
 ! Ref. 1: Koseki, S; et. al; J. Phys. Chem. A, 2019, 123, 2325−2339
 !         D'Alessando, D. N; et. al; Inorg. Chem. 2006, 45, 3261−3274
@@ -495,33 +502,31 @@ real*8          , intent(inout) :: eps
 ! Ref. 3: Manne, R; et. al; Molecular Physics, 1975, 29, 485−500
 ! Ref. 4: Wittel, K. e Manne, R; Theoret. Chim. Acta (Berl.), 1974, 33, 347-349
 
-select case( basis % AtNo )
+select case( AtNo )
 
     case( 6 )
 
-!        if( basis % l == 1 ) eps = 453.50d-6 ! Ref. 2
-        if( basis % l == 1 ) eps = 0.5d0 ! TESTE
+!        if( l == 1 ) eps = 453.50d-6 ! Ref. 2
+        if( l == 1 ) eps = 4.535d0 ! teste
 
     case( 7 )
 
-        if( basis % l == 1 ) eps = 649.48d-6 ! Ref. 2
+        if( l == 1 ) eps = 649.48d-6 ! Ref. 2
 
     case( 35 )
 
-!        eps = - 0.35d0
-        eps = 0.35d0 ! Ref. 3
+!        if( l == 1 ) eps = - 0.35d0
+        if( l == 1 ) eps = 0.35d0 ! Ref. 3
 
     case( 44 )
 
-!        if( basis % l == 1 ) eps = 13.95d-3  ! Ref. 2 <== Revise it...
-!        if( basis % l == 2 ) eps = 0.12398d0 ! Ref. 1
-        if( basis % l == 1 ) eps = 0.6d0 ! TESTE
-        if( basis % l == 2 ) eps = 0.9d0 ! TESTE
+        if( l == 1 ) eps = 13.95d-3  ! Ref. 2 <== Revise it...
+        if( l == 2 ) eps = 0.12398d0 ! Ref. 1
 
     case( 53 )
 
-!        eps = - 0.73d0 ! Ref. 3
-        eps = 0.73d0 ! Ref. 3
+!        if( l == 1 ) eps = - 0.73d0 ! Ref. 3
+        if( l == 1 ) eps = 0.73d0 ! Ref. 3
 
     case default
 

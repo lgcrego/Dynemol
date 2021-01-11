@@ -36,15 +36,15 @@ use Matrix_math
 implicit none
 type(structure)             , intent(in)    :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-type(R_eigen)               , intent(inout) :: QM
+type(C_eigen)               , intent(inout) :: QM
 integer          , optional , intent(in)    :: it
 
 
 ! local variables ...
-complex*16 , ALLOCATABLE :: h_spin(:,:)
-real*8     , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8     , ALLOCATABLE :: h(:,:)  , S_matrix(:,:) , S_root(:,:)
-real*8     , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
+complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:)
+complex*16 , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8     , ALLOCATABLE :: h_orb(:,:)  , S_matrix(:,:) , S_root(:,:)
+real*8     , ALLOCATABLE :: tool(:,:) , S_eigen(:)
 integer                  :: i , N , info 
 logical    , save        :: first_call_ = .true.
 
@@ -56,25 +56,35 @@ CALL Overlap_Matrix( system , basis , S_matrix )
 
 If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(N))
 
-Allocate(      h(N,N) )
+Allocate(  h_orb(N,N) )
 Allocate( dumb_S(N,N) )
 
-! clone S_matrix because SYGVD will destroy it ...
-dumb_s = S_matrix
+! clone S_matrix because HEGVD will destroy it ...
+dumb_s = dcmplx( S_matrix , D_zero )
 
 If( EnvField_ .OR. Induced_ ) then
-    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
+  h_orb(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 else
-    h(:,:) = Build_Huckel( basis , S_matrix ) 
+  h_orb(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
 
 if( SOC ) then
+
     CALL spin_orbit_h( basis , h_spin , S_matrix )
-!    h = h + h_spin
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
+!    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+    deallocate( h_spin )
+
+else
+
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+
 end if
 
-CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
-if ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+deallocate(h_orb)
+
+CALL HEGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
+if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD in EigenSystem '
 
 select case ( driver ) 
 
@@ -98,78 +108,76 @@ select case ( driver )
           ! eigenvectors in the rows of QM%L
           QM%L = transpose(Lv) 
 
+          allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
           ! Rv = S * Lv ...
-          call Multiply( S_matrix, Lv, Rv )
-
-          DEALLOCATE( S_matrix )
+          call hemm( S_complex, Lv, Rv )
+          deallocate( S_matrix , S_complex )
 
           If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
           ! eigenvectors in the columns of QM%R
           QM%R = Rv
-
-          Deallocate( Lv , Rv )
 
     case ("slice_FSSH" )    
 
           !--------------------------------------------------------
           ! Overlap Matrix Factorization: S^(1/2) ...
 
-          dumb_s = S_matrix
-
-          Allocate( S_eigen(N)  )
-
-          CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
-
-          Allocate( tool(N,N) , source = transpose(dumb_S) )
-
-          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
-
-          allocate( S_root(N,N) )
-          CALL gemm(dumb_S , tool , S_root , 'N' , 'N')
-
-          !now S_root   = S^(1/2) Lowdin Orthogonalization matrix ...
-          !now S_matrix = S ...
-
-          DEALLOCATE( S_eigen , tool )
-!          DEALLOCATE( S_eigen , dumb_S , tool )
-
-          dumb_S = S_matrix
-
-          !---------------------------------------------------
-          !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
-          !
-          !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
-          !---------------------------------------------------
-
-          Allocate( Lv(N,N) )
-          Allocate( Rv(N,N) )
-
-          Lv = h
-          Deallocate( h )
-
-          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-          ! eigenvectors in the rows of QM%L
-          ! keeping the nonorthogonal representation of %L for future use ...
-          QM%L = transpose(Lv) 
-
-          If( first_call_ .AND. (.NOT. restart) ) then
-
-              ! Rv = S * Lv ...
-              call symm( S_matrix, Lv, Rv )
-              call invert( S_root )
-              first_call_ = .false.
-          else
-
-              ! Rv = S^(1/2) * Lv ...
-              ! Lowding representation ...
-              CALL symm( S_root , Lv , Rv )
-          end If
-
-          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
-          ! eigenvectors in the columns of QM%R
-          QM%R = Rv
-          
-          Deallocate( Lv , Rv , S_matrix , S_root )
+!          dumb_s = S_matrix
+!
+!          Allocate( S_eigen(N)  )
+!
+!          CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
+!
+!          Allocate( tool(N,N) , source = transpose(dumb_S) )
+!
+!          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
+!
+!          allocate( S_root(N,N) )
+!          CALL gemm(dumb_S , tool , S_root , 'N' , 'N')
+!
+!          !now S_root   = S^(1/2) Lowdin Orthogonalization matrix ...
+!          !now S_matrix = S ...
+!
+!          DEALLOCATE( S_eigen , tool )
+!!          DEALLOCATE( S_eigen , dumb_S , tool )
+!
+!          dumb_S = S_matrix
+!
+!          !---------------------------------------------------
+!          !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
+!          !
+!          !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+!          !---------------------------------------------------
+!
+!          Allocate( Lv(N,N) )
+!          Allocate( Rv(N,N) )
+!
+!          Lv = h
+!          Deallocate( h )
+!
+!          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+!          ! eigenvectors in the rows of QM%L
+!          ! keeping the nonorthogonal representation of %L for future use ...
+!          QM%L = transpose(Lv) 
+!
+!          If( first_call_ .AND. (.NOT. restart) ) then
+!
+!              ! Rv = S * Lv ...
+!              call symm( S_matrix, Lv, Rv )
+!              call invert( S_root )
+!              first_call_ = .false.
+!          else
+!
+!              ! Rv = S^(1/2) * Lv ...
+!              ! Lowding representation ...
+!              CALL symm( S_root , Lv , Rv )
+!          end If
+!
+!          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+!          ! eigenvectors in the columns of QM%R
+!          QM%R = Rv
+!          
+!          Deallocate( Lv , Rv , S_matrix , S_root )
 
 end select
 
@@ -177,7 +185,9 @@ end select
 ! save energies of the TOTAL system ...
 OPEN(unit=9,file='system-ergs.dat',status='unknown')
     do i = 1 , N
-        write(9,*) i , QM%erg(i)
+!        write(9,*) i , QM%erg(i)
+        write(9,fmt='(i5,3f20.14)') i , QM%erg(i) , dreal(dot_product( QM%L(i,:) , QM%R(:,i) )) , &
+                                                    dreal(dot_product( QM%L(i,:) , dcmplx( basis( : ) % s , D_zero ) * QM%R(:,i) ))
     end do
 close(9)
 
@@ -191,43 +201,33 @@ end subroutine EigenSystem
  function Build_Huckel( basis , S_matrix ) result(h)
 !===================================================
 implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(in)    :: S_matrix(:,:)
+type(STO_basis) , intent(in) :: basis(:)
+real*8          , intent(in) :: S_matrix(:,:)
 
 ! local variables ... 
+real*8  , allocatable :: h(:,:)
 integer :: i , j , N , N2
-real*8  , allocatable   :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
-N = size(basis)
+!----------------------------------------------------------
 
-if( SOC ) then
-    N2 = 2 * size(basis)
-    ALLOCATE( h(N2,N2) , source = D_zero )
-else
-    ALLOCATE( h(N,N) , source = D_zero )
-end if
+N  = size(basis)
+N2 = merge(N/2,N,SOC)
 
-do j = 1 , N
-    do i = j , N
+ALLOCATE( h(N,N) , source = D_zero )
+
+! spin up orbital block
+do j = 1 , N2
+    do i = j , N2
 
         h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
 
     end do
 end do
 
-if( SOC ) then
- 
-    do j = N + 1 , N2
-        do i = j , N2
-
-            h( i , j ) = h( i - N , j - N )
-
-        end do
-    end do
-
-end if
+! spin down orbital block
+if( SOC ) h( N2 + 1 : N , N2 + 1 : N ) = h( 1 : N2 , 1 : N2 )
 
 end function Build_Huckel
 !

@@ -38,7 +38,7 @@
  implicit none
  type(structure) , intent(inout) :: system
  type(STO_basis) , intent(inout) :: basis(:)
- type(R_eigen)   , intent(in)    :: UNI
+ type(C_eigen)   , intent(in)    :: UNI
  type(f_time)    , intent(inout) :: QDyn
 
 ! local variables ...
@@ -47,7 +47,7 @@ integer                          :: it , n , it_init
 real*8                           :: t , t_rate
 real*8                           :: Total_DP(3)
 complex*16      , ALLOCATABLE    :: phase(:)
-type(R_eigen)                    :: el_FMO , hl_FMO
+type(C_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
@@ -68,7 +68,7 @@ do n = 1 , n_part
 
             CALL FMO_analysis ( system , basis , UNI , el_FMO , instance="E" )
 
-            MO_bra( : , n ) = el_FMO%L( orbital(n) , : )
+            MO_bra( : , n ) = conjg(el_FMO%L( orbital(n) , : ))
             MO_ket( : , n ) = el_FMO%R( : , orbital(n) )
 
             Print 591, orbital(n) , el_FMO%erg(orbital(n))
@@ -77,13 +77,13 @@ do n = 1 , n_part
 
             CALL FMO_analysis ( system , basis , UNI , hl_FMO , instance="H" )
 
-            MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )
+            MO_bra( : , n ) = conjg(hl_FMO%L( orbital(n) , : ))
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )
 
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
-        end select
+    end select
 end do
 
 ! deallocate after use ...
@@ -94,18 +94,18 @@ if( eh_tag(2) == "hl" ) deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 If( preview ) stop
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+CALL gemm( UNI%L , MO_bra , DUAL_bra , 'C' , 'N' )
 
 ! save populations ...
 Pops(1,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
 
 QDyn%dyn(1,:,:,:) = Pops(1,:,:,:)
 
-If( DensityMatrix ) then
-    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
-    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
-End If
+!If( DensityMatrix ) then
+!    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
+!    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
+!End If
 
 !   save the initial GaussianCube file ...
 If( GaussianCube ) then
@@ -137,10 +137,10 @@ DO it = it_init , n_t
         MO_bra(:,j) = merge( conjg(phase(:)) * MO_bra(:,j) , C_zero , eh_tag(j) /= "XX" )
         MO_ket(:,j) = merge(       phase(:)  * MO_ket(:,j) , C_zero , eh_tag(j) /= "XX" )
     end forall
-
+    
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+    CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+    CALL gemm( UNI%L , MO_bra , DUAL_bra , 'C' , 'N' )
 
     ! get populations ...
     Pops(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
@@ -159,7 +159,7 @@ DO it = it_init , n_t
 
     end If
 
-    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
+!    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
 END DO
 
@@ -250,7 +250,7 @@ end subroutine RunningStat
 !==================================
 implicit none
 type(f_time)    , intent(in) :: QDyn
-type(R_eigen)   , intent(in) :: UNI
+type(C_eigen)   , intent(in) :: UNI
 
 ! local variables ...
 integer                       :: nf , n , it , spin

@@ -24,7 +24,7 @@ module DOS_m
 subroutine  Total_DOS( QM , basis , TDOS , internal_sigma )
 !==========================================================
 implicit none
-type(R_eigen)             , intent(in)    :: QM
+type(C_eigen)             , intent(in)    :: QM
 type(STO_basis)           , intent(in)    :: basis(:)
 type(f_grid)              , intent(inout) :: TDOS
 real*8        , OPTIONAL  , intent(in)    :: internal_sigma
@@ -143,7 +143,7 @@ subroutine  Partial_DOS( system , basis , QM , PDOS , nr , internal_sigma )
 implicit none
 type(structure)             , intent(in)    :: system
 type(STO_basis)             , intent(in)    :: basis(:)
-type(R_eigen)               , intent(in)    :: QM
+type(C_eigen)               , intent(in)    :: QM
 type(f_grid)  , allocatable , intent(inout) :: PDOS(:)
 integer       , OPTIONAL    , intent(in)    :: nr
 real*8        , OPTIONAL    , intent(in)    :: internal_sigma

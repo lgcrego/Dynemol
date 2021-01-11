@@ -52,7 +52,7 @@ contains
 integer                         :: frame , frame_init , nr , N_of_residues
 real*8                          :: internal_sigma
 logical                         :: FMO_ , DIPOLE_
-type(R_eigen)                   :: UNI 
+type(C_eigen)                   :: UNI 
 type(f_grid)                    :: TDOS , SPEC
 type(f_grid)    , allocatable   :: PDOS(:) 
 type(f_time)                    :: QDyn
@@ -120,10 +120,10 @@ do frame = frame_init , size(trj) , frame_step
         CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr , internal_sigma )            
     end do
 
-    If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
+!    If( DIPOLE_  ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
 
     ! SPEC += avrg
-    If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC , internal_sigma )
+!    If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC , internal_sigma )
 
     If( survival ) CALL Simple_dynamics( Extended_Cell, ExCell_basis, UNI, QDyn )
 

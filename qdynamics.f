@@ -38,7 +38,7 @@ implicit none
 
 ! local variables ...
  integer                        :: nr , N_of_residues
- type(R_eigen)                  :: UNI
+ type(C_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(f_time)                   :: QDyn
@@ -63,7 +63,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
+! If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )  
 
  If( EnvField_ )CALL Environment_SetUp( Extended_Cell )
 
@@ -75,7 +75,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
     CALL Partial_DOS( Extended_Cell , ExCell_basis , UNI , PDOS , nr )            
  end do
 
- If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
+! If( spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
  If( survival ) CALL Simple_dynamics( Extended_Cell , ExCell_basis , UNI , QDyn )
 
