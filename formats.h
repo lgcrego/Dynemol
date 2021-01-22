@@ -80,6 +80,8 @@
 
 113   FORMAT(I5,4F12.6)
 
+119   FORMAT(/,1x,'Total number of spin-orbitals  = ',I6)
+
 120   FORMAT(/,1x,'Total number of orbitals  = ',I6)
 
 121   FORMAT(1x,A2,' atoms  = ',I5)

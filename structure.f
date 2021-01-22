@@ -347,7 +347,11 @@ call sleep(3) ! waits 3 seconds ...
 
 ! total number of orbitals ...
 N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
-Print 120 , N_of_orbitals                       
+if( SOC ) then
+    Print 119 , 2*N_of_orbitals                       
+else
+    Print 120 , N_of_orbitals                       
+end if
 
 ! total number of electrons ...
 a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
