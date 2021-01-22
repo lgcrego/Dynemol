@@ -60,7 +60,7 @@ Allocate(  h_orb(N,N) )
 Allocate( dumb_S(N,N) )
 
 ! clone S_matrix because HEGVD will destroy it ...
-dumb_s = S_matrix
+dumb_s = dcmplx( S_matrix , D_zero )
 
 If( EnvField_ .OR. Induced_ ) then
   h_orb(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
@@ -69,47 +69,50 @@ else
 end If
 
 if( SOC ) then
-  CALL spin_orbit_h( basis , h_spin , S_matrix )
-  Allocate( h(N,N) , source = h_orb + h_spin )
+    CALL spin_orbit_h( basis , h_spin , S_matrix )
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
+    deallocate( h_spin )
+else
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
 end if
 
 deallocate(h_orb)
 
 CALL HEGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
-if ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
+if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD in EigenSystem '
 
 select case ( driver ) 
 
     case default
 
-          !---------------------------------------------------
-          !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-          !
-          !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-          !
-          !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
-          !---------------------------------------------------
+        !---------------------------------------------------
+        !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
+        !
+        !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
+        !
+        !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
+        !---------------------------------------------------
 
-          Allocate( Lv(N,N) )
-          Allocate( Rv(N,N) )
+        Allocate( Lv(N,N) )
+        Allocate( Rv(N,N) )
 
-          Lv = h
-          Deallocate(h)
+        Lv = h
+        Deallocate(h)
 
-          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-          ! eigenvectors in the rows of QM%L
-          QM%L = transpose(Lv) 
+        If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+        ! eigenvectors in the rows of QM%L
+        QM%L = transpose(conjg(Lv)) 
 
-          allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
-          ! Rv = S * Lv ...
-          call hemm( S_complex, Lv, Rv )
-          deallocate( S_matrix , S_complex )
+        allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
+        ! Rv = S * Lv ...
+        call hemm( S_complex, Lv, Rv )
+        deallocate( Lv , S_matrix , S_complex )
 
           If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
           ! eigenvectors in the columns of QM%R
           QM%R = Rv
 
-          Deallocate( Lv , Rv )
+          Deallocate( Rv )
 
     case ("slice_FSSH" )    
 
@@ -184,7 +187,7 @@ OPEN(unit=9,file='system-ergs.dat',status='unknown')
 close(9)
 
 If( verbose ) Print*, '>> EigenSystem done <<'
-stop
+
 end subroutine EigenSystem
 !
 !
@@ -193,8 +196,8 @@ end subroutine EigenSystem
  function Build_Huckel( basis , S_matrix ) result(h)
 !===================================================
 implicit none
-type(STO_basis) , intent(in)    :: basis(:)
-real*8          , intent(in)    :: S_matrix(:,:)
+type(STO_basis) , intent(in) :: basis(:)
+real*8          , intent(in) :: S_matrix(:,:)
 
 ! local variables ... 
 integer :: i , j , N , N2

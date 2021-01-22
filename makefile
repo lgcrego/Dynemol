@@ -181,6 +181,7 @@ SOURCE2 = constants_m.o \
 		  MM_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
+          spin_OPT.o \
 		  CG_EH_driver.o \
 		  ga_routines.o \
 		  CG_MM_driver.o \

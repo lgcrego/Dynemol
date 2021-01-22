@@ -41,30 +41,30 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     ! local
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
-    real*8         , allocatable :: S_tmp(:,:)
-    integer                      :: NonZero, S_size , n
+    real*8         , allocatable :: S_noSpin(:,:)
+    integer                      :: NonZero, Mtx_size , n , i , j
     real*8                       :: Sparsity
 
     CALL util_overlap
 
-    S_size = SUM(atom(system%AtNo)%DOS, system%QMMM == "QM")
+    Mtx_size = SUM(atom(system%AtNo)%DOS, system%QMMM == "QM")
 
-    allocate( S_tmp( S_size , S_size ) )
+    allocate( S_noSpin( Mtx_size , Mtx_size ) )
 
     select case (purpose)
         case('FMO')
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_tmp)
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_noSpin)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
             CALL Generate_Periodic_Structure(system, basis, pbc_system, pbc_basis)
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_tmp)
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_noSpin)
 
         case('Pulay') ! <== used by diagnostic through Hellman_Feynman_Pulay function
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure(system, pbc_system, pbc_basis)
-            CALL Pulay_Overlap(system, basis, pbc_system, pbc_basis, S_tmp, site)
+            CALL Pulay_Overlap(system, basis, pbc_system, pbc_basis, S_noSpin, site)
 
         case default
             ! Overlap Matrix S(a,b) of the system
@@ -80,10 +80,10 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix( system, basis(1:S_size), pbc_system, pbc_basis, S_tmp , recycle = .true. )
+            CALL Build_Overlap_Matrix( system, basis(1:Mtx_size), pbc_system, pbc_basis(1:Mtx_size), S_noSpin , recycle = .true. )
 
-            NonZero  = count(S_tmp /= 0.d0)
-            Sparsity = float(NonZero) / float(S_size ** 2)
+            NonZero  = count(S_noSpin /= 0.d0)
+            Sparsity = float(NonZero) / float(Mtx_size ** 2)
 
             if (verbose) then
                 Print 69, Sparsity
@@ -92,33 +92,25 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
             end if
     end select
 
-    CALL Deallocate_Structures(pbc_system)
-    if (allocated(pbc_basis)) then
-        deallocate(pbc_basis)
-    end if
-
     if( not(SOC) ) then
-
-        if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) )
-
-        S_matrix = S_tmp
-
+        if( .NOT. allocated(S_matrix) ) allocate( S_matrix(Mtx_size,Mtx_size) )
+        S_matrix = S_noSpin
     else
-
-        S_size = 2 * S_size
-
-        if( .NOT. allocated(S_matrix) ) allocate( S_matrix( S_size , S_size ) , source = 0.0d0 )
-
-        n = S_size / 2
-
-        S_matrix(     1 :      n ,     1 :      n ) = S_tmp( 1 : n , 1 : n )
-        S_matrix( n + 1 : S_size , n + 1 : S_size ) = S_tmp( 1 : n , 1 : n )
-
+        Mtx_size = 2 * Mtx_size
+        if( .NOT. allocated(S_matrix) ) allocate( S_matrix(Mtx_size,Mtx_size) , source = 0.0d0 )
+        n = Mtx_size / 2
+        do concurrent ( i=1:n , j=1:n )
+             S_matrix(i,j)     = S_noSpin(i,j)
+             S_matrix(n+i,n+j) = S_noSpin(i,j)
+             end do
     end if
 
-    deallocate( S_tmp )
+    CALL Deallocate_Structures(pbc_system)
+    if (allocated(pbc_basis)) deallocate(pbc_basis)
+    deallocate( S_noSpin )
     
     include 'formats.h'
+
 end subroutine OVERLAP_MATRIX
 
 
@@ -131,7 +123,7 @@ subroutine PREPROCESS_OVERLAPMATRIX(system, basis)
 
     ! local
     real*8,          allocatable :: S_matrix(:,:)
-    integer                      :: S_size
+    integer                      :: Mtx_size
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
 
@@ -139,8 +131,8 @@ subroutine PREPROCESS_OVERLAPMATRIX(system, basis)
     ! called by HFP force routines
     CALL util_overlap
 
-    S_size = SUM(atom(system%AtNo)%DOS , system%QMMM == "QM")
-    allocate(S_matrix(S_size,S_size))
+    Mtx_size = SUM(atom(system%AtNo)%DOS , system%QMMM == "QM")
+    allocate(S_matrix(Mtx_size,Mtx_size))
 
     Pulay = .true.
     done = .false.
@@ -207,7 +199,6 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
 
             ! ckecking: if atoms ia and ib remain fixed => recover S_matrix
             if (motion_detector_ready) then
-
                 Rab = GET_RAB(a_system%coord(ia,:), b_system%coord(ib,:))
                 if (Rab > cutoff_Angs) then
                     cycle
@@ -306,7 +297,6 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
 
     ! save overlap data for reuse
     if ((.NOT. static .OR. Pulay) .AND. (.NOT. done)) then
-
         if(allocated(a_xyz)) then
             a_xyz = a_system%coord
             b_xyz = b_system%coord
