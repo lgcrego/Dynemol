@@ -15,7 +15,6 @@
                                              hole_state ,           &
                                              LCMO ,                 &
                                              SOC ,                  &
-                                             spin ,                 &
                                              verbose
     use Allocation_m                , only : Allocate_Structures ,  &
                                              Deallocate_Structures
@@ -28,6 +27,7 @@
     use Structure_Builder           , only : Basis_Builder
     use Hamiltonians                , only : X_ij , Huckel_with_Fields , spin_orbit_h
     use LCMO_m                      , only : LCMO_Builder
+    use Hamiltonians                , only : spin_orbit_h
 
     public :: FMO_analysis , eh_tag , orbital
 
@@ -53,90 +53,95 @@
  character(*)   , optional , intent(in)    :: instance
 
 ! local variables ...
- type(structure)               :: FMO_system
- type(STO_basis) , allocatable :: FMO_basis(:)
- integer                       :: i
- character(1)                  :: fragment
- character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
- logical                       :: TorF
+type(structure)               :: FMO_system
+type(STO_basis) , allocatable :: FMO_basis(:)
+integer                       :: i
+character(1)                  :: fragment
+character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
+logical                       :: TorF
 
- CALL preprocess( system , basis , system_fragment , basis_fragment , fragment , instance )
+CALL preprocess( system , basis , system_fragment , basis_fragment , fragment , instance )
 
 !FMO_system = fragment ...
- FMO_system%atoms = count(system%fragment == fragment)
+FMO_system%atoms = count(system%fragment == fragment)
 
- CALL Allocate_Structures(FMO_system%atoms,FMO_system)
+CALL Allocate_Structures(FMO_system%atoms,FMO_system)
 
 ! Notice: not everything needs to be cloned into FMO ... 
- forall(i=1:3)
- FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
- end forall
- FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
- FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == fragment ) 
- FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
- FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
- FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
- FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
- FMO_system%QMMM       =  pack( system%QMMM      , system%fragment == fragment )
- FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
- FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
- FMO_system%V_shift    =  pack( system%V_shift   , system%fragment == fragment )
- FMO_system%T_xyz      =  system%T_xyz
- FMO_system%copy_No    =  0
+forall(i=1:3)
+FMO_system%coord(:,i) =  pack(system%coord(:,i) , system%fragment == fragment ) 
+end forall
+FMO_system%AtNo       =  pack( system%AtNo      , system%fragment == fragment ) 
+FMO_system%Nvalen     =  pack( system%Nvalen    , system%fragment == fragment ) 
+FMO_system%k_WH       =  pack( system%k_WH      , system%fragment == fragment )
+FMO_system%symbol     =  pack( system%symbol    , system%fragment == fragment )
+FMO_system%fragment   =  pack( system%fragment  , system%fragment == fragment )
+FMO_system%MMSymbol   =  pack( system%MMSymbol  , system%fragment == fragment )
+FMO_system%QMMM       =  pack( system%QMMM      , system%fragment == fragment )
+FMO_system%residue    =  pack( system%residue   , system%fragment == fragment )
+FMO_system%nr         =  pack( system%nr        , system%fragment == fragment )
+FMO_system%V_shift    =  pack( system%V_shift   , system%fragment == fragment )
+FMO_system%T_xyz      =  system%T_xyz
+FMO_system%copy_No    =  0
 
 ! check point ...
- If( any(FMO_system%QMMM /= "QM") ) then
-     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' warning.signal |cat")                                  
-     stop     
+If( any(FMO_system%QMMM /= "QM") ) then
+    TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' warning.signal |cat")                                  
+    stop     
 end If
 
- CALL Basis_Builder( FMO_system , FMO_basis , FMO=.true. )
+CALL Basis_Builder( FMO_system , FMO_basis )
 
- CALL eigen_FMO( FMO_system , FMO_basis , fragment )
+CALL eigen_FMO( FMO_system , FMO_basis , fragment )
 
 ! If ( LCMO ) CALL LCMO_Builder( Dual%L, Dual%erg , instance )
 ! the following subroutine can be used to check the LCMO states ... 
 ! call check_casida_builder( FMO_system , FMO_basis , Dual%L, Dual%erg )
 
- If( Survival .AND. (.not. present(AO)) ) then
+If( Survival .AND. (.not. present(AO)) ) then
 
-     ! Psi_0 = FMO used at AO/MO propagator ...
-     CALL projector( FMO , UNI , basis%fragment , fragment , instance = 'MO' , basis_spin=basis%s )
+    ! Psi_0 = FMO used at AO/MO propagator ...
+    CALL projector( FMO , UNI , basis%fragment , fragment , instance = 'MO' )
 
- elseIf( present(AO) ) then
+elseIf( present(AO) ) then
 
-     ! Psi_0 in local representation ... 
-     ! used at Chebyshev propagator ...
-     CALL projector( basis_fragment = basis%fragment , fragment = fragment , instance = 'AO' )
+    if( SOC ) then
+        print*, "present(AO) not implemented for SOC=.true. ==> Problem in routine FMO_analysis (FMO.f)"
+        stop
+    end if
+    
+    ! Psi_0 in local representation ... 
+    ! used at Chebyshev propagator ...
+    CALL projector( basis_fragment = basis%fragment , fragment = fragment , instance = 'AO' )
 
-     allocate( AO%L(UNI_size,2) , AO%R(UNI_size,2) )
+    allocate( AO%L(UNI_size,2) , AO%R(UNI_size,2) )
 
-     select case(instance)
-          case ("E","D")
-               AO%L(:,1) = tmp%L(orbital(1),:)
-               AO%R(:,1) = tmp%R(:,orbital(1))
-          case ("H")
-               AO%L(:,2) = tmp%L(orbital(2),:)
-               AO%R(:,2) = tmp%R(:,orbital(2))
-     end select
+    select case(instance)
+        case ("E","D")
+            AO%L(:,1) = tmp%L(orbital(1),:)
+            AO%R(:,1) = tmp%R(:,orbital(1))
+        case ("H")
+            AO%L(:,2) = tmp%L(orbital(2),:)
+            AO%R(:,2) = tmp%R(:,orbital(2))
+    end select
 
-     deallocate( tmp%L , tmp%R )
+    deallocate( tmp%L , tmp%R )
 
- end IF
+end IF
 
- DeAllocate( FMO_basis )
- CALL DeAllocate_Structures( FMO_system )
+DeAllocate( FMO_basis )
+CALL DeAllocate_Structures( FMO_system )
 
- system % fragment = system_fragment
- basis  % fragment = basis_fragment
+system % fragment = system_fragment
+basis  % fragment = basis_fragment
 
- deallocate( system_fragment , basis_fragment )
+deallocate( system_fragment , basis_fragment )
 
- Print*, '>> FMO analysis done <<'
+Print*, '>> FMO analysis done <<'
 
- include 'formats.h'
+include 'formats.h'
 
- end subroutine FMO_analysis
+end subroutine FMO_analysis
 !
 !
 !
@@ -144,82 +149,59 @@ end If
  subroutine preprocess( system , basis , system_fragment , basis_fragment , fragment , instance )
 !================================================================================================
 implicit none
- type(structure)                           , intent(inout) :: system
- type(STO_basis)                           , intent(inout) :: basis(:)
- character(1)    , allocatable             , intent(out)   :: system_fragment(:) 
- character(1)    , allocatable             , intent(out)   :: basis_fragment(:)
- character(1)                              , intent(out)   :: fragment
- character(*)                  , optional  , intent(in)    :: instance
+type(structure)                           , intent(inout) :: system
+type(STO_basis)                           , intent(inout) :: basis(:)
+character(1)    , allocatable             , intent(out)   :: system_fragment(:) 
+character(1)    , allocatable             , intent(out)   :: basis_fragment(:)
+character(1)                              , intent(out)   :: fragment
+character(*)                  , optional  , intent(in)    :: instance
 
 ! setting the fragment ...
- allocate(system_fragment (system%atoms) , source = system % fragment )
- allocate( basis_fragment (size(basis) ) , source =  basis % fragment )
+allocate(system_fragment (system%atoms) , source = system % fragment )
+allocate( basis_fragment (size(basis) ) , source =  basis % fragment )
 
- If( .not. present(instance) ) then
+If( .not. present(instance) ) then
 
-        ! entire system ...
-        fragment = "#"       
-        system % fragment = fragment
-        basis  % fragment = fragment
+    ! entire system ...
+    fragment = "#"       
+    system % fragment = fragment
+    basis  % fragment = fragment
 
- else
+else
 
     fragment = instance
 
-    if( SOC ) then
+    select case (instance)
 
-        select case (instance)
+        case( "D" )
+            where( system%El ) system % fragment = instance
+            where( basis%El  ) basis  % fragment = instance
 
-            case( "D" )
-                where( system%El ) system % fragment = instance
-                where( basis%El .AND. basis%s==spin ) basis % fragment = instance
+        case( "E" )
+            where( system%El ) system % fragment = instance
+            where( basis%El  ) basis  % fragment = instance
 
-            case( "E" )
-                where( system%El ) system % fragment = instance
-                where( basis%El .AND. basis%s==spin ) basis % fragment = instance
+        case( "H" )
+            where( system%Hl ) system % fragment = instance
+            where( basis%Hl  ) basis  % fragment = instance
+                
+    end select
 
-            case( "H" )
-                where( system%Hl ) system % fragment = instance
-                where( basis%Hl .AND. basis%s==spin ) basis % fragment = instance
-                    
-        end select
+end if
 
-    else
-
-        select case (instance)
-
-            case( "D" )
-                where( system%El ) system % fragment = instance
-                where( basis%El  ) basis  % fragment = instance
-
-            case( "E" )
-                where( system%El ) system % fragment = instance
-                where( basis%El  ) basis  % fragment = instance
-
-            case( "H" )
-                where( system%Hl ) system % fragment = instance
-                where( basis%Hl  ) basis  % fragment = instance
-                    
-        end select
-
-    end if
-
- end if
-
- end subroutine preprocess
+end subroutine preprocess
 !
 !
 !
-!=====================================================================================
- subroutine projector( FMO , UNI , basis_fragment , fragment , instance , basis_spin )
-!=====================================================================================
+!========================================================================
+ subroutine projector( FMO , UNI , basis_fragment , fragment , instance )
+!========================================================================
 implicit none
 type(C_eigen)    , optional , intent(out) :: FMO
 type(C_eigen)    , optional , intent(in)  :: UNI
 character(len=1)            , intent(in)  :: basis_fragment(:)
 character(len=1)            , intent(in)  :: fragment
 character(len=2)            , intent(in)  :: instance
-integer          , optional , intent(in)  :: basis_spin(:)
 
 ! local variables ...
 complex*16 , allocatable :: aux(:,:)
@@ -236,16 +218,17 @@ select case ( instance )
         !--------------------------------------------------------------------------
         ! cast the FMO eigenvectors in UNI eigen-space
         !--------------------------------------------------------------------------
+
         allocate( aux(FMO_size,UNI_size), source=C_zero )
+
         k = 0 
         do i = 1 , UNI_size
-!           if( basis_fragment(i) == fragment ) then
-           if( basis_fragment(i) == fragment .AND. basis_spin(i) == spin ) then
+            if( basis_fragment(i) == fragment ) then
 
-               k = k + 1
-               aux(k,:) = UNI%R(i,:)
+                k = k + 1
+                aux(k,:) = UNI%R(i,:)
 
-           end if
+            end if
         end do
 
         !-------------------------------------------------------------------------
@@ -256,20 +239,20 @@ select case ( instance )
         Allocate( FMO%L  (FMO_size,UNI_size) , source=C_zero )
         Allocate( FMO%R  (UNI_size,FMO_size) , source=C_zero )
 
-        CALL gemm( conjg(Dual%L) , conjg(aux)  , FMO%L )
+        CALL gemm( Dual%L , aux , FMO%L )
 
-        FMO%R = transpose(FMO%L)
-
+        FMO%R = transpose(conjg(FMO%L))
+        
         deallocate( aux )
 
-        forall(k=1:FMO_size) FMO%erg(k) = sum( conjg(FMO%L(k,:))*UNI%erg(:)*FMO%R(:,k) )
+        forall(k=1:FMO_size) FMO%erg(k) = dreal(sum( FMO%L(k,:)*UNI%erg(:)*FMO%R(:,k) ))
 
         FMO% Fermi_state = Dual% Fermi_state
 
-        check = 0.d0
+        check = D_zero
         do i = 1 , FMO_size
            ! %L*%R = A^T.S.C.C^T.S.A = 1
-           check = check + dot_product( FMO%L(i,:) , FMO%R(:,i) )
+           check = check + dreal(sum( FMO%L(i,:) * FMO%R(:,i) ))
         end do
 
         if( dabs(check-FMO_size) < low_prec ) then
@@ -312,48 +295,64 @@ end subroutine projector
 ! 
 !
 !
-!================================================
- subroutine  eigen_FMO( system, basis, fragment )
-!================================================
- implicit none
- type(structure)               , intent(in)  :: system
- type(STO_basis)               , intent(in)  :: basis(:)
- character(*)    , optional    , intent(in)  :: fragment
+!==================================================
+ subroutine  eigen_FMO( system , basis , fragment )
+!==================================================
+implicit none
+type(structure)               , intent(in)  :: system
+type(STO_basis)               , intent(in)  :: basis(:)
+character(*)    , optional    , intent(in)  :: fragment
 
 ! local variables ... 
- integer               :: N_of_FMO_electrons, i, N , info
- real*8  , ALLOCATABLE :: s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) , aux_R(:,:)
+complex*16 , ALLOCATABLE :: h_FMO(:,:) , h_spin(:,:) , S_complex(:,:) , dumb_S(:,:)
+real*8     , ALLOCATABLE :: s_FMO(:,:) , h_Huckel(:,:)
+real*8                   :: Fermi_level
+integer                  :: N_of_FMO_electrons , i , N , info
 
- N = size(basis)
+N = size(basis)
 
- ALLOCATE( s_FMO(N,N)  , h_FMO(N,N) ,  Dual%erg(N) , aux_R(N,N) )
+ALLOCATE( s_FMO(N,N)  , h_Huckel(N,N) ,  Dual%erg(N) )
 
- CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
+CALL Overlap_Matrix( system, basis, S_FMO, purpose='FMO' )
 
- If( EnvField_ .OR. Induced_ ) then
-     h_FMO = even_more_extended_Huckel( system , basis , S_FMO )
- else
-     h_FMO = Build_Huckel( basis , S_FMO )
- end If
+If( EnvField_ .OR. Induced_ ) then
+    h_Huckel = even_more_extended_Huckel( system , basis , S_FMO )
+else
+    h_Huckel = Build_Huckel( basis , S_FMO )
+end If
+
+if( SOC ) then
+
+    CALL spin_orbit_h( basis , h_spin , s_FMO )
+    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) + h_spin )
+    deallocate( h_spin )
+!    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) )
+
+else
+
+    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) )
+
+end if
+
+deallocate(h_Huckel)
 
 !-------- solve generalized eH eigenvalue problem H*Q = E*S*Q
 
- ALLOCATE( dumb_S(N,N) , source = s_FMO )
+ALLOCATE( S_complex(N,N) , source = dcmplx( s_FMO , D_zero ) )
+ALLOCATE( dumb_S(N,N) , source = S_complex )
 
- CALL SYGVD(h_FMO , dumb_S , Dual%erg , 1 , 'V' , 'U' , info)
+CALL HEGVD( h_FMO , dumb_S , Dual%erg , 1 , 'V' , 'L' , info )
+if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD/eigen/FMO '
 
- If (info /= 0) write(*,*) 'info = ',info,' in SYGVD/eigen_FMO '
+ALLOCATE(Dual%R(N,N)) 
+ALLOCATE(Dual%L(N,N)) 
+Dual%L = transpose(conjg(h_FMO))
 
- ALLOCATE(Dual%R(N,N)) 
- ALLOCATE(Dual%L(N,N)) 
- Dual%L = cmplx( transpose(h_FMO) , D_zero ) 
+CALL hemm( S_complex , h_FMO , Dual%R )
 
- CALL symm( s_FMO , h_FMO , aux_R )
- Dual%R = cmplx( aux_R , D_zero )
+DeAllocate( S_complex , s_FMO , h_FMO , dumb_S )
 
- DeAllocate( s_FMO , h_FMO , dumb_S , aux_R )
-
- Dual% Fermi_state = sum(system%Nvalen)/two + mod( sum(system%Nvalen) , 2 )
+Dual% Fermi_state = sum(system%Nvalen)/two + mod( sum(system%Nvalen) , 2 )
 
 ! save energies of the FMO system 
 If( present(fragment) .AND. (fragment=="H") ) then
@@ -363,15 +362,24 @@ else
 end IF
 
 N_of_FMO_electrons = sum( system%Nvalen )
-write(9,*) float(N_of_FMO_electrons) / 2.0
-do i = 1 , N
-!    write(9,*) i , Dual%erg(i)
-    write(9,fmt='(i5,3f20.14)') i , DUAL%erg(i) , dreal(dot_product( Dual%L(i,:) , Dual%R(:,i) )) , &
-                                                  dreal(dot_product( Dual%L(i,:) , dcmplx( basis( : ) % s , D_zero ) * Dual%R(:,i) ))
-end do
-CLOSE(9)   
+Fermi_level = merge(dfloat(N_of_FMO_electrons),dfloat(N_of_FMO_electrons)/TWO,SOC)
+write(9,*) "# Fermi level = " , Fermi_level
+if( SOC ) then
+    write(9,100) "#" , "Level" , "Energy" , "Sz"
+    do i = 1 , N
+        write(9,*) i , Dual%erg(i) , dreal( sum( Dual%L(i,:) * dcmplx( basis( : ) % s , D_zero ) * Dual%R(:,i) ) )
+    end do
+else
+    write(9,100) "#" , "Level" , "Energy"
+    do i = 1 , N
+        write(9,*) i , Dual%erg(i)
+    end do
+end if
+close(9)
 
 Print*, '>> eigen_FMO done <<'
+
+100 format(a1,a11,a19,a24)
 
 end subroutine eigen_FMO
 !
@@ -385,24 +393,29 @@ type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: S_matrix(:,:)
 
 ! local variables ... 
-integer :: i , j , N
-real*8  , allocatable   :: h(:,:)
+real*8  , allocatable :: h(:,:)
+integer               :: i , j , N , N2
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
+!----------------------------------------------------------
 
-N = size(basis)
+N  = size(basis)
+N2 = merge(N/2,N,SOC)
+
 ALLOCATE( h(N,N) , source = D_zero )
 
-do j = 1 , N
-  do i = 1 , j 
+! spin up orbital block
+do j = 1 , N2
+    do i = j , N2
 
-        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j)
-
-        h(j,i) = h(i,j)
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
 
     end do
 end do
+
+! spin down orbital block
+if( SOC ) h( N2 + 1 : N , N2 + 1 : N ) = h( 1 : N2 , 1 : N2 )
 
 end function Build_Huckel
 !

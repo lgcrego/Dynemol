@@ -11,6 +11,9 @@ then
 	rm -r -f MO.trunk 2> qdynamo.err
 	mkdir MO.trunk
 
+	rm -r -f spin.trunk 2> qdynamo.err
+	mkdir spin.trunk
+
 	mkdir opt.trunk 2> qdynamo.err
 	mv opt.trunk/view_cost.dat opt.trunk/old_view_cost.dat 2> qdynamo.err
 

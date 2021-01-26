@@ -8,7 +8,7 @@ module diagnostic_m
                                          survival , EnvField_ , &
                                          Alpha_Tensor ,         &
                                          GaussianCube ,         &
-                                         HFP_Forces
+                                         HFP_Forces , SOC
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
@@ -26,6 +26,7 @@ module diagnostic_m
  use Data_Output                , only : Dump_stuff
  use Embedded_FF_Alpha          , only : AlphaPolar
  use HuckelForces_m             , only : HuckelForces
+ use Spin_Align_m               , only : ScanSpinOrientation
 
  public :: diagnostic
 
@@ -48,7 +49,6 @@ implicit none
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 
- 
 ! preprocessing stuff ...................................
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
@@ -75,6 +75,8 @@ CALL Read_Command_Lines_Arguments( MOnum )
  If( Alpha_Tensor .AND. DP_Moment ) CALL AlphaPolar( Extended_Cell, ExCell_basis ) 
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
+
+ if( SOC ) CALL ScanSpinOrientation( Extended_Cell , ExCell_basis )
 
  CALL Total_DOS( UNI , ExCell_basis , TDOS )
 

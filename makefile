@@ -41,6 +41,11 @@ CC_PARALLEL = -qopenmp
 # Others
 CC_FLAGS = -O2 $(CC_PARALLEL)
 
+#######################
+# SPIN-ORBIT COUPLING #
+#######################
+# Uncomment the line below when using Sin-Orbit Coupling
+#SPIN = -DUSE_SOC 
 
 #######################
 # CUDA CONFIGURATIONS #
@@ -120,12 +125,12 @@ SOURCE2 = constants_m.o \
 		  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
-                  checklist.o \
+          checklist.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \
@@ -146,7 +151,7 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
@@ -157,11 +162,11 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -176,6 +181,7 @@ SOURCE2 = constants_m.o \
 		  MM_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
+          spin_scan.o \
 		  CG_EH_driver.o \
 		  ga_routines.o \
 		  CG_MM_driver.o \
@@ -186,7 +192,7 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
 		  AO_adiabatic.o \
 		  Chebyshev_driver.o \
@@ -246,16 +252,16 @@ vtune: debug
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
 .f.o:
-	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) $(SPIN) -c $<
 
 .F90.o:
-	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) $(SPIN) -c $<
 
 .cpp.o:
-	$(CC) $(CC_ALL) -align -fno-exceptions -restrict $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+	$(CC) $(CC_ALL) -align -fno-exceptions -restrict $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) $(SPIN) -c $<
 
 .cu.o:
-	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) $(SPIN) -c $<
 
 
 clean:

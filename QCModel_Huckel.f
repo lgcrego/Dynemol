@@ -34,18 +34,15 @@
 !==================================================
 use Matrix_math
 implicit none
-type(structure)             , intent(in)    :: system
-type(STO_basis)             , intent(in)    :: basis(:)
-type(C_eigen)               , intent(inout) :: QM
-integer          , optional , intent(in)    :: it
-
+type(structure)            , intent(in)    :: system
+type(STO_basis)            , intent(in)    :: basis(:)
+type(C_eigen)              , intent(inout) :: QM
+integer         , optional , intent(in)    :: it
 
 ! local variables ...
-complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:)
-complex*16 , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8     , ALLOCATABLE :: h_orb(:,:)  , S_matrix(:,:) , S_root(:,:)
-real*8     , ALLOCATABLE :: tool(:,:) , S_eigen(:)
-integer                  :: i , N , info 
+complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:) , Lv(:,:) , Rv(:,:) 
+real*8     , ALLOCATABLE :: h_orb(:,:) , S_matrix(:,:) , S_root(:,:) , tool(:,:) , S_eigen(:)
+integer                  :: i , j , N , info , N_of_electrons , N_occupied_MOs
 logical    , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -72,8 +69,8 @@ if( SOC ) then
 
     CALL spin_orbit_h( basis , h_spin , S_matrix )
     allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
-!    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
     deallocate( h_spin )
+!    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
 
 else
 
@@ -86,36 +83,40 @@ deallocate(h_orb)
 CALL HEGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD in EigenSystem '
 
+deallocate( dumb_S )
+
 select case ( driver ) 
 
     case default
 
-          !---------------------------------------------------
-          !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
-          !
-          !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
-          !
-          !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
-          !---------------------------------------------------
+        !---------------------------------------------------
+        !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
+        !
+        !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
+        !
+        !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
+        !---------------------------------------------------
 
-          Allocate( Lv(N,N) )
-          Allocate( Rv(N,N) )
+        Allocate( Lv(N,N) )
+        Allocate( Rv(N,N) )
 
-          Lv = h
-          Deallocate(h)
+        Lv = h
+        Deallocate(h)
 
-          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-          ! eigenvectors in the rows of QM%L
-          QM%L = transpose(Lv) 
+        If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+        ! eigenvectors in the rows of QM%L
+        QM%L = transpose(conjg(Lv)) 
 
-          allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
-          ! Rv = S * Lv ...
-          call hemm( S_complex, Lv, Rv )
-          deallocate( S_matrix , S_complex )
+        allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
+        ! Rv = S * Lv ...
+        call hemm( S_complex, Lv, Rv )
+        deallocate( Lv , S_matrix , S_complex )
 
-          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
-          ! eigenvectors in the columns of QM%R
-          QM%R = Rv
+        If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+        ! eigenvectors in the columns of QM%R
+        QM%R = Rv
+
+        deallocate(Rv)
 
     case ("slice_FSSH" )    
 
@@ -184,14 +185,22 @@ end select
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! save energies of the TOTAL system ...
 OPEN(unit=9,file='system-ergs.dat',status='unknown')
+if( SOC ) then
+    write(9,100) "#" , "Level" , "Energy" , "Sz"
     do i = 1 , N
-!        write(9,*) i , QM%erg(i)
-        write(9,fmt='(i5,3f20.14)') i , QM%erg(i) , dreal(dot_product( QM%L(i,:) , QM%R(:,i) )) , &
-                                                    dreal(dot_product( QM%L(i,:) , dcmplx( basis( : ) % s , D_zero ) * QM%R(:,i) ))
+        write(9,*) i , QM%erg(i) , dreal( sum( QM%L(i,:) * dcmplx( basis( : ) % s , D_zero ) * QM%R(:,i) ) )
     end do
+else
+    write(9,100) "#" , "Level" , "Energy"
+    do i = 1 , N
+        write(9,*) i , QM%erg(i)
+    end do
+end if
 close(9)
 
 If( verbose ) Print*, '>> EigenSystem done <<'
+
+100 format(a1,a11,a19,a24)
 
 end subroutine EigenSystem
 !

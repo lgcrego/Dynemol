@@ -29,23 +29,24 @@ logical , parameter :: T_ = .true. , F_ = .false.
 select case( DRIVER )
 
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
-      
-        If( ad_hoc == F_ .OR. Survival == F_ ) then
-            CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
-            stop 
-         end If
+       
+       If( ad_hoc == F_ .OR. Survival == F_ ) then
+           CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
+           stop 
+           end If
 
     case( "avrg_confgs" )
 
-        If( file_type      /= "trajectory"   ) stop ">>> Mind: if DRIVER=^avrg_confgs^: file_type must be ^trajectory^; check parameters.f"
-        If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^avrg_confgs^: nuclear_matter must be ^extended_sys^; check parameters.f"
+       If( file_type      /= "trajectory"   ) stop ">>> Mind: if DRIVER=^avrg_confgs^: file_type must be ^trajectory^; check parameters.f"
+       If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^avrg_confgs^: nuclear_matter must be ^extended_sys^; check parameters.f"
 
     case( "Genetic_Alg" )
 
-        If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: nuclear_matter must be ^extended_sys^; check parameters.f"
-        If( EnvField_      == .true.         ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: flag ^EnvField_ = F_^; check parameters.f"
+       If( nuclear_matter /= "extended_sys" ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: nuclear_matter must be ^extended_sys^; check parameters.f"
+       If( EnvField_      == .true.         ) stop ">>> Mind: if DRIVER=^Genetic_Alg^: flag ^EnvField_ = F_^; check parameters.f"
 
 end select
+
 
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     CALL system("sed '11i >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<' warning.signal |cat")
@@ -80,10 +81,8 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
 
         write(10,'(" QMMM            :" , A10)') merge(".true. <==",".false.   ",QMMM)            
         write(10,'(" OPT_parms       :" , A10)') merge(".true. <==",".false.   ",OPT_parms)       
-
-        If( SOC          ) write(10,'(" SOC             :" , A10)') ".true. <=="
-        If( SPECTRUM     ) write(10,'(" SPECTRUM        :" , A10)') ".true. <=="
-        If( Alpha_Tensor ) write(10,'(" Alpha_Tensor    :" , A10)') ".true. <=="    
+        write(10,'(" SPECTRUM        :" , A10)') merge(".true. <==",".false.   ",SPECTRUM)        
+        write(10,'(" Alpha_Tensor    :" , A10)') merge(".true. <==",".false.   ",Alpha_Tensor)    
 
         tag = merge("no ","yes",GaussianCube)       
         write(10 , '(" GaussianCube    :" , A10)' , advance=tag) merge(".true. <==",".false.   ",GaussianCube)    
@@ -95,9 +94,9 @@ open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
         If( NetCharge ) &
             write(10,'(" CH_and_DP_step = " , I0)') CH_and_DP_step      
 
-        If( DensityMatrix   ) write(10,'(" DensityMatrix   :" , A10)') ".true. <=="
-        If( AutoCorrelation ) write(10,'(" AutoCorrelation :" , A10)') ".true. <=="
-        If( VDOS_           ) write(10,'(" VDOS_           :" , A10)') ".true. <=="
+        write(10,'(" DensityMatrix   :" , A10)') merge(".true. <==",".false.   ",DensityMatrix)   
+        write(10,'(" AutoCorrelation :" , A10)') merge(".true. <==",".false.   ",AutoCorrelation) 
+        write(10,'(" VDOS_           :" , A10)') merge(".true. <==",".false.   ",VDOS_)           
 
         tag = merge("no ","yes",EnvField_)       
         write(10 , '(" EnvField_       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",EnvField_)       
@@ -208,6 +207,7 @@ logical              :: TorF
 integer               :: i , j , x , y , z
 integer               :: Nbonds , Nangs , Ndiheds , KeyLeft , KeyRight
 integer , allocatable :: BondKeys(:) , AngKeys(:)
+logical               :: flag
 
 Nbonds  =  size(bonds (:,1)) 
 Nangs   =  size(angs  (:,1))
@@ -225,15 +225,17 @@ end do
 ! checking angs topology ...
 do i = 1 , Nangs
 
+     flag = .false.
+
      x = angs(i,1)  ;  y = angs(i,2) 
      KeyLeft = PairingFunction(x,y) 
-     If( .not. any(KeyLeft == BondKeys) ) call error_message(i,angs,instance="ang")
+     If( .not. any(KeyLeft == BondKeys) ) call error_message(i,angs,flag,instance="ang")
 
      x = angs(i,2)  ;  y = angs(i,3) 
      KeyRight = PairingFunction(x,y) 
-     If( .not. any(KeyRight == BondKeys) ) call error_message(i,angs,instance="ang")
+     If( .not. any(KeyRight == BondKeys) ) call error_message(i,angs,flag,instance="ang")
 
-     If( KeyLeft == KeyRight ) call error_message(i,angs,instance="ang")
+     If( KeyLeft == KeyRight ) call error_message(i,angs,flag,instance="ang")
 
 end do
 
@@ -248,13 +250,15 @@ end do
 
 do i = 1 , Ndiheds
 
+     flag = .false.
+
      x = diheds(i,1)  ;  y = diheds(i,2)   ;  z = diheds(i,3) 
      KeyLeft = CantorPairing( x , y , z ) 
-     If( .not. any(KeyLeft == AngKeys) ) call error_message(i,diheds,instance="dihed")
+     If( .not. any(KeyLeft == AngKeys) ) call error_message(i,diheds,flag,instance="dihed")
 
      x = diheds(i,2)  ;  y = diheds(i,3)   ;  z = diheds(i,4) 
      KeyRight = CantorPairing( x , y , z ) 
-     If( .not. any(KeyRight == AngKeys) ) call error_message(i,diheds,instance="dihed")
+     If( .not. any(KeyRight == AngKeys) ) call error_message(i,diheds,flag,instance="dihed")
 
 end do
 
@@ -271,11 +275,11 @@ end function Checking_Topology
 !
 !
 !
-!===============================================
+!========================================
  function CantorPairing(i,j,k) result(R)
 ! 3-tupling Cantor Function ...
 ! f(i,j,k) = f(k,j,i)
-!===============================================
+!========================================
 implicit none
 integer            , intent(in) :: i,j,k
 
@@ -323,16 +327,19 @@ end function PairingFunction
 !
 !
 !
-!===========================================
- subroutine error_message(i , a , instance ) 
-!===========================================
+!==================================================
+ subroutine error_message(i , a , flag , instance ) 
+!==================================================
 implicit none
 integer          , intent(in) :: i
 integer          , intent(in) :: a(:,:)
+logical          , intent(inout) :: flag
 character(len=*) , intent(in) :: instance
 
 If( .not. done ) open (10, file='log.trunk/Topology.test.log', status='unknown')
+done = .true.
 
+If( flag == .true. ) return
 select case (instance)
 
        case("ang")
@@ -342,8 +349,7 @@ select case (instance)
        write(10,233) a(i,1) , a(i,2) , a(i,3)  , a(i,4) 
 
 end select
-
-done = .true.
+flag = .true.
 
 include 'formats.h'
 
