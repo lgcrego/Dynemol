@@ -50,6 +50,8 @@ module AO_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use decoherence_m           , only: apply_decoherence
+    use Ehrenfest_Builder       , only: EhrenfestForce 
+    use Ehrenfest_CSDM          , only: E_CSDM
 
     public :: AO_adiabatic
 
@@ -114,11 +116,14 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
-        If( driver == "slice_FSSH" ) then
-            CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
-            else
-            CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
-            end if
+        select case (driver)
+            case("slice_FSSH") 
+                CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
+            case("slice_CSDM") 
+                CALL E_CSDM( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate , representation="MO")
+            case("slice_AO") 
+                CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+            end select 
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
@@ -374,10 +379,9 @@ select case (driver)
        case("slice_FSSH") ! <== Lowdin orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
            MO_bra = conjg(MO_ket)
-print*, PES
            CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PES , t_rate )
 
-       case("slice_AO")   ! <== asymmetrical orthogonalization ...
+       case("slice_AO","slice_CSDM")   ! <== asymmetrical orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
@@ -409,7 +413,7 @@ select case (driver)
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            DUAL_bra = conjg(DUAL_ket)
 
-       case("slice_AO")   ! <== asymmetrical orthogonalization ...
+       case("slice_AO","slice_CSDM")   ! <== asymmetrical orthogonalization ...
 
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -561,9 +565,9 @@ end subroutine dump_Qdyn
 !
 !
 !
-!===============================================
+!========================================================
  subroutine QMMM_erg_status( frame , t_rate , triggered )
-!===============================================
+!========================================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
 integer, intent(in)    :: frame
@@ -572,17 +576,19 @@ logical, intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
-real*8     :: Frontier_gap
 complex*16 :: wp_energy(n_part)
-logical    :: jump
 
-triggered = no
+triggered = NO
 
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
-Unit_Cell% QM_erg    =  update_QM_erg()
+Unit_Cell% QM_erg    =  update_QM_erg( t_rate , triggered )
 Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
 
 if( mod(frame,MM_log_step) == 0 ) then 
+
+  open( unit = 13 , file = "dyn.trunk/classical_E.dat" , status = "unknown", action = "write" , position = "append" )
+  open( unit = 16 , file = "dyn.trunk/quantum_E.dat"   , status = "unknown", action = "write" , position = "append" )
+
   select case (Units_MM)
     case( "eV" )    
         write(13,'(I7,4F15.5)') frame, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
@@ -593,15 +599,9 @@ if( mod(frame,MM_log_step) == 0 ) then
         write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
 
     end select
-end if
 
-if( PES(1) == PES(2) ) then
-
-   call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
-   
-   Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-   
-   if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
+    close(13)
+    close(16)
 
 end if
 
@@ -609,34 +609,53 @@ end subroutine  QMMM_erg_status
 !
 !
 !
-!=========================
- function update_QM_erg &
+!==============================================
+ function update_QM_erg( t_rate , triggered ) &
  result(QM_erg)
-!=========================
+!==============================================
 implicit none
+real*8 , optional , intent(in)    :: t_rate
+logical, optional , intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
-real*8     :: QM_erg
+real*8     :: QM_erg , Frontier_gap
 complex*16 :: wp_energy(n_part)
+logical    :: jump
 
 select case ( driver )
 
-       case("slice_FSSH") 
-       If( it == 1) then
-           QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-           else
-           QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-           end If
+  case("slice_FSSH") 
 
-       case("slice_AO")
-           do n = 1 , n_part
-               if( eh_tag(n) == "XX" ) cycle
-               wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-               end do
-           QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+            If( it == 1) then
+                QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+                return
+            else
+                QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+            end If
 
-       end select
+            If( PES(1) == PES(2) ) then
+            
+               call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
+               
+               Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+               
+               if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
+            
+            end if
+
+  case("slice_AO","slice_CSDM")
+
+            do n = 1 , n_part
+
+                if( eh_tag(n) == "XX" ) cycle
+
+                wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+
+            end do
+            QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+  end select
 
 end function update_QM_erg
 !
