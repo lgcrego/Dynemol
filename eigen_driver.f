@@ -6,7 +6,8 @@ module QMDynamicSlice_driver_m
     use parameters_m                , only : survival , driver , n_part
     use Data_Output                 , only : Dump_stuff 
     use Schroedinger_m              , only : DeAllocate_QDyn
-    use AO_adiabatic_m              , only : AO_adiabatic
+    use TDSE_adiabatic_m            , only : TDSE_adiabatic
+    use CSDM_adiabatic_m            , only : CSDM_adiabatic
     use Chebyshev_driver_m          , only : Chebyshev_driver
 
     public :: QMDynamicSlice_driver
@@ -35,7 +36,11 @@ select case ( DRIVER )
 
     case( "slice_AO" , "slice_FSSH" )
 
-        CALL AO_adiabatic ( QDyn , it )
+        CALL TDSE_adiabatic ( QDyn , it )
+
+    case( "slice_CSDM" )
+
+        CALL CSDM_adiabatic ( QDyn , it )
 
     case( "slice_Cheb" )
 

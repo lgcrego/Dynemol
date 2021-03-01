@@ -195,7 +195,7 @@ implicit none
  character(len=2)            , intent(in)  :: instance
 
 ! local variables ...
- integer :: i , j , k
+ integer :: i , k
  real*8  :: check
  real*8  , allocatable :: aux(:,:)
 

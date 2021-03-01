@@ -49,7 +49,7 @@ type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
 integer         , allocatable   :: indx(:)
-integer                         :: i , generation , info , Pop_start , GeneSize
+integer                         :: i , generation , Pop_start , GeneSize
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
@@ -424,7 +424,7 @@ implicit none
 type(STO_basis) , intent(inout) :: basis(:)
 
 ! local variables ...
-integer :: i , j , ioerr , err , n , N_of_EHSymbol
+integer :: i , j , ioerr , n , N_of_EHSymbol
 character(1) :: dumb
 
 OPEN(unit=3,file='input-GA.dat',status='old',iostat=ioerr,err=10)

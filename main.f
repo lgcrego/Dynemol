@@ -45,7 +45,7 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "slice_AO" , "slice_FSSH" , "slice_Cheb" )
+    case ( "slice_AO" , "slice_FSSH" , "slice_Cheb" , "slice_CSDM" )
         CALL QMDynamicSlice_driver
 
     case ( "avrg_confgs" )

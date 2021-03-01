@@ -170,7 +170,7 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
 
     motion_detector_ready = present(recycle) .AND. ready
 
-    S_matrix = 0
+    S_matrix = d_zero
 
     !$OMP parallel do &
     !$OMP   default(shared) &
@@ -341,20 +341,7 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
     real*8 :: rl2(-mxl:mxl,-mxl:mxl,0:mxl)
 
     ib = site
-
-    !$OMP parallel do schedule(static) &
-    !$OMP   default(shared) private(ia, jb, ja, a, b)
-    do ia = ib , a_system%atoms
-        do jb = 1, atom(b_system%AtNo(ib))%DOS
-            do ja = 1, atom(a_system%AtNo(ia))%DOS
-                b = b_system%BasisPointer(ib) + jb
-                a = a_system%BasisPointer(ia) + ja
-                a = a - a_basis(a)%copy_No * size(b_basis)
-                S_matrix(a,b) = 0
-            end do
-        end do
-    end do
-    !$OMP end parallel do
+    S_matrix = d_zero
 
     ! The parallel region below is a very complicated one. It takes many public
     ! matrices, for reading, and performs lots of writes in a single, shared,

@@ -28,7 +28,7 @@ logical , parameter :: T_ = .true. , F_ = .false.
 ! feel free to add your own dynemol-for-dummies checklist ...
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
        
        If( ad_hoc == F_ .OR. Survival == F_ ) then
            CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' warning.signal |cat")
@@ -65,7 +65,6 @@ end subroutine checklist
 implicit none
  
 ! local variables ... 
- integer :: i
  character(len=3)  :: tag
  character(len=12) :: number_string
 
@@ -204,7 +203,7 @@ integer , intent(in) :: diheds(:,:)
 logical              :: TorF
  
 ! local variables ... 
-integer               :: i , j , x , y , z
+integer               :: i , x , y , z
 integer               :: Nbonds , Nangs , Ndiheds , KeyLeft , KeyRight
 integer , allocatable :: BondKeys(:) , AngKeys(:)
 logical               :: flag

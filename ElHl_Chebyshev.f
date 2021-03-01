@@ -172,7 +172,7 @@ real*8           , intent(in)    :: delta_t
 integer          , intent(in)    :: it
 
 ! local variables...
-integer :: j , N , it_sync
+integer :: N , it_sync
 real*8  :: t_max , tau_max , tau(2) , t_init
 
 t_init = t
