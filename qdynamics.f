@@ -14,8 +14,7 @@ module qdynamics_m
  use Structure_Builder    , only : Generate_Structure ,   &
                                    Basis_Builder ,        &
                                    Unit_Cell ,            &
-                                   Extended_Cell ,        &
-                                   ExCell_Basis
+                                   Extended_Cell 
  use DP_main_m            , only : Dipole_Matrix
  use Dielectric_Potential , only : Environment_SetUp 
  use Oscillator_m         , only : Optical_Transitions
@@ -42,6 +41,7 @@ implicit none
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(f_time)                   :: QDyn
+ type(STO_basis) , allocatable  :: ExCell_basis(:)
 
  
 ! preprocessing stuff ...................................

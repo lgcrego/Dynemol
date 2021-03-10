@@ -133,8 +133,6 @@ SOURCE2 = constants_m.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
-		  f_intra.o \
-		  f_inter.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -151,11 +149,13 @@ SOURCE2 = constants_m.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
-          decoherence.o \
 		  Ehrenfest.o \
 		  CSDM.o \
 		  FSSH.o \
+          decoherence.o \
 		  CoulInt_QMMM.o \
+		  f_intra.o \
+		  f_inter.o \
 		  FMO.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \

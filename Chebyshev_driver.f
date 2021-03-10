@@ -18,8 +18,7 @@ module Chebyshev_driver_m
     use Structure_Builder           , only : Unit_Cell ,                    &
                                              Extended_Cell ,                &
                                              Generate_Structure ,           &
-                                             Basis_Builder ,                &
-                                             ExCell_basis
+                                             Basis_Builder
     use tuning_m                    , only : eh_tag
     use DP_main_m                   , only : Dipole_Matrix                 
     use Solvated_M                  , only : Prepare_Solvated_System 
@@ -44,10 +43,11 @@ module Chebyshev_driver_m
     private
 
     ! module variables ...
-    Complex*16      , allocatable , dimension(:,:)  :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
-    real*8          , allocatable , dimension(:)    :: Net_Charge_MM
-    real*8                                          :: t
-    integer                                         :: nn , it
+    type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
+    Complex*16      , allocatable , dimension(:,:) :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
+    real*8          , allocatable , dimension(:)   :: Net_Charge_MM
+    real*8                                         :: t
+    integer                                        :: nn , it
 
 contains
 !

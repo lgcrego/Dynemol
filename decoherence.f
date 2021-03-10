@@ -3,15 +3,17 @@ module decoherence_m
     use type_m
     use constants_m
     use parameters_m      , only: n_part
-    use Structure_Builder       , only: Unit_Cell
+    use Structure_Builder , only: Unit_Cell
 
-    public :: apply_decoherence , DecoherenceRate
+    public :: apply_decoherence , DecoherenceRate , DecoherenceForce
 
     private
 
     !module parameters ...
+    logical , parameter :: T_ = .true. , F_ = .false.
 
     !module variables ...
+    real*8 , allocatable :: tau_inv(:,:) , veloc(:,:) , coord(:,:)
 
     interface apply_decoherence
         module procedure FirstOrderDecoherence
@@ -33,20 +35,19 @@ real*8     , intent(in)    :: t_rate
 
 ! local variables ...
 integer :: n , i 
-real*8  :: coeff , summ(2)
-real*8 , allocatable :: tau_inv(:,:)
+real*8  :: dt , coeff , summ(2)
 
 ! J. Chem. Phys. 126, 134114 (2007)
-CALL  DecoherenceRate( erg , PES , tau_inv )
-! for the wavefunction tau(wvpckt) = 2.0*tau(rho) ...
-tau_inv = tau_inv * HALF
+CALL  DecoherenceRate( erg , PES )
+! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
+dt = t_rate * HALF
 
 summ = d_zero
 do n = 1 , n_part 
 do i = 1 , size(erg) 
      if( i == PES(n) ) cycle
-     MO_bra(i,n) = MO_bra(i,n) * exp(-t_rate*tau_inv(i,n))
-     MO_ket(i,n) = MO_ket(i,n) * exp(-t_rate*tau_inv(i,n))
+     MO_bra(i,n) = MO_bra(i,n) * exp(-dt*tau_inv(i,n))
+     MO_ket(i,n) = MO_ket(i,n) * exp(-dt*tau_inv(i,n))
      summ(n) = summ(n) + MO_bra(i,n)*MO_ket(i,n)
      end do
      end do
@@ -59,43 +60,266 @@ do n = 1 , n_part
      MO_ket(PES(n),n) = MO_ket(PES(n),n) * coeff
      end do
 
-deallocate( tau_inv )
-
 end subroutine FirstOrderDecoherence
 !
 !
 !
-!=======================================================
- subroutine DecoherenceRate( ergMO , PES , tau_inv )
-!=======================================================
+!=======================================
+ subroutine DecoherenceRate( erg , PES )
+!=======================================
 implicit none
-real*8                , intent(in)  :: ergMO(:)
-integer               , intent(in)  :: PES(:)
-real*8  , allocatable , intent(out) :: tau_inv(:,:)
+real*8  , intent(in) :: erg(:)
+integer , intent(in) :: PES(:)
 
 !local parameters ...
 real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
-integer :: PPP(2) = [16,15]
 
-!local variables ...                                                                                                                                                    
+!local variables ...   
 integer :: i , j
 real*8  :: Const , tau , dE
 
 ! kinetic energy in eV units ...
 Const = d_one + C/Unit_Cell%MD_Kin  !   E_kin()
 
-allocate( tau_inv(size(ErgMO),2) , source = d_zero )
+allocate( tau_inv(size(erg),2) , source = d_zero )
 
 do j = 1 , n_part 
-do i = 1 , size(ErgMO)
-     if( i == PPP(j) ) cycle 
-        dE = abs(ErgMO(i) - ErgMO(PPP(j)))
+do i = 1 , size(erg)
+     if( i == PES(j) ) cycle 
+        dE = abs(erg(i) - erg(PES(j)))
         tau_inv(i,j) = h_bar * Const / dE
         tau_inv(i,j) = d_one/tau_inv(i,j)
-end do
-end do
+        end do
+        end do
 
 end subroutine DecoherenceRate
+!
+!
+!
+!
+!===================================================================
+ subroutine DecoherenceForce( system , MO_bra , MO_ket , erg , PST )
+!===================================================================
+ use MD_read_m   , only: atom
+ use MM_input    , only: read_velocities
+ implicit none
+ type(structure) , intent(in) :: system
+ complex*16      , intent(in) :: MO_bra(:,:)
+ complex*16      , intent(in) :: MO_ket(:,:)
+ real*8          , intent(in) :: erg(:)
+ integer         , intent(in) :: PST(:)
+
+! local parameters ...
+real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
+real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+
+! local variables ...
+integer  :: i, j, n, N_atoms, space
+real*8   :: aux
+real*8  , allocatable , dimension(:,:)     :: rho, v_x_s
+real*8  , allocatable , dimension(:,:,:)   :: ForceN
+real*8  , allocatable , dimension(:,:,:,:) :: s_N_ik
+
+CALL preprocess( system )
+
+N_atoms = system%atoms
+space   = size(erg)
+
+! set atomic forces to zero beforehand ...
+forall( i=1:N_atoms ) atom(i)% f_CSDM(:) = d_zero
+
+if( Unit_Cell% MD_Kin < mid_prec ) return
+     
+s_N_ik = get_S_versor( system , PST , space )
+
+allocate( v_x_s(space,n_part) )
+do j = 1 , n_part
+     !!$OMP parallel do private(n) firstprivate(j) default(shared) reduction(+:v_x_s)
+     do i = 1 , space
+          v_x_s(i,j) = d_zero
+          do n = 1 , N_atoms
+             If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+             v_x_s(i,j) = v_x_s(i,j) + sum(veloc(:,n)*s_N_ik(:,n,i,j)) 
+             end do  
+     end do
+     !!$OMP end parallel do
+end do
+v_x_s = v_x_s * V_factor  
+do concurrent( i=1:space , j=1:n_part , v_x_s(i,j)/=d_zero ) 
+     v_x_s(i,j) = d_one/v_x_s(i,j)
+     end do
+
+allocate( rho(space,n_part) )
+forall(j=1:2) rho(:,j) = MO_ket(:,j)*MO_bra(:,j) 
+
+allocate( ForceN(3,N_atoms,n_part) , source=d_zero )
+
+do i = 1 , space 
+     !===================================================================
+     ! electron ...
+     If( i == PST(1) ) cycle     
+     aux = rho(i,1)*tau_inv(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
+     do n = 1 , N_atoms
+          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+          ForceN(:,n,1) = ForceN(:,n,1) + aux*s_N_ik(:,n,i,1)
+          end do
+     !===================================================================
+end do
+
+
+
+print*,rho(16,1), rho(17,1)
+
+print*,tau_inv(16,1),tau_inv(17,1)
+
+print*,(erg(16)-erg(PST(1))) ,(erg(17)-erg(PST(1)))
+
+print*,v_x_s(16,1), v_x_s(17,1)
+
+
+
+
+
+
+
+do i = 1 , space 
+     !===================================================================
+     ! hole ...
+     If( i == PST(2) ) cycle     
+     aux = rho(i,2)*tau_inv(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
+     do n = 1 , N_atoms
+          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+          ForceN(:,n,2) = ForceN(:,n,2) + aux*s_N_ik(:,n,i,2)
+          end do
+     !===================================================================
+end do
+
+do n = 1 , N_atoms
+     If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+     atom(n)% f_CSDM(:) = ( ForceN(:,n,1) - ForceN(:,n,2) ) * eVAngs_2_Newton 
+     end do 
+
+deallocate( rho , tau_inv , v_x_s , s_N_ik , ForceN )  
+
+end subroutine DecoherenceForce
+!
+!
+!
+!===============================================
+ function get_S_versor( system , PST , space ) &
+ result(s_N_ik)
+!===============================================
+use Ehrenfest_CSDM, only: d_NA_El , d_NA_Hl
+
+implicit none
+type(structure) , intent(in) :: system
+integer         , intent(in) :: PST(:)
+integer         , intent(in) :: space
+
+! local parameters ...
+real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+
+! local variables ...
+integer :: i , n , N_atoms
+real*8  :: norm_d , norm_S , R2 , v_x_R , aux
+real*8 , allocatable :: V_vib(:,:) , v_x_dNA(:,:) , s_N_ik(:,:,:,:)
+
+N_atoms = system%atoms
+
+! V_vib = (\vec{V}\cdot\hat{R})\hat{R} ... units=Ang/ps
+allocate( V_vib(3,N_atoms) , source=d_zero )
+do n = 1 , N_atoms
+     R2 = dot_product(coord(:,n),coord(:,n))
+     If( R2 < high_prec) cycle
+     v_X_R = dot_product(veloc(:,n),coord(:,n)) * V_factor
+     aux = v_X_R / R2
+     V_vib(:,n) = aux*coord(:,n)
+end do
+
+! MIND: d_NA_EL and d_NA_HL vectors are zero for "fixed" or "MM" atoms ...
+allocate( v_x_dNA(space,n_part) )
+!!$OMP parallel do private(n,xyz) firstprivate(i) default(shared) reduction(+:v_x_dNA)
+do i = 1 , space
+     v_x_dNA(i,:) = d_zero
+     do n = 1 , N_atoms
+        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+        ! electrons ... 
+        v_x_dNA(i,1) = v_x_dNA(i,1) + sum(veloc(:,n)*d_NA_El(:,n,i)) 
+        ! holes ...
+        v_x_dNA(i,2) = v_x_dNA(i,2) + sum(veloc(:,n)*d_NA_Hl(:,n,i)) 
+        end do  
+end do
+!!$OMP end parallel do
+v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
+
+! building decoherent force versor s_N_ik ...
+allocate( s_N_ik(3,N_atoms,space,n_part) , source = d_zero )
+
+do i = 1 , space
+     If( i == PST(1) ) cycle     
+     !=============================================================================================================
+     ! electron ...
+     do n = 1 , N_atoms
+          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+          norm_S = d_zero
+          norm_d = sum(d_NA_El(:,n,i)*d_NA_El(:,n,i)) 
+          norm_d = sqrt(d_one/norm_d)
+          ! the vector ...
+          s_N_ik(:,n,i,1) = v_x_dNA(i,1)*d_NA_El(:,n,i)*norm_d + V_vib(:,n)
+          norm_S = sum(s_N_ik(:,n,i,1)**2)
+          norm_S = sqrt(d_one/norm_S)
+          ! the versor ...
+          s_N_ik(:,n,i,1) = s_N_ik(:,n,i,1) * norm_S
+          end do
+          !========================================================================================================
+end do
+
+do i = 1 , space
+     If( i == PST(2) ) cycle     
+     !=============================================================================================================
+     ! hole ...
+     do n = 1 , N_atoms
+          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+          norm_S = d_zero
+          norm_d = sum(d_NA_Hl(:,n,i)*d_NA_Hl(:,n,i))
+          norm_d = sqrt(d_one/norm_d)
+          ! the vector ...
+          s_N_ik(:,n,i,2) = v_x_dNA(i,2)*d_NA_Hl(:,n,i)*norm_d + V_vib(:,n)
+          norm_S = sum(s_N_ik(:,n,i,2)**2)
+          norm_S = sqrt(d_one/norm_S)
+          ! the versor ...
+          s_N_ik(:,n,i,2) = s_N_ik(:,n,i,2) * norm_S
+          end do
+          !=========================================================================================================
+end do
+
+deallocate( V_vib , v_x_dNA )
+
+end function get_S_versor
+!
+!
+!
+!=================================
+ subroutine preprocess( system )
+!=================================
+use MD_read_m   , only: atom
+implicit none
+type(structure) , intent(in) :: system
+
+! local variables ...
+integer :: n , xyz
+
+If(.NOT. allocated(coord)) then
+   allocate( coord (3,system%atoms) )
+   allocate( veloc (3,system%atoms) )
+   end if
+
+do concurrent( n=1:system%atoms , xyz=1:3 )
+   coord(xyz,n) = system% coord(n,xyz)
+   veloc(xyz,n) = atom(n)% vel(xyz)
+   end do
+
+end subroutine preprocess
 !
 !
 !

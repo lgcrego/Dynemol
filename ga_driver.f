@@ -9,7 +9,7 @@ module GA_driver_m
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
- use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
+ use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder 
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -36,7 +36,7 @@ implicit none
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
- type(STO_basis) , allocatable  :: OPT_basis(:)
+ type(STO_basis) , allocatable  :: OPT_basis(:) , ExCell_basis(:)
 
 ! preprocessing stuff ...................................
 

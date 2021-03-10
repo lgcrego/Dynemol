@@ -24,7 +24,6 @@
                                              Include_OPT_parameters
 
     type(structure)                 , public  :: Unit_Cell , Extended_Cell 
-    type(STO_basis) , allocatable   , public  :: ExCell_basis(:)
     real*8          , allocatable   , public  :: Cube_Coef(:,:) , Cube_Zeta(:,:)
 
 

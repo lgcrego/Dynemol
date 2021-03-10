@@ -6,8 +6,8 @@ module MM_dynamics_m
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
-    use f_inter_m           , only : FORCEINTER
-    use f_intra_m           , only : FORCEINTRA
+    use f_inter_m           , only : ForceINTER
+    use f_intra_m           , only : ForceINTRA , ForceQMMM
     use QMMM_m              , only : QMMM_FORCE
     use for_force           , only : pot_total
     use Babel_m             , only : QMMM_key
@@ -102,9 +102,10 @@ dt = t_rate * pico_2_sec
 
 atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
 
-If( .not. QMMM ) forall(xyz=1:3) atom(:)% ftotal(xyz) = atom(:)% f_MM(xyz)
-
 ! Molecular dynamics ...
+
+If( QMMM ) CALL ForceQMMM
+
 CALL this % VV1( dt )
 
 if( driver /= "slice_FSSH" ) CALL move_to_box_CM
@@ -114,6 +115,8 @@ CALL Molecular_CM
 CALL ForceInter
 
 CALL ForceIntra
+
+If( QMMM ) CALL ForceQMMM
 
 CALL this% VV2( dt )
 
