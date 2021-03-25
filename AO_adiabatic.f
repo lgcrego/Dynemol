@@ -25,8 +25,7 @@ module AO_adiabatic_m
     use Structure_Builder       , only: Unit_Cell ,                      &
                                         Extended_Cell ,                  &
                                         Generate_Structure ,             &
-                                        Basis_Builder ,                  &
-                                        ExCell_basis                     
+                                        Basis_Builder
     use FMO_m                   , only: FMO_analysis ,                   &
                                         orbital , eh_tag                 
     use DP_main_m               , only: Dipole_Matrix ,                  &
@@ -51,19 +50,20 @@ module AO_adiabatic_m
     use Dielectric_Potential    , only: Environment_SetUp
     use decoherence_m           , only: apply_decoherence
     use Ehrenfest_Builder       , only: EhrenfestForce 
-    use Ehrenfest_CSDM          , only: E_CSDM
+                                        
 
     public :: AO_adiabatic
 
     private
 
     ! module variables ...
-    type(R_eigen)                              :: UNI , el_FMO , hl_FMO
-    Complex*16 , allocatable , dimension(:,:)  :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
-    Complex*16 , allocatable , dimension(:)    :: phase
-    real*8     , allocatable , dimension(:)    :: Net_Charge_MM
-    real*8                                     :: t
-    integer                                    :: it , mm , nn
+    type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
+    Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
+    Complex*16      , allocatable , dimension(:)   :: phase
+    real*8          , allocatable , dimension(:)   :: Net_Charge_MM
+    type(R_eigen)   :: UNI , el_FMO , hl_FMO
+    real*8          :: t
+    integer         :: it , mm , nn
 
 contains
 !
@@ -77,7 +77,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer        :: j , frame , frame_init , frame_final , frame_restart
+integer        :: frame , frame_init , frame_final , frame_restart
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
@@ -119,10 +119,8 @@ do frame = frame_init , frame_final , frame_step
         select case (driver)
             case("slice_FSSH") 
                 CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
-            case("slice_CSDM") 
-                CALL E_CSDM( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate , representation="MO")
             case("slice_AO") 
-                CALL EhrenfestForce ( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+                CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
             end select 
     end If
 
@@ -204,9 +202,7 @@ print*, QMMM
     End If
 
     CALL QMMM_erg_status( frame , t_rate , triggered )
-
-    Print*, frame 
-
+        
 end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
@@ -381,11 +377,11 @@ select case (driver)
            MO_bra = conjg(MO_ket)
            CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PES , t_rate )
 
-       case("slice_AO","slice_CSDM")   ! <== asymmetrical orthogonalization ...
+       case("slice_AO")   ! <== asymmetrical orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-end select
+       end select
 
 end subroutine U_nad
 !
@@ -413,7 +409,7 @@ select case (driver)
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            DUAL_bra = conjg(DUAL_ket)
 
-       case("slice_AO","slice_CSDM")   ! <== asymmetrical orthogonalization ...
+       case("slice_AO")   ! <== asymmetrical orthogonalization ...
 
            CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
@@ -574,10 +570,6 @@ integer, intent(in)    :: frame
 real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
-! local variables ...
-integer    :: n
-complex*16 :: wp_energy(n_part)
-
 triggered = NO
 
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
@@ -644,7 +636,7 @@ select case ( driver )
             
             end if
 
-  case("slice_AO","slice_CSDM")
+  case("slice_AO")
 
             do n = 1 , n_part
 
