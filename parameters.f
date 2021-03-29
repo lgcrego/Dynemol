@@ -5,6 +5,7 @@ use type_m
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
 integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
+integer                 :: h1_state , h2_state , e1_state , e2_state
 real*8                  :: t_i , t_f , sigma , B_field(3)
 real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
@@ -17,8 +18,9 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: SOC , resume
+logical                 :: SOC , resume , comb
 logical , parameter     :: T_ = .true. , F_ = .false. 
+character (len=1)       :: tp_comb
 
 contains
 !
@@ -34,17 +36,17 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "q_dynamics"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
   SOC            = T_                        ! <== Spin-orbit coupling
   OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -96,19 +98,21 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
-  t_i  =  0.d0                              
-  t_f  =  5.0d-1                              ! <== final time in PICOseconds
-  n_t  =  1000                                ! <== number of time steps
+  t_i  =  0.0d0                              
+  t_f  =  100.0d3                             ! <== final time in PICOseconds
+  n_t  =  20000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 2                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  comb = T_
+
+  hole_state     = 6                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 30                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 5                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -139,21 +143,22 @@ logical :: dynamic
 !           EXTERNAL MAGNETIC FIELD 
 !
   B_field = [ 0.0d0 , 0.0d0 , 0.0d0 ] ! in Tesla
+!  B_field = [ 0.0d0 , 0.0d0 , 1.0d-6 ] ! in Tesla
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
 !
 
-  Pop_Size       =  200  
-  N_generations  =  50    
-  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.5     
+  Pop_Size       =  100  
+  N_generations  =  30
+  Pop_range      =  0.5      ! <== range of variation of parameters [0:1]
+  Mutation_rate  =  0.5
 
-  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
+  Adaptive_      =  F_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
-  CG_            =  T_       ! <== use conjugate gradient method after genetic algorithm
-  Top_Selection  =  5        ! <== top selection to undergo CG_
+  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  2        ! <== top selection to undergo CG_
   profiling      =  T_       ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------

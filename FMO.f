@@ -307,7 +307,7 @@ character(*)    , optional    , intent(in)  :: fragment
 complex*16 , ALLOCATABLE :: h_FMO(:,:) , h_spin(:,:) , S_complex(:,:) , dumb_S(:,:)
 real*8     , ALLOCATABLE :: s_FMO(:,:) , h_Huckel(:,:)
 real*8                   :: Fermi_level
-integer                  :: N_of_FMO_electrons , i , N , info
+integer                  :: N_of_FMO_electrons , i , j , N , info
 
 N = size(basis)
 
@@ -323,10 +323,10 @@ end If
 
 if( SOC ) then
 
-    CALL spin_orbit_h( basis , h_spin , s_FMO )
-    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) + h_spin )
-    deallocate( h_spin )
-!    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) )
+!    CALL spin_orbit_h( basis , h_spin , s_FMO )
+!    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) + h_spin )
+!    deallocate( h_spin )
+    allocate( h_FMO(N,N) , source = dcmplx( h_Huckel , D_zero ) )
 
 else
 
@@ -377,9 +377,25 @@ else
 end if
 close(9)
 
+if( SOC ) then
+    If( present(fragment) .AND. (fragment=="H") ) then
+        OPEN(unit=9,file='hl_FMO-complet.dat',status='unknown')
+    else
+        OPEN(unit=9,file='el_FMO-complet.dat',status='unknown')
+    end IF
+    write(9,101) "Orb" , "Energy" , "Sz" , "s up" , "py up" , "pz up" , "px up" , "s down" , "py down" , "pz down" , "px down"
+    do i = 1 , N
+        write(9,102) i , Dual%erg(i) , dreal( sum( Dual%L(i,:) * Dual%R(:,i) * basis(:) % s ) ) , &
+                     ( dreal( Dual%L(i,j) * Dual%R(j,i) ) , j = 1 , N )
+    end do
+    close(9)
+end if
+
 Print*, '>> eigen_FMO done <<'
 
 100 format(a1,a11,a19,a24)
+101 format(a3,a11,9a13)
+102 format(i3,f11.6,9f13.9)
 
 end subroutine eigen_FMO
 !

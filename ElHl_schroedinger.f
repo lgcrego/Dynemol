@@ -6,8 +6,7 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , DensityMatrix , driver , SOC , &
-                                         comb , tp_comb , h1_state , h2_state , e1_state , e2_state , hole_state , electron_state
+                                         Coulomb_ , DensityMatrix , driver , SOC , comb
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
@@ -85,10 +84,15 @@ do n = 1 , n_part
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
-            end if
-
     end select
 end do
+
+if( comb ) then
+    MO_bra(:,1) = ( MO_bra(:,1) + MO_bra(:,2) ) / dsqrt(TWO)
+    MO_ket(:,1) = ( MO_ket(:,1) + MO_ket(:,2) ) / dsqrt(TWO)
+    MO_bra(:,2) = MO_bra(:,1)
+    MO_ket(:,2) = MO_ket(:,1)
+end if
 
 ! deallocate after use ...
 if( eh_tag(1) == "el" ) deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
@@ -385,19 +389,23 @@ if( SOC ) then
 
         deallocate( vec_up , vec_down )
 
+    else
+
         allocate( p ( nc - 1 ) , source = D_zero )
 
-        open( unit = 54 , file = "dyn.trunk/"//"Polarization_mujica.dat" , status = "replace" , action = "write" , position = "append" )
+        open(unit=54 , file = "dyn.trunk/"//"Polarization_comb_+.dat" , status = "replace" , action = "write" , position = "append" )
 
         write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
         write(54,12) "#" , QDyn%fragments , "total"
 
+        ! el == py up
+        ! hl == py down
         vec = D_zero
         do it = 2 , n_t
 
             do nf = 1 , nc-1
-                p(nf) = QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2) + QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2)
-                p(nf) = ( QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,2,1) - QDyn%dyn(it,nf,2,2) - QDyn%dyn(it,nf,1,2) ) / p(nf)
+                p(nf) = QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2)
+                p(nf) = ( QDyn%dyn(it,nf,1,1) - QDyn%dyn(it,nf,1,2) ) / p(nf)
                 vec(nf) = vec(nf) + p(nf)
             end do
 
@@ -412,133 +420,37 @@ if( SOC ) then
 
         deallocate( p )
 
-    else
+        allocate( p ( nc - 1 ) , source = D_zero )
 
-        if( tp_comb == "C" ) then
-    
-            allocate( vec_up   ( nc - 1 ) , source = D_zero )
-            allocate( vec_down ( nc - 1 ) , source = D_zero )
-    
-            open( unit = 54 , file = "dyn.trunk/"//"Polarization.dat" , status = "replace" , action = "write" , position = "append" )
-    
-            write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
-            write(54,12) "#" , QDyn%fragments , "total"
-    
-            ! el == py up
-            ! hl == py down
-            vec = D_zero
-            do it = 2 , n_t
-    
-                do nf = 1 , nc-1
-                    vec_up(nf)   = QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2)
-                    vec_up(nf)   = QDyn%dyn(it,nf,1,1) / vec_up(nf)
-                    vec_down(nf) = QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2)
-                    vec_down(nf) = QDyn%dyn(it,nf,2,2) / vec_down(nf)
-                    vec(nf) = vec(nf) + vec_up(nf) - vec_down(nf)
-                end do
-    
-                write(54,13) QDyn%dyn(it,0,1,1) , ( vec_up(nf) - vec_down(nf) , nf=1,nc-1 )
-    
-            end do
-    
-            vec = vec / dfloat( n_t - 1 )
-            write(54,fmt='(a4,10ES17.7)') "#" , ( vec(nf) , nf=1,nc-1 )
-    
-            close(54)
-    
-            deallocate( vec_up , vec_down )
-    
-            allocate( p ( nc - 1 ) , source = D_zero )
-    
-            open(unit=54 , file = "dyn.trunk/"//"Polarization_mujica.dat" , status = "replace" , action = "write" , position = "append" )
-    
-            write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
-            write(54,12) "#" , QDyn%fragments , "total"
-    
-            vec = D_zero
-            do it = 2 , n_t
-    
-                do nf = 1 , nc-1
-                    p(nf) = QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2) + QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2)
-                    p(nf) = ( QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,2,1) - QDyn%dyn(it,nf,2,2) - QDyn%dyn(it,nf,1,2) ) / p(nf)
-                    vec(nf) = vec(nf) + p(nf)
-                end do
-    
-                write(54,13) QDyn%dyn(it,0,1,1) , ( p(nf) , nf=1,nc-1 )
-    
-            end do
-    
-            vec = vec / dfloat( n_t - 1 )
-            write(54,fmt='(a4,10ES17.7)') "#" , ( vec(nf) , nf=1,nc-1 )
-    
-            close(54)
-    
-            deallocate( p )
+        open(unit=54 , file = "dyn.trunk/"//"Polarization_comb_-.dat" , status = "replace" , action = "write" , position = "append" )
 
-        else
+        write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
+        write(54,12) "#" , QDyn%fragments , "total"
 
-            allocate( p ( nc - 1 ) , source = D_zero )
-    
-            open(unit=54 , file = "dyn.trunk/"//"Polarization_comb_+.dat" , status = "replace" , action = "write" , position = "append" )
-    
-            write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
-            write(54,12) "#" , QDyn%fragments , "total"
-    
-            ! el == py up
-            ! hl == py down
-            vec = D_zero
-            do it = 2 , n_t
-    
-                do nf = 1 , nc-1
-                    p(nf) = QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2)
-                    p(nf) = ( QDyn%dyn(it,nf,1,1) - QDyn%dyn(it,nf,1,2) ) / p(nf)
-                    vec(nf) = vec(nf) + p(nf)
-                end do
-    
-                write(54,13) QDyn%dyn(it,0,1,1) , ( p(nf) , nf=1,nc-1 )
-    
-            end do
-    
-            vec = vec / dfloat( n_t - 1 )
-            write(54,fmt='(a4,10ES17.7)') "#" , ( vec(nf) , nf=1,nc-1 )
-    
-            close(54)
-    
-            deallocate( p )
-    
-            allocate( p ( nc - 1 ) , source = D_zero )
-    
-            open(unit=54 , file = "dyn.trunk/"//"Polarization_comb_-.dat" , status = "replace" , action = "write" , position = "append" )
-    
-            write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
-            write(54,12) "#" , QDyn%fragments , "total"
-    
-            ! el == py up
-            ! hl == py down
-            vec = D_zero
-            do it = 2 , n_t
-    
-                do nf = 1 , nc-1
-                    p(nf) = QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2)
-                    p(nf) = ( QDyn%dyn(it,nf,2,1) - QDyn%dyn(it,nf,2,2) ) / p(nf)
-                    vec(nf) = vec(nf) + p(nf)
-                end do
-    
-                write(54,13) QDyn%dyn(it,0,1,1) , ( p(nf) , nf=1,nc-1 )
-    
-            end do
-    
-            vec = vec / dfloat( n_t - 1 )
-            write(54,fmt='(a4,10ES17.7)') "#" , ( vec(nf) , nf=1,nc-1 )
-    
-            close(54)
-    
-            deallocate( p )
-          
-        end if
+        ! el == py up
+        ! hl == py down
+        vec = D_zero
+        do it = 2 , n_t
 
+            do nf = 1 , nc-1
+                p(nf) = QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2)
+                p(nf) = ( QDyn%dyn(it,nf,2,1) - QDyn%dyn(it,nf,2,2) ) / p(nf)
+                vec(nf) = vec(nf) + p(nf)
+            end do
+
+            write(54,13) QDyn%dyn(it,0,1,1) , ( p(nf) , nf=1,nc-1 )
+
+        end do
+
+        vec = vec / dfloat( n_t - 1 )
+        write(54,fmt='(a4,10ES17.7)') "#" , ( vec(nf) , nf=1,nc-1 )
+
+        close(54)
+
+        deallocate( p )
+      
     end if
-    
+
     deallocate( vec )
 
 end if
