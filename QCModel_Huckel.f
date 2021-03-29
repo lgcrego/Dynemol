@@ -34,18 +34,15 @@
 !==================================================
 use Matrix_math
 implicit none
-type(structure)             , intent(in)    :: system
-type(STO_basis)             , intent(in)    :: basis(:)
-type(C_eigen)               , intent(inout) :: QM
-integer          , optional , intent(in)    :: it
-
+type(structure)            , intent(in)    :: system
+type(STO_basis)            , intent(in)    :: basis(:)
+type(C_eigen)              , intent(inout) :: QM
+integer         , optional , intent(in)    :: it
 
 ! local variables ...
-complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:)
-complex*16 , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
-real*8     , ALLOCATABLE :: h_orb(:,:)  , S_matrix(:,:) , S_root(:,:)
-real*8     , ALLOCATABLE :: tool(:,:) , S_eigen(:)
-integer                  :: i , N , info 
+complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:) , Lv(:,:) , Rv(:,:) 
+real*8     , ALLOCATABLE :: h_orb(:,:) , S_matrix(:,:) , S_root(:,:) , tool(:,:) , S_eigen(:)
+integer                  :: i , j , N , info , N_of_electrons , N_occupied_MOs
 logical    , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -69,17 +66,24 @@ else
 end If
 
 if( SOC ) then
+
     CALL spin_orbit_h( basis , h_spin , S_matrix )
     allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
     deallocate( h_spin )
+!    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+
 else
+
     allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+
 end if
 
 deallocate(h_orb)
 
 CALL HEGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD in EigenSystem '
+
+deallocate( dumb_S )
 
 select case ( driver ) 
 
@@ -108,11 +112,11 @@ select case ( driver )
         call hemm( S_complex, Lv, Rv )
         deallocate( Lv , S_matrix , S_complex )
 
-          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
-          ! eigenvectors in the columns of QM%R
-          QM%R = Rv
+        If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+        ! eigenvectors in the columns of QM%R
+        QM%R = Rv
 
-          Deallocate( Rv )
+        deallocate(Rv)
 
     case ("slice_FSSH" )    
 
@@ -181,12 +185,22 @@ end select
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! save energies of the TOTAL system ...
 OPEN(unit=9,file='system-ergs.dat',status='unknown')
+if( SOC ) then
+    write(9,100) "#" , "Level" , "Energy" , "Sz"
+    do i = 1 , N
+        write(9,*) i , QM%erg(i) , dreal( sum( QM%L(i,:) * dcmplx( basis( : ) % s , D_zero ) * QM%R(:,i) ) )
+    end do
+else
+    write(9,100) "#" , "Level" , "Energy"
     do i = 1 , N
         write(9,*) i , QM%erg(i)
     end do
+end if
 close(9)
 
 If( verbose ) Print*, '>> EigenSystem done <<'
+
+100 format(a1,a11,a19,a24)
 
 end subroutine EigenSystem
 !
@@ -200,29 +214,29 @@ type(STO_basis) , intent(in) :: basis(:)
 real*8          , intent(in) :: S_matrix(:,:)
 
 ! local variables ... 
+real*8  , allocatable :: h(:,:)
 integer :: i , j , N , N2
-real*8  , allocatable   :: h(:,:)
 
 !----------------------------------------------------------
 !      building  the  HUCKEL  HAMILTONIAN
 !----------------------------------------------------------
 
 N  = size(basis)
-N2 = merge(2*N,N,SOC)
+N2 = merge(N/2,N,SOC)
 
-ALLOCATE( h(N2,N2) , source = D_zero )
+ALLOCATE( h(N,N) , source = D_zero )
 
 ! spin up orbital block
-do j = 1 , N
-   do i = j , N
+do j = 1 , N2
+    do i = j , N2
 
-       h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
 
-       end do
-       end do
+    end do
+end do
 
 ! spin down orbital block
-h( N+1:N2 , N+1:N2 ) = h(1:N,1:N)
+if( SOC ) h( N2 + 1 : N , N2 + 1 : N ) = h( 1 : N2 , 1 : N2 )
 
 end function Build_Huckel
 !

@@ -221,9 +221,9 @@ integer :: copy , nr_sum , ix , iy , k , n
 !
 !
 !
-!=======================================================
+!======================================================
  subroutine Basis_Builder( system , basis , GACG_flag )
-!=======================================================
+!======================================================
  implicit none
  type(structure)               , intent(inout) :: system
  type(STO_basis) , allocatable , intent(out)   :: basis(:)

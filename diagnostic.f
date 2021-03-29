@@ -49,7 +49,6 @@ implicit none
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
 
- 
 ! preprocessing stuff ...................................
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
@@ -77,7 +76,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
- if( SOC ) CALL ScanSpinOrientation( Extended_Cell, ExCell_basis )
+ if( SOC ) CALL ScanSpinOrientation( Extended_Cell , ExCell_basis )
 
  CALL Total_DOS( UNI , ExCell_basis , TDOS )
 

@@ -54,7 +54,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     select case (purpose)
         case('FMO')
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_noSpin)
+            CALL Build_Overlap_Matrix(system, basis(1:Mtx_size), pbc_system, pbc_basis, S_noSpin)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
@@ -97,12 +97,13 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
         S_matrix = S_noSpin
     else
         Mtx_size = 2 * Mtx_size
-        if( .NOT. allocated(S_matrix) ) allocate( S_matrix(Mtx_size,Mtx_size) , source = 0.0d0 )
+        if( .NOT. allocated(S_matrix) ) allocate( S_matrix(Mtx_size,Mtx_size) )
+        S_matrix = D_zero
         n = Mtx_size / 2
         do concurrent ( i=1:n , j=1:n )
-             S_matrix(i,j)     = S_noSpin(i,j)
-             S_matrix(n+i,n+j) = S_noSpin(i,j)
-             end do
+            S_matrix(i,j)     = S_noSpin(i,j)
+            S_matrix(n+i,n+j) = S_noSpin(i,j)
+        end do
     end if
 
     CALL Deallocate_Structures(pbc_system)

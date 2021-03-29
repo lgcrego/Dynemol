@@ -100,7 +100,7 @@
 real*8           :: ChargeSign(2) = [-1.0 , 1.0]  !<== [el,hl]
 
 ! local variables ...
-integer          :: n , nf , N_of_fragments , ati , n_spin, ns
+integer          :: n , nf , N_of_fragments , ati , n_spin, ns , spin , indx
 character(len=1) :: fragment 
 
 !----------------------------------------------------------------------------
@@ -112,8 +112,8 @@ character(len=1) :: fragment
 !----------------------------------------------------------------------------
 
 n_spin = merge(2,1,SOC)
-
-allocate( Populations_mtx(0:size(QDyn_fragments)+1 , n_part , n_spin) )
+n      = merge(size(QDyn_fragments)+2,size(QDyn_fragments)+1,SOC)
+allocate( Populations_mtx(0:n , n_part , n_spin) )
 
 ! time of population ...
 Populations_mtx(0,:,:) = t
@@ -121,27 +121,36 @@ Populations_mtx(0,:,:) = t
 ! partial populations ...
 N_of_fragments = size( QDyn_fragments )
 
-do ns = 1 , n_spin
+spin = merge(1,0,SOC)
+indx = 1
+do ns = spin , -spin , -2
     do n = 1 , n_part
         do nf = 1 , N_of_fragments
     
             fragment = QDyn_fragments (nf)
     
-            Populations_mtx( nf , n , ns ) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment , S=ns )
+            Populations_mtx( nf , n , indx ) = pop_Slater( basis , bra(:,n) , ket(:,n) , fragment , S=ns )
     
         end do
+
+        ! total up/downpopulations ...
+        ! if not(SOC) spin=0 ...
+        Populations_mtx( N_of_fragments+1 , n , indx ) = pop_Slater( basis , bra(:,n) , ket(:,n) , S=ns )
+
         ! total populations ...
-        Populations_mtx( N_of_fragments+1 , n , ns ) = pop_Slater( basis , bra(:,n) , ket(:,n) , S=ns )
-        end do
-        end do
+        if( SOC ) Populations_mtx( N_of_fragments+2 , n , indx ) = pop_Slater( basis , bra(:,n) , ket(:,n) )
+        
+    end do
+    indx = indx + 1
+end do
 
 ! atomic net-charge ...
 Net_Charge = d_zero
 do n = 1 , n_part
-     do ati = 1 , system%atoms
+    do ati = 1 , system%atoms
         Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
-        end do
-        end do
+    end do
+end do
 
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
@@ -274,9 +283,6 @@ complex*16                   , intent(in) :: za(:) , zb(:)
 character(*)     , optional  , intent(in) :: fragment
 integer          , optional  , intent(in) :: S
 
-! local parameter ...
-integer , parameter :: spin(2) = [1,-1]
-
 ! local variables
 real*8       :: pop_Slater
 complex*16   :: pop 
@@ -284,9 +290,13 @@ complex*16   :: pop
 pop = C_zero
 
 if( present(fragment) ) then
-    pop = sum( za(:) * zb(:) , mask = (basis%fragment == fragment) .AND. (basis%S == spin(S)) )
+    pop = sum( za(:) * zb(:) , mask = (basis%fragment == fragment) .AND. (basis%S == S) )
 else
-    pop = sum( za(:) * zb(:) )
+    if( present(S) ) then
+        pop = sum( za(:) * zb(:) , mask = (basis%S == S) )
+    else
+        pop = sum( za(:) * zb(:) )
+    end if
 end if
 
 pop_Slater = real( pop )
@@ -381,16 +391,8 @@ select case ( instance )
             end If
 
        case ("erg") 
-            if( spin_tag(s) == "XX" ) then
-                allocate( character(len=23) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg.dat" 
-            elseif( spin_tag(s) == "up" ) then
-                allocate( character(len=26) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_up.dat" 
-            elseif( spin_tag(s) == "dw" ) then
-                allocate( character(len=28) :: f_name )
-                f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg_down.dat" 
-            end If
+            allocate( character(len=23) :: f_name )
+            f_name = "dyn.trunk/"//eh_tag(n)//"_wp-erg.dat" 
 
        case ("std") 
             if( spin_tag(s) == "XX" ) then

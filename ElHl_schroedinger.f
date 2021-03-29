@@ -51,14 +51,13 @@ type(C_eigen)                    :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
-allocate( Pops(n_t , 0:size(system%list_of_fragments)+1 , n_part , n_spin) )
+mm = merge(size(system%list_of_fragments)+2,size(system%list_of_fragments)+1,SOC)
+
+allocate( Pops(n_t , 0:mm , n_part , n_spin) )
 
 mm = size(basis) ; nn = n_part
 
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-
-t  = t_i
-it = 1
 
 !   building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 do n = 1 , n_part
@@ -83,7 +82,7 @@ do n = 1 , n_part
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
-        end select
+    end select
 end do
 
 ! deallocate after use ...
@@ -94,13 +93,14 @@ if( eh_tag(2) == "hl" ) deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 If( preview ) stop
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL DZgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' )
 
 ! save populations ...
-Pops(1,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
-
-QDyn%dyn(1,:,:,:) = Pops(1,:,:,:)
+t  = t_i
+it = 1
+Pops(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t_i )
+QDyn%dyn(it,:,:,:) = Pops(it,:,:,:)
 
 !If( DensityMatrix ) then
 !    If( n_part == 1 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI )
@@ -112,7 +112,7 @@ If( GaussianCube ) then
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
 
     do n = 1 , n_part
         if( eh_tag(n) == "XX" ) cycle
@@ -139,8 +139,8 @@ DO it = it_init , n_t
     end forall
 
     ! DUAL representation for efficient calculation of survival probabilities ...
-    CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_ket , mm , C_zero , DUAL_ket , mm )
-    CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_bra , mm , C_zero , DUAL_bra , mm )
+    CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+    CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' )
 
     ! get populations ...
     Pops(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
@@ -148,13 +148,13 @@ DO it = it_init , n_t
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-    CALL DZgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_ket , mm , C_zero , AO_ket , mm )
+    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
 
     If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
         do n = 1 , n_part
             if( eh_tag(n) == "XX" ) cycle
-            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
         end do
 
     end If
@@ -191,7 +191,6 @@ deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , pha
 include 'formats.h'
 
 end subroutine Simple_dynamics
-!
 !
 !
 !
@@ -244,7 +243,6 @@ end subroutine RunningStat
 !
 !
 !
-!
 !==================================
  subroutine dump_Qdyn( Qdyn , UNI )
 !==================================
@@ -253,48 +251,101 @@ type(f_time)    , intent(in) :: QDyn
 type(C_eigen)   , intent(in) :: UNI
 
 ! local variables ...
-integer                       :: nf , n , it , spin
+logical                       :: erg_done
+integer                       :: nf , n , nc , it , spin
 complex*16                    :: wp_energy
 character(len=:) ,allocatable :: f_name
 
+nc = merge(size(QDyn%fragments)+2,size(QDyn%fragments)+1,SOC)
+
+erg_done = no
 do spin = 1 , n_spin
+    
+    do n = 1 , n_part
 
-   do n = 1 , n_part
-   
-         if( eh_tag(n) == "XX" ) cycle
+        if( eh_tag(n) == "XX" ) cycle
 
-         call FileName( f_name , n , spin , instance="dens" )
-         open( unit = 52 , file = f_name , status = "replace" , action = "write" , position = "append" )
-         write(52,15) "#" ,( nf+1 , nf=0,size(QDyn%fragments)+1 )  ! <== numbered columns for your eyes only ...
-         write(52,12) "#" , QDyn%fragments , "total"
+        call FileName( f_name , n , spin , instance="dens" )
+        open( unit = 52 , file = f_name , status = "replace" , action = "write" , position = "append" )
+        write(52,15) "#" , ( nf+1 , nf=0,nc )  ! <== numbered columns for your eyes only ...
 
-         call FileName( f_name , n , spin , instance="erg" )
-         open( unit = 53 , file = f_name , status = "replace" , action = "write" , position = "append" )
-         wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
+        if( SOC ) then
+            write(52,12) "#" , QDyn%fragments , "total" , "both spins"
+        else
+            write(52,12) "#" , QDyn%fragments , "total"
+        end if
+
+        do it = 1 , n_t
+
+            ! dumps el-&-hl populations ...
+            write(52,13) ( QDyn%dyn(it,nf,n,spin) , nf=0,nc )
+        
+        end do
+
+        close(52)
+        
+        if( not(erg_done) ) then
+
+            call FileName( f_name , n , spin , instance="erg" )
+            open( unit = 53 , file = f_name , status = "replace" , action = "write" , position = "append" )
+            wp_energy = sum(MO_bra(:,n) * UNI%erg(:) * MO_ket(:,n))
+        
+            do it = 1 , n_t
+
+                ! dumps el-&-hl wavepachet energies ...
+                write(53,14) QDyn%dyn(it,0,n,spin) , dreal(wp_energy) , dimag(wp_energy)
+        
+            end do
+        
+            close(53)
+        
+            erg_done = yes
+
+        end if
          
-         DO it = 1 , n_t
-         
-             ! dumps el-&-hl populations ...
-             write(52,13) ( QDyn%dyn(it,nf,n,spin) , nf=0,size(QDyn%fragments)+1 )
-         
-             ! dumps el-&-hl wavepachet energies ...
-             write(53,14) QDyn%dyn(it,0,n,spin) , real(wp_energy) , dimag(wp_energy)
-         
-         end do
-   
-         close(52)
-         close(53)
-         
-   end do
+    end do
 end do
 
-12 FORMAT(/15A10)
-13 FORMAT(F11.6,14F10.5)
+if( SOC ) then
+
+    open( unit = 54 , file = "dyn.trunk/"//"el"//"_dens.dat" , status = "replace" , action = "write" , position = "append" )
+
+    write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
+    write(54,12) "#" , QDyn%fragments , "total"
+
+    do it = 1 , n_t
+
+        write(54,13) QDyn%dyn(it,0,1,1) , ( QDyn%dyn(it,nf,1,1) + QDyn%dyn(it,nf,1,2) , nf=1,nc-1 )
+
+    end do
+
+    close(54)
+
+    if( n_part == 2 ) then
+
+        open( unit = 54 , file = "dyn.trunk/"//"hl"//"_dens.dat" , status = "replace" , action = "write" , position = "append" )
+
+        write(54,15) "#" , ( nf+1 , nf=0,nc-1 )  ! <== numbered columns for your eyes only ...
+        write(54,12) "#" , QDyn%fragments , "total"
+
+        do it = 1 , n_t
+
+            write(54,13) QDyn%dyn(it,0,2,1) , ( QDyn%dyn(it,nf,2,1) + QDyn%dyn(it,nf,2,2) , nf=1,nc-1 )
+
+        end do
+
+        close(54)
+
+    end if
+
+end if
+
+12 FORMAT(/15A11)
+13 FORMAT(F11.6,14F11.5)
 14 FORMAT(3F12.6)
-15 FORMAT(A,I9,14I10)
+15 FORMAT(A,I10,14I11)
 
 end subroutine dump_Qdyn
-!
 !
 !
 !
@@ -306,7 +357,7 @@ type(f_time)  , intent(inout) :: QDyn
 character(*)  , intent(in)    :: flag
 
 ! local variable ...
-integer      :: N_of_fragments 
+integer      :: n , N_of_fragments 
 character(1) :: first_in_line
 logical      :: A_flag
 
@@ -341,7 +392,8 @@ select case( flag )
 
         ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
         allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments)    ) , source = Extended_Cell % list_of_fragments )
-        allocate( QDyn%dyn      ( n_t , 0:N_of_fragments+1 , n_part , n_spin ) , source = 0.d0                              )
+        n = merge(N_of_fragments+2,N_of_fragments+1,SOC)
+        allocate( QDyn%dyn      ( n_t , 0:n , n_part , n_spin ) , source = 0.d0 )
         If( driver == "avrg_confgs" ) then
               allocate( QDyn%std( n_t , 0:N_of_fragments+1 , n_part , n_spin ) , source = 0.d0                              )
         End If

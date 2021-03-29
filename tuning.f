@@ -130,10 +130,10 @@ end If
 ! spin states ...
 allocate( spin_tag(2) ) 
 If( SOC ) then
-   spin_tag = ["up","dw"]
-   else
-   spin_tag = ["XX","XX"]
-   end If
+    spin_tag = ["up","dw"]
+else
+    spin_tag = ["XX","XX"]
+end If
 
 !default: %El => DONOR
 If( any(a% El) ) then      ! <== first priority ...

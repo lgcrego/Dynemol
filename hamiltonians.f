@@ -500,17 +500,20 @@ real*8  , intent(inout) :: eps
 !         Equation 1: eps = 0.45 * Z^(2.33) * n_eff ^(-3) , in cm^(-1)
 ! Ref. 3: Manne, R; et. al; Molecular Physics, 1975, 29, 485−500
 ! Ref. 4: Wittel, K. e Manne, R; Theoret. Chim. Acta (Berl.), 1974, 33, 347-349
+! Ref. 5: Geyer, M; et. al; J. Phys. Chem. C, 2019, 123, 27230-27241
 
 select case( AtNo )
 
     case( 6 )
 
-!        if( l == 1 ) eps = 453.50d-6 ! Ref. 2
-        if( l == 1 ) eps = 4.535d0 ! teste
+        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
+!        if( l == 1 ) eps = 6.0d0    ! teste
+!        if( l == 1 ) eps = 454.0923d-6 ! Ref. 2
+!        if( l == 1 ) eps = 4.541d0 ! teste
 
     case( 7 )
 
-        if( l == 1 ) eps = 649.48d-6 ! Ref. 2
+        if( l == 1 ) eps = 649.3675d-6 ! Ref. 2
 
     case( 35 )
 
@@ -519,7 +522,7 @@ select case( AtNo )
 
     case( 44 )
 
-        if( l == 1 ) eps = 13.95d-3  ! Ref. 2 <== Revise it...
+        if( l == 1 ) eps = 5.8893d-3 ! Ref. 2
         if( l == 2 ) eps = 0.12398d0 ! Ref. 1
 
     case( 53 )

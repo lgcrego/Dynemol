@@ -43,7 +43,6 @@ implicit none
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(f_time)                   :: QDyn
 
- 
 ! preprocessing stuff ...................................
 
 CALL DeAllocate_TDOS( TDOS , flag="alloc" )
