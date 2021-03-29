@@ -54,7 +54,9 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     select case (purpose)
         case('FMO')
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix(system, basis(1:Mtx_size), pbc_system, pbc_basis, S_noSpin)
+            i = 3**sum(PBC) * Mtx_size
+            CALL Build_Overlap_Matrix(system, basis(1:Mtx_size), pbc_system, pbc_basis(1:i), S_noSpin)
+!            CALL Build_Overlap_Matrix(system, basis(1:Mtx_size), pbc_system, pbc_basis, S_noSpin)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
@@ -80,7 +82,8 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            CALL Build_Overlap_Matrix( system, basis(1:Mtx_size), pbc_system, pbc_basis(1:Mtx_size), S_noSpin , recycle = .true. )
+            i = 3**sum(PBC) * Mtx_size
+            CALL Build_Overlap_Matrix( system, basis(1:Mtx_size), pbc_system, pbc_basis(1:i), S_noSpin , recycle = .true. )
 
             NonZero  = count(S_noSpin /= 0.d0)
             Sparsity = float(NonZero) / float(Mtx_size ** 2)

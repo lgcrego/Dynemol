@@ -105,7 +105,7 @@ select case ( driver )
 
         If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
         ! eigenvectors in the rows of QM%L
-        QM%L = transpose(conjg(Lv)) 
+        QM%L = transpose(dconjg(Lv)) 
 
         allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
         ! Rv = S * Lv ...
