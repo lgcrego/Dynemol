@@ -501,19 +501,31 @@ real*8  , intent(inout) :: eps
 ! Ref. 3: Manne, R; et. al; Molecular Physics, 1975, 29, 485−500
 ! Ref. 4: Wittel, K. e Manne, R; Theoret. Chim. Acta (Berl.), 1974, 33, 347-349
 ! Ref. 5: Geyer, M; et. al; J. Phys. Chem. C, 2019, 123, 27230-27241
+! Ref. 6: Cusachs, L. C. and. Aldrich, H. S; Chem.Phys. Let; 1971, 12, 197-198
+! Ref. 7: Dulitz, K; et. al; Molecular Physics, 114:19, 2848-2856
+! Ref. 8: Küfner,S;et.al; Phys. Rev. B, 2013, 87, 235307
 
 select case( AtNo )
 
+    case( 4 )
+
+!        if( l == 1 ) eps = 92.988d-6 ! Ref. 2
+        if( l == 1 ) eps = 92.988d-3 ! teste
+
     case( 6 )
 
-        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
-!        if( l == 1 ) eps = 6.0d0    ! teste
+!        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
+        if( l == 1 ) eps = 6.0d0    ! teste
 !        if( l == 1 ) eps = 454.0923d-6 ! Ref. 2
 !        if( l == 1 ) eps = 4.541d0 ! teste
 
     case( 7 )
 
         if( l == 1 ) eps = 649.3675d-6 ! Ref. 2
+
+    case( 15 )
+
+        if( l == 1 ) eps = - 0.00889d0 ! Ref. 2 <-- Neff = 1.51 (Ref.6)
 
     case( 35 )
 
@@ -525,10 +537,14 @@ select case( AtNo )
         if( l == 1 ) eps = 5.8893d-3 ! Ref. 2
         if( l == 2 ) eps = 0.12398d0 ! Ref. 1
 
+    case( 50 )
+
+        if( l == 1 ) eps = 0.68d0 ! Ref. 8 
+
     case( 53 )
 
-!        if( l == 1 ) eps = - 0.73d0 ! Ref. 3
-        if( l == 1 ) eps = 0.73d0 ! Ref. 3
+!        if( l == 1 ) eps = 0.73d0 ! Ref. 3
+        if( l == 1 ) eps = - 0.62848 ! Ref. 7
 
     case default
 

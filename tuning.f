@@ -58,16 +58,16 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "BP1") univ % atom % El = .true.
+where(univ % atom % residue == "DNR") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "ION") univ % atom % Hl = .true.
+where(univ % atom % residue == "DNR") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-where(univ % atom % residue == "BP2") univ % atom % fragment = "2"
-where(univ % atom % residue == "BP3") univ % atom % fragment = "3"
+where(univ % atom % residue == "ETH") univ % atom % fragment = "B"
+where(univ % atom % residue == "ACP") univ % atom % fragment = "A"
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
