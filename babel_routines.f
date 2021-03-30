@@ -93,8 +93,16 @@ integer :: i
             a(i)%AtNo = 44 
         case( 'CD','Cd' )
             a(i)%AtNo = 48 
+        case( 'IN','In' )
+            a(i)%AtNo = 49
+        case( 'SN' , 'Sn' ) 
+            a(i)%AtNo = 50
+        case( 'TE' , 'Te' ) 
+            a(i)%AtNo = 52
         case( 'I' ) 
             a(i)%AtNo = 53 
+        case( 'XE' , 'Xe' ) 
+            a(i)%AtNo = 54
         case( 'Pb' ) 
             a(i)%AtNo = 82
         case( '$$' ) 
@@ -157,8 +165,16 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 44 
         case( 'CD','Cd' ) 
             a%AtNo(i) = 48 
+        case( 'IN','In' )
+            a%AtNo(i) = 49
+        case( 'SN' , 'Sn' ) 
+            a%AtNo(i) = 50
+        case( 'TE' , 'Te' ) 
+            a%AtNo(i) = 52
         case( 'I' ) 
             a%AtNo(i) = 53 
+        case( 'XE' , 'Xe' ) 
+            a%AtNo(i) = 54
         case( 'Pb' ) 
             a%AtNo(i) = 82
         case( '$$' ) 
@@ -224,8 +240,16 @@ integer :: i
             a(i)%Symbol = 'Ru'
         case( 48 ) 
             a(i)%Symbol = 'Cd'
+        case( 49 ) 
+            a(i)%Symbol = 'In'
+        case( 50 ) 
+            a(i)%Symbol = 'Sn'
+        case( 52 ) 
+            a(i)%Symbol = 'Te'
         case( 53 ) 
             a(i)%Symbol = 'I'
+        case( 54 ) 
+            a(i)%Symbol = 'Xe'
         case( 82 ) 
             a(i)%Symbol = 'Pb'
         case( 90 ) 
@@ -291,8 +315,16 @@ integer :: i
             a%Symbol(i) = 'Ru'
         case( 48 ) 
             a%Symbol(i) = 'Cd'
+        case( 49 ) 
+            a%Symbol(i) = 'In'
+        case( 50 ) 
+            a%Symbol(i) = 'Sn'
+        case( 52 ) 
+            a%Symbol(i) = 'Te'
         case( 53 ) 
             a%Symbol(i) = 'I'
+        case( 54 ) 
+            a%Symbol(i) = 'Xe'
         case( 82 ) 
             a%Symbol(i) = 'Pb'
         case( 90 ) 
@@ -349,8 +381,14 @@ character(len=2)    :: element2
         case( 'Hw','HB','HC', 'GH' )
             a(i)%Symbol = 'H' 
 
+        case( 'In' )
+            a(i)%Symbol = 'In'
+
         case( 'Ix','Ic' )
             a(i)%Symbol = 'I' 
+
+        case( 'Te' )
+            a(i)%Symbol = 'Te' 
 
         case( 'CT','YC','CM','C=','CC','CS','CTr','CA' ) 
             a(i)%Symbol = 'C' 

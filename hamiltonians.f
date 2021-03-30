@@ -515,7 +515,7 @@ select case( AtNo )
     case( 6 )
 
 !        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
-        if( l == 1 ) eps = 6.0d0    ! teste
+        if( l == 1 ) eps = 6.0d-2    ! teste
 !        if( l == 1 ) eps = 454.0923d-6 ! Ref. 2
 !        if( l == 1 ) eps = 4.541d0 ! teste
 

@@ -20,7 +20,6 @@ logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alph
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
 logical                 :: SOC , resume , comb
 logical , parameter     :: T_ = .true. , F_ = .false. 
-character (len=1)       :: tp_comb
 
 contains
 !
@@ -45,7 +44,7 @@ logical :: dynamic
   DP_Moment      = F_                       
   QMMM           = F_
   SOC            = T_                        ! <== Spin-orbit coupling
-  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = T_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -99,20 +98,20 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.0d0                              
-  t_f  =  100.0d3                             ! <== final time in PICOseconds
-  n_t  =  20000                               ! <== number of time steps
+  t_f  =  50.0d0                             ! <== final time in PICOseconds
+  n_t  =  20000                           ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
-  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  comb = T_
+  comb = F_
 
-  hole_state     = 6                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 0                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 5                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 7                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
