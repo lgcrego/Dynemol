@@ -66,15 +66,12 @@ else
 end If
 
 if( SOC ) then
-
-    CALL spin_orbit_h( basis , h_spin , S_matrix )
-    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
-    deallocate( h_spin )
-!    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
-
+  CALL spin_orbit_h( basis , h_spin , S_matrix )
+  allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
+  deallocate( h_spin )
 else
 
-    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+  allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
 
 end if
 

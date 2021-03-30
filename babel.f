@@ -205,8 +205,11 @@ read(unit=3 , fmt = 43 , iostat=io_err , err=12) System_Characteristics
 read(unit=3 , fmt=105 , iostat=io_err , err=12) keyword
 if ( keyword == "CRYST1" ) then
     backspace 3
-    read(3 , fmt=100 , iostat=io_err , err=12) system%box(1) , system%box(2) , system%box(3)
+!    read(3 , fmt=100 , iostat=io_err , err=12) system%box(1) , system%box(2) , system%box(3)
+    read(3 , fmt=1000 , iostat=io_err , err=12) keyword , system%box(1) , system%box(2) , system%box(3)
 end if
+
+1000 FORMAT(a6,3F9.3)
 
 ! scan file for N_of_Atoms ...   
 N_of_atoms = 0
