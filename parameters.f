@@ -98,8 +98,8 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.0d0                              
-  t_f  =  50.0d0                             ! <== final time in PICOseconds
-  n_t  =  20000                           ! <== number of time steps
+  t_f  =  0.1d0                               ! <== final time in PICOseconds
+  n_t  =  200                                 ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
@@ -111,7 +111,7 @@ logical :: dynamic
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 7                          ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 346                        ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -122,7 +122,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters

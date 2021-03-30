@@ -241,7 +241,8 @@ select case ( instance )
 
         CALL gemm( Dual%L , aux , FMO%L )
 
-        FMO%R = transpose(conjg(FMO%L))
+        aux = dconjg(FMO%L)
+        FMO%R = transpose(aux)
         
         deallocate( aux )
 
@@ -417,21 +418,35 @@ integer               :: i , j , N , N2
 !----------------------------------------------------------
 
 N  = size(basis)
-N2 = merge(N/2,N,SOC)
 
 ALLOCATE( h(N,N) , source = D_zero )
 
-! spin up orbital block
-do j = 1 , N2
-    do i = j , N2
+if( SOC ) then
 
-        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
+    N2 = N/2
 
+    do j = 1 , N2
+        do i = j , N2
+
+            ! spin up orbital block
+            h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
+            ! spin down orbital block
+            h(i+N2,j+N2) = h(i,j)
+
+        end do
     end do
-end do
 
-! spin down orbital block
-if( SOC ) h( N2 + 1 : N , N2 + 1 : N ) = h( 1 : N2 , 1 : N2 )
+else
+
+    do j = 1 , N
+        do i = j , N
+
+            h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
+
+        end do
+    end do
+
+end if
 
 end function Build_Huckel
 !
