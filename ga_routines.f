@@ -8,7 +8,7 @@ module GA_m
                                          Top_Selection , Pop_range ,    &
                                          Mutation_rate , Mutate_Cross , &
                                          Alpha_Tensor , OPT_parms ,     &
-                                         Adaptive_
+                                         Adaptive_, selection_by
     use Semi_Empirical_Parms    , only : atom 
     use Structure_Builder       , only : Extended_Cell 
     use OPT_Parent_class_m      , only : GA_OPT
@@ -46,9 +46,8 @@ type(STO_basis)                 , intent(inout) :: basis(:)
 type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 
 ! local variables ...
-real*8          , allocatable   :: Pop(:,:) , Old_Pop(:,:) , cost(:) 
+real*8          , allocatable   :: Pop(:,:) , cost(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
-integer         , allocatable   :: indx(:)
 integer                         :: i , generation , info , Pop_start , GeneSize
 type(R_eigen)                   :: GA_UNI
 type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
@@ -64,8 +63,6 @@ GeneSize = GA%GeneSize
 
 ! Initial Populations ...
 allocate( Pop     (Pop_Size , GeneSize) )
-allocate( Old_Pop (Pop_Size , GeneSize) )
-allocate( indx    (Pop_Size)               )
 
 CALL random_seed
 
@@ -74,8 +71,6 @@ CALL generate_RND_Pop( Pop_start , Pop )
 
 ! this keeps the input EHT parameters in the population ...
 Pop(1,:) = D_zero
-
-indx = [ ( i , i=1,Pop_Size ) ]
 
 !-----------------------------------------------
 
@@ -110,11 +105,7 @@ do generation = 1 , N_generations
 
     end do
 
-!   select the fittest ...    
-    CALL sort2(cost,indx)
-
-    Old_Pop = Pop
-    Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+    CALL SelectTheFittest( cost , Pop , Pop_Size , GeneSize )
 
     Pop_start = Pop_size/2 + 1
 
@@ -124,8 +115,6 @@ do generation = 1 , N_generations
     else
         CALL generate_RND_Pop( Pop_start , Pop )       
     end If
-
-    indx = [ ( i , i=1,Pop_Size ) ]
 
     If( Adaptive_ ) then
         Print 159 , generation , N_generations
@@ -187,8 +176,7 @@ end if
 ! saving the optimized parameters ...
 CALL Dump_OPT_parameters( OPT_basis )
 
-deallocate( GA_UNI%L , GA_UNI%R , GA_UNI%erg )
-deallocate( Pop , indx , Old_Pop ) 
+deallocate( cost , GA_UNI%L , GA_UNI%R , GA_UNI%erg )
 
 include 'formats.h'
 
@@ -609,6 +597,153 @@ else
 end If
 
 end subroutine normalization
+!
+!
+!
+!===============================================================
+ subroutine SelectTheFittest( cost , Pop , Pop_Size , GeneSize ) 
+!===============================================================
+implicit none
+real*8  , allocatable , intent(inout) :: cost(:) 
+real*8  , allocatable , intent(inout) :: Pop(:,:) 
+integer               , intent(in)    :: Pop_size
+integer               , intent(in)    :: GeneSize
+
+
+! local variables ...
+integer               :: i , j
+integer , allocatable :: indx(:)
+real*8                :: normalization , rn
+real*8  , allocatable :: Old_Pop(:,:) , Prob_Selection(:) , fitness(:), wheel(:)
+
+
+
+select case ( selection_by ) 
+
+     case( "roullete" )
+
+         allocate( fitness(Pop_Size) )
+         fitness = 1.d0/cost 
+
+         normalization = sum(fitness)
+
+         allocate( Prob_Selection(Pop_Size) )
+         Prob_Selection = fitness / normalization
+
+         allocate( wheel(0:Pop_size) )
+         allocate( indx (Pop_Size)   )
+
+         do j = 1 , Pop_size
+
+              wheel(0:) = d_zero
+              call random_number(rn)
+
+              do i = 1 , Pop_size
+                   wheel(i) = wheel(i-1) + Prob_Selection(i)
+                   if( rn > wheel(i-1) .AND. rn <= wheel(i) ) then
+                       indx(j)  = i
+                       cycle
+                       end if 
+                       end do
+                       end do 
+
+         print*, minloc(cost) , cost(minloc(cost))
+
+         allocate( Old_Pop(Pop_Size,GeneSize) , source = Pop )
+         Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+
+         Pop( 1 , : ) = Old_pop( minloc(cost,dim=1) , : )
+
+         deallocate( fitness , Prob_Selection , wheel , indx )
+
+     case( "ranking" )
+
+
+
+     case( "sorting" )
+
+         allocate( indx    (Pop_Size)          )
+         allocate( Old_Pop (Pop_Size,GeneSize) )
+
+         indx = [ ( i , i=1,Pop_Size ) ]
+
+         CALL sort2(cost,indx)
+
+         Old_Pop = Pop
+
+         Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+
+         deallocate( indx , Old_Pop ) 
+
+end select
+
+
+
+!do i = 1 , Pop_size
+!write(24,*) i , indx(i) , cost(i)
+!write(25,*) i , cost(i), Prob_Selection(i)
+!end do
+!
+!
+!
+!        
+!
+!
+!stop
+!
+
+end subroutine SelectTheFittest
+!
+!
+!
+!===================
+ subroutine  sort(a)
+!===================
+implicit none
+integer , intent(inout) :: a(:)
+
+! local variables ...
+integer  :: ra, l, n, ir, i, j
+
+!---------------------
+!      SORT A(I) 
+!---------------------
+      n = size(a)
+      l = n/2+1
+      ir = n
+
+10    continue
+      if(l .gt. 1) then
+         l = l -1
+         ra  = a(l)
+      else
+         ra = a(ir)
+         a(ir) = a(1)
+         ir = ir - 1
+         if(ir .eq. 1) then
+             a(1) = ra
+             return
+         endif
+      endif
+      i = l
+      j = l + l
+20    if(j .le. ir) then
+        if(j .lt. ir)then
+          if(a(j) .lt. a(j+1)) j = j + 1
+        endif
+      if(ra .lt. a(j)) then
+        a(i) = a(j)
+        i = j
+        j = j + j
+      else
+      j = ir + 1
+      endif
+      goto 20
+      endif
+      a(i) = ra
+      goto 10
+
+end subroutine sort
 !
 !
 !
