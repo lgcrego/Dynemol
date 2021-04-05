@@ -43,7 +43,7 @@ logical :: dynamic
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
@@ -141,16 +141,16 @@ logical :: dynamic
 
   Pop_Size       =  200  
   N_generations  =  200    
-  Pop_range      =  0.86     ! <== range of variation of parameters [0:1]
-  selection_by   =  'roullete'
+  Pop_range      =  0.96          ! <== range of variation of parameters [0:1]
+  selection_by   =  'ranking'     ! option={roullete,ranking,sorting}
   Mutation_rate  =  0.9     
 
-  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
-  Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Adaptive_      =  T_            ! <== true  -> Adaptive GA method
+  Mutate_Cross   =  T_            ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
-  CG_            =  F_       ! <== use conjugate gradient method after genetic algorithm
-  Top_Selection  =  5        ! <== top selection to undergo CG_
-  profiling      =  T_       ! <== for tuning the optimization parameters of the code
+  CG_            =  F_            ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  5             ! <== top selection to undergo CG_
+  profiling      =  T_            ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 !  hereafter only CHECKLIST and  WARNINGS !!!

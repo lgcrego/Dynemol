@@ -96,14 +96,14 @@ Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , fi
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(50) - UNI%erg(49) , 3.8153d0
-Print*, "dE2 = ",UNI%erg(51) - UNI%erg(49) , 5.1876d0
-Print*, "dE3 = ",UNI%erg(50) - UNI%erg(48) , 5.3631d0
-Print*, "dE4 = ",UNI%erg(49) - UNI%erg(48) , 1.5478d0
-Print*, "dE5 = ",UNI%erg(51) - UNI%erg(50) , 1.3722d0
-Print*, "dE6 = ",UNI%erg(48) - UNI%erg(47) , 0.2046d0
-Print*, "dE7 = ",UNI%erg(47) - UNI%erg(46) , 0.0734d0
-Print*, "dE8 = ",UNI%erg(52) - UNI%erg(51) , 0.2484d0
+Print*, "dE1 = ",UNI%erg(50) - UNI%erg(49) , 4.9013d0
+Print*, "dE2 = ",UNI%erg(51) - UNI%erg(49) , 5.4700d0
+Print*, "dE3 = ",UNI%erg(50) - UNI%erg(48) , 5.5321d0
+Print*, "dE4 = ",UNI%erg(49) - UNI%erg(48) , 0.6308d0
+Print*, "dE5 = ",UNI%erg(51) - UNI%erg(50) , 0.5687d0
+Print*, "dE6 = ",UNI%erg(48) - UNI%erg(47) , 0.2857d0
+Print*, "dE7 = ",UNI%erg(47) - UNI%erg(46) , 0.4522d0
+Print*, "dE8 = ",UNI%erg(52) - UNI%erg(51) , 0.6248d0
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 

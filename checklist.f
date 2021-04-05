@@ -63,13 +63,20 @@ end subroutine checklist
  subroutine dump_driver_parameters_and_tuning
 !============================================
 implicit none
+
+! local parameters ...
+character(len=3) :: month(12)=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
  
 ! local variables ... 
- integer :: i
+ integer :: i , date_time(8)
  character(len=3)  :: tag
  character(len=12) :: number_string
 
 open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
+
+call date_and_time(values=date_time) 
+
+write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
 
     write(10,'(''<======  ###############  ==>'')')
     write(10,'(''<====    PARAMETERS.F   ====>'')')
@@ -220,6 +227,8 @@ close (10)
  end if
 
  CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+
+ include 'formats.h'
 
 end subroutine dump_driver_parameters_and_tuning
 !

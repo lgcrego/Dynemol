@@ -1,3 +1,5 @@
+29    FORMAT(/,"DATE: ",A3,"/",I2,"/",I4,"    ---    TIME: ",I2,"h:",I2,"min",/)
+
 30    FORMAT(/,A,/)
 
 40    FORMAT(/,"======================   Optimizing  Parameters  ==========================")

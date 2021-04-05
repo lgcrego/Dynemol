@@ -50,14 +50,14 @@ mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 50, 49, 3.8153d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 51, 49, 5.1876d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 50, 48, 5.3631d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 49, 48, 1.5478d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 51, 50, 1.3722d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 48, 47, 0.2046d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 47, 46, 0.0734d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 52, 51, 0.2484d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 50, 49, 4.9013d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 51, 49, 5.4700d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 50, 48, 5.5321d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 49, 48, 0.6308d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 51, 50, 0.5687d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 48, 47, 0.2857d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 47, 46, 0.4522d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 52, 51, 0.6248d0 )
 !===========
 !  46    H-3
 !  47    H-2
@@ -97,92 +97,115 @@ eval(me) = MO_erg_diff( OPT_UNI, 52, 51, 0.2484d0 )
 !----------------------------------------------------------------------------------------------
 
 !46 ===================
+eval(me) =  Localize(OPT_UNI, basis, MO=46, residue = "ADN", slide = real_interval( 0.9 , 0.91), adaptive = lock)    
+
 eval(me) =  MO_character( OPT_UNI , basis , MO=46 , AO='Pz')
 
-eval(me) =  Localize(OPT_UNI, basis, MO=46, residue = "CYT", slide = real_interval( 0.15 , 0.55), adaptive = lock)    
-eval(me) =  Localize(OPT_UNI, basis, MO=46, residue = "GUA", slide = real_interval( 0.10 , 0.40), adaptive = lock)    
+eval(me) =  Bond_Type(sys, OPT_UNI, 46, 15, 'Pz', 14, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46, 15, 'Pz',  6, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46, 12, 'Pz', 11, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46,  2, 'Pz',  3, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46, 12, 'Pz', 14, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46, 15, 'Pz',  2, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46,  8, 'Pz', 11, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 46,  8, 'Pz',  6, 'Pz', '+')                                
 
-eval(me) =  Exclude (OPT_UNI, basis, MO=46, atom = [14:17], slide = real_interval( 0.21 , 0.01), adaptive = lock)    
-
-eval(me) =  Bond_Type(sys, OPT_UNI, 46, 13, 'Pz', 22, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 46,  2, 'Pz', 11, 'Pz', '-')                                
+eval(me) =  Exclude (OPT_UNI, basis, MO=46, atom = [ 7], slide = real_interval( 0.30, 0.05), adaptive = lock) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=46, atom = [ 5], slide = real_interval( 0.30, 0.08), adaptive = lock) 
 
 !47 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=47 , AO='Pz', y_or_n='n' )
 
-eval(me) =  Localize(OPT_UNI, basis, MO=47, residue = "GUA", slide = real_interval( 0.31 , 0.93), adaptive = lock )    
+eval(me) =  Localize(OPT_UNI, basis, MO=47, residue = "ADN", slide = real_interval( 0.5 , 0.91), adaptive = lock )    
 
 !48 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=48 , AO='Pz')
 
-eval(me) =  Localize(OPT_UNI, basis, MO=48, residue = "CYT", slide = real_interval( 0.45, 0.98 ), adaptive = lock)    
+eval(me) =  Localize(OPT_UNI, basis, MO=48, residue = "THY", slide = real_interval( 0.3, 0.97 ), adaptive = lock)    
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  3, 'Pz',  5, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  2, 'Pz', 11, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  2, 'Pz',  3, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  2, 'Pz', 13, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48, 11, 'Pz', 13, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  5, 'Pz',  8, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48,  5, 'Pz',  7, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 48, 11, 'Pz', 20, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 20, 'Pz', 18, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 20, 'Pz', 25, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 29, 'Pz', 17, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 17, 'Pz', 18, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 21, 'Pz', 20, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 30, 'Pz', 17, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 20, 'Pz', 26, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 20, 'Pz', 27, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 48, 17, 'Pz', 27, 'Pz', '+')                                
 
-eval(me) =  Exclude (OPT_UNI, basis, MO=48, atom = [ 7], slide = real_interval( 0.28, 0.15), adaptive = lock) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=48, atom = [27], slide = real_interval( 0.15, 0.05), adaptive = lock) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=48, atom = [27], slide = real_interval( 0.15, 0.08), adaptive = lock) 
 
 !49 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=49, residue = "GUA", slide = real_interval( 0.43, 0.97 ), adaptive = lock)    
+eval(me) =  Localize(OPT_UNI, basis, MO=49, residue = "ADN", slide = real_interval( 0.3, 0.97 ), adaptive = lock)    
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 18, 'Pz', 17, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 17, 'Pz', 24, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 24, 'Pz', 14, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 16, 'Pz', 15, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 21, 'Pz', 23, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 18, 'Pz', 19, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 16, 'Pz', 17, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49, 14, 'Pz', 12, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  3, 'Pz',  5, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  2, 'Pz', 15, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49, 15, 'Pz',  6, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  6, 'Pz',  7, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  7, 'Pz', 11, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  8, 'Pz',  7, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 49, 14, 'Pz', 15, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 23, 'Pz', 24, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 49, 21, 'Pz', 22, 'Pz', '-')                                
-
-eval(me) =  Exclude (OPT_UNI, basis, MO=49, atom=[20], slide = real_interval( 0.21 , 0.005 ), adaptive = lock)    
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  3, 'Pz',  2, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49,  5, 'Pz',  6, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 49, 12, 'Pz', 11, 'Pz', '-')                                
 
 !50 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=50, residue = "CYT", slide = real_interval( 0.21 , 0.91), adaptive = lock)    
+eval(me) =  Localize(OPT_UNI, basis, MO=50, residue = "THY", slide = real_interval( 0.3, 0.97 ), adaptive = lock)    
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 50,  5, 'Pz',  7, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 50,  3, 'Pz',  5, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 50,  2, 'Pz',  3, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 50,  7, 'Pz', 11, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 50,  7, 'Pz',  8, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 50, 12, 'Pz',  2, 'Pz', '-')                                
-
-eval(me) =  Exclude(OPT_UNI, basis, MO=50, atom = [12], slide = real_interval( 0.11, 0.07 ), adaptive = lock) 
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 20, 'Pz', 25, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 29, 'Pz', 17, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 26, 'Pz', 25, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 20, 'Pz', 18, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 17, 'Pz', 18, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 50, 27, 'Pz', 25, 'Pz', '-')                                
 
 !51 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=51, residue = "CYT", slide = real_interval( 0.30 , 0.95), adaptive = lock)    
+eval(me) =  Localize(OPT_UNI, basis, MO=51, residue = "ADN", slide = real_interval( 0.30 , 0.95), adaptive = lock)    
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 51,  2, 'Pz',  3, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 51,  7, 'Pz', 11, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51,  5, 'Pz',  6, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51,  2, 'Pz',  6, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51,  3, 'Pz',  2, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 51,  3, 'Pz',  5, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 51,  2, 'Pz', 12, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 51,  3, 'Pz', 12, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 51, 11, 'Pz', 12, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 51,  5, 'Pz',  7, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51,  6, 'Pz',  7, 'Pz', '-')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 51,  7, 'Pz',  8, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51, 14, 'Pz', 12, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51,  7, 'Pz', 12, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 51, 14, 'Pz',  2, 'Pz', '-')                                
+
+eval(me) =  Exclude(OPT_UNI, basis, MO=51, atom=[15], slide = real_interval( 0.07 , 0.05 ), adaptive = lock ) 
+eval(me) =  Exclude(OPT_UNI, basis, MO=51, atom=[11], slide = real_interval( 0.05 , 0.03 ), adaptive = lock ) 
 
 !52 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=52, residue="CYT", slide = real_interval( 0.00 , 0.85), adaptive = lock )
+eval(me) =  MO_character( OPT_UNI , basis , MO=52 , AO='Pz')
+
+eval(me) =  Localize(OPT_UNI, basis, MO=52, residue="ADN", slide = real_interval( 0.30 , 0.95), adaptive = lock )
+
+eval(me) =  Bond_Type(sys, OPT_UNI, 52,  6, 'Pz',  7, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52, 14, 'Pz', 12, 'Pz', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52,  6, 'Pz',  5, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52,  7, 'Pz',  8, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52,  7, 'Pz', 11, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52, 11, 'Pz', 12, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52,  2, 'Pz', 15, 'Pz', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 52, 15, 'Pz',  6, 'Pz', '-')                                
+
+eval(me) =  Exclude(OPT_UNI, basis, MO=52, atom=[ 3], slide = real_interval( 0.007, 0.003), adaptive = mode ) 
 
 !53 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=53, residue="GUA", slide = real_interval( 0.00, 0.85), adaptive = lock )
+eval(me) =  MO_character( OPT_UNI , basis , MO=53 , AO='Pz', y_or_n='n' )
 
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 18, 'Pz', 17, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 16, 'Pz', 24, 'Pz', '+')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 19, 'Pz', 18, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 18, 'Pz', 20, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 17, 'Pz', 24, 'Pz', '-')                                
-eval(me) =  Bond_Type(sys, OPT_UNI, 53, 20, 'Pz', 12, 'Pz', '-')                                
+eval(me) =  Localize(OPT_UNI, basis, MO=53, residue="THY", slide = real_interval( 0.9 , 0.95), adaptive = lock )
 
-eval(me) =  Exclude(OPT_UNI, basis, MO=53, atom=[21], slide = real_interval( 0.303, 0.003 ) , adaptive = lock ) 
-eval(me) =  Exclude(OPT_UNI, basis, MO=53, atom=[22], slide = real_interval( 0.31, 0.007 ), adaptive = lock ) 
+eval(me) =  Bond_Type(sys, OPT_UNI, 53, 16,  's', 19,  's', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 53, 17, 'Px', 18, 'Px', '+')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 53, 16,  'S', 17, 'Px', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 53, 18, 'Px', 19,  'S', '-')                                
+eval(me) =  Bond_Type(sys, OPT_UNI, 53, 20, 'Px', 18, 'Px', '+')                                
+
+eval(me) =  Exclude (OPT_UNI, basis, MO=53, atom=[   29] , slide = real_interval( 0.05,0.008), adaptive = mode )
+eval(me) =  Localize(OPT_UNI, basis, MO=53, atom=[16,19] , slide = real_interval( 0.45, 0.55), adaptive = mode )
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
