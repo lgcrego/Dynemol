@@ -89,7 +89,6 @@ do generation = 1 , N_generations
     ! sharing these variables with ga_QCModel ...
     Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
 
-    !do i = Pop_start , Pop_Size
      do i = 1 , Pop_Size
 
         ! intent(in):basis ; intent(inout):GA_basis ...
@@ -108,12 +107,11 @@ do generation = 1 , N_generations
 
     CALL SelectTheFittest( cost , Pop , Pop_Size , GeneSize , BestCost)
 
-    Pop_start = Pop_size/2 + 1
-
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross .AND. (mod(generation,4) /= 0) ) then
+    If( Mutate_Cross .AND. (mod(generation,100) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
     else
+        Pop_start = Pop_size/2 + 1
         CALL generate_RND_Pop( Pop_start , Pop )       
     end If
 
@@ -485,21 +483,48 @@ type(STO_basis)            , intent(inout) :: OPT_basis(:)
 character(len=*), optional , intent(in)    :: output
 
 ! local variables ...
-integer               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol
-integer , allocatable :: indx_EHS(:)
-integer               :: unit_tag
+integer                               :: i , j , L , AngMax ,n_EHS , N_of_EHSymbol , unit_tag
+integer                 , allocatable :: aux(:)
+integer          , save , allocatable :: indx_EHS(:)
+character(len=:)        , allocatable :: string(:)
+logical                               :: done = .false.
 
 ! local parameters ...
 character(1)    , parameter :: Lquant(0:3) = ["s","p","d","f"]
 integer         , parameter :: DOS   (0:3) = [ 1 , 4 , 9 , 16]
 
-N_of_EHSymbol = size( GA%EHSymbol )
 
-allocate( indx_EHS(N_of_EHSymbol) )
+!-------------------------------------------------------------------------------------
+If( .not. done ) then
+    allocate( character( len=len(OPT_basis%EHSymbol)+len(OPT_basis%residue)) :: string(size(OPT_basis)) )
+    allocate( aux(size(OPT_basis)) , source = 0 )
+    
+    j = 0
+    do i = 1 , size(OPT_basis)
+       
+        string(i) = OPT_basis(i)% EHSymbol//OPT_basis(i)% residue
+    
+        ! find different (EHSymbol,residue) pairs ... 
+        if( .NOT. any( string(1:i-1) == string(i) ) ) then
+    
+             If( any( GA% EHSymbol == OPT_basis(i)% EHSymbol ) ) then
+                 j = j + 1
+                 aux(j) = i
+             end If
+    
+        end If  
+    
+    end do
+    
+    allocate( indx_EHS(j) , source = aux(1:j) )
 
-! locate position of the first appearance of EHS-atoms in OPT_basis
-indx_EHS = [ ( minloc(OPT_basis%EHSymbol , 1 , OPT_basis%EHSymbol == GA%EHSymbol(i)) , i=1,N_of_EHSymbol ) ] 
+    deallocate( aux , string ) 
 
+    done = .true. 
+end If
+N_of_EHSymbol = size( indx_EHS )
+
+!-------------------------------------------------------------------------------------
 If( present(output) .AND. output=="STDOUT" ) then
 
     Print*,""

@@ -141,8 +141,8 @@ logical :: dynamic
 
   Pop_Size       =  200  
   N_generations  =  200    
-  Pop_range      =  0.96          ! <== range of variation of parameters [0:1]
-  selection_by   =  'ranking'     ! option={roullete,ranking,sorting}
+  Pop_range      =  0.92          ! <== range of variation of parameters [0:1]
+  selection_by   =  'roullete'     ! option={roullete,ranking,sorting}
   Mutation_rate  =  0.9     
 
   Adaptive_      =  T_            ! <== true  -> Adaptive GA method

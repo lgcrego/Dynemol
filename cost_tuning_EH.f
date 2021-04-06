@@ -39,12 +39,13 @@ real*8                                   :: evaluate_cost
 
 ! local variables ...
 integer  :: i , dumb
-real*8   :: eval(200) = D_zero
+real*8   :: eval(200) 
 real*8   :: REF_DP(3) , REF_Alpha(3)
 logical  :: mode
 
 mode = Adaptive_GA% mode
 
+eval(:) = d_zero
 !-------------------------------------------------------------------------
 ! Energy gaps ...     
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
@@ -152,7 +153,8 @@ eval(me) =  Bond_Type(sys, OPT_UNI, 49,  5, 'Pz',  6, 'Pz', '-')
 eval(me) =  Bond_Type(sys, OPT_UNI, 49, 12, 'Pz', 11, 'Pz', '-')                                
 
 !50 ===================
-eval(me) =  Localize(OPT_UNI, basis, MO=50, residue = "THY", slide = real_interval( 0.3, 0.97 ), adaptive = lock)    
+eval(me) =  MO_character(OPT_UNI, basis, MO=50, AO='Pz')  
+eval(me) =  Localize(OPT_UNI, basis, MO=50, residue = "THY", slide = real_interval( 0.3, 0.95 ), adaptive = mode)    
 
 eval(me) =  Bond_Type(sys, OPT_UNI, 50, 20, 'Pz', 25, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 50, 29, 'Pz', 17, 'Pz', '+')                                
@@ -180,7 +182,7 @@ eval(me) =  Exclude(OPT_UNI, basis, MO=51, atom=[11], slide = real_interval( 0.0
 !52 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=52 , AO='Pz')
 
-eval(me) =  Localize(OPT_UNI, basis, MO=52, residue="ADN", slide = real_interval( 0.30 , 0.95), adaptive = lock )
+eval(me) =  Localize(OPT_UNI, basis, MO=52, residue="ADN", slide = real_interval( 0.30 , 0.6), adaptive = mode )
 
 eval(me) =  Bond_Type(sys, OPT_UNI, 52,  6, 'Pz',  7, 'Pz', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 52, 14, 'Pz', 12, 'Pz', '+')                                
@@ -196,7 +198,7 @@ eval(me) =  Exclude(OPT_UNI, basis, MO=52, atom=[ 3], slide = real_interval( 0.0
 !53 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=53 , AO='Pz', y_or_n='n' )
 
-eval(me) =  Localize(OPT_UNI, basis, MO=53, residue="THY", slide = real_interval( 0.9 , 0.95), adaptive = lock )
+eval(me) =  Localize(OPT_UNI, basis, MO=53, residue="THY", slide = real_interval( 0.9 , 0.95), adaptive = mode )
 
 eval(me) =  Bond_Type(sys, OPT_UNI, 53, 16,  's', 19,  's', '+')                                
 eval(me) =  Bond_Type(sys, OPT_UNI, 53, 17, 'Px', 18, 'Px', '+')                                
