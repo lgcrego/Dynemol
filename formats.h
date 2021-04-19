@@ -22,7 +22,7 @@
 
 47    FORMAT(/,">>>  Saving structure.log ",/)
 
-48    FORMAT("Symbol  |  EHsymbol  |  residue  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH")
+48    FORMAT("Symbol  |  EHsymbol  |  residue  |  NoAt  |  Nvalen  |  Nzeta  |  n  |  spdf  |    IP   |  zeta1  |  zeta2  |  coef1  |  coef2  |  k_WH  |  V_shift")
 
 50    FORMAT(/,1x,'# of cluster states  = ',I5/,  &
                1x,'# of molecule states = ',I5/,  &

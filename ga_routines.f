@@ -108,10 +108,10 @@ do generation = 1 , N_generations
     CALL SelectTheFittest( cost , Pop , Pop_Size , GeneSize , BestCost)
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross .AND. (mod(generation,100) /= 0) ) then
+    If( Mutate_Cross .AND. (mod(generation,10) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
     else
-        Pop_start = Pop_size/2 + 1
+        Pop_start = Pop_size/4 + 1
         CALL generate_RND_Pop( Pop_start , Pop )       
     end If
 
@@ -557,7 +557,7 @@ do n_EHS = 1 , N_of_EHSymbol
     do L = 0 , AngMax
 
         j = (i-1) + DOS(L)
-    
+
   write(unit_tag,17)    OPT_basis(j)%Symbol          ,   &
                         OPT_basis(j)%EHSymbol        ,   &
                         OPT_basis(j)%residue         ,   &
@@ -571,13 +571,15 @@ do n_EHS = 1 , N_of_EHSymbol
                         OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
                         OPT_basis(j)%coef(1)         ,   &
                         OPT_basis(j)%coef(2)         ,   &
-                        OPT_basis(j)%k_WH
-    end do
+                        OPT_basis(j)%k_WH            ,   &
+                        "(",OPT_basis(j)%V_shift,")"
+
+    enddo
 
 enddo
 If( unit_tag == 13 ) close(13)
 
-17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
+17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6,t141,A1,F5.2,A1)
 
 include 'formats.h'
 
@@ -729,6 +731,12 @@ select case ( selection_by )
 
           allocate( Old_Pop(Pop_Size,GeneSize) , source = Pop )
           Pop( 1:Pop_Size , : ) = Old_pop( indx(1:Pop_Size) , : )
+
+    
+     case default
+
+          CALL system("sed '11i>> execution stopped, check your 'selection_by' options in parameters.f <<' warning.signal |cat")
+          stop
           
 end select
 
