@@ -14,6 +14,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
+character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
@@ -34,16 +35,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "slice_FSSH"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "Genetic_Alg"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
-  QMMM           = T_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  QMMM           = F_
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -57,12 +58,12 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -139,16 +140,17 @@ logical :: dynamic
 !
 
   Pop_Size       =  200  
-  N_generations  =  50    
-  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.5     
+  N_generations  =  200    
+  Pop_range      =  0.92          ! <== range of variation of parameters [0:1]
+  selection_by   =  'roullete'     ! option={roullete,ranking,sorting}
+  Mutation_rate  =  0.9     
 
-  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
-  Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Adaptive_      =  T_            ! <== true  -> Adaptive GA method
+  Mutate_Cross   =  T_            ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
-  CG_            =  T_       ! <== use conjugate gradient method after genetic algorithm
-  Top_Selection  =  5        ! <== top selection to undergo CG_
-  profiling      =  T_       ! <== for tuning the optimization parameters of the code
+  CG_            =  F_            ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  5             ! <== top selection to undergo CG_
+  profiling      =  T_            ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 !  hereafter only CHECKLIST and  WARNINGS !!!
