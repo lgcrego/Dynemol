@@ -72,6 +72,8 @@ do n = 1 , n_part
 
             Print 591, orbital(n) , el_FMO%erg(orbital(n))
 
+            deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
+
         case( "hl" )
 
             CALL FMO_analysis ( system , basis , UNI , hl_FMO , instance="H" )
@@ -82,12 +84,10 @@ do n = 1 , n_part
             Print 592, orbital(n) , hl_FMO%erg(orbital(n))
             If( (orbital(n) > hl_FMO%Fermi_State) ) write(*,"(/a)") '>>> warning: hole state above the Fermi level <<<'
 
+            deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
+
         end select
 end do
-
-! deallocate after use ...
-if( eh_tag(1) == "el" ) deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
-if( eh_tag(2) == "hl" ) deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
 
 ! stop here to preview and check input and system info ...
 If( preview ) stop
@@ -206,7 +206,7 @@ character    , optional , intent(in)    :: instance
 ! M[k] = ( (k-1)*M[k-1] + x[k] ) / k
 ! S[k] = S[k-1] + (x[k] – M[k-1]) * (x[k] – M[k])
 ! M[] = mean value
-! S[n]/(n-1)  = S^2 = variance
+! S[n]/(n-1)  =  variance
 
 !===============================================
 If( present(instance) ) then
