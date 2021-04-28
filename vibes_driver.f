@@ -9,6 +9,7 @@ module good_vibrations_m
     use MM_input                , only : OPT_driver , nmd_window
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
+    use MD_dump_m               , only : cleanup
     use setup_m                 , only : Setup
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
@@ -287,6 +288,7 @@ end subroutine normal_modes
 implicit none
 
 ! local variables ...
+integer :: dumb
 real*8  :: local_minimum 
 
 ! setting up the MM system ...
@@ -298,8 +300,13 @@ If( .not. done ) then
 
 end If
 
+! if (exit(frames.pdb)) ==> erase it
+CALL cleanup
+
 ! instantiating MM ...
 MM_erg = MM_OPT( )
+
+dumb =  len(MM_erg% message)
 
 CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
 

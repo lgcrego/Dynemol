@@ -18,10 +18,10 @@ module MM_ERG_class_m
     public :: MM_OPT
 
     type, extends(OPT_Parent)    :: MM_OPT
-        integer                  :: ITMAX_MM = 4000             ! <== 100-300 is a good compromise of accuracy and safety
-        real*8                   :: BracketSize_MM = 1.d-2      ! <== this value may vary between 1.0d-2 and 1.0d-3
+        integer                  :: ITMAX_MM = 40000             ! <== 100-300 is a good compromise of accuracy and safety
+        real*8                   :: BracketSize_MM = 1.d-5       ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_MM = .true.
-        character(len=72)        :: my_message
+        character(len=120)       :: my_message
     contains
         procedure :: cost => energy
         procedure :: cost_variation => forces
