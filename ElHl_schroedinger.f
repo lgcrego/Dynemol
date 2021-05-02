@@ -6,14 +6,15 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , DensityMatrix , driver , SOC , comb
+                                         Coulomb_ , DensityMatrix , driver , SOC , &
+                                         comb , tp_comb , h1_state , h2_state , e1_state , e2_state , hole_state , electron_state
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : FMO_analysis , orbital , eh_tag
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations , Net_Charge , FileName
- use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
+ use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format , probability_flux
  use Backup_m                   , only : Security_Copy , Restart_state
  use Auto_Correlation_m         , only : MO_Occupation
 
@@ -51,6 +52,10 @@ real*8                           :: Total_DP(3)
 complex*16      , ALLOCATABLE    :: phase(:)
 type(C_eigen)                    :: el_FMO , hl_FMO
 
+real*8     , allocatable :: i_up(:,:) , i_down(:,:) , i_total(:,:) , i_SO(:,:) , Sup(:) , Sdown(:) , S_real(:,:)
+real*8                :: z_LFT , z_RGT , a , b , c , d
+integer               :: iLFT , iRGT
+
 ! ------------------ preprocess stuff --------------------
 
 mm = merge(size(system%list_of_fragments)+2,size(system%list_of_fragments)+1,SOC)
@@ -58,6 +63,34 @@ mm = merge(size(system%list_of_fragments)+2,size(system%list_of_fragments)+1,SOC
 allocate( Pops(n_t , 0:mm , n_part , n_spin) )
 
 mm = size(basis) ; nn = n_part
+
+allocate( i_up    ( n_t , 4 ) , source = D_zero )
+allocate( i_down  ( n_t , 4 ) , source = D_zero )
+allocate( i_SO    ( n_t , 4 ) , source = D_zero )
+allocate( i_total ( n_t , 4 ) , source = D_zero )
+allocate( Sup     ( n_t )     , source = D_zero )
+allocate( Sdown   ( n_t )     , source = D_zero )
+
+do i = 1 , mm
+    if( basis(i) % residue == "LFT" ) then
+!    if( basis(i) % residue == "DNR" ) then
+        iLFT = i
+        exit
+    end if
+end do
+
+do i = 2 , mm
+    if( basis(i) % residue == "ACP" .AND. basis(i-1) % residue == "RGT" ) then
+!    if( basis(i) % residue == "RGT" .AND. basis(i-1) % residue == "DNR" ) then
+        iRGT = i - 1
+        exit
+    end if
+end do
+
+z_LFT = ( basis( iLFT - 1 ) % z + basis( iLFT ) % z ) / 2.0d0
+z_RGT = ( basis( iRGT + 1 ) % z + basis( iRGT ) % z ) / 2.0d0
+
+print*, z_LFT , z_RGT
 
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 
@@ -91,19 +124,16 @@ do n = 1 , n_part
     end select
 end do
 
-if( comb ) then
-    MO_bra(:,1) = ( MO_bra(:,1) + MO_bra(:,2) ) / dsqrt(TWO)
-    MO_ket(:,1) = ( MO_ket(:,1) + MO_ket(:,2) ) / dsqrt(TWO)
-    MO_bra(:,2) = MO_bra(:,1)
-    MO_ket(:,2) = MO_ket(:,1)
-end if
-
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+
 CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' )
+CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+
+Sup(1)   = dreal( sum( DUAL_bra(:,1) * DUAL_ket(:,1) * basis(:) % s ) )
+Sdown(1) = dreal( sum( DUAL_bra(:,2) * DUAL_ket(:,2) * basis(:) % s ) )
 
 ! save populations ...
 t  = t_i
@@ -116,19 +146,31 @@ QDyn%dyn(it,:,:,:) = Pops(it,:,:,:)
 !    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
 !End If
 
+! LOCAL representation for film STO production ...
+AO_bra = DUAL_bra
+AO_ket = dconjg(AO_bra)
+
+CALL probability_flux( AO_bra(:,1) , AO_ket(:,1) , z_LFT , i_up(1,1) , i_down(1,1) , i_SO(1,1) )
+CALL probability_flux( AO_bra(:,1) , AO_ket(:,1) , z_RGT , i_up(1,2) , i_down(1,2) , i_SO(1,2) )
+CALL probability_flux( AO_bra(:,2) , AO_ket(:,2) , z_LFT , i_up(1,3) , i_down(1,3) , i_SO(1,3) )
+CALL probability_flux( AO_bra(:,2) , AO_ket(:,2) , z_RGT , i_up(1,4) , i_down(1,4) , i_SO(1,4) )
+
+i_total(1,1) = i_up(1,1) + i_down(1,1)
+i_total(1,2) = i_up(1,2) + i_down(1,2)
+i_total(1,3) = i_up(1,3) + i_down(1,3)
+i_total(1,4) = i_up(1,4) + i_down(1,4)
+
 !   save the initial GaussianCube file ...
-If( GaussianCube ) then
+!If( GaussianCube ) then
+!
+!    do n = 1 , n_part
+!    n = 1
+!        if( eh_tag(n) == "XX" ) cycle
+!        CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+!    end do
+!
+!end If
 
-    ! LOCAL representation for film STO production ...
-    AO_bra = DUAL_bra
-    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
-
-    do n = 1 , n_part
-        if( eh_tag(n) == "XX" ) cycle
-        CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
-    end do
-
-end If
 !-------------------------------------------------------------
 !                       Q-DYNAMICS
 
@@ -137,6 +179,8 @@ it_init = it + 1
 t_rate = (t_f - t_i) / float(n_t)
 
 DO it = it_init , n_t
+
+    write(33,*) it , n_t
 
     t = t + t_rate
 
@@ -151,26 +195,41 @@ DO it = it_init , n_t
     CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
     CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' )
 
+    Sup(it)   = dreal( sum( DUAL_bra(:,1) * DUAL_ket(:,1) * basis(:) % s ) )
+    Sdown(it) = dreal( sum( DUAL_bra(:,2) * DUAL_ket(:,2) * basis(:) % s ) )
+
     ! get populations ...
     Pops(it,:,:,:) = Populations( QDyn%fragments , basis , DUAL_bra , DUAL_ket , t )
     QDyn%dyn(it,:,:,:) = Pops(it,:,:,:)
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
+    AO_ket = dconjg(AO_bra)
 
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
+    CALL probability_flux( AO_bra(:,1) , AO_ket(:,1) , z_LFT , i_up(it,1) , i_down(it,1) , i_SO(it,1) )
+    CALL probability_flux( AO_bra(:,1) , AO_ket(:,1) , z_RGT , i_up(it,2) , i_down(it,2) , i_SO(it,2) )
+    CALL probability_flux( AO_bra(:,2) , AO_ket(:,2) , z_LFT , i_up(it,3) , i_down(it,3) , i_SO(it,3) )
+    CALL probability_flux( AO_bra(:,2) , AO_ket(:,2) , z_RGT , i_up(it,4) , i_down(it,4) , i_SO(it,4) )
 
-        do n = 1 , n_part
-            if( eh_tag(n) == "XX" ) cycle
-            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
-        end do
+    i_total(it,1) = i_up(it,1) + i_down(it,1)
+    i_total(it,2) = i_up(it,2) + i_down(it,2)
+    i_total(it,3) = i_up(it,3) + i_down(it,3)
+    i_total(it,4) = i_up(it,4) + i_down(it,4)
 
-    end If
+!    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
+!
+!        do n = 1 , n_part
+!            if( eh_tag(n) == "XX" ) cycle
+!            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
+!        end do
+!
+!    end If
 
 !    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
 END DO
+
+close(35)
 
 ! saving populations & all that jazz ...
 select case (driver) 
@@ -195,9 +254,100 @@ select case (driver)
 
 end select 
 
-deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+open( unit=35 , file="Sz.dat" , action="write" , status="unknown" )
+write(35,1000) "#                time" , "Sz, Sz(Psi(0))=1" , "Sz, Sz(Psi(0))=-1"
+do i = 1 , n_t
+    write(35,1001) dfloat(i-1) * t_rate , Sup(i) , Sdown(i)
+end do
+close(35)
+
+open( unit=40 , file="UpCurrent.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "iup_LFT" , "iup_RGT" , "iup_LFT" , "iup_RGT"
+do i = 1 , n_t
+    write(40,301) dfloat(i-1) * t_rate , i_up(i,1) , i_up(i,2) , i_up(i,3) , i_up(i,4)
+end do
+close(40)
+
+open( unit=40 , file="DownCurrent.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "idown_LFT" , "idown_RGT" , "idown_LFT" , "idown_RGT"
+do i = 1 , n_t
+    write(40,301) dfloat(i-1) * t_rate , i_down(i,1) , i_down(i,2) , i_down(i,3) , i_down(i,4)
+end do
+close(40)
+
+open( unit=40 , file="SOCurrent.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "idown_LFT" , "idown_RGT" , "idown_LFT" , "idown_RGT"
+do i = 1 , n_t
+    write(40,301) dfloat(i-1) * t_rate , i_SO(i,1) , i_SO(i,2) , i_SO(i,3) , i_SO(i,4)
+end do
+close(40)
+
+open( unit=40 , file="TotalCurrent.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "i_LFT" , "i_RGT" , "i_LFT" , "i_RGT"
+do i = 1 , n_t
+    write(40,301) dfloat(i-1) * t_rate , i_total(i,1) , i_total(i,2) , i_total(i,3) , i_total(i,4)
+end do
+close(40)
+
+open( unit=40 , file="Area.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "i_LFT" , "i_RGT" , "i_LFT" , "i_RGT"
+a = D_zero
+b = D_zero
+c = D_zero
+d = D_zero
+do i = 1 , n_t - 1
+    a = a + t_rate * ( i_total(i+1,1) + i_total(i,1) ) / 2.0d0
+    b = b + t_rate * ( i_total(i+1,2) + i_total(i,2) ) / 2.0d0
+    c = c + t_rate * ( i_total(i+1,3) + i_total(i,3) ) / 2.0d0
+    d = d + t_rate * ( i_total(i+1,4) + i_total(i,4) ) / 2.0d0
+    write(40,301) dfloat(i-1) * t_rate + t_rate / 2.0d0 , a , b , c , d
+end do
+close(40)
+
+open( unit=40 , file="SO_Area.dat" , action="write" , status="unknown" )
+write(40,297) "# z_LFT = " , z_LFT
+write(40,297) "# z_RGT = " , z_RGT
+write(40,299) "#             ||          Sz(t=0)=1         ||          Sz(t=0)=-1        |"
+write(40,300) "#          time" , "i_LFT" , "i_RGT" , "i_LFT" , "i_RGT"
+a = D_zero
+b = D_zero
+c = D_zero
+d = D_zero
+do i = 1 , n_t - 1
+    a = a + t_rate * ( i_SO(i+1,1) + i_SO(i,1) ) / 2.0d0
+    b = b + t_rate * ( i_SO(i+1,2) + i_SO(i,2) ) / 2.0d0
+    c = c + t_rate * ( i_SO(i+1,3) + i_SO(i,3) ) / 2.0d0
+    d = d + t_rate * ( i_SO(i+1,4) + i_SO(i,4) ) / 2.0d0
+    write(40,301) dfloat(i-1) * t_rate + t_rate / 2.0d0 , a , b , c , d
+end do
+close(40)
+
+deallocate( Pops , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase , i_up , i_down , i_total , Sup , Sdown )
 
 include 'formats.h'
+
+297 format(a10,f10.3)
+298 format(a135)
+299 format(a75)
+300 format(9a15)
+301 format(f15.7,8ES15.5)
+1000 format(3a21)
+1001 format(3f21.6)
 
 end subroutine Simple_dynamics
 !
@@ -309,7 +459,6 @@ do spin = 1 , n_spin
                 write(53,14) QDyn%dyn(it,0,n,spin) , dreal(wp_energy) , dimag(wp_energy)
         
             end do
-        
             close(53)
         
             erg_done = yes

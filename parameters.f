@@ -18,8 +18,9 @@ character (len=7)       :: argument
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: SOC , resume , comb
+logical                 :: SOC , resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
+character (len=1)       :: tp_comb
 
 contains
 !
@@ -64,7 +65,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -98,16 +99,14 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.0d0                              
-  t_f  =  0.1d0                               ! <== final time in PICOseconds
-  n_t  =  200                                 ! <== number of time steps
+  t_f  =  0.15d0                              ! <== final time in PICOseconds
+  n_t  =  3000                                ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
-  n_part = 1                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
+  n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  comb = F_
-
-  hole_state     = 0                          ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 345                        ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 

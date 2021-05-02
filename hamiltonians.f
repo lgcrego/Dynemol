@@ -13,7 +13,7 @@
     use polarizability_m      , only : Induced_DP_phi
     use Semi_Empirical_Parms  , only : atom
 
-    public :: X_ij , even_more_extended_Huckel , Huckel_with_FIELDS , spin_orbit_h
+    public :: zX_ij , X_ij , even_more_extended_Huckel , Huckel_with_FIELDS , spin_orbit_h
 
     private
 
@@ -23,6 +23,55 @@
     logical               :: done = .false.
 
  contains
+!
+!
+!
+!========================================
+ pure function zX_ij( i , j , basis , N )
+!========================================
+ implicit none
+ integer         , intent(in) :: i , j , N
+ type(STO_basis) , intent(in) :: basis(:)
+
+! local variables ... 
+ complex*16 :: zX_ij
+ complex*16 :: zk_eff , zk_WH , zc1 , zc2 , zc3 , zc4 , IP_i , IP_j
+ real*8     :: k_WH , c4
+
+!----------------------------------------------------------
+!      building  the  HUCKEL  HAMILTONIAN
+
+if( ( i >= N/2 - 251 .AND. i <= N/2 ) .OR. ( i >= N - 251 .AND. i <= N ) ) then
+    IP_i = basis(i) % IP * zi
+else
+    IP_i = dcmplx(basis(i) % IP , D_zero)
+end if
+if( ( j >= N/2 - 251 .AND. j <= N/2 ) .OR. ( j >= N - 251 .AND. j <= N ) ) then
+    IP_j = basis(j) % IP * zi
+else
+    IP_j = dcmplx(basis(j) % IP , D_zero)
+end if
+
+ if (i == j) then
+    zX_ij = IP_i + dcmplx(basis(i)%V_shift,D_zero)
+ else
+    zc1 = IP_i - IP_j
+    zc2 = IP_i + IP_j
+
+    zc3 = (zc1/zc2)*(zc1/zc2)
+
+    c4 = (basis(i)%V_shift + basis(j)%V_shift) * HALF
+    zc4 = dcmplx(c4,D_zero)
+
+    k_WH = (basis(i)%k_WH + basis(j)%k_WH) * HALF
+    zk_WH = dcmplx(k_WH,D_zero)
+
+    zk_eff = zk_WH + zc3 + zc3 * zc3 * (C_one - zk_WH)
+
+    zX_ij = (zk_eff*zc2*HALF + zc4)
+ endif
+
+ end function zX_ij
 !
 !
 !
@@ -401,7 +450,6 @@ do i = 1 , n
             end do
 
             h( j , i ) = sum1 + sum2
-!            h( j , i ) = 0.4d0 * h( j , i ) ! older publications used the W factor...
 
         end if
 
@@ -515,7 +563,7 @@ select case( AtNo )
     case( 6 )
 
 !        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
-        if( l == 1 ) eps = 6.0d-2    ! teste
+        if( l == 1 ) eps = 6.0d0    ! teste
 !        if( l == 1 ) eps = 454.0923d-6 ! Ref. 2
 !        if( l == 1 ) eps = 4.541d0 ! teste
 
@@ -526,6 +574,7 @@ select case( AtNo )
     case( 15 )
 
         if( l == 1 ) eps = - 0.00889d0 ! Ref. 2 <-- Neff = 1.51 (Ref.6)
+!        if( l == 1 ) eps = - 0.8d0 ! teste
 
     case( 35 )
 
@@ -540,11 +589,13 @@ select case( AtNo )
     case( 50 )
 
         if( l == 1 ) eps = 0.68d0 ! Ref. 8 
+!        if( l == 1 ) eps = 3.0d0 ! teste
 
     case( 53 )
 
 !        if( l == 1 ) eps = 0.73d0 ! Ref. 3
-        if( l == 1 ) eps = - 0.62848 ! Ref. 7
+        if( l == 1 ) eps = - 0.62848d0 ! Ref. 7
+ !       if( l == 1 ) eps = - 3.0d0 ! teste
 
     case default
 

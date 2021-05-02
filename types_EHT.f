@@ -26,6 +26,7 @@ module type_m
         real*8       , allocatable :: hardcore(:)
         real*8       , allocatable :: V_shift(:)
         real*8       , allocatable :: polar(:)
+        real*8       , allocatable :: Qcore(:)
         real*8                     :: BoxSides(3)
         real*8                     :: Center_of_Mass(3)
         real*8                     :: Center_of_Charge(3)
@@ -168,6 +169,7 @@ module type_m
         complex*16 , allocatable :: R(:,:)
         complex*16 , allocatable :: L(:,:)
         real*8     , allocatable :: erg(:)
+        real*8     , allocatable :: Sz(:)
         real*8                   :: time
         integer                  :: Fermi_state
     end type C_eigen
