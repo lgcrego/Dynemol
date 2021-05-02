@@ -184,6 +184,11 @@ integer :: copy , nr_sum , ix , iy , k , n
 
  END FORALL
 
+ if( not(allocated(extended_cell % Qcore)) ) allocate( extended_cell % Qcore ( size(extended_cell % Symbol) ) )
+ where( extended_cell % Symbol == 'P' )  extended_cell % Qcore =  4.886d0
+ where( extended_cell % Symbol == 'Sn' ) extended_cell % Qcore =  9.102d0
+ where( extended_cell % Symbol == 'I' )  extended_cell % Qcore = 11.612d0
+
  CALL fix_fragments( extended_cell )
 
 ! create_&_allocate Extended_Cell%list_of_fragments ...     

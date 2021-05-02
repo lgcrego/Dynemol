@@ -40,9 +40,6 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-univ % atom(  1 :  63) % residue = "DNR"
-univ % atom( 64 : 273) % residue = "BDG"
-univ % atom(274 : 336) % residue = "ACP"
 
 !-----------------------------------
 !      define %nr
@@ -65,14 +62,15 @@ where(univ % atom % residue == "DNR") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-!where(univ % atom % residue == "ION") univ % atom % Hl = .true.
+where(univ % atom % residue == "DNR") univ % atom % Hl = .true.
 !----------------------------------------------------
 
 !      define %fragment 
 !----------------------------------------------------
-where(univ % atom % residue == "DNR") univ % atom % fragment = "1"
-where(univ % atom % residue == "BDG") univ % atom % fragment = "B"
-where(univ % atom % residue == "ACP") univ % atom % fragment = "2"
+where(univ % atom % residue == "LFT") univ % atom % fragment = "L"
+where(univ % atom % residue == "DNR") univ % atom % fragment = "D"
+where(univ % atom % residue == "RGT") univ % atom % fragment = "R"
+where(univ % atom % residue == "ACP") univ % atom % fragment = "A"
 
 
 ! ---------- Table of fragments -------------
