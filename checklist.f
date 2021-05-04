@@ -63,69 +63,108 @@ end subroutine checklist
  subroutine dump_driver_parameters_and_tuning
 !============================================
 implicit none
+
+! local parameters ...
+character(len=3) :: month(12)=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
  
 ! local variables ... 
+ integer :: i , date_time(8)
  character(len=3)  :: tag
  character(len=12) :: number_string
 
 open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
 
+call date_and_time(values=date_time) 
+
+write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
+
     write(10,'(''<======  ###############  ==>'')')
     write(10,'(''<====    PARAMETERS.F   ====>'')')
     write(10,'(''<==  ###############  ======>'')')
     write(10,*)
+
     write(10,'(" DRIVER          :" , A12  )') DRIVER          
 
-    if( DRIVER /= "MM_Dynamics" ) then
+    if( .not. static ) then
 
-        write(10,'(" QMMM            :" , A10)') merge(".true. <==",".false.   ",QMMM)            
+        if( DRIVER /= "MM_Dynamics" ) then
+       
+            write(10,'(" QMMM            :" , A10)') merge(".true. <==",".false.   ",QMMM)            
+            write(10,'(" OPT_parms       :" , A10)') merge(".true. <==",".false.   ",OPT_parms)       
+            write(10,'(" SPECTRUM        :" , A10)') merge(".true. <==",".false.   ",SPECTRUM)        
+            write(10,'(" Alpha_Tensor    :" , A10)') merge(".true. <==",".false.   ",Alpha_Tensor)    
+       
+            tag = merge("no ","yes",GaussianCube)       
+            write(10 , '(" GaussianCube    :" , A10)' , advance=tag) merge(".true. <==",".false.   ",GaussianCube)    
+            If( GaussianCube ) &
+                write(10,'(" GaussianCube_step = " , I0)') GaussianCube_step      
+       
+            tag = merge("no ","yes",NetCharge)       
+            write(10 , '(" NetCharge       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",NetCharge)       
+            If( NetCharge ) &
+                write(10,'(" CH_and_DP_step = " , I0)') CH_and_DP_step      
+       
+            write(10,'(" DensityMatrix   :" , A10)') merge(".true. <==",".false.   ",DensityMatrix)   
+            write(10,'(" AutoCorrelation :" , A10)') merge(".true. <==",".false.   ",AutoCorrelation) 
+            write(10,'(" VDOS_           :" , A10)') merge(".true. <==",".false.   ",VDOS_)           
+       
+            tag = merge("no ","yes",EnvField_)       
+            write(10 , '(" EnvField_       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",EnvField_)       
+            If( EnvField_) then 
+                write(10,'(" Environ_Type =" , A6)' , advance=tag) Environ_Type    
+                write(10,'("   /   Environ_step = " , I0)') Environ_step    
+            end IF
+            write(10,'(" Coulomb_        :" , A10)') merge(".true. <==",".false.   ",Coulomb_)        
+            write(10,'(" Induced_        :" , A10)') merge(".true. <==",".false.   ",Induced_)        
+            write(10,'(" frame_step      : " , I0)') frame_step      
+       
+        end if
+       
+        write(10,'(" ad_hoc          :" , A10)') merge(".true. <==",".false.   ",ad_hoc)          
+        write(10,'(" restart         :" , A10)') merge(".true. <==",".false.   ",restart)         
+        write( number_string , '(F12.4)' ) t_f
+        write(10,'(" t_f             : " , A12)') adjustl(number_string)
+        write(10,'(" n_t             : " ,  I0)') n_t            
+       
+        if( (DRIVER(1:5) == "slice") .or.  DRIVER == "q_dynamics" .or. DRIVER == "avrg_confgs") then
+            write(10,'(" CT_dump_step    : " , I0)') CT_dump_step   
+            write(10,'(" n_part          : " , I0)') n_part         
+            write(10,'(" hole_state      : " , I0)') hole_state     
+            write(10,'(" electron_state  : " , I0)') electron_state 
+        end if
+       
+        write(10,'(" nnx , nny       : " , I0,I2)') nnx , nny           
+        write(10,'(" PBC             : " , I0,I2,I2)') PBC            
+        write(10,*)
+
+    elseif( DRIVER == "Genetic_Alg" ) then
+
         write(10,'(" OPT_parms       :" , A10)') merge(".true. <==",".false.   ",OPT_parms)       
-        write(10,'(" SPECTRUM        :" , A10)') merge(".true. <==",".false.   ",SPECTRUM)        
+        write(10,'(" DP_Moment       :" , A10)') merge(".true. <==",".false.   ",DP_Moment)       
         write(10,'(" Alpha_Tensor    :" , A10)') merge(".true. <==",".false.   ",Alpha_Tensor)    
+        write(10,'(" ad_hoc          :" , A10)') merge(".true. <==",".false.   ",ad_hoc)          
+        write(10,'(" GaussianCube    :" , A10)') merge(".true. <==",".false.   ",GaussianCube)          
 
-        tag = merge("no ","yes",GaussianCube)       
-        write(10 , '(" GaussianCube    :" , A10)' , advance=tag) merge(".true. <==",".false.   ",GaussianCube)    
-        If( GaussianCube ) &
-            write(10,'(" GaussianCube_step = " , I0)') GaussianCube_step      
+        write(10,'(" Pop_Size        :" , I0)') Pop_Size
+        write(10,'(" N_generations   :" , I0)') N_generations
+        write( number_string , '(F8.5)' ) Pop_range
+        write(10,'(" Pop_range       :" , A8)') adjustl(number_string)
+        write(10,'(" selection_by    :" , A8)') adjustl(selection_by)          
 
-        tag = merge("no ","yes",NetCharge)       
-        write(10 , '(" NetCharge       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",NetCharge)       
-        If( NetCharge ) &
-            write(10,'(" CH_and_DP_step = " , I0)') CH_and_DP_step      
+        tag = merge("no ","yes",Mutate_Cross)       
+        write(10 , '(" Mutate_Cross    :" , A10)' , advance=tag) merge(".true. <==",".false.   ",Mutate_Cross)    
+        If( Mutate_Cross ) &
+            write(10,'(" Mutation_rate = " , F5.3)') Mutation_rate      
 
-        write(10,'(" DensityMatrix   :" , A10)') merge(".true. <==",".false.   ",DensityMatrix)   
-        write(10,'(" AutoCorrelation :" , A10)') merge(".true. <==",".false.   ",AutoCorrelation) 
-        write(10,'(" VDOS_           :" , A10)') merge(".true. <==",".false.   ",VDOS_)           
+        write(10,'(" Adaptive_       :" , A10)') merge(".true. <==",".false.   ",Adaptive_)       
 
-        tag = merge("no ","yes",EnvField_)       
-        write(10 , '(" EnvField_       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",EnvField_)       
-        If( EnvField_) then 
-            write(10,'(" Environ_Type =" , A6)' , advance=tag) Environ_Type    
-            write(10,'("   /   Environ_step = " , I0)') Environ_step    
-        end IF
-        write(10,'(" Coulomb_        :" , A10)') merge(".true. <==",".false.   ",Coulomb_)        
-        write(10,'(" Induced_        :" , A10)') merge(".true. <==",".false.   ",Induced_)        
-        write(10,'(" frame_step      : " , I0)') frame_step      
+        tag = merge("no ","yes",CG_)       
+        write(10,'(" CG_             :" , A10)' , advance=tag) merge(".true. <==",".false.   ",CG_ )    
+        If( CG_  ) write(10,'(" Top_Selection = " , I0)') Top_Selection      
+
+        write(10,'(" profiling       :" , A10)') merge(".true. <==",".false.   ",profiling)       
 
     end if
-
-    write(10,'(" ad_hoc          :" , A10)') merge(".true. <==",".false.   ",ad_hoc)          
-    write(10,'(" restart         :" , A10)') merge(".true. <==",".false.   ",restart)         
-    write( number_string , '(F12.4)' ) t_f
-    write(10,'(" t_f             : " , A12)') adjustl(number_string)
-    write(10,'(" n_t             : " ,  I0)') n_t            
-
-    if( (DRIVER(1:5) == "slice") .or.  DRIVER == "q_dynamics" .or. DRIVER == "avrg_confgs") then
-        write(10,'(" CT_dump_step    : " , I0)') CT_dump_step   
-        write(10,'(" n_part          : " , I0)') n_part         
-        write(10,'(" hole_state      : " , I0)') hole_state     
-        write(10,'(" electron_state  : " , I0)') electron_state 
-    end if
-
-    write(10,'(" nnx , nny       : " , I0,I2)') nnx , nny           
-    write(10,'(" PBC             : " , I0,I2,I2)') PBC            
-    write(10,*)
-
 
  if( nuclear_matter == "MDynamics" ) then
 
@@ -188,6 +227,8 @@ close (10)
  end if
 
  CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+
+ include 'formats.h'
 
 end subroutine dump_driver_parameters_and_tuning
 !

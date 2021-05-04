@@ -73,7 +73,8 @@ do its=1,this % ITMAX                                           ! Loop over iter
 
    If( this% cost() - fp > THIRD ) then
       local_minimum = real_large
-      If(this% driver == "MM_Optimize") this% message = " >>> FF-Manifold is too steep here; try pre-process by Annealing <<<"
+      If(this% driver == "MM_Optimize") &
+         this% message = " >>> FF-Manifold is too steep; try: 1) pre-process by Annealing or 2) decrease BracketSize in MM_ERG_class.f <<<"
       goto 100     ! ==> convergence not likely; Exit ...
    ElseIf( NaN ) then
       local_minimum = real_large

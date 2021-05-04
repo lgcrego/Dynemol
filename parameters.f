@@ -14,6 +14,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
+character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
@@ -139,9 +140,10 @@ logical :: dynamic
 !
 
   Pop_Size       =  200  
-  N_generations  =  50    
-  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.5     
+  N_generations  =  200    
+  Pop_range      =  0.92          ! <== range of variation of parameters [0:1]
+  selection_by   =  'roullete'     ! option={roullete,ranking,sorting}
+  Mutation_rate  =  0.9     
 
   Adaptive_      =  T_       ! <== true  -> Adaptive GA method
   Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !

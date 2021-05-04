@@ -206,7 +206,7 @@ character    , optional , intent(in)    :: instance
 ! M[k] = ( (k-1)*M[k-1] + x[k] ) / k
 ! S[k] = S[k-1] + (x[k] – M[k-1]) * (x[k] – M[k])
 ! M[] = mean value
-! S[n]/(n-1)  = S^2 = variance
+! S[n]/(n-1)  =  variance
 
 !===============================================
 If( present(instance) ) then

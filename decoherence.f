@@ -176,6 +176,9 @@ print*,(erg(16)-erg(PST(1))) ,(erg(17)-erg(PST(1)))
 
 print*,v_x_s(16,1), v_x_s(17,1)
 
+write(25,*)tau_inv(17,1), (erg(17)-erg(PST(1))), v_x_s(17,1)
+
+write(26,*)rho(17,1)
 
 
 

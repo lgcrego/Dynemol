@@ -9,7 +9,7 @@ module GA_driver_m
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
- use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder 
+ use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -36,7 +36,7 @@ implicit none
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
- type(STO_basis) , allocatable  :: OPT_basis(:) , ExCell_basis(:)
+ type(STO_basis) , allocatable  :: OPT_basis(:)
 
 ! preprocessing stuff ...................................
 
@@ -96,12 +96,17 @@ Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , fi
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1 = ",UNI%erg(115) - UNI%erg(114) , 3.2000d0
-!Print*, "dE2 = ",UNI%erg(122) - UNI%erg(121) , 0.0930d0
-!Print*, "dE3 = ",UNI%erg(123) - UNI%erg(121) , 2.9600d0
-!Print*, "dE4 = ",UNI%erg(121) - UNI%erg(120) , 1.0970d0
-!Print*, "dE5 = ",UNI%erg(120) - UNI%erg(119) , 0.2020d0
-!Print*, "dE6 = ",UNI%erg(125) - UNI%erg(124) , 1.6310d0
+Print 10, "dE1 = ",UNI%erg(50) - UNI%erg(49) , "  vs " , 3.8327d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(49)) - 3.8327d0
+Print 10, "dE2 = ",UNI%erg(51) - UNI%erg(49) , "  vs " , 5.1816d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(49)) - 5.1816d0
+Print 10, "dE3 = ",UNI%erg(50) - UNI%erg(48) , "  vs " , 5.3971d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(48)) - 5.3971d0
+Print 10, "dE4 = ",UNI%erg(49) - UNI%erg(48) , "  vs " , 1.5644d0 , "  => error = ", ( UNI%erg(49) - UNI%erg(48)) - 1.5644d0
+Print 10, "dE5 = ",UNI%erg(51) - UNI%erg(50) , "  vs " , 1.3500d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(50)) - 1.3500d0
+Print 10, "dE6 = ",UNI%erg(48) - UNI%erg(47) , "  vs " , 0.2046d0 , "  => error = ", ( UNI%erg(48) - UNI%erg(47)) - 0.2046d0
+Print 10, "dE7 = ",UNI%erg(47) - UNI%erg(46) , "  vs " , 0.1116d0 , "  => error = ", ( UNI%erg(47) - UNI%erg(46)) - 0.1116d0
+Print 10, "dE8 = ",UNI%erg(52) - UNI%erg(51) , "  vs " , 0.1929d0 , "  => error = ", ( UNI%erg(52) - UNI%erg(51)) - 0.1929d0
+Print 10, "dE9 = ",UNI%erg(53) - UNI%erg(51) , "  vs " , 0.3880d0 , "  => error = ", ( UNI%erg(53) - UNI%erg(51)) - 0.3880d0
+
+10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 

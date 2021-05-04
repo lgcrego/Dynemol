@@ -34,7 +34,8 @@ module GA_QCModel_m
     logical               :: eval_CG_cost = .false.
 
     ! module parameters ...
-    real :: big = 1.d2
+    real*8 :: big = 1.d2
+    real*8 :: penalty = 1.d1
 
 contains
 !
@@ -141,7 +142,7 @@ EndIf
 If( eval_CG_cost ) then
     Exclude = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
 else
-    Exclude = merge( D_zero , large , x < D_zero )   ! <== Genetic Algorithm uses step function
+    Exclude = merge( D_zero , penalty , x < D_zero )   ! <== Genetic Algorithm uses step function
 EndIf
 
 deallocate( mask )
@@ -229,7 +230,7 @@ EndIf
 If( eval_CG_cost ) then
     Localize = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
 else
-    Localize = merge( D_zero , large , x < D_zero )   ! <== Genetic Algorithm uses step function
+    Localize = merge( D_zero , penalty , x < D_zero )   ! <== Genetic Algorithm uses step function
 EndIf
 
 deallocate( mask )
@@ -306,11 +307,11 @@ logical , allocatable :: mask(:)
  population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 
  if( .not. present(y_or_n) ) then
-     MO_character = merge( D_zero , large , population > HALF )
+     MO_character = merge( D_zero , penalty , population > HALF )
  elseif( y_or_n == "y" ) then
-     MO_character = merge( D_zero , large , population > HALF )
+     MO_character = merge( D_zero , penalty , population > HALF )
  elseif( y_or_n == "n" ) then
-     MO_character = merge( D_zero , large , population < HALF )
+     MO_character = merge( D_zero , penalty , population < HALF )
  endif
 
 deallocate( mask )
@@ -442,11 +443,11 @@ select case ( instance )
 
     case( '+' )  ! <== Bonding ...
 
-        bond_type = merge( D_zero , large , bond_signal > D_zero )
+        bond_type = merge( D_zero , penalty , bond_signal > D_zero )
 
     case( '-' )  ! <== Anti-Bonding ...
 
-        bond_type = merge( D_zero , large , bond_signal < D_zero )
+        bond_type = merge( D_zero , penalty , bond_signal < D_zero )
 
     case default
 
