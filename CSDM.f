@@ -75,7 +75,7 @@ oldPST=PST
 print*, oldPST
 
 GetNewPST = getPointerState( QM%R , MO_TDSE_bra , MO_TDSE_ket )   
-PST = newPST
+PST = GetNewPST
 
 jump = merge( T_ , F_ , any(oldPST /= PST) )
 print*, "jump = ", jump
