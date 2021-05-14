@@ -49,7 +49,6 @@ module TDSE_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use decoherence_m           , only: apply_decoherence
-    use Ehrenfest_Builder       , only: EhrenfestForce 
                                         
 
     public :: TDSE_adiabatic 

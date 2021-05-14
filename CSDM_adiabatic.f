@@ -15,7 +15,6 @@ module CSDM_adiabatic_m
                                         hole_state , electron_state ,    &
                                         DensityMatrix, AutoCorrelation,  &
                                         CT_dump_step, Environ_step,      &
-                                        driver, HFP_Forces ,             &
                                         step_security
     use Babel_m                 , only: Coords_from_Universe, trj, MD_dt                            
     use Allocation_m            , only: Allocate_UnitCell ,              &
@@ -43,7 +42,6 @@ module CSDM_adiabatic_m
                                         Restart_Sys                      
     use MM_dynamics_m           , only: MolecularMechanics ,             &
                                         preprocess_MM , MoveToBoxCM
-    use Ehrenfest_Builder       , only: EhrenfestForce 
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use F_intra_m               , only: BcastQMArgs
@@ -69,15 +67,15 @@ contains
 !
 !
 !
-!==========================================
+!============================================
  subroutine CSDM_adiabatic( Qdyn , final_it )
-!==========================================
+!============================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer        :: j , frame , frame_init , frame_final , frame_restart
+integer        :: frame , frame_init , frame_final , frame_restart
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
@@ -101,6 +99,7 @@ If( restart ) then
     CALL Restart_stuff( QDyn , frame_restart )
 else
     CALL Preprocess( QDyn )
+    triggered = yes
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -112,7 +111,7 @@ do frame = frame_init , frame_final , frame_step
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
-if(it == 20000) stop
+if(it == 40000) stop
     ! calculate for use in MM ...
     If( QMMM ) then
         Net_Charge_MM = Net_Charge
@@ -161,11 +160,9 @@ if(it == 20000) stop
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
-            if( driver == "slice_FSSH" ) then
-                QMMM = QMMM .OR. (triggered == yes)
-                end if
+            QMMM = (triggered == yes)
 print*, QMMM
+
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -188,7 +185,7 @@ print*, QMMM
 
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
-    CALL U_nad(t_rate) ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
+    CALL U_nad() ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
     if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
 
@@ -260,7 +257,7 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 mm = size(ExCell_basis) ; nn = n_part
 
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-                          
+
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( EnvField_ ) then
@@ -348,6 +345,9 @@ Unit_Cell% QM_erg = update_QM_erg()
 
 include 'formats.h'
 
+deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
+deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg )
+
 end subroutine Preprocess
 !
 !
@@ -375,11 +375,10 @@ end forall
 
 end subroutine U_ad
 !
-!==========================
- subroutine U_nad( t_rate )
-!==========================
+!==================
+ subroutine U_nad()
+!==================
 implicit none
-real*8  , intent(in) :: t_rate 
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate)
@@ -397,8 +396,6 @@ end subroutine U_nad
  subroutine DUAL_wvpckts
 !=======================
 implicit none
-
-real*8 , allocatable :: aux(:,:)
 
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%R , mm , MO_TDSE_ket , mm , C_zero , DUAL_TDSE_ket , mm )
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%L , mm , MO_TDSE_bra , mm , C_zero , DUAL_TDSE_bra , mm )
@@ -562,10 +559,6 @@ real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
 ! local variables ...
-integer    :: n
-complex*16 :: wp_energy(n_part)
-
-triggered = NO
 
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
 Unit_Cell% QM_erg    =  update_QM_erg( t_rate , triggered )
@@ -610,18 +603,15 @@ real*8     :: QM_erg , Frontier_gap
 complex*16 :: wp_energy(n_part)
 logical    :: jump
 
-select case ( driver )
-
-  case("slice_FSSH") 
 
 !            If( it == 1) then
 !                QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
 !                return
 !            else
-!                QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+!                QM_erg = UNI%erg(PST(1)) - UNI%erg(PST(2))
 !            end If
 !
-!            If( PES(1) == PES(2) ) then
+!            If( PST(1) == PST(2) ) then
 !            
 !               call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
 !               
@@ -631,18 +621,30 @@ select case ( driver )
 !            
 !            end if
 
-  case("slice_AO","slice_CSDM")
+!===============================================
+           do n = 1 , n_part
+              wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+              end do
+              QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
-            do n = 1 , n_part
+           If( it == 1) then
+              return
+           elseif( (QM_erg <= d_zero) .OR. (PST(1) == PST(2)) ) then
+              PST(:)    = UNI % Fermi_state
+              QM_erg    = d_zero
+              triggered = NO
+           else
+              triggered = YES
+           end if
 
-                if( eh_tag(n) == "XX" ) cycle
+!                
+!           If( PST(1) == PST(2) ) then
 
-                wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-
-            end do
-            QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
-
-  end select
+!               Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+!               
+!               if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
+!           
+!           end if
 
 end function update_QM_erg
 !

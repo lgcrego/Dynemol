@@ -72,7 +72,7 @@ real*8  , intent(in) :: erg(:)
 integer , intent(in) :: PES(:)
 
 !local parameters ...
-real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
+real*8 , parameter :: C = 0.5 * Hartree_2_eV   ! <== eV units
 
 !local variables ...   
 integer :: i , j
@@ -166,22 +166,10 @@ do i = 1 , space
      !===================================================================
 end do
 
-
-
-print*,rho(16,1), rho(17,1)
-
-print*,tau_inv(16,1),tau_inv(17,1)
-
-print*,(erg(16)-erg(PST(1))) ,(erg(17)-erg(PST(1)))
-
-print*,v_x_s(16,1), v_x_s(17,1)
-
-write(25,*)tau_inv(17,1), (erg(17)-erg(PST(1))), v_x_s(17,1)
-
-write(26,*)rho(17,1)
-
-
-
+print*, rho(16,1), rho(17,1)
+print*, tau_inv(16,1), tau_inv(17,1)
+print*, v_x_s(16,1), v_x_s(17,1)
+ 
 
 
 
@@ -201,7 +189,7 @@ do n = 1 , N_atoms
      If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
      atom(n)% f_CSDM(:) = ( ForceN(:,n,1) - ForceN(:,n,2) ) * eVAngs_2_Newton 
      end do 
-
+print*, atom(2)%f_CSDM(1)
 deallocate( rho , tau_inv , v_x_s , s_N_ik , ForceN )  
 
 end subroutine DecoherenceForce
@@ -224,7 +212,7 @@ real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s 
 
 ! local variables ...
 integer :: i , n , N_atoms
-real*8  :: norm_d , norm_S , R2 , v_x_R , aux
+real*8  :: norm_d , norm_S , R2 , v_x_R , aux , D_k(2)
 real*8 , allocatable :: V_vib(:,:) , v_x_dNA(:,:) , s_N_ik(:,:,:,:)
 
 N_atoms = system%atoms
@@ -257,7 +245,8 @@ v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
 
 ! building decoherent force versor s_N_ik ...
 allocate( s_N_ik(3,N_atoms,space,n_part) , source = d_zero )
-
+aux = d_zero
+D_k = d_zero
 do i = 1 , space
      If( i == PST(1) ) cycle     
      !=============================================================================================================
@@ -266,6 +255,9 @@ do i = 1 , space
           If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
           norm_S = d_zero
           norm_d = sum(d_NA_El(:,n,i)*d_NA_El(:,n,i)) 
+
+          aux = aux + norm_d
+
           norm_d = sqrt(d_one/norm_d)
           ! the vector ...
           s_N_ik(:,n,i,1) = v_x_dNA(i,1)*d_NA_El(:,n,i)*norm_d + V_vib(:,n)
@@ -275,8 +267,10 @@ do i = 1 , space
           s_N_ik(:,n,i,1) = s_N_ik(:,n,i,1) * norm_S
           end do
           !========================================================================================================
+          D_k(1) = D_k(1) + sqrt(aux)
 end do
 
+aux = d_zero
 do i = 1 , space
      If( i == PST(2) ) cycle     
      !=============================================================================================================
@@ -285,6 +279,9 @@ do i = 1 , space
           If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
           norm_S = d_zero
           norm_d = sum(d_NA_Hl(:,n,i)*d_NA_Hl(:,n,i))
+
+          aux = aux + norm_d
+
           norm_d = sqrt(d_one/norm_d)
           ! the vector ...
           s_N_ik(:,n,i,2) = v_x_dNA(i,2)*d_NA_Hl(:,n,i)*norm_d + V_vib(:,n)
@@ -294,7 +291,11 @@ do i = 1 , space
           s_N_ik(:,n,i,2) = s_N_ik(:,n,i,2) * norm_S
           end do
           !=========================================================================================================
+          D_k(2) = D_k(2) + sqrt(aux)
 end do
+
+!
+!write(25,*) D_k(1) , D_k(2)
 
 deallocate( V_vib , v_x_dNA )
 

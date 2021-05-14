@@ -95,7 +95,7 @@ real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
-integer :: i , xyz
+integer :: i 
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
@@ -118,6 +118,7 @@ CALL ForceIntra
 
 If( QMMM ) CALL ForceQMMM
 
+        write(*,10) frame, Temperature, Unit_Cell% MD_Kin
 CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
@@ -210,7 +211,9 @@ else
     CALL Cleanup
 
     CALL ForceInter
+    QMMM = NO
     CALL ForceIntra
+    QMMM = YES
 
     ! QMMM coupling ...
     if( QMMM ) CALL QMMM_FORCE( Net_Charge )

@@ -80,6 +80,7 @@ PST = GetNewPST
 jump = merge( T_ , F_ , any(oldPST /= PST) )
 print*, "jump = ", jump
 print*, PST
+
 if(jump) pause
 
 CALL EhrenfestForce( system , basis )
@@ -308,22 +309,19 @@ real*8, allocatable  :: rho(:,:) , base(:,:) , g_switch(:,:)
 allocate( rho(space, 2) )
 ! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2
-!   rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) )
-!   rho(:,j) = rho(:,j) / rho( PST(j) , j )
-!print*, rho(14,2)
    rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
    end do
 
 allocate(g_switch(space,2))
-
 g_switch(:,:) = two * rho * Omega(QR)
 
 deallocate( rho )
-allocate  ( base(0:space,2) , source=d_zero )
 
 call random_number(rn)
 
+newPST = PST
+allocate( base(0:space,2) , source=d_zero )
 base(0,:) = d_zero
 do j = 1 , 2 
    do i = 1 , space
@@ -418,7 +416,6 @@ end function Omega
 !=================================================================================
  subroutine setup_Module( system , basis , QM , A_ad_nd , B_ad_nd , rho_EH , aux )
 !=================================================================================
-use MD_read_m   , only: atom
 implicit none
 type(structure)               , intent(in)    :: system
 type(R_eigen)                 , intent(in)    :: QM
@@ -429,7 +426,6 @@ real*8          , allocatable , intent(inout) :: rho_EH(:,:)
 real*8          , allocatable , intent(inout) :: aux(:,:) 
 
 ! local variables ...
-integer :: n , xyz
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis ) 
