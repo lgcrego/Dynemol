@@ -116,7 +116,7 @@ real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s 
 ! local variables ...
 integer  :: i, j, n, N_atoms, space
 real*8   :: aux
-real*8  , allocatable , dimension(:,:)     :: rho, v_x_s
+real*8  , allocatable , dimension(:,:)     :: rho, v_x_s, tmp
 real*8  , allocatable , dimension(:,:,:)   :: ForceN
 real*8  , allocatable , dimension(:,:,:,:) :: s_N_ik
 
@@ -133,18 +133,23 @@ if( Unit_Cell% MD_Kin < mid_prec ) return
 s_N_ik = get_S_versor( system , PST , space )
 
 allocate( v_x_s(space,n_part) )
+allocate( tmp(space,n_part) )
 do j = 1 , n_part
      !!$OMP parallel do private(n) firstprivate(j) default(shared) reduction(+:v_x_s)
      do i = 1 , space
           v_x_s(i,j) = d_zero
+          tmp(i,j) = d_zero
           do n = 1 , N_atoms
              If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
              v_x_s(i,j) = v_x_s(i,j) + sum(veloc(:,n)*s_N_ik(:,n,i,j)) 
+             tmp(i,j) = tmp(i,j) + sum(s_N_ik(:,n,i,j)*s_N_ik(:,n,i,j)) 
              end do  
      end do
      !!$OMP end parallel do
 end do
 v_x_s = v_x_s * V_factor  
+
+print*, tmp(18,1), tmp(17,1)
 do concurrent( i=1:space , j=1:n_part , v_x_s(i,j)/=d_zero ) 
      v_x_s(i,j) = d_one/v_x_s(i,j)
      end do
@@ -167,7 +172,6 @@ do i = 1 , space
 end do
 
 print*, rho(16,1), rho(17,1)
-print*, tau_inv(16,1), tau_inv(17,1)
 print*, v_x_s(16,1), v_x_s(17,1)
  
 
@@ -212,92 +216,88 @@ real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s 
 
 ! local variables ...
 integer :: i , n , N_atoms
-real*8  :: norm_d , norm_S , R2 , v_x_R , aux , D_k(2)
-real*8 , allocatable :: V_vib(:,:) , v_x_dNA(:,:) , s_N_ik(:,:,:,:)
+real*8  :: norm_S , R2 , v_x_R , aux , D_k(2)
+real*8 , allocatable , dimension(:,:)     :: V_vib , v_x_dNA , norm_d
+real*8 , allocatable , dimension(:,:,:,:) :: s_N_ik
 
 N_atoms = system%atoms
 
 ! V_vib = (\vec{V}\cdot\hat{R})\hat{R} ... units=Ang/ps
 allocate( V_vib(3,N_atoms) , source=d_zero )
+R2 = d_zero
+v_X_R = d_zero
 do n = 1 , N_atoms
-     R2 = dot_product(coord(:,n),coord(:,n))
-     If( R2 < high_prec) cycle
-     v_X_R = dot_product(veloc(:,n),coord(:,n)) * V_factor
-     aux = v_X_R / R2
-     V_vib(:,n) = aux*coord(:,n)
-end do
+     R2 = R2 + dot_product(coord(:,n),coord(:,n))
+     v_X_R = v_X_R + dot_product(veloc(:,n),coord(:,n))*V_factor
+     enddo
+do n = 1 , N_atoms
+     V_vib(:,n) = (v_X_R/R2)*coord(:,n)
+     enddo
 
 ! MIND: d_NA_EL and d_NA_HL vectors are zero for "fixed" or "MM" atoms ...
-allocate( v_x_dNA(space,n_part) )
-!!$OMP parallel do private(n,xyz) firstprivate(i) default(shared) reduction(+:v_x_dNA)
+allocate( v_x_dNA (space,n_part) , source=d_zero )
+allocate( norm_d  (space,n_part) , source=d_zero )
+!!$OMP parallel do private(n,xyz) firstprivate(i) default(shared) reduction(+:v_x_dNA,norm_d)
 do i = 1 , space
-     v_x_dNA(i,:) = d_zero
      do n = 1 , N_atoms
         If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
         ! electrons ... 
         v_x_dNA(i,1) = v_x_dNA(i,1) + sum(veloc(:,n)*d_NA_El(:,n,i)) 
+         norm_d(i,1) =  norm_d(i,1) + sum(d_NA_El(:,n,i)*d_NA_El(:,n,i)) 
         ! holes ...
         v_x_dNA(i,2) = v_x_dNA(i,2) + sum(veloc(:,n)*d_NA_Hl(:,n,i)) 
-        end do  
-end do
+         norm_d(i,2) =  norm_d(i,2) + sum(d_NA_Hl(:,n,i)*d_NA_Hl(:,n,i)) 
+        enddo  
+        enddo
 !!$OMP end parallel do
 v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
+norm_d  = sqrt(d_one/norm_d)
+
 
 ! building decoherent force versor s_N_ik ...
 allocate( s_N_ik(3,N_atoms,space,n_part) , source = d_zero )
-aux = d_zero
-D_k = d_zero
+
 do i = 1 , space
      If( i == PST(1) ) cycle     
      !=============================================================================================================
      ! electron ...
      do n = 1 , N_atoms
           If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          norm_S = d_zero
-          norm_d = sum(d_NA_El(:,n,i)*d_NA_El(:,n,i)) 
-
-          aux = aux + norm_d
-
-          norm_d = sqrt(d_one/norm_d)
           ! the vector ...
-          s_N_ik(:,n,i,1) = v_x_dNA(i,1)*d_NA_El(:,n,i)*norm_d + V_vib(:,n)
-          norm_S = sum(s_N_ik(:,n,i,1)**2)
-          norm_S = sqrt(d_one/norm_S)
-          ! the versor ...
-          s_N_ik(:,n,i,1) = s_N_ik(:,n,i,1) * norm_S
-          end do
-          !========================================================================================================
-          D_k(1) = D_k(1) + sqrt(aux)
-end do
+          s_N_ik(:,n,i,1) = v_x_dNA(i,1)*d_NA_El(:,n,i)*norm_d(i,1) + V_vib(:,n)
+          enddo
+     norm_s = d_zero
+     do n = 1 , n_atoms
+          norm_s = norm_s + sum( s_n_ik(:,n,i,1) * s_n_ik(:,n,i,1) )
+          enddo
+          norm_s = sqrt(d_one/norm_s)
+     do n = 1 , n_atoms
+          s_n_ik(:,n,i,1) = s_n_ik(:,n,i,1) * norm_s
+          enddo
+     !========================================================================================================
+     enddo
 
-aux = d_zero
 do i = 1 , space
      If( i == PST(2) ) cycle     
      !=============================================================================================================
      ! hole ...
      do n = 1 , N_atoms
           If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          norm_S = d_zero
-          norm_d = sum(d_NA_Hl(:,n,i)*d_NA_Hl(:,n,i))
-
-          aux = aux + norm_d
-
-          norm_d = sqrt(d_one/norm_d)
           ! the vector ...
-          s_N_ik(:,n,i,2) = v_x_dNA(i,2)*d_NA_Hl(:,n,i)*norm_d + V_vib(:,n)
-          norm_S = sum(s_N_ik(:,n,i,2)**2)
-          norm_S = sqrt(d_one/norm_S)
-          ! the versor ...
-          s_N_ik(:,n,i,2) = s_N_ik(:,n,i,2) * norm_S
-          end do
-          !=========================================================================================================
-          D_k(2) = D_k(2) + sqrt(aux)
-end do
+          s_N_ik(:,n,i,2) = v_x_dNA(i,2)*d_NA_Hl(:,n,i)*norm_d(i,2) + V_vib(:,n)
+          enddo
+     norm_s = d_zero
+     do n = 1 , n_atoms
+          norm_s = norm_s + sum( s_n_ik(:,n,i,2) * s_n_ik(:,n,i,2) )
+          enddo
+          norm_s = sqrt(d_one/norm_s)
+     do n = 1 , n_atoms
+          s_n_ik(:,n,i,2) = s_n_ik(:,n,i,2) * norm_s
+          enddo
+     !=========================================================================================================
+     enddo
 
-!
-!write(25,*) D_k(1) , D_k(2)
-
-deallocate( V_vib , v_x_dNA )
+deallocate( V_vib , v_x_dNA , norm_d )
 
 end function get_S_versor
 !
