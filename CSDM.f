@@ -14,11 +14,11 @@ module Ehrenfest_CSDM
     private
 
     !module variables ...
-    integer                                  :: space , PST(2) , Fermi
+    integer                                  :: space , PST(2) , Fermi , dim_3N
     integer , allocatable , dimension(:)     :: BasisPointer, DOS
     real*8  , allocatable , dimension(:)     :: erg, F_vec
-    real*8  , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA
-    real*8  , allocatable , dimension(:,:,:) :: F_mtx, d_NA_El, d_NA_Hl              
+    real*8  , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA, d_NA_El, d_NA_Hl              
+    real*8  , allocatable , dimension(:,:,:) :: F_mtx
     logical , allocatable , dimension(:,:)   :: mask
 
     !module parameters ...
@@ -99,11 +99,9 @@ end subroutine Ehrenfest
 !===========================================
 use Semi_empirical_parms , only: ChemAtom => atom
 use MD_read_m            , only: atom
-
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
-
 
 ! local parameters ...
 integer , parameter :: xyz_key(3) = [1,2,3]
@@ -111,7 +109,7 @@ real*8  , parameter :: delta = 1.d-8
 real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
 
 ! local variables ...
-integer :: i , j , xyz , jL , L , indx
+integer :: i , j , xyz , jL , L , indx , atm_counter
 integer :: k , ik , DOS_k , BP_k 
 
 ! local arrays ...
@@ -129,14 +127,16 @@ forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = d_zero
 ! Run, Forrest, Run ...
 do xyz = 1 , 3
 
-        grad_S  = d_zero
-        Force   = d_zero 
-        
+        grad_S = d_zero
+        Force  = d_zero 
+       
+        atm_counter = 0
+  
         do k = 1 , system% atoms
         
-            If( system%QMMM(k) == "MM" .OR. system%flex(k) == F_ ) then
-               cycle
-            endif
+            If( system%QMMM(k) == "MM" .OR. system%flex(k) == F_ ) cycle
+
+            atm_counter = atm_counter + 1
         
             !force on atom site ...
             DOS_k = ChemAtom( system% AtNo(k) )% DOS
@@ -195,11 +195,12 @@ do xyz = 1 , 3
         
             ! calculation of d_NA ...
             d_NA = NAcoupling( grad_S( : , BP_K+1 : BP_K+DOS_k) , DOS_k , BP_K )  ! <== units = 1/Angs
-        
+       
+            indx = (atm_counter-1)*3 + xyz 
             do concurrent (j=1:space)
-               d_NA_El(xyz,k,j) = d_NA(j,1)
-               d_NA_Hl(xyz,k,j) = d_NA(j,2)
-               end do
+               d_NA_El(indx,j) = d_NA(j,1)
+               d_NA_Hl(indx,j) = d_NA(j,2)
+               enddo
         
             ! recover original system ...
             system% coord (K,:) = tmp_coord
@@ -447,8 +448,9 @@ If( .NOT. allocated(grad_S) ) then
     allocate( grad_S  (space,space) )
     allocate( Kernel  (space,space) )
 
-    allocate( d_NA_El (3,system%atoms,space) , source = d_zero )
-    allocate( d_NA_Hl (3,system%atoms,space) , source = d_zero )
+    dim_3N = 3*count( system%QMMM == "QM" .AND. system%flex == T_ )
+    allocate( d_NA_El (dim_3N,space) , source = d_zero )
+    allocate( d_NA_Hl (dim_3N,space) , source = d_zero )
 
     PST(1) = electron_state
     PST(2) = hole_state

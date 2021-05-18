@@ -1,5 +1,8 @@
 module decoherence_m
 
+    use f95_precision
+    use blas95
+    use lapack95
     use type_m
     use constants_m
     use parameters_m      , only: n_part
@@ -13,7 +16,8 @@ module decoherence_m
     logical , parameter :: T_ = .true. , F_ = .false.
 
     !module variables ...
-    real*8 , allocatable :: tau_inv(:,:) , veloc(:,:) , coord(:,:)
+    integer              :: dim_3N
+    real*8 , allocatable :: tau_inv(:,:) , veloc(:) , coord(:)
 
     interface apply_decoherence
         module procedure FirstOrderDecoherence
@@ -72,16 +76,18 @@ real*8  , intent(in) :: erg(:)
 integer , intent(in) :: PES(:)
 
 !local parameters ...
-real*8 , parameter :: C = 0.5 * Hartree_2_eV   ! <== eV units
+real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
 
 !local variables ...   
 integer :: i , j
-real*8  :: Const , tau , dE
+real*8  :: Const , dE
 
 ! kinetic energy in eV units ...
 Const = d_one + C/Unit_Cell%MD_Kin  !   E_kin()
 
-allocate( tau_inv(size(erg),2) , source = d_zero )
+if( .not. allocated(tau_inv) ) then
+    allocate( tau_inv(size(erg),2) , source = d_zero )
+    endif
 
 do j = 1 , n_part 
 do i = 1 , size(erg)
@@ -100,206 +106,180 @@ end subroutine DecoherenceRate
 !===================================================================
  subroutine DecoherenceForce( system , MO_bra , MO_ket , erg , PST )
 !===================================================================
- use MD_read_m   , only: atom
- use MM_input    , only: read_velocities
- implicit none
- type(structure) , intent(in) :: system
- complex*16      , intent(in) :: MO_bra(:,:)
- complex*16      , intent(in) :: MO_ket(:,:)
- real*8          , intent(in) :: erg(:)
- integer         , intent(in) :: PST(:)
+use MD_read_m  , only: atom
+implicit none
+type(structure), intent(in):: system
+complex*16     , intent(in):: MO_bra(:,:)
+complex*16     , intent(in):: MO_ket(:,:)
+real*8         , intent(in):: erg(:)
+integer        , intent(in):: PST(:)
 
 ! local parameters ...
-real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
-real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9 
+real*8, parameter:: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
 
 ! local variables ...
-integer  :: i, j, n, N_atoms, space
+integer  :: i, j, h, n, N_atoms, space, xyz
 real*8   :: aux
-real*8  , allocatable , dimension(:,:)     :: rho, v_x_s, tmp
-real*8  , allocatable , dimension(:,:,:)   :: ForceN
-real*8  , allocatable , dimension(:,:,:,:) :: s_N_ik
+real*8  , allocatable , dimension(:,:)   :: rho, v_x_s, s_El_ik, s_Hl_ik
+real*8  , allocatable , dimension(:,:,:) :: ForceN 
 
 CALL preprocess( system )
+if( .not. allocated(tau_inv) ) then
+    allocate( tau_inv(size(erg),2) , source = d_zero )
+    endif
 
 N_atoms = system%atoms
 space   = size(erg)
 
-! set atomic forces to zero beforehand ...
+! reset decoherence force to zero ...
 forall( i=1:N_atoms ) atom(i)% f_CSDM(:) = d_zero
 
 if( Unit_Cell% MD_Kin < mid_prec ) return
      
-s_N_ik = get_S_versor( system , PST , space )
-
-allocate( v_x_s(space,n_part) )
-allocate( tmp(space,n_part) )
-do j = 1 , n_part
-     !!$OMP parallel do private(n) firstprivate(j) default(shared) reduction(+:v_x_s)
-     do i = 1 , space
-          v_x_s(i,j) = d_zero
-          tmp(i,j) = d_zero
-          do n = 1 , N_atoms
-             If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-             v_x_s(i,j) = v_x_s(i,j) + sum(veloc(:,n)*s_N_ik(:,n,i,j)) 
-             tmp(i,j) = tmp(i,j) + sum(s_N_ik(:,n,i,j)*s_N_ik(:,n,i,j)) 
-             end do  
-     end do
-     !!$OMP end parallel do
-end do
-v_x_s = v_x_s * V_factor  
-
-print*, tmp(18,1), tmp(17,1)
-do concurrent( i=1:space , j=1:n_part , v_x_s(i,j)/=d_zero ) 
-     v_x_s(i,j) = d_one/v_x_s(i,j)
-     end do
-
 allocate( rho(space,n_part) )
 forall(j=1:2) rho(:,j) = MO_ket(:,j)*MO_bra(:,j) 
+
+CALL get_S_versor( s_El_ik , s_Hl_ik , system , PST , space )
+
+allocate( v_x_s(space,n_part) )
+CALL gemv( s_El_ik , veloc , v_x_s(:,1) , V_factor , 0.d0 , 'T' )
+CALL gemv( s_Hl_ik , veloc , v_x_s(:,2) , V_factor , 0.d0 , 'T' )
+
+do concurrent( i=1:space , j=1:n_part , v_x_s(i,j)/=d_zero ) 
+     v_x_s(i,j) = d_one/v_x_s(i,j)
+     enddo
 
 allocate( ForceN(3,N_atoms,n_part) , source=d_zero )
 
 do i = 1 , space 
      !===================================================================
-     ! electron ...
+     ! electron = 1
      If( i == PST(1) ) cycle     
      aux = rho(i,1)*tau_inv(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
-     do n = 1 , N_atoms
-          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          ForceN(:,n,1) = ForceN(:,n,1) + aux*s_N_ik(:,n,i,1)
-          end do
+     h = 0
+     do n = 1,system%atoms 
+     do xyz = 1,3 
+        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+        h = h + 1
+        ForceN(xyz,n,1) = ForceN(xyz,n,1) + aux*s_El_ik(h,i)
+        enddo
+        enddo
      !===================================================================
 end do
 
-print*, rho(16,1), rho(17,1)
-print*, v_x_s(16,1), v_x_s(17,1)
- 
-
-
-
 do i = 1 , space 
      !===================================================================
-     ! hole ...
+     ! hole = 2
      If( i == PST(2) ) cycle     
      aux = rho(i,2)*tau_inv(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
-     do n = 1 , N_atoms
-          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          ForceN(:,n,2) = ForceN(:,n,2) + aux*s_N_ik(:,n,i,2)
-          end do
+     h = 0
+     do n = 1,system%atoms 
+     do xyz = 1,3 
+        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+        h = h + 1
+        ForceN(xyz,n,2) = ForceN(xyz,n,2) + aux*s_Hl_ik(h,i)
+        enddo
+        enddo
      !===================================================================
 end do
 
 do n = 1 , N_atoms
      If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
      atom(n)% f_CSDM(:) = ( ForceN(:,n,1) - ForceN(:,n,2) ) * eVAngs_2_Newton 
-     end do 
-print*, atom(2)%f_CSDM(1)
-deallocate( rho , tau_inv , v_x_s , s_N_ik , ForceN )  
+     enddo 
+
+deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , ForceN )  
 
 end subroutine DecoherenceForce
 !
 !
 !
-!===============================================
- function get_S_versor( system , PST , space ) &
- result(s_N_ik)
-!===============================================
+!===================================================================
+ subroutine get_S_versor( s_El_ik , s_Hl_ik , system , PST , space ) 
+!===================================================================
 use Ehrenfest_CSDM, only: d_NA_El , d_NA_Hl
-
 implicit none
-type(structure) , intent(in) :: system
-integer         , intent(in) :: PST(:)
-integer         , intent(in) :: space
+type(structure)     , intent(in) :: system
+integer             , intent(in) :: PST(:)
+integer             , intent(in) :: space
+real*8 , allocatable, intent(out):: s_El_ik(:,:)
+real*8 , allocatable, intent(out):: s_Hl_ik(:,:)
 
 ! local parameters ...
-real*8  , parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+real*8, parameter:: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
 
 ! local variables ...
-integer :: i , n , N_atoms
-real*8  :: norm_S , R2 , v_x_R , aux , D_k(2)
-real*8 , allocatable , dimension(:,:)     :: V_vib , v_x_dNA , norm_d
-real*8 , allocatable , dimension(:,:,:,:) :: s_N_ik
+integer :: i , N_atoms
+real*8  :: norm , R2 , v_x_R 
+real*8 , allocatable , dimension(:)   :: V_vib
+real*8 , allocatable , dimension(:,:) :: v_x_dNA , versor_d_EL , versor_d_Hl 
 
 N_atoms = system%atoms
 
-! V_vib = (\vec{V}\cdot\hat{R})\hat{R} ... units=Ang/ps
-allocate( V_vib(3,N_atoms) , source=d_zero )
-R2 = d_zero
-v_X_R = d_zero
-do n = 1 , N_atoms
-     R2 = R2 + dot_product(coord(:,n),coord(:,n))
-     v_X_R = v_X_R + dot_product(veloc(:,n),coord(:,n))*V_factor
-     enddo
-do n = 1 , N_atoms
-     V_vib(:,n) = (v_X_R/R2)*coord(:,n)
-     enddo
+! V_vib, units=Ang/ps
+allocate( V_vib(dim_3N) )
+R2    = dot_product( coord , coord )
+v_X_R = dot_product( veloc , coord ) * V_factor
+V_vib = v_X_R / R2 * coord
 
-! MIND: d_NA_EL and d_NA_HL vectors are zero for "fixed" or "MM" atoms ...
-allocate( v_x_dNA (space,n_part) , source=d_zero )
-allocate( norm_d  (space,n_part) , source=d_zero )
-!!$OMP parallel do private(n,xyz) firstprivate(i) default(shared) reduction(+:v_x_dNA,norm_d)
-do i = 1 , space
-     do n = 1 , N_atoms
-        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-        ! electrons ... 
-        v_x_dNA(i,1) = v_x_dNA(i,1) + sum(veloc(:,n)*d_NA_El(:,n,i)) 
-         norm_d(i,1) =  norm_d(i,1) + sum(d_NA_El(:,n,i)*d_NA_El(:,n,i)) 
-        ! holes ...
-        v_x_dNA(i,2) = v_x_dNA(i,2) + sum(veloc(:,n)*d_NA_Hl(:,n,i)) 
-         norm_d(i,2) =  norm_d(i,2) + sum(d_NA_Hl(:,n,i)*d_NA_Hl(:,n,i)) 
-        enddo  
-        enddo
-!!$OMP end parallel do
-v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
-norm_d  = sqrt(d_one/norm_d)
-
-
-! building decoherent force versor s_N_ik ...
-allocate( s_N_ik(3,N_atoms,space,n_part) , source = d_zero )
+! MIND: d_NA_EL and d_NA_HL vectors are NOT defined for "fixed" or "MM" atoms ...
+allocate( v_x_dNA     (space,n_part) , source=d_zero )
+allocate( versor_d_El (dim_3N,space) , source=d_zero )
+allocate( versor_d_Hl (dim_3N,space) , source=d_zero )
 
 do i = 1 , space
      If( i == PST(1) ) cycle     
-     !=============================================================================================================
-     ! electron ...
-     do n = 1 , N_atoms
-          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          ! the vector ...
-          s_N_ik(:,n,i,1) = v_x_dNA(i,1)*d_NA_El(:,n,i)*norm_d(i,1) + V_vib(:,n)
-          enddo
-     norm_s = d_zero
-     do n = 1 , n_atoms
-          norm_s = norm_s + sum( s_n_ik(:,n,i,1) * s_n_ik(:,n,i,1) )
-          enddo
-          norm_s = sqrt(d_one/norm_s)
-     do n = 1 , n_atoms
-          s_n_ik(:,n,i,1) = s_n_ik(:,n,i,1) * norm_s
-          enddo
-     !========================================================================================================
+     !========================================================
+     ! electron = 1 
+     v_x_dNA(i,1)     = dot_product( veloc(:)     , d_NA_El(:,i) ) 
+     norm             = dot_product( d_NA_El(:,i) , d_NA_El(:,i) ) 
+     norm             = sqrt(d_one/norm)
+     versor_d_El(:,i) = d_NA_El(:,i) * norm
+     !========================================================
      enddo
-
 do i = 1 , space
      If( i == PST(2) ) cycle     
-     !=============================================================================================================
-     ! hole ...
-     do n = 1 , N_atoms
-          If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-          ! the vector ...
-          s_N_ik(:,n,i,2) = v_x_dNA(i,2)*d_NA_Hl(:,n,i)*norm_d(i,2) + V_vib(:,n)
-          enddo
-     norm_s = d_zero
-     do n = 1 , n_atoms
-          norm_s = norm_s + sum( s_n_ik(:,n,i,2) * s_n_ik(:,n,i,2) )
-          enddo
-          norm_s = sqrt(d_one/norm_s)
-     do n = 1 , n_atoms
-          s_n_ik(:,n,i,2) = s_n_ik(:,n,i,2) * norm_s
-          enddo
-     !=========================================================================================================
+     !========================================================
+     ! hole  = 2 
+     v_x_dNA(i,2)     = dot_product( veloc(:)     , d_NA_Hl(:,i) ) 
+     norm             = dot_product( d_NA_Hl(:,i) , d_NA_Hl(:,i) ) 
+     norm             = sqrt(d_one/norm)
+     versor_d_Hl(:,i) = d_NA_Hl(:,i) * norm
+     !========================================================
      enddo
 
-deallocate( V_vib , v_x_dNA , norm_d )
+v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
 
-end function get_S_versor
+! building decoherent force versor s_ik ...
+
+allocate( s_El_ik(dim_3N,space) , source = d_zero )
+do i = 1 , space
+     If( i == PST(1) ) cycle     
+     !========================================================
+     ! electron = 1 
+     s_El_ik(:,i) = v_x_dNA(i,1)*versor_d_El(:,i) + V_vib(:)
+     norm = dot_product( s_El_ik(:,i) , s_El_ik(:,i) )
+     norm = sqrt(d_one/norm)
+     s_El_ik(:,i) = s_El_ik(:,i) * norm
+     !========================================================
+     enddo
+
+allocate( s_Hl_ik(dim_3N,space) , source = d_zero )
+do i = 1 , space
+     If( i == PST(2) ) cycle     
+     !========================================================
+     ! hole = 2
+     s_Hl_ik(:,i) = v_x_dNA(i,2)*versor_d_Hl(:,i) + V_vib(:)
+     norm = dot_product( s_Hl_ik(:,i) , s_Hl_ik(:,i) )
+     norm = sqrt(d_one/norm)
+     s_Hl_ik(:,i) = s_Hl_ik(:,i) * norm
+     !========================================================
+     enddo
+
+deallocate( V_vib , v_x_dNA , versor_d_El , versor_d_Hl )
+
+end subroutine get_S_versor
 !
 !
 !
@@ -311,17 +291,23 @@ implicit none
 type(structure) , intent(in) :: system
 
 ! local variables ...
-integer :: n , xyz
+integer :: k , n , xyz
 
 If(.NOT. allocated(coord)) then
-   allocate( coord (3,system%atoms) )
-   allocate( veloc (3,system%atoms) )
-   end if
+   dim_3N = 3*count( system%QMMM == "QM" .AND. system%flex == T_ )
+   allocate( coord (dim_3N) )
+   allocate( veloc (dim_3N) )
+   endif
 
-do concurrent( n=1:system%atoms , xyz=1:3 )
-   coord(xyz,n) = system% coord(n,xyz)
-   veloc(xyz,n) = atom(n)% vel(xyz)
-   end do
+k = 0
+do n = 1 , system%atoms 
+   If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+   do xyz = 1 , 3 
+      k = k + 1
+      coord(k) = system% coord(n,xyz)
+      veloc(k) = atom(n)% vel(xyz)
+      enddo
+      enddo
 
 end subroutine preprocess
 !

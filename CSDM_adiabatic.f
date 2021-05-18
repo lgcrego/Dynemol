@@ -196,10 +196,11 @@ print*, QMMM
 
     CALL QMMM_erg_status( frame , t_rate , triggered )
 
-    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+!    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 
     CALL DecoherenceForce( Extended_Cell , MO_bra , MO_ket , UNI%erg , PST )
 
+    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )

@@ -118,7 +118,7 @@ CALL ForceIntra
 
 If( QMMM ) CALL ForceQMMM
 
-        write(*,10) frame, Temperature, Unit_Cell% MD_Kin
+        write(*,10) frame, Unit_Cell% MD_Kin
 CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
