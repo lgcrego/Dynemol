@@ -6,10 +6,11 @@ module Ehrenfest_CSDM
     use lapack95
     use type_m
     use constants_m
-    use parameters_m    , only: verbose, n_part,electron_state, hole_state
-    use Overlap_Builder , only: Overlap_Matrix
+    use Structure_Builder, only: Unit_Cell
+    use parameters_m     , only: verbose, n_part,electron_state, hole_state
+    use Overlap_Builder  , only: Overlap_Matrix
 
-    public :: Ehrenfest , PST , d_NA_El , d_NA_Hl
+    public :: Ehrenfest , PST , d_NA_El , d_NA_Hl , NewPointerState
 
     private
 
@@ -43,12 +44,10 @@ contains
 ! local variables ... 
  integer              :: i , j , nn
  real*8 , allocatable :: A_ad_nd(:,:) , B_ad_nd(:,:) , aux(:,:) , rho_EH(:,:) 
- integer              :: GetNewPST(2)
-    integer :: oldPST(2)
-    logical :: jump
-!================================================================================================
+
+!============================================================
 ! some preprocessing ...
-!================================================================================================
+!============================================================
 space = size(basis)
 nn = n_part
 
@@ -69,19 +68,7 @@ CALL gemm( aux , QM%L  , B_ad_nd , 'T' , 'N' )
 Kernel = Xij * A_ad_nd - B_ad_nd
 
 deallocate( A_ad_nd , B_ad_nd , rho_EH , aux )
-!================================================================================================
-
-oldPST=PST
-print*, oldPST
-
-GetNewPST = getPointerState( QM%R , MO_TDSE_bra , MO_TDSE_ket )   
-PST = GetNewPST
-
-jump = merge( T_ , F_ , any(oldPST /= PST) )
-print*, "jump = ", jump
-print*, PST
-
-if(jump) pause
+!============================================================
 
 CALL EhrenfestForce( system , basis )
 
@@ -244,6 +231,9 @@ dimb = size(grad_Slice(1,:))
 ! temporary arrays ...
 allocate( A(dima,2) , R1(dima,2) , R2(dima,2) , d_NA(dima,2) , Mat2(dima,dima) )
 
+Phi(:,1) = QL(PST(1),:)
+Phi(:,2) = QL(PST(2),:)
+
 do concurrent (j=1:dima) shared(QL,erg,Mat2)
    Mat2(:,j) = QL(:,j)*erg(:)
    end do
@@ -292,32 +282,33 @@ end function NAcoupling
 !
 !
 !
-!===============================================================
- function getPointerState( QR , MO_TDSE_bra , MO_TDSE_ket ) &
- result(newPST)
-!===============================================================
+!=====================================================================
+ subroutine NewPointerState( QR , MO_TDSE_bra , MO_TDSE_ket , MOerg )
+!=====================================================================
 implicit none
 ! args
-real*8                  , intent(in)  :: QR(:,:)
-complex*16              , intent(in)  :: MO_TDSE_bra(:,:)
-complex*16              , intent(in)  :: MO_TDSE_ket(:,:)
+real*8    , intent(in):: QR(:,:)
+complex*16, intent(in):: MO_TDSE_bra(:,:)
+complex*16, intent(in):: MO_TDSE_ket(:,:)
+real*8    , intent(in):: MOerg(:)
 
 ! local variables ...
-integer              :: i , j , newPST(2)
-real*8               :: rn
-real*8, allocatable  :: rho(:,:) , base(:,:) , g_switch(:,:)
+integer            :: i , j , newPST(2)
+real*8             :: rn , EH_jump
+real*8, allocatable:: rho(:,:) , base(:,:) , g_switch(:,:)
+
+    integer :: oldPST(2)
+    logical :: jump
 
 allocate( rho(space, 2) )
 ! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2
    rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
-   end do
+   enddo
 
 allocate(g_switch(space,2))
 g_switch(:,:) = two * rho * Omega(QR)
-
-deallocate( rho )
 
 call random_number(rn)
 
@@ -334,6 +325,19 @@ do j = 1 , 2
       end do
       end do
 
+
+EH_jump = (MOerg(newPST(1)) - MOerg(PST(1))) - (MOerg(newPST(2)) - MOerg(PST(2)))
+print*, EH_jump
+if( EH_jump <= d_zero) then
+         ! do nothing, transitions are allowed
+   elseif( EH_jump >  Unit_Cell% MD_Kin ) then
+    !energy forbidden 
+    return
+    endif
+
+
+
+
 if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
          ! do nothing, transitions are allowed
    elseif( newPST(1) == newPST(2) ) then
@@ -347,20 +351,37 @@ if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
    else
          ! transitions not allowed
          newPST = PST  
-   end if
+   endif
 
 If( newPST(1) < newPST(2) ) then
     CALL system("sed '11i >>> ATTENTION: electron below hole state <<<' warning.signal |cat")
     stop 
     end If
 
-! to be used in NACoupling ...
-Phi(:,1) = QL(newPST(1),:)
-Phi(:,2) = QL(newPST(2),:)
+deallocate( rho , base , g_switch ) 
 
-deallocate( base , g_switch ) 
 
-end function getPointerState
+
+
+
+
+oldPST=PST
+print*, oldPST
+PST = newPST
+jump = merge( T_ , F_ , any(oldPST /= PST) )
+print*, "jump = ", jump
+print*, PST
+if(jump) pause
+
+
+
+
+
+
+
+
+
+end subroutine NewPointerState
 !
 !
 !

@@ -116,13 +116,12 @@ integer        , intent(in):: PST(:)
 
 ! local parameters ...
 real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9 
-real*8, parameter:: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
 
 ! local variables ...
 integer  :: i, j, h, n, N_atoms, space, xyz
-real*8   :: aux
+real*8   :: f_ik 
 real*8  , allocatable , dimension(:,:)   :: rho, v_x_s, s_El_ik, s_Hl_ik
-real*8  , allocatable , dimension(:,:,:) :: ForceN 
+real*8  , allocatable , dimension(:,:) :: Force3N 
 
 CALL preprocess( system )
 if( .not. allocated(tau_inv) ) then
@@ -143,28 +142,21 @@ forall(j=1:2) rho(:,j) = MO_ket(:,j)*MO_bra(:,j)
 CALL get_S_versor( s_El_ik , s_Hl_ik , system , PST , space )
 
 allocate( v_x_s(space,n_part) )
-CALL gemv( s_El_ik , veloc , v_x_s(:,1) , V_factor , 0.d0 , 'T' )
-CALL gemv( s_Hl_ik , veloc , v_x_s(:,2) , V_factor , 0.d0 , 'T' )
+CALL gemv( s_El_ik , veloc , v_x_s(:,1) , 1.d0 , 0.d0 , 'T' )
+CALL gemv( s_Hl_ik , veloc , v_x_s(:,2) , 1.d0 , 0.d0 , 'T' )
 
 do concurrent( i=1:space , j=1:n_part , v_x_s(i,j)/=d_zero ) 
      v_x_s(i,j) = d_one/v_x_s(i,j)
      enddo
 
-allocate( ForceN(3,N_atoms,n_part) , source=d_zero )
+allocate( Force3N(dim_3N,n_part) , source=d_zero )
 
 do i = 1 , space 
      !===================================================================
      ! electron = 1
      If( i == PST(1) ) cycle     
-     aux = rho(i,1)*tau_inv(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
-     h = 0
-     do n = 1,system%atoms 
-     do xyz = 1,3 
-        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-        h = h + 1
-        ForceN(xyz,n,1) = ForceN(xyz,n,1) + aux*s_El_ik(h,i)
-        enddo
-        enddo
+     f_ik = rho(i,1)*tau_inv(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
+     Force3N(:,1) = Force3N(:,1) + f_ik*s_El_ik(:,i)
      !===================================================================
 end do
 
@@ -172,24 +164,21 @@ do i = 1 , space
      !===================================================================
      ! hole = 2
      If( i == PST(2) ) cycle     
-     aux = rho(i,2)*tau_inv(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
-     h = 0
-     do n = 1,system%atoms 
-     do xyz = 1,3 
-        If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-        h = h + 1
-        ForceN(xyz,n,2) = ForceN(xyz,n,2) + aux*s_Hl_ik(h,i)
-        enddo
-        enddo
+     f_ik = rho(i,2)*tau_inv(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
+     Force3N(:,2) = Force3N(:,2) + f_ik*s_Hl_ik(:,i)
      !===================================================================
 end do
 
-do n = 1 , N_atoms
-     If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-     atom(n)% f_CSDM(:) = ( ForceN(:,n,1) - ForceN(:,n,2) ) * eVAngs_2_Newton 
-     enddo 
+h = 0
+do n = 1 , N_atoms 
+do xyz = 1 , 3 
+   If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+   h = h + 1
+   atom(n)% f_CSDM(xyz) = ( Force3N(h,1) - Force3N(h,2) ) * eVAngs_2_Newton 
+   enddo 
+   enddo
 
-deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , ForceN )  
+deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , Force3N )  
 
 end subroutine DecoherenceForce
 !
@@ -206,9 +195,6 @@ integer             , intent(in) :: space
 real*8 , allocatable, intent(out):: s_El_ik(:,:)
 real*8 , allocatable, intent(out):: s_Hl_ik(:,:)
 
-! local parameters ...
-real*8, parameter:: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
-
 ! local variables ...
 integer :: i , N_atoms
 real*8  :: norm , R2 , v_x_R 
@@ -220,7 +206,7 @@ N_atoms = system%atoms
 ! V_vib, units=Ang/ps
 allocate( V_vib(dim_3N) )
 R2    = dot_product( coord , coord )
-v_X_R = dot_product( veloc , coord ) * V_factor
+v_X_R = dot_product( veloc , coord ) 
 V_vib = v_X_R / R2 * coord
 
 ! MIND: d_NA_EL and d_NA_HL vectors are NOT defined for "fixed" or "MM" atoms ...
@@ -249,7 +235,7 @@ do i = 1 , space
      !========================================================
      enddo
 
-v_x_dNA = a_Bohr * v_x_dNA * V_factor  ! <== units = Ang/ps ...
+v_x_dNA = a_Bohr * v_x_dNA ! <== units = Ang/ps ...
 
 ! building decoherent force versor s_ik ...
 
@@ -290,6 +276,9 @@ use MD_read_m   , only: atom
 implicit none
 type(structure) , intent(in) :: system
 
+! local parameters ...
+real*8, parameter:: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+
 ! local variables ...
 integer :: k , n , xyz
 
@@ -305,7 +294,7 @@ do n = 1 , system%atoms
    do xyz = 1 , 3 
       k = k + 1
       coord(k) = system% coord(n,xyz)
-      veloc(k) = atom(n)% vel(xyz)
+      veloc(k) = atom(n)% vel(xyz) * V_factor
       enddo
       enddo
 

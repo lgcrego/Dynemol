@@ -372,7 +372,7 @@
             end do  ! <== DOS
         end do  ! <== atoms
 
-        Psi_2( ix+1 , iy+1 , iz+1 ) = cdabs( cdsqrt( TotalPsiBra * TotalPsiKet ) )
+        Psi_2( ix+1 , iy+1 , iz+1 ) = dreal( TotalPsiBra * TotalPsiKet )
 
     END DO          ! <==  Z coord
     END DO          ! <==  Y coord

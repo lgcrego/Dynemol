@@ -45,7 +45,7 @@ module CSDM_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use F_intra_m               , only: BcastQMArgs
-    use Ehrenfest_CSDM          , only: PST 
+    use Ehrenfest_CSDM          , only: PST , NewPointerState
     use decoherence_m           , only: apply_decoherence , DecoherenceForce
                                         
 
@@ -113,10 +113,10 @@ do frame = frame_init , frame_final , frame_step
     it = it + 1
 if(it == 40000) stop
     ! calculate for use in MM ...
-    If( QMMM ) then
+    if( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI )
-    end If
+        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI, PST )
+    endif
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
     CALL U_ad(t_rate) ! <== adiabatic component of the propagation ; 1 of 2 ... 
@@ -194,14 +194,13 @@ print*, QMMM
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL QMMM_erg_status( frame , t_rate , triggered )
+    CALL Write_Erg_Log( frame , t_rate , triggered )
 
-!    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
-
-    CALL DecoherenceForce( Extended_Cell , MO_bra , MO_ket , UNI%erg , PST )
+    CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
 
     CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
-end do
+
+enddo
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
 deallocate( MO_TDSE_bra , MO_TDSE_ket , DUAL_TDSE_bra , DUAL_TDSE_ket )
@@ -551,7 +550,7 @@ end subroutine dump_Qdyn
 !
 !
 !========================================================
- subroutine QMMM_erg_status( frame , t_rate , triggered )
+ subroutine Write_Erg_Log( frame , t_rate , triggered )
 !========================================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
@@ -586,7 +585,7 @@ if( mod(frame,MM_log_step) == 0 ) then
 
 end if
 
-end subroutine  QMMM_erg_status 
+end subroutine  Write_Erg_Log 
 !
 !
 !
@@ -637,6 +636,7 @@ logical    :: jump
            else
               triggered = YES
            end if
+
 
 !                
 !           If( PST(1) == PST(2) ) then

@@ -2,39 +2,41 @@ module F_intra_m
 
     use type_m   
     use constants_m
-    use MM_input       , only : MM_input_format
-    use parameters_m   , only : PBC , QMMM , n_part
-    use Allocation_m   , only : Allocate_Structures
-    use setup_m        , only : offset
-    use for_force      , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
-                                vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
-                                Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                                harm_dih, imp_dih, harm_bond, morse_bond
-    use MD_read_m      , only : atom , molecule , MM 
-    use MM_types       , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use gmx2mdflex     , only : SpecialPairs , SpecialPairs14 , SpecialMorse
-    use Ehrenfest_CSDM , only : Ehrenfest 
+    use MM_input       , only: MM_input_format
+    use parameters_m   , only: PBC , QMMM , n_part
+    use Allocation_m   , only: Allocate_Structures
+    use setup_m        , only: offset
+    use for_force      , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
+                               vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
+                               Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
+                               harm_dih, imp_dih, harm_bond, morse_bond
+    use MD_read_m      , only: atom , molecule , MM 
+    use MM_types       , only: MM_system , MM_molecular , MM_atomic , debug_MM
+    use gmx2mdflex     , only: SpecialPairs , SpecialPairs14 , SpecialMorse
+    use Ehrenfest_CSDM , only: Ehrenfest 
+    use decoherence_m  , only: DecoherenceForce
 
     private
 
     public :: ForceINTRA, pot_INTRA, BcastQMArgs, ForceQMMM
 
     ! module variables ...
-    real*8  , dimension (3) :: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
-    real*8                  :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
-                               rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
-                               sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
-                               term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
-                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
-                               term4 , dphi1 , dphi2
-    real*8                  :: pot_INTRA
-    integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
-    logical                 :: flag1, flag2, flag3, flag4, flag5
-    logical                 :: there_are_NB_SpecialPairs   = .false.
-    logical                 :: there_are_NB_SpecialPairs14 = .false.
-    integer , allocatable   :: species_offset(:)
+    real*8  , dimension (3):: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
+    real*8                 :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
+                              rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
+                              sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
+                              term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
+                              sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
+                              term4 , dphi1 , dphi2
+    real*8                 :: pot_INTRA
+    integer                :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
+    logical                :: flag1, flag2, flag3, flag4, flag5
+    logical                :: there_are_NB_SpecialPairs   = .false.
+    logical                :: there_are_NB_SpecialPairs14 = .false.
+    integer , allocatable  :: species_offset(:)
 
     ! imported module variables ...
+    integer         :: PST(2)
     type(structure) :: system
     type(R_eigen)   :: QM
     type(STO_basis) , allocatable , dimension(:)   :: basis(:)
@@ -507,7 +509,10 @@ pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + C
 pot_total = pot_INTER + pot_INTRA
 pot_total = pot_total * mol * micro / MM % N_of_molecules
 
-if( QMMM ) CALL Ehrenfest( system, basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, QM )
+if( QMMM ) then
+    CALL Ehrenfest( system, basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, QM )
+    CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
+    endif
 
 ! Get total MM force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
@@ -523,7 +528,7 @@ do i = 1 , MM % N_of_atoms
                                           ) * Angs_2_mts
 
     atom(i)% ftotal(:) = atom(i)% f_MM(:) 
-    end do
+    enddo
 
 end subroutine ForceINTRA
 !
@@ -759,22 +764,24 @@ end subroutine ForceQMMM
 !
 !
 !
-!=======================================================================
- subroutine StoreQMArgs( sys , vec , mtx1 , mtx2 , mtx3 , mtx4 , Eigen )
-!=======================================================================
+!=============================================================================
+ subroutine StoreQMArgs( sys , vec , mtx1 , mtx2 , mtx3 , mtx4 , Eigen , PSE )
+!=============================================================================
  implicit none
- type(structure)  , intent(inout) :: sys
- type(STO_basis)  , intent(in)    :: vec(:)
- complex*16       , intent(in)    :: mtx1(:,:)
- complex*16       , intent(in)    :: mtx2(:,:)
- complex*16       , intent(in)    :: mtx3(:,:)
- complex*16       , intent(in)    :: mtx4(:,:)
- type(R_eigen)    , intent(in)    :: Eigen
+ type(structure), intent(inout):: sys
+ type(STO_basis), intent(in)   :: vec(:)
+ complex*16     , intent(in)   :: mtx1(:,:)
+ complex*16     , intent(in)   :: mtx2(:,:)
+ complex*16     , intent(in)   :: mtx3(:,:)
+ complex*16     , intent(in)   :: mtx4(:,:)
+ type(R_eigen)  , intent(in)   :: Eigen
+ integer        , intent(in)   :: PSE(2)
 
 ! local variables ... 
 
 basis  = vec
 system = sys
+PST    = PSE
 
 MO_bra      = mtx1
 MO_ket      = mtx2
