@@ -297,9 +297,6 @@ integer            :: i , j , newPST(2)
 real*8             :: rn , EH_jump
 real*8, allocatable:: rho(:,:) , base(:,:) , g_switch(:,:)
 
-    integer :: oldPST(2)
-    logical :: jump
-
 allocate( rho(space, 2) )
 ! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2
@@ -325,18 +322,14 @@ do j = 1 , 2
       end do
       end do
 
-
 EH_jump = (MOerg(newPST(1)) - MOerg(PST(1))) - (MOerg(newPST(2)) - MOerg(PST(2)))
-print*, EH_jump
+
 if( EH_jump <= d_zero) then
          ! do nothing, transitions are allowed
    elseif( EH_jump >  Unit_Cell% MD_Kin ) then
     !energy forbidden 
     return
     endif
-
-
-
 
 if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
          ! do nothing, transitions are allowed
@@ -360,26 +353,7 @@ If( newPST(1) < newPST(2) ) then
 
 deallocate( rho , base , g_switch ) 
 
-
-
-
-
-
-oldPST=PST
-print*, oldPST
 PST = newPST
-jump = merge( T_ , F_ , any(oldPST /= PST) )
-print*, "jump = ", jump
-print*, PST
-if(jump) pause
-
-
-
-
-
-
-
-
 
 end subroutine NewPointerState
 !

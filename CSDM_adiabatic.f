@@ -45,8 +45,10 @@ module CSDM_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use F_intra_m               , only: BcastQMArgs
-    use Ehrenfest_CSDM          , only: PST , NewPointerState
-    use decoherence_m           , only: apply_decoherence , DecoherenceForce
+    use Ehrenfest_CSDM          , only: PST , NewPointerState , Ehrenfest
+    use decoherence_m           , only: apply_decoherence ,              &
+                                        DecoherenceForce ,               &
+                                        AdjustNuclearVeloc
                                         
 
     public :: CSDM_adiabatic
@@ -161,7 +163,6 @@ if(it == 40000) stop
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = (triggered == yes)
-print*, QMMM
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
@@ -194,9 +195,9 @@ print*, QMMM
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL Write_Erg_Log( frame , t_rate , triggered )
-
     CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
+
+    CALL Write_Erg_Log( frame , triggered )
 
     CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 
@@ -549,19 +550,18 @@ end subroutine dump_Qdyn
 !
 !
 !
-!========================================================
- subroutine Write_Erg_Log( frame , t_rate , triggered )
-!========================================================
+!=============================================
+ subroutine Write_Erg_Log( frame , triggered )
+!=============================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
 integer, intent(in)    :: frame
-real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
 ! local variables ...
 
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
-Unit_Cell% QM_erg    =  update_QM_erg( t_rate , triggered )
+Unit_Cell% QM_erg    =  update_QM_erg( triggered )
 Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
 
 if( mod(frame,MM_log_step) == 0 ) then 
@@ -589,63 +589,52 @@ end subroutine  Write_Erg_Log
 !
 !
 !
-!==============================================
- function update_QM_erg( t_rate , triggered ) &
+!======================================
+ function update_QM_erg( triggered ) &
  result(QM_erg)
-!==============================================
+!======================================
 implicit none
-real*8 , optional , intent(in)    :: t_rate
 logical, optional , intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
-real*8     :: QM_erg , Frontier_gap
+real*8     :: QM_erg , Gap
 complex*16 :: wp_energy(n_part)
-logical    :: jump
 
+do n = 1 , n_part
+   wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+   end do
+   QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
-!            If( it == 1) then
-!                QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-!                return
-!            else
-!                QM_erg = UNI%erg(PST(1)) - UNI%erg(PST(2))
-!            end If
-!
-!            If( PST(1) == PST(2) ) then
-!            
-!               call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
-!               
-!               Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-!               
-!               if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
-!            
-!            end if
+If( it == 1) return
 
-!===============================================
-           do n = 1 , n_part
-              wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-              end do
-              QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+Gap = UNI% erg(PST(1)) - UNI% erg( UNI%Fermi_state )
+!if( triggered  == NO ) then
+!   if( (Unit_Cell% MD_Kin > Gap) .AND. (PST(1) /= PST(2)) ) then
+!      ! back to excited-state
+!      triggered = YES !!!
+!      QMMM      = YES !!!
+!      CALL Ehrenfest( Extended_Cell, ExCell_basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI )
+!      CALL DecoherenceForce( Extended_Cell , MO_bra , MO_ket , UNI%erg , PST )
+!      return
+!   endif
+!endif
 
-           If( it == 1) then
-              return
-           elseif( (QM_erg <= d_zero) .OR. (PST(1) == PST(2)) ) then
-              PST(:)    = UNI % Fermi_state
-              QM_erg    = d_zero
-              triggered = NO
-           else
-              triggered = YES
-           end if
-
-
-!                
-!           If( PST(1) == PST(2) ) then
-
-!               Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-!               
-!               if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
-!           
-!           end if
+if( triggered == OFF ) then
+   ! remains in GS dynamics forever
+   PST(:)    = UNI % Fermi_state
+   QM_erg    = d_zero
+   triggered = NO
+elseif( (QM_erg < d_zero) .AND. (PST(1) /= PST(2)) ) then
+   ! decay to GS dynamics
+   CALL AdjustNuclearVeloc( Extended_Cell , QM_erg )
+   PST(:)    = UNI % Fermi_state
+   QM_erg    = d_zero
+   triggered = NO
+elseif( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+   ! excited-state dynamics
+   triggered = YES !!!
+end if
 
 end function update_QM_erg
 !

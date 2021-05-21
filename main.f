@@ -22,6 +22,7 @@ use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimiz
 ! Initialize GPU if necessary 
 call GPU_Init(0,1)
 
+!               THE TRUTH IS OUT THERE
 !========================================================
 !                   DRIVER ROUTINE
 !========================================================

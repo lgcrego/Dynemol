@@ -8,7 +8,7 @@ module decoherence_m
     use parameters_m      , only: n_part
     use Structure_Builder , only: Unit_Cell
 
-    public :: apply_decoherence , DecoherenceRate , DecoherenceForce
+    public :: apply_decoherence , DecoherenceRate , DecoherenceForce , AdjustNuclearVeloc
 
     private
 
@@ -83,7 +83,7 @@ integer :: i , j
 real*8  :: Const , dE
 
 ! kinetic energy in eV units ...
-Const = d_one + C/Unit_Cell%MD_Kin  !   E_kin()
+Const = d_one + C/Unit_Cell%MD_Kin  
 
 if( .not. allocated(tau_inv) ) then
     allocate( tau_inv(size(erg),2) , source = d_zero )
@@ -118,10 +118,10 @@ integer        , intent(in):: PST(:)
 real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9 
 
 ! local variables ...
-integer  :: i, j, h, n, N_atoms, space, xyz
-real*8   :: f_ik 
-real*8  , allocatable , dimension(:,:)   :: rho, v_x_s, s_El_ik, s_Hl_ik
-real*8  , allocatable , dimension(:,:) :: Force3N 
+integer:: i, j, h, n, N_atoms, space, xyz
+real*8 :: f_ik 
+real*8, allocatable, dimension(:,:):: rho, v_x_s, s_El_ik, s_Hl_ik
+real*8, allocatable, dimension(:,:):: Force3N 
 
 CALL preprocess( system )
 if( .not. allocated(tau_inv) ) then
@@ -302,24 +302,44 @@ end subroutine preprocess
 !
 !
 !
-!================================
- function E_kin() result(kinetic)
-!================================
-use MD_read_m, only: MM, atom
+!===============================================
+ subroutine AdjustNuclearVeloc( system , QM_erg)
+!===============================================
+use MD_read_m   , only: atom
 implicit none
+type(structure), intent(in):: system
+real*8         , intent(in):: QM_erg
 
 ! local variables ...
-integer :: i
-real*8  :: kinetic
+integer:: n , Nactive
+real*8 :: erg_per_part , V_adjustment 
 
-! calculation of the kinetic energy ...                                                                                                                                 
-kinetic = d_zero
-do i = 1 , MM % N_of_atoms
-    kinetic = kinetic + atom(i)% mass * sum( atom(i)% vel(:) * atom(i)% vel(:) ) * half   ! <== J/kmol
-end do
-kinetic = kinetic * micro * kJmol_2_eV   ! <== eV
+! update atomic kinetic energy ...
+do n = 1 , system%atoms 
+   atom(n)%kinetic = atom(n)%mass * sum(atom(n)%vel(:)*atom(n)%vel(:)) * half   ! <== J/kmol
+   enddo
+   atom%kinetic = atom%kinetic * kJmol_2_eV * micro    ! <== eV
 
-end function E_kin
+! return negative QM_erg to the nuclei ...
+Nactive = count( system%QMMM == "QM" .AND. system%flex == T_ )
+erg_per_part = QM_erg/float(Nactive)
+
+! reset nuclear velocities for GS ...
+do n = 1 , system%atoms 
+   If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+   V_adjustment = dsqrt(d_one + erg_per_part/atom(n)%kinetic)
+   atom(n)%vel  = atom(n)%vel * V_adjustment
+   enddo
+
+! reset kinetic energy and forces for GS ...
+do n = 1 , system%atoms 
+   atom(n)%kinetic = atom(n)%mass * sum(atom(n)%vel(:)*atom(n)%vel(:)) * half   ! <== J/kmol
+   atom(n)%kinetic = atom(n)%kinetic * kJmol_2_eV * micro                       ! <== eV
+   atom(n)%ftotal  = atom(n)%f_MM
+   enddo
+Unit_Cell% MD_kin = sum(atom%kinetic)
+
+end subroutine AdjustNuclearVeloc
 !
 !
 !
