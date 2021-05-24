@@ -113,7 +113,7 @@ do frame = frame_init , frame_final , frame_step
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
-if(it == 40000) stop
+
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
