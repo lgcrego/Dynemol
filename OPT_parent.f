@@ -10,7 +10,7 @@ module OPT_Parent_class_m
         real*8                  :: accuracy
         real*8  , allocatable   :: p(:)
         character (len=11)      :: driver
-        character (len=72)      :: message
+        character (len=120)     :: message
         logical                 :: profiling 
     contains
         procedure :: cost 

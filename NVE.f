@@ -104,7 +104,7 @@ select case (me % thermostat_type)
                 end if
             end do
             V_CM    = tmp / molecule(i) % mass
-            sumtemp = sumtemp + molecule(i) % mass *  sum( V_CM * V_CM ) 
+            sumtemp = sumtemp + molecule(i) % mass *  sum( V_CM * V_CM )    ! <== Joule ...
         end do
 
     case (2:) ! <== atomic ...
@@ -117,7 +117,7 @@ select case (me % thermostat_type)
 
                 V_atomic = atom(i) % vel 
                 factor   = imol * atom(i) % mass
-                sumtemp  = sumtemp + factor * sum( V_atomic * V_atomic )
+                sumtemp  = sumtemp + factor * sum( V_atomic * V_atomic )    ! <== Joule ...
 
             end if
         end do
@@ -136,9 +136,9 @@ end select
 ! calculation of the kinetic energy ...
 me % kinetic = D_zero
 do i = 1 , MM % N_of_atoms
-    me % kinetic = me % kinetic + ( atom(i) % mass ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
+    me % kinetic = me % kinetic + ( atom(i) % mass ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half   ! <== J/kmol
 end do
-me % kinetic = me % kinetic * micro / MM % N_of_Molecules
+me % kinetic = me % kinetic * micro / MM % N_of_Molecules   ! <== kJ/mol
 
 end subroutine VV2
 !

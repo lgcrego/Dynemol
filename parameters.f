@@ -14,6 +14,7 @@ character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type 
 character (len=12)      :: nuclear_matter
 character (len=7)       :: argument
+character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
@@ -34,16 +35,16 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "avrg_confgs"             ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "Genetic_Alg"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"            ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "extended_sys"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = T_                       
+  Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -52,7 +53,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           READING FILE FORMAT
 !
-  file_type    =  "trajectory"                ! <== structure or trajectory
+  file_type    =  "structure"                 ! <== structure or trajectory
   file_format  =  "pdb"                       ! <== xyz , pdb or vasp
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
@@ -62,7 +63,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -96,18 +97,18 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  5.0d-1                              ! <== final time in PICOseconds
-  n_t  =  1000                                ! <== number of time steps
+  t_f  =  0.50d0                               ! <== final time in PICOseconds
+  n_t  =  100000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 114                        ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 15                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 115                        ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 16                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -139,16 +140,17 @@ logical :: dynamic
 !
 
   Pop_Size       =  200  
-  N_generations  =  50    
-  Pop_range      =  0.36     ! <== range of variation of parameters [0:1]
-  Mutation_rate  =  0.5     
+  N_generations  =  200    
+  Pop_range      =  0.92          ! <== range of variation of parameters [0:1]
+  selection_by   =  'roullete'     ! option={roullete,ranking,sorting}
+  Mutation_rate  =  0.9     
 
-  Adaptive_      =  T_       ! <== true  -> Adaptive GA method
-  Mutate_Cross   =  T_       ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
+  Adaptive_      =  T_            ! <== true  -> Adaptive GA method
+  Mutate_Cross   =  T_            ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning !
 
-  CG_            =  T_       ! <== use conjugate gradient method after genetic algorithm
-  Top_Selection  =  5        ! <== top selection to undergo CG_
-  profiling      =  T_       ! <== for tuning the optimization parameters of the code
+  CG_            =  F_            ! <== use conjugate gradient method after genetic algorithm
+  Top_Selection  =  5             ! <== top selection to undergo CG_
+  profiling      =  T_            ! <== for tuning the optimization parameters of the code
 
 !--------------------------------------------------------------------
 !  hereafter only CHECKLIST and  WARNINGS !!!

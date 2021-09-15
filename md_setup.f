@@ -190,7 +190,7 @@ integer :: i, j, l
 real*8  :: massa, masstot
 real*8, dimension(3) :: t, p, rcm, vcm
 
-! determines atomic Center of Mass and its velocity for the box of atoms ... 
+! determines the atomic Center of Mass and its velocity for the box of atoms ... 
 p(:) = 0.d0
 t(:) = 0.d0
 masstot = 0.d0
