@@ -41,7 +41,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     ! local
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
-    integer                      :: i , NonZero , S_size
+    integer                      :: NonZero, S_size
     real*8                       :: Sparsity
 
     CALL util_overlap
@@ -55,8 +55,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     select case (purpose)
         case('FMO')
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            i = 3**sum(PBC) * S_size
-            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis(1:i), S_matrix)
+            CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
@@ -82,8 +81,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
             ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
-            i = 3**sum(PBC) * S_size
-            CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis(1:i), S_matrix , recycle = .true. )
+            CALL Build_Overlap_Matrix( system, basis, pbc_system, pbc_basis, S_matrix , recycle = .true. )
 
             NonZero  = count(S_matrix /= 0.d0)
             Sparsity = float(NonZero) / float(S_size ** 2)
