@@ -105,6 +105,7 @@ implicit none
 integer , intent(in) :: frame
 
 ! local variables ...
+real*8  :: q1 , q2 , q3 , a , zeta3
 integer :: copy , nr_sum , ix , iy , k , n
 
 !----------------------------------------------------------
@@ -185,9 +186,24 @@ integer :: copy , nr_sum , ix , iy , k , n
  END FORALL
 
  if( not(allocated(extended_cell % Qcore)) ) allocate( extended_cell % Qcore ( size(extended_cell % Symbol) ) )
- where( extended_cell % Symbol == 'P' )  extended_cell % Qcore =  4.886d0
- where( extended_cell % Symbol == 'Sn' ) extended_cell % Qcore =  9.102d0
- where( extended_cell % Symbol == 'I' )  extended_cell % Qcore = 11.612d0
+
+ zeta3 = 2.159987d0 ** 3
+ a     = 30.0d0 / zeta3
+ q1    = - 690.110562d0 * 0.00889d0 * a
+
+ zeta3 = 2.159007d0 ** 3
+ a     = 180.0d0 / zeta3
+ q2    = 690.110562d0 * 0.68d0 * a
+
+ zeta3 = 2.426015d0 ** 3
+ a     = 180.0d0 / zeta3
+ q3    = - 690.110562d0 * 0.62848d0 * a
+
+!print*, q1 , q2 , q3
+
+ where( extended_cell % Symbol == 'P' )  extended_cell % Qcore = q1
+ where( extended_cell % Symbol == 'Sn' ) extended_cell % Qcore = q2
+ where( extended_cell % Symbol == 'I' )  extended_cell % Qcore = q3
 
  CALL fix_fragments( extended_cell )
 

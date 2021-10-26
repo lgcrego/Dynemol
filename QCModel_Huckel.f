@@ -8,7 +8,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC , BK
+    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC
     use Overlap_Builder  , only : Overlap_Matrix
     use Hamiltonians     , only : X_ij , even_more_extended_Huckel , spin_orbit_h
     use Matrix_Math
@@ -188,6 +188,8 @@ select case ( driver )
 !          QM%R = Rv
 !          
 !          Deallocate( Lv , Rv , S_matrix , S_root )
+
+end select
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! save energies of the TOTAL system ...

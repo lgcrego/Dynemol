@@ -15,7 +15,6 @@
                                              hole_state ,           &
                                              LCMO ,                 &
                                              SOC ,                  &
-                                             comb , tp_comb , h1_state , h2_state , e1_state , e2_state , &
                                              verbose
     use Allocation_m                , only : Allocate_Structures ,  &
                                              Deallocate_Structures
@@ -351,7 +350,7 @@ if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD/eigen/FMO '
 
 ALLOCATE(Dual%R(N,N)) 
 ALLOCATE(Dual%L(N,N)) 
-Dual%L = transpose(conjg(h_FMO))
+Dual%L = transpose(dconjg(h_FMO))
 
 CALL hemm( S_complex , h_FMO , Dual%R )
 

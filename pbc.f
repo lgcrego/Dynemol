@@ -57,7 +57,6 @@ contains
  pbc_cell % flex               (1:cell%atoms)      =  cell % flex  
  pbc_cell % copy_No  (1:cell%atoms)                =  0
 
-
 ! include the replicas        
 
  k = cell%atoms

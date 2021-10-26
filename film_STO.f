@@ -5,7 +5,7 @@
     use parameters_m            , only : electron_state , SOC
     use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
-    use Structure_Builder       , only : Extended_Cell
+    use Structure_Builder       , only : Extended_Cell , Cube_Coef , Cube_Zeta
     use Slater_Type_Orbitals    , only : s_orb , p_orb , d_x2y2 , d_z2 , d_xyz  
 
     public :: Gaussian_Cube_Format , probability_flux 
@@ -422,14 +422,12 @@
  real*8     , parameter   :: r_cut = 11.0d0 / a_Bohr
  real*8     , parameter   :: dxmax = 0.25d0
  real*8     , parameter   :: dymax = 0.25d0
- real*8     , parameter   :: dzmax = 0.0001d0 
- integer                  :: n_xyz_steps(3)
- complex*16               :: TotalPsiKet_a_up   , TotalPsiKet_b_up   , dTotalPsiKet_up   , TotalPsiBra_up   , TotalPsiKet_up
- complex*16               :: TotalPsiKet_a_down , TotalPsiKet_b_down , dTotalPsiKet_down , TotalPsiBra_down , TotalPsiKet_down
- real*8     , allocatable :: xyz(:,:) , di_up(:,:) , di_down(:,:) , di_SO(:,:)
- real*8                   :: x , y , z , za , zb , x0 , y0 , z0 , z0_a , z0_b , dx , dy , dz , a , b , QoverR3 , r , ra , rb
- real*8                   :: SlaterOrbital , SlaterOrbital_a , SlaterOrbital_b , z_loc , sumy , sumx
- integer                  :: AtNo , i , j , ix , iy , k , l , N
+ integer                  :: n_xyz_steps(2)
+ complex*16               :: TotalPsiBra_up ,TotalPsiBra_down ,TotalPsiKet_down , dTotalPsiKet_up , dTotalPsiKet_down
+ real*8     , allocatable :: xyz(:,:) , dj_up(:,:) , dj_down(:,:) , dj_SO(:,:)
+ real*8                   :: x , y , z , x0 , y0 , z0 , dx , dy , a , b , QoverR3 , r
+ real*8                   :: SlaterOrbital , z_loc , sumy , sumx , area , coef
+ integer                  :: AtNo , i , j , ix , iy , k , l , N , nq
 
  N = size(bra) / 2
 
@@ -441,12 +439,10 @@
 ! fix number of steps for each direction according to aspect ratio ... 
  n_xyz_steps(1) = idint( extended_cell%BoxSides(1) / dxmax ) + 1
  n_xyz_steps(2) = idint( extended_cell%BoxSides(2) / dymax ) + 1
- n_xyz_steps(3) = idint( extended_cell%BoxSides(3) / dzmax ) + 1
 
 !  voxel dimensions
  dx = extended_cell%BoxSides(1) / n_xyz_steps(1) 
  dy = extended_cell%BoxSides(2) / n_xyz_steps(2) 
- dz = extended_cell%BoxSides(3) / n_xyz_steps(3)      
 
 !  translation to the center of mass
  forall(i=1:extended_cell%atoms,j=1:3) xyz(i,j) = extended_cell%coord(i,j) - extended_cell%Center_of_Mass(j)
@@ -458,6 +454,14 @@
 
 !  coordinates in a.u., because zeta is in units of [a_0^{-1}] ...
  xyz = xyz / a_Bohr
+
+ dx = dx / a_Bohr
+ dy = dy / a_Bohr
+
+ a = a / a_Bohr
+ b = b / a_Bohr
+
+ z = z_loc / a_Bohr
 
 !---------------------------------------------------------    
 !  drawing the wavefunction denssity in cube format
@@ -475,30 +479,24 @@
 !       Dx2y2  -->  9   --> l = 2  ,  m = +2        
 !========================================================
 
- allocate( di_SO   ( n_xyz_steps(1) +1 , n_xyz_steps(2) + 1 ) , source = D_zero )
- allocate( di_up   ( n_xyz_steps(1) +1 , n_xyz_steps(2) + 1 ) , source = D_zero )
- allocate( di_down ( n_xyz_steps(1) +1 , n_xyz_steps(2) + 1 ) , source = D_zero )
+ allocate( dj_SO   ( n_xyz_steps(1) , n_xyz_steps(2) ) , source = D_zero )
+ allocate( dj_up   ( n_xyz_steps(1) , n_xyz_steps(2) ) , source = D_zero )
+ allocate( dj_down ( n_xyz_steps(1) , n_xyz_steps(2) ) , source = D_zero )
 
-!$OMP parallel private(ix,iy,x,y,x0,y0,z0,z0_a,z0_b,SlaterOrbital,SlaterOrbital_a,SlaterOrbital_b,r,ra,rb,AtNo,i,j,k,l,TotalPsiBra_up,TotalPsiBra_down,TotalPsiKet_up,TotalPsiKet_down,TotalPsiKet_a_up,TotalPsiKet_a_down,TotalPsiKet_b_up,TotalPsiket_b_down,sumx,sumy,dTotalPsiKet_up,dTotalPsiKet_down,QoverR3)
+!$OMP parallel private(ix,iy,nq,x,y,x0,y0,z0,SlaterOrbital,coef,r,AtNo,i,j,k,l,TotalPsiBra_up,TotalPsiBra_down,TotalPsiKet_down,sumx,sumy,dTotalPsiKet_up,dTotalPsiKet_down,QoverR3)
 !$OMP single
- z  = z_loc / a_Bohr
- za = (z_loc - HALF * dz) / a_Bohr
- zb = (z_loc + HALF * dz) / a_Bohr
- DO ix = 0 , n_xyz_steps(1)
-    x = (a + ix * dx) / a_Bohr
+ DO ix = 0 , n_xyz_steps(1) - 1
+    x = a + ( dfloat(ix) + HALF ) * dx
 
     !$OMP task untied
-    DO iy = 0 , n_xyz_steps(2)
-        y = (b + iy * dy) / a_Bohr
+    DO iy = 0 , n_xyz_steps(2) - 1
+        y = b + ( dfloat(iy) + HALF ) * dy
 
-        TotalPsiBra_up     = C_zero 
-        TotalPsiBra_down   = C_zero 
-        TotalPsiKet_up     = C_zero 
-        TotalPsiKet_down   = C_zero 
-        TotalPsiKet_a_up   = C_zero 
-        TotalPsiKet_a_down = C_zero 
-        TotalPsiKet_b_up   = C_zero 
-        TotalPsiKet_b_down = C_zero 
+        TotalPsiBra_up    = C_zero 
+        TotalPsiBra_down  = C_zero 
+        TotalPsiKet_down  = C_zero 
+        dTotalPsiKet_up   = C_zero 
+        dTotalPsiKet_down = C_zero 
 
         i    = 0 
         sumy = D_zero
@@ -511,80 +509,50 @@
 
             ! coordinates centered on the nuclei   
 
-            x0   = x  - xyz(k,1)
-            y0   = y  - xyz(k,2)
-            z0   = z  - xyz(k,3)
-            z0_a = za - xyz(k,3)
-            z0_b = zb - xyz(k,3)
+            x0 = x - xyz(k,1)
+            y0 = y - xyz(k,2)
+            z0 = z - xyz(k,3)
 
             ! distance from the center of the nuclei
 
             r = dsqrt(x0*x0 + y0*y0 + z0*z0)
 
             if( r <= r_cut ) then
-            
-                ra = dsqrt(x0*x0 + y0*y0 + z0_a*z0_a)
-                rb = dsqrt(x0*x0 + y0*y0 + z0_b*z0_b)
 
+                ! Qcore <== structure.f ...
                 QoverR3 = extended_cell % Qcore(k) / (r**3)
                 sumy    = sumy + QoverR3 * y0
                 sumx    = sumx + QoverR3 * x0
 
+                nq = atom(AtNo)%Nquant(0)
+
                 do j = 1 , atom(AtNo)%DOS
 
-                    i = i + 1
-                    l = extended_cell%BasisPointer(k) + j
+                    i  = i + 1
+                    l  = extended_cell%BasisPointer(k) + j
 
                     select case (j)
                         case( 1 ) 
-                            SlaterOrbital   = s_orb(r,AtNo,l)  
-                            SlaterOrbital_a = s_orb(ra,AtNo,l)  
-                            SlaterOrbital_b = s_orb(rb,AtNo,l)  
+                            SlaterOrbital = s_orb(r,AtNo,l)  
+                            coef          = ( dfloat( nq - 1 ) / r - Cube_Zeta(l,1) ) * (z0/r)
                         case( 2 ) 
-                            SlaterOrbital   = p_orb(r,y0,AtNo,l)
-                            SlaterOrbital_a = p_orb(ra,y0,AtNo,l)
-                            SlaterOrbital_b = p_orb(rb,y0,AtNo,l)
+                            SlaterOrbital = p_orb(r,y0,AtNo,l)
+                            coef          = ( dfloat( nq - 2 ) / r - Cube_Zeta(l,1) ) * (z0/r)
                         case( 3 ) 
-                            SlaterOrbital   = p_orb(r,z0,AtNo,l)
-                            SlaterOrbital_a = p_orb(ra,z0_a,AtNo,l)
-                            SlaterOrbital_b = p_orb(rb,z0_b,AtNo,l)
+                            SlaterOrbital = p_orb(r,z0,AtNo,l)
+                            coef          = D_one / z0 + ( dfloat( nq - 2 ) / r - Cube_Zeta(l,1) ) * (z0/r)
                         case( 4 ) 
-                            SlaterOrbital   = p_orb(r,x0,AtNo,l)
-                            SlaterOrbital_a = p_orb(ra,x0,AtNo,l)
-                            SlaterOrbital_b = p_orb(rb,x0,AtNo,l)
-                        case( 5 ) 
-                            SlaterOrbital   = d_xyz(r,x0,y0,AtNo,l)
-                            SlaterOrbital_a = d_xyz(ra,x0,y0,AtNo,l)
-                            SlaterOrbital_b = d_xyz(rb,x0,y0,AtNo,l)
-                        case( 6 ) 
-                            SlaterOrbital   = d_xyz(r,y0,z0,AtNo,l)
-                            SlaterOrbital_a = d_xyz(ra,y0,z0_a,AtNo,l)
-                            SlaterOrbital_b = d_xyz(rb,y0,z0_b,AtNo,l)
-                        case( 7 ) 
-                            SlaterOrbital   = d_z2(r,x0,y0,z0,AtNo,l)
-                            SlaterOrbital_a = d_z2(ra,x0,y0,z0_a,AtNo,l)
-                            SlaterOrbital_b = d_z2(rb,x0,y0,z0_b,AtNo,l)
-                        case( 8 ) 
-                            SlaterOrbital   = d_xyz(r,x0,z0,AtNo,l)
-                            SlaterOrbital_a = d_xyz(ra,x0,z0_a,AtNo,l)
-                            SlaterOrbital_b = d_xyz(rb,x0,z0_b,AtNo,l)
-                        case( 9 ) 
-                            SlaterOrbital   = d_x2y2(r,x0,y0,AtNo,l)
-                            SlaterOrbital_a = d_x2y2(ra,x0,y0,AtNo,l)
-                            SlaterOrbital_b = d_x2y2(rb,x0,y0,AtNo,l)
+                            SlaterOrbital = p_orb(r,x0,AtNo,l)
+                            coef          = ( dfloat( nq - 2 ) / r - Cube_Zeta(l,1) ) * (z0/r)
                     end select
 
                     TotalPsiBra_up   = TotalPsiBra_up   + bra(i)   * SlaterOrbital
                     TotalPsiBra_down = TotalPsiBra_down + bra(i+N) * SlaterOrbital
 
-                    TotalPsiKet_up   = TotalPsiKet_down + ket(i)   * SlaterOrbital
                     TotalPsiKet_down = TotalPsiKet_down + ket(i+N) * SlaterOrbital
 
-                    TotalPsiKet_a_up   = TotalPsiKet_a_up   + ket(i)   * SlaterOrbital_a
-                    TotalPsiKet_a_down = TotalPsiKet_a_down + ket(i+N) * SlaterOrbital_a
-
-                    TotalPsiKet_b_up   = TotalPsiKet_b_up   + ket(i)   * SlaterOrbital_b
-                    TotalPsiKet_b_down = TotalPsiKet_b_down + ket(i+N) * SlaterOrbital_b
+                    dTotalPsiKet_up   = dTotalPsiKet_up   + ket(i)   * coef * SlaterOrbital
+                    dTotalPsiKet_down = dTotalPsiKet_down + ket(i+N) * coef * SlaterOrbital
 
                 end do  ! <== DOS
 
@@ -596,26 +564,24 @@
 
         end do  ! <== atoms
 
-        dTotalPsiKet_up   = ( TotalPsiKet_b_up   - TotalPsiKet_a_up   ) / dz
-        dTotalPsiKet_down = ( TotalPsiKet_b_down - TotalPsiKet_a_down ) / dz
+        dj_up  ( ix+1 , iy+1 ) = dimag( TotalPsiBra_up   * dTotalPsiKet_up   )
+        dj_down( ix+1 , iy+1 ) = dimag( TotalPsiBra_down * dTotalPsiKet_down )
 
-        di_up  ( ix+1 , iy+1 ) = dimag( TotalPsiBra_up   * dTotalPsiKet_up   ) * dx * dy
-        di_down( ix+1 , iy+1 ) = dimag( TotalPsiBra_down * dTotalPsiKet_down ) * dx * dy
-
-        di_SO( ix+1 , iy+1 ) = (dimag(TotalPsiBra_up*TotalPsiKet_down)*sumx - dreal(TotalPsiBra_up*TotalPsiKet_down)*sumy) * dx * dy
+        dj_SO( ix+1 , iy+1 ) = dreal(TotalPsiBra_up*TotalPsiKet_down)*sumy - dimag(TotalPsiBra_up*TotalPsiKet_down)*sumx
 
     END DO          ! <==  Y coord
     !$OMP end task 
  END DO             ! <==  X coord
 !$OMP end single 
 !$OMP end parallel 
-iup   = 7.812387321d4 * sum(di_up)
-idown = 7.812387321d4 * sum(di_down)
-iSO   = 3.930377364d0 * sum(di_SO)
+area = dx * dy
+iup   = 4.134137331d4 * area * sum(dj_up)
+idown = 4.134137331d4 * area * sum(dj_down)
+iSO   = 1.100742063d0 * area * sum(dj_SO)
 
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
- deallocate( xyz , di_up , di_down , di_SO )
+ deallocate( xyz , dj_up , dj_down , dj_SO )
 
 end subroutine  probability_flux
 !

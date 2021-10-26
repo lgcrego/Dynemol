@@ -40,6 +40,9 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
+!univ % atom(1:63) % residue = "DNR"
+!univ % atom(64:273) % residue = "BDG"
+!univ % atom(274:1953) % residue = "ACP"
 
 !-----------------------------------
 !      define %nr
@@ -68,9 +71,12 @@ where(univ % atom % residue == "DNR") univ % atom % Hl = .true.
 !      define %fragment 
 !----------------------------------------------------
 where(univ % atom % residue == "LFT") univ % atom % fragment = "L"
-where(univ % atom % residue == "DNR") univ % atom % fragment = "D"
 where(univ % atom % residue == "RGT") univ % atom % fragment = "R"
-where(univ % atom % residue == "ACP") univ % atom % fragment = "A"
+where(univ % atom % residue == "DNR") univ % atom % fragment = "D"
+!where(univ % atom % residue == "ACP") univ % atom % fragment = "A"
+where(univ % atom % residue == "ACL") univ % atom % fragment = "1"
+where(univ % atom % residue == "ACR") univ % atom % fragment = "2"
+where(univ % atom % residue == "SPC") univ % atom % fragment = "S"
 
 
 ! ---------- Table of fragments -------------
