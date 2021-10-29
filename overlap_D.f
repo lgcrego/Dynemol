@@ -41,7 +41,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     ! local
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
-    integer                      :: NonZero, S_size
+    integer                      :: NonZero , S_size
     real*8                       :: Sparsity
 
     CALL util_overlap

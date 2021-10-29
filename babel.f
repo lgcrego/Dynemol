@@ -286,7 +286,7 @@ deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 12 if( io_err   > 0 ) stop "problems reading input.pdb; check IO_file_formats"
 
 43  format(a72)
-100 format(t10, f6.3, t19, f6.3, t28, f6.3)
+100 format(t7,3f9.3)
 105 format(a6)
 115 FORMAT(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
 
