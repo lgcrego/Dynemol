@@ -4,9 +4,9 @@ use type_m
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step , Nuc , Nat_uc
-real*8                  :: t_i , t_f , sigma , Rmod , vecK(3)
-real*8                  :: Pop_range , Mutation_rate
+integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
+real*8                  :: t_i , t_f , sigma
+real*8                  :: Pop_range , Mutation_rate  
 type (real_interval)    :: occupied , empty , DOS_range 
 type (integer_interval) :: holes , electrons , rho_range
 character (len=5)       :: Environ_type
@@ -18,7 +18,7 @@ character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: Band_Structure , resume
+logical                 :: resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
 contains
@@ -35,7 +35,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "diagnostic"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "Genetic_Alg"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -43,9 +43,8 @@ logical :: dynamic
   Survival       = F_                       
   DP_Moment      = F_                       
   QMMM           = F_
-  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
-  Band_Structure = T_                        ! <== compute the electronic band structure <== if DRIVER = diagnostic
 
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
@@ -64,7 +63,7 @@ logical :: dynamic
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = F_                       
+  GaussianCube      = T_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
@@ -120,7 +119,7 @@ logical :: dynamic
 !
 !           Periodic Boundary Conditions 
 
-  PBC = [ 0 , 0 , 1 ]                         ! <== PBC replicas : 1 = yes , 0 = no
+  PBC = [ 0 , 0 , 0 ]                         ! <== PBC replicas : 1 = yes , 0 = no
 
 !--------------------------------------------------------------------
 !           DOS parameters
@@ -135,18 +134,6 @@ logical :: dynamic
   occupied  =  real_interval( -15.50d0 , -9.501d0 )       
 
   empty     =  real_interval( -9.500d0 , -4.00d0 )        
-
-!--------------------------------------------------------------------
-!           ELECTRONIC BAND STRUCTURE parameters
-!
-! The routine assumes that all unit cells are ordered sequentially in the input file and that sequence is the same in all unit cells
-
-  vecK   = [ 0.0d0 , 0.0d0 , 1.000d0 ] ! Direction of wavevector in the Brillouin zone ...
-
-! SnIP
-  Rmod   = 23.802d0
-  Nuc    = 32                          ! Number of unit cells ...
-  Nat_uc = 63                          ! Number of atoms in an unit cell ...
 
 !--------------------------------------------------------------------
 !           Genetic_Alg and CG OPTIMIZATION parameters
