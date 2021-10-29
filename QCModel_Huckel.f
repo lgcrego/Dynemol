@@ -8,10 +8,11 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart
-    use Overlap_Builder  , only : Overlap_Matrix
-    use Hamiltonians     , only : X_ij , even_more_extended_Huckel
+    use parameters_m            , only : EnvField_ , Induced_ , driver , verbose , restart , Band_Structure
+    use Overlap_Builder         , only : Overlap_Matrix
+    use Hamiltonians            , only : X_ij , even_more_extended_Huckel
     use Matrix_Math
+    use QCModel_Reciprocal_m    , only : EigenSystem_Reciprocal
 
     public :: EigenSystem , S_root_inv 
 
@@ -66,6 +67,8 @@ If( EnvField_ .OR. Induced_ ) then
 else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
+
+if( driver == 'diagnostic' .AND. Band_Structure ) CALL EigenSystem_Reciprocal( basis , h , S_matrix )
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '

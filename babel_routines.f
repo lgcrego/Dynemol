@@ -91,6 +91,8 @@ integer :: i
             a(i)%AtNo = 44 
         case( 'CD','Cd' )
             a(i)%AtNo = 48 
+        case( 'SN','Sn' ) 
+            a(i)%AtNo = 50
         case( 'I' ) 
             a(i)%AtNo = 53 
         case( 'Pb' ) 
@@ -155,6 +157,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 44 
         case( 'CD','Cd' ) 
             a%AtNo(i) = 48 
+        case( 'SN','Sn' ) 
+            a%AtNo(i) = 50
         case( 'I' ) 
             a%AtNo(i) = 53 
         case( 'Pb' ) 
@@ -222,6 +226,8 @@ integer :: i
             a(i)%Symbol = 'Ru'
         case( 48 ) 
             a(i)%Symbol = 'Cd'
+        case( 50 ) 
+            a(i)%Symbol = 'Sn'
         case( 53 ) 
             a(i)%Symbol = 'I'
         case( 82 ) 
@@ -289,6 +295,8 @@ integer :: i
             a%Symbol(i) = 'Ru'
         case( 48 ) 
             a%Symbol(i) = 'Cd'
+        case( 50 ) 
+            a%Symbol(i) = 'Sn'
         case( 53 ) 
             a%Symbol(i) = 'I'
         case( 82 ) 
