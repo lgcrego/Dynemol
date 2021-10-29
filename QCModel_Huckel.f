@@ -8,7 +8,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC 
+    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , SOC
     use Overlap_Builder  , only : Overlap_Matrix
     use Hamiltonians     , only : X_ij , even_more_extended_Huckel , spin_orbit_h
     use Matrix_Math
@@ -40,7 +40,7 @@ type(C_eigen)              , intent(inout) :: QM
 integer         , optional , intent(in)    :: it
 
 ! local variables ...
-complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:) , Lv(:,:) , Rv(:,:) , aux(:,:)
+complex*16 , ALLOCATABLE :: h_spin(:,:) , h(:,:) , dumb_S(:,:) , S_complex(:,:) , Lv(:,:) , Rv(:,:) 
 real*8     , ALLOCATABLE :: h_orb(:,:) , S_matrix(:,:) , S_root(:,:) , tool(:,:) , S_eigen(:)
 integer                  :: i , j , N , info , N_of_electrons , N_occupied_MOs
 logical    , save        :: first_call_ = .true.
@@ -51,13 +51,7 @@ N = size(basis)
 
 CALL Overlap_Matrix( system , basis , S_matrix )
 
-If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(N))
-
 Allocate(  h_orb(N,N) )
-Allocate( dumb_S(N,N) )
-
-! clone S_matrix because HEGVD will destroy it ...
-dumb_s = dcmplx( S_matrix , D_zero )
 
 If( EnvField_ .OR. Induced_ ) then
   h_orb(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
@@ -66,16 +60,25 @@ else
 end If
 
 if( SOC ) then
-  CALL spin_orbit_h( basis , h_spin , S_matrix )
-  allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
-  deallocate( h_spin )
+
+    CALL spin_orbit_h( basis , h_spin , S_matrix )
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) + h_spin )
+    deallocate( h_spin )
+
 else
 
-  allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
+    allocate( h(N,N) , source = dcmplx( h_orb , D_zero ) )
 
 end if
 
 deallocate(h_orb)
+
+If( .NOT. allocated(QM%erg) ) ALLOCATE(QM%erg(N))
+
+Allocate( dumb_S(N,N) )
+
+! clone S_matrix because HEGVD will destroy it ...
+dumb_s = dcmplx( S_matrix , D_zero )
 
 CALL HEGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD in EigenSystem '
@@ -95,24 +98,30 @@ select case ( driver )
         !---------------------------------------------------
 
         Allocate( Lv(N,N) )
-        Allocate( Rv(N,N) )
 
         Lv = h
-        Deallocate(h)
 
         If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-        ! eigenvectors in the rows of QM%L
-        allocate( aux(N,N) )
-        aux = dconjg(Lv)
-        QM%L = transpose(aux)
-        deallocate( aux )
 
-        allocate( S_complex , source = dcmplx(S_matrix,D_zero) )
+        ! eigenvectors in the rows of QM%L
+        h    = dconjg(Lv)
+        QM%L = transpose(h)
+
+        Deallocate(h)
+
+        allocate( S_complex(N,N) , source = dcmplx(S_matrix,D_zero) )
+
+        deallocate( S_matrix )
+        
+        Allocate( Rv(N,N) )
+
         ! Rv = S * Lv ...
         call hemm( S_complex, Lv, Rv )
-        deallocate( Lv , S_matrix , S_complex )
+
+        deallocate( Lv , S_complex )
 
         If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+
         ! eigenvectors in the columns of QM%R
         QM%R = Rv
 
@@ -188,7 +197,7 @@ OPEN(unit=9,file='system-ergs.dat',status='unknown')
 if( SOC ) then
     write(9,100) "#" , "Level" , "Energy" , "Sz"
     do i = 1 , N
-        write(9,*) i , QM%erg(i) , dreal( sum( QM%L(i,:) * dcmplx( basis( : ) % s , D_zero ) * QM%R(:,i) ) )
+        write(9,*) i , QM%erg(i) , dreal( sum( QM%L(i,:) * basis(:) % s * QM%R(:,i) ) )
     end do
 else
     write(9,100) "#" , "Level" , "Energy"

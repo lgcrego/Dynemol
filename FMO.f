@@ -48,7 +48,7 @@
  type(structure)           , intent(inout) :: system
  type(STO_basis)           , intent(inout) :: basis(:)
  type(C_eigen)  , optional , intent(in)    :: UNI
- type(C_eigen)  , optional , intent(out)   :: FMO
+ type(C_eigen)  , optional , intent(inout) :: FMO
  type(C_eigen)  , optional , intent(inout) :: AO
  character(*)   , optional , intent(in)    :: instance
 
@@ -92,7 +92,7 @@ end If
 
 CALL Basis_Builder( FMO_system , FMO_basis )
 
-CALL eigen_FMO( FMO_system , FMO_basis , fragment )
+CALL eigen_FMO( FMO_system , FMO_basis , fragment=fragment )
 
 ! If ( LCMO ) CALL LCMO_Builder( Dual%L, Dual%erg , instance )
 ! the following subroutine can be used to check the LCMO states ... 
@@ -205,7 +205,7 @@ character(len=2)            , intent(in)  :: instance
 
 ! local variables ...
 complex*16 , allocatable :: aux(:,:)
-real*8  :: check
+real*8  :: check , a , b
 integer :: i , j , k
 
 UNI_size = size( basis_fragment )   ! <== basis size of the entire system
@@ -259,7 +259,7 @@ select case ( instance )
         if( dabs(check-FMO_size) < low_prec ) then
             Print*, '>> projection done <<'
         else
-            Print 58 , check 
+            Print 58 , check
             Print*, '---> problem in projector <---'
         end if
 
@@ -300,14 +300,17 @@ end subroutine projector
  subroutine  eigen_FMO( system , basis , fragment )
 !==================================================
 implicit none
-type(structure)               , intent(in)  :: system
-type(STO_basis)               , intent(in)  :: basis(:)
-character(*)    , optional    , intent(in)  :: fragment
+type(structure)            , intent(in) :: system
+type(STO_basis)            , intent(in) :: basis(:)
+character(*)    , optional , intent(in) :: fragment
 
 ! local variables ... 
 complex*16 , ALLOCATABLE :: h_FMO(:,:) , h_spin(:,:) , S_complex(:,:) , dumb_S(:,:)
+complex*16 , ALLOCATABLE :: pop(:,:) , AO_bra(:,:) , AO_ket(:,:) , MO_bra(:,:) , MO_ket(:,:)
+complex*16 , ALLOCATABLE :: DUAL_bra(:,:) , DUAL_ket(:,:)
 real*8     , ALLOCATABLE :: s_FMO(:,:) , h_Huckel(:,:)
-real*8                   :: Fermi_level
+complex*16               :: c
+real*8                   :: Fermi_level , a
 integer                  :: N_of_FMO_electrons , i , j , N , info
 
 N = size(basis)
@@ -347,7 +350,7 @@ if ( info /= 0 ) write(*,*) 'info = ',info,' in HEGVD/eigen/FMO '
 
 ALLOCATE(Dual%R(N,N)) 
 ALLOCATE(Dual%L(N,N)) 
-Dual%L = transpose(conjg(h_FMO))
+Dual%L = transpose(dconjg(h_FMO))
 
 CALL hemm( S_complex , h_FMO , Dual%R )
 
@@ -368,7 +371,7 @@ write(9,*) "# Fermi level = " , Fermi_level
 if( SOC ) then
     write(9,100) "#" , "Level" , "Energy" , "Sz"
     do i = 1 , N
-        write(9,*) i , Dual%erg(i) , dreal( sum( Dual%L(i,:) * dcmplx( basis( : ) % s , D_zero ) * Dual%R(:,i) ) )
+        write(9,*) i , Dual%erg(i) , dreal( sum( Dual%L(i,:) * basis(:) % s * Dual%R(:,i) ) )
     end do
 else
     write(9,100) "#" , "Level" , "Energy"
@@ -377,20 +380,6 @@ else
     end do
 end if
 close(9)
-
-if( SOC ) then
-    If( present(fragment) .AND. (fragment=="H") ) then
-        OPEN(unit=9,file='hl_FMO-complet.dat',status='unknown')
-    else
-        OPEN(unit=9,file='el_FMO-complet.dat',status='unknown')
-    end IF
-    write(9,101) "Orb" , "Energy" , "Sz" , "s up" , "py up" , "pz up" , "px up" , "s down" , "py down" , "pz down" , "px down"
-    do i = 1 , N
-        write(9,102) i , Dual%erg(i) , dreal( sum( Dual%L(i,:) * Dual%R(:,i) * basis(:) % s ) ) , &
-                     ( dreal( Dual%L(i,j) * Dual%R(j,i) ) , j = 1 , N )
-    end do
-    close(9)
-end if
 
 Print*, '>> eigen_FMO done <<'
 
@@ -418,35 +407,21 @@ integer               :: i , j , N , N2
 !----------------------------------------------------------
 
 N  = size(basis)
+N2 = merge(N/2,N,SOC)
 
 ALLOCATE( h(N,N) , source = D_zero )
 
-if( SOC ) then
+! spin up orbital block
+do j = 1 , N2
+    do i = j , N2
 
-    N2 = N/2
+        h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
 
-    do j = 1 , N2
-        do i = j , N2
-
-            ! spin up orbital block
-            h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
-            ! spin down orbital block
-            h(i+N2,j+N2) = h(i,j)
-
-        end do
     end do
+end do
 
-else
-
-    do j = 1 , N
-        do i = j , N
-
-            h(i,j) = X_ij( i , j , basis ) * S_matrix(i,j) 
-
-        end do
-    end do
-
-end if
+! spin down orbital block
+if( SOC ) h( N2 + 1 : N , N2 + 1 : N ) = h( 1 : N2 , 1 : N2 )
 
 end function Build_Huckel
 !

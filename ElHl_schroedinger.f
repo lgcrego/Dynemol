@@ -6,14 +6,15 @@
  use blas95
  use parameters_m               , only : t_i , t_f , n_t , n_part , GaussianCube , preview, &
                                          GaussianCube_step ,  DP_Moment , electron_state ,  &
-                                         Coulomb_ , DensityMatrix , driver , SOC , comb
+                                         Coulomb_ , DensityMatrix , driver , SOC , &
+                                         hole_state , electron_state
  use Allocation_m               , only : Allocate_Brackets , DeAllocate_Structures
  use Babel_m                    , only : trj , Coords_from_Universe
  use Structure_Builder          , only : Unit_Cell , Extended_Cell , Generate_Structure
  use FMO_m                      , only : FMO_analysis , orbital , eh_tag
  use DP_main_m                  , only : Dipole_Moment
  use Data_Output                , only : Populations , Net_Charge , FileName
- use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format
+ use Psi_Squared_Cube_Format    , only : Gaussian_Cube_Format , probability_flux
  use Backup_m                   , only : Security_Copy , Restart_state
  use Auto_Correlation_m         , only : MO_Occupation
 
@@ -44,12 +45,12 @@
  type(f_time)    , intent(inout) :: QDyn
 
 ! local variables ...
-integer                          :: i , j , nn , mm
-integer                          :: it , n , it_init
-real*8                           :: t , t_rate
-real*8                           :: Total_DP(3)
-complex*16      , ALLOCATABLE    :: phase(:)
-type(C_eigen)                    :: el_FMO , hl_FMO
+integer                     :: i , j , nn , mm
+integer                     :: it , n , it_init
+real*8                      :: t , t_rate
+real*8                      :: Total_DP(3)
+complex*16    , ALLOCATABLE :: phase(:)
+type(C_eigen)               :: el_FMO , hl_FMO
 
 ! ------------------ preprocess stuff --------------------
 
@@ -91,19 +92,13 @@ do n = 1 , n_part
     end select
 end do
 
-if( comb ) then
-    MO_bra(:,1) = ( MO_bra(:,1) + MO_bra(:,2) ) / dsqrt(TWO)
-    MO_ket(:,1) = ( MO_ket(:,1) + MO_ket(:,2) ) / dsqrt(TWO)
-    MO_bra(:,2) = MO_bra(:,1)
-    MO_ket(:,2) = MO_ket(:,1)
-end if
-
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
 ! DUAL representation for efficient calculation of survival probabilities ...
-CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
+
 CALL gemm( UNI%L , MO_bra , DUAL_bra , 'T' , 'N' )
+CALL gemm( UNI%R , MO_ket , DUAL_ket , 'N' , 'N' )
 
 ! save populations ...
 t  = t_i
@@ -116,19 +111,21 @@ QDyn%dyn(it,:,:,:) = Pops(it,:,:,:)
 !    If( n_part == 2 ) CALL MO_Occupation( t_i, MO_bra, MO_ket, UNI, UNI )
 !End If
 
+! LOCAL representation for film STO production ...
+AO_bra = DUAL_bra
+AO_ket = dconjg(AO_bra)
+
 !   save the initial GaussianCube file ...
-If( GaussianCube ) then
+!If( GaussianCube ) then
+!
+!    do n = 1 , n_part
+!    n = 1
+!        if( eh_tag(n) == "XX" ) cycle
+!        CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
+!    end do
+!
+!end If
 
-    ! LOCAL representation for film STO production ...
-    AO_bra = DUAL_bra
-    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
-
-    do n = 1 , n_part
-        if( eh_tag(n) == "XX" ) cycle
-        CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it ,t , eh_tag(n) )
-    end do
-
-end If
 !-------------------------------------------------------------
 !                       Q-DYNAMICS
 
@@ -157,16 +154,16 @@ DO it = it_init , n_t
 
     ! LOCAL representation for film STO production ...
     AO_bra = DUAL_bra
-    CALL gemm( UNI%L , MO_ket , AO_ket , 'T' , 'N' )
+    AO_ket = dconjg(AO_bra)
 
-    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
+!    If( GaussianCube .AND. mod(it,GaussianCube_step) == 0 ) then
 
-        do n = 1 , n_part
-            if( eh_tag(n) == "XX" ) cycle
-            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
-        end do
+!        do n = 1 , n_part
+!            if( eh_tag(n) == "XX" ) cycle
+!            CALL Gaussian_Cube_Format( AO_bra(:,n) , AO_ket(:,n) , it , t , eh_tag(n) )
+!        end do
 
-    end If
+!    end If
 
 !    if ( DP_Moment ) CALL Dipole_Moment( system , basis , UNI%L , UNI%R , AO_bra , AO_ket , Dual_ket , Total_DP )
 
@@ -309,7 +306,6 @@ do spin = 1 , n_spin
                 write(53,14) QDyn%dyn(it,0,n,spin) , dreal(wp_energy) , dimag(wp_energy)
         
             end do
-        
             close(53)
         
             erg_done = yes
