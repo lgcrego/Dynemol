@@ -5,8 +5,7 @@ module TD_Dipole_m
     use constants_m
     use blas95
     use parameters_m                , only : n_part
-    use Structure_Builder           , only : Extended_Cell ,                &
-                                             ExCell_basis
+    use Structure_Builder           , only : Extended_Cell 
     use DP_main_m                   , only : DP_Matrix_AO
     use tuning_m                    , only : eh_tag
 

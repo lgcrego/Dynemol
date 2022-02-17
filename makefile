@@ -133,8 +133,6 @@ SOURCE2 = constants_m.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
-		  f_intra.o \
-		  f_inter.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -151,10 +149,13 @@ SOURCE2 = constants_m.o \
 		  hamiltonians.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
-          decoherence.o \
 		  Ehrenfest.o \
+		  CSDM.o \
 		  FSSH.o \
+          decoherence.o \
 		  CoulInt_QMMM.o \
+		  f_intra.o \
+		  f_inter.o \
 		  FMO.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
@@ -191,7 +192,8 @@ SOURCE2 = constants_m.o \
 		  qdynamics.o \
                   Taylor.o \
 		  ElHl_Chebyshev.o \
-		  AO_adiabatic.o \
+		  TDSE_adiabatic.o \
+		  CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
@@ -217,7 +219,7 @@ a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	-rm -f *.log
 
 # Program runs very slowly with this
-safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens
+safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
 safe: a
 

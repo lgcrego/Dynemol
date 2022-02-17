@@ -1,7 +1,7 @@
 #include "GPU.h"
 
 ! Subroutine for computing time evolution adiabatic on the AO
-module AO_adiabatic_m
+module TDSE_adiabatic_m
 
     use type_m
     use constants_m
@@ -49,10 +49,9 @@ module AO_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use decoherence_m           , only: apply_decoherence
-    use Ehrenfest_Builder       , only: EhrenfestForce 
                                         
 
-    public :: AO_adiabatic
+    public :: TDSE_adiabatic 
 
     private
 
@@ -69,9 +68,9 @@ contains
 !
 !
 !
-!==========================================
- subroutine AO_adiabatic( Qdyn , final_it )
-!==========================================
+!============================================
+ subroutine TDSE_adiabatic( Qdyn , final_it )
+!============================================
 implicit none
 type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
@@ -211,7 +210,7 @@ final_it = it
 
 include 'formats.h'
 
-end subroutine AO_adiabatic
+end subroutine TDSE_adiabatic
 !
 !
 !
@@ -682,4 +681,4 @@ end If
 end subroutine Restart_stuff
 !
 !
-end module AO_adiabatic_m
+end module TDSE_adiabatic_m

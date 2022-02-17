@@ -24,8 +24,7 @@ module Sampling_m
     use Structure_Builder    , only : Unit_Cell ,                    &
                                       Extended_Cell ,                &
                                       Generate_Structure ,           &
-                                      Basis_Builder ,                &
-                                      ExCell_basis
+                                      Basis_Builder
     use DOS_m
     use Oscillator_m         , only : Optical_Transitions
     use DP_main_m            , only : Dipole_Matrix 
@@ -49,14 +48,15 @@ contains
  implicit none
 
 ! local variables ...
-integer                         :: frame , frame_init , nr , N_of_residues
-real*8                          :: internal_sigma
-logical                         :: FMO_ , DIPOLE_
-type(R_eigen)                   :: UNI 
-type(f_grid)                    :: TDOS , SPEC
-type(f_grid)    , allocatable   :: PDOS(:) 
-type(f_time)                    :: QDyn
-type(universe)                  :: Solvated_System
+integer                        :: frame , frame_init , nr , N_of_residues
+real*8                         :: internal_sigma
+logical                        :: FMO_ , DIPOLE_
+type(R_eigen)                  :: UNI 
+type(f_grid)                   :: TDOS , SPEC
+type(f_grid)    , allocatable  :: PDOS(:) 
+type(f_time)                   :: QDyn
+type(universe)                 :: Solvated_System
+type(STO_basis) , allocatable  :: ExCell_basis(:)
 
 ! preprocessing stuff .....................................................
 

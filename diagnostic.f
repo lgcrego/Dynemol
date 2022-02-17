@@ -16,8 +16,7 @@ module diagnostic_m
  use Structure_Builder          , only : Unit_Cell ,            &
                                          Extended_Cell ,        &
                                          Generate_Structure ,   &
-                                         Basis_Builder ,        &
-                                         ExCell_basis
+                                         Basis_Builder 
  use GA_QCModel_m               , only : Mulliken
  use DP_main_m                  , only : Dipole_Matrix
  use Dielectric_Potential       , only : Environment_SetUp
@@ -47,6 +46,7 @@ implicit none
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
+ type(STO_basis) , allocatable  :: ExCell_basis(:)
 
  
 ! preprocessing stuff ...................................

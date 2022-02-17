@@ -35,7 +35,7 @@ logical :: dynamic
 !--------------------------------------------------------------------
 ! ACTION	flags
 !
-  DRIVER         = "Genetic_Alg"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH] , MM_Dynamics
+  DRIVER         = "slice_CSDM"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH, CSDM] , MM_Dynamics
 !			
   nuclear_matter = "extended_sys"               ! <== solvated_sys , extended_sys , MDynamics
 !			
@@ -70,7 +70,7 @@ logical :: dynamic
   CH_and_DP_step    = 1000000                 ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
-  DensityMatrix     = F_                      ! <== generates data for postprocessing 
+  DensityMatrix     = T_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
   VDOS_             = F_
 !--------------------------------------------------------------------
@@ -108,7 +108,7 @@ logical :: dynamic
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 16                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 17                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
@@ -157,7 +157,7 @@ logical :: dynamic
 
 select case( DRIVER )
 
-    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" )
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
         
         dynamic = T_ 
 
@@ -181,7 +181,7 @@ end select
 static = .not. dynamic
 
 ! verbose is T_ only if ...
-verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "slice_FSSH") 
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "slice_FSSH") .AND. (DRIVER /= "slice_CSDM")
 
 If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
     Print*," >>> halting: " 

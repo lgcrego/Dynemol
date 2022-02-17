@@ -44,7 +44,7 @@ integer          , optional , intent(in)    :: it
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
 real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:) , S_root(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
-integer               :: i , j , N , info 
+integer               :: i , N , info 
 logical , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

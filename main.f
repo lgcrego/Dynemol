@@ -22,6 +22,7 @@ use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimiz
 ! Initialize GPU if necessary 
 call GPU_Init(0,1)
 
+!               THE TRUTH IS OUT THERE
 !========================================================
 !                   DRIVER ROUTINE
 !========================================================
@@ -45,7 +46,7 @@ select case ( driver )
     case ( "q_dynamics" )
         CALL qdynamics
 
-    case ( "slice_AO" , "slice_FSSH" , "slice_Cheb" )
+    case ( "slice_AO" , "slice_FSSH" , "slice_Cheb" , "slice_CSDM" )
         CALL QMDynamicSlice_driver
 
     case ( "avrg_confgs" )

@@ -309,20 +309,17 @@ forall(j=1:3) MolPBC(1:N_of_M)% CC(j)      = Mol(:)% CC(j)
               MolPBC(1:N_of_M)% nr         = Mol(:)% nr
               MolPBC(1:N_of_M)% N_of_Atoms = Mol(:)% N_of_Atoms
 
-do concurrent (i=1:N_of_M)
-
+do i = 1 , N_of_M
     na = Mol(i)% N_of_Atoms
     If( .not. allocated(MolPBC(i)% PC% Q) ) Then
         allocate( MolPBC(i)% PC% Q(na)     )
         allocate( MolPBC(i)% PC% nr(na)    )
         allocate( MolPBC(i)% PC% xyz(na,3) )
     end If
-   
     MolPBC(i)% PC% Q   = Mol(i)% PC% Q  
     MolPBC(i)% PC% nr  = Mol(i)% PC% nr 
     MolPBC(i)% PC% xyz = Mol(i)% PC% xyz
-
-end do
+    end do
 
 nr_max = Mol(N_of_M)%nr 
 

@@ -44,8 +44,9 @@ MODULE constants_m
     real*8     , parameter :: D_one =  1.d0
     integer    , parameter :: I_one =  1
 
-    logical    , parameter :: yes = .true.
-    logical    , parameter :: no  = .false.
+    logical    , parameter :: YES = .true.
+    logical    , parameter :: NO  = .false.
+    logical    , parameter :: OFF = .false.
 
 !   Molecular dynamics constants ...
     real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
