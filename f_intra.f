@@ -2,19 +2,21 @@ module F_intra_m
 
     use type_m   
     use constants_m
-    use MM_input       , only: MM_input_format
-    use parameters_m   , only: PBC , QMMM , n_part
-    use Allocation_m   , only: Allocate_Structures
-    use setup_m        , only: offset
-    use for_force      , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
-                               vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
-                               Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                               harm_dih, imp_dih, harm_bond, morse_bond
-    use MD_read_m      , only: atom , molecule , MM 
-    use MM_types       , only: MM_system , MM_molecular , MM_atomic , debug_MM
-    use gmx2mdflex     , only: SpecialPairs , SpecialPairs14 , SpecialMorse
-    use Ehrenfest_CSDM , only: Ehrenfest 
-    use decoherence_m  , only: DecoherenceForce
+    use MM_input          , only: MM_input_format
+    use parameters_m      , only: PBC , QMMM , driver , n_part
+    use Allocation_m      , only: Allocate_Structures
+    use setup_m           , only: offset
+    use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
+                                  vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
+                                  Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
+                                  harm_dih, imp_dih, harm_bond, morse_bond
+    use MD_read_m         , only: atom , molecule , MM 
+    use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
+    use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
+    use Ehrenfest_CSDM    , only: Ehrenfest 
+    use Ehrenfest_Builder , only: EhrenfestForce 
+    use Surface_Hopping   , only: SH_Force
+    use decoherence_m     , only: DecoherenceForce
 
     private
 
@@ -37,14 +39,17 @@ module F_intra_m
 
     ! imported module variables ...
     integer         :: PST(2)
+    real*8          :: t_rate
+    character(2)    :: mode
     type(structure) :: system
     type(R_eigen)   :: QM
     type(STO_basis) , allocatable , dimension(:)   :: basis(:)
     Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket
 
     interface BcastQMArgs
-        module procedure StoreQMArgs
         module procedure AllocateQMArgs
+        module procedure StoreQMArgs_AO_and_FSSH
+        module procedure StoreQMArgs_CSDM
     end interface
 
 contains
@@ -510,9 +515,20 @@ pot_total = pot_INTER + pot_INTRA
 pot_total = pot_total * mol * micro / MM % N_of_molecules
 
 if( QMMM ) then
-    CALL Ehrenfest( system, basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, QM )
-    CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
-    endif
+    select case (driver)
+
+       case( "slice_CSDM" ) 
+           CALL Ehrenfest( system, basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, QM )
+           CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
+
+       case( "slice_AO")
+           CALL EhrenfestForce( system , basis , MO_bra , MO_ket , QM , representation=mode)    
+
+       case("slice_FSSH")
+           CALL SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )
+    
+    end select
+endif
 
 ! Get total MM force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
@@ -755,18 +771,25 @@ end function DEL
 ! local variables ...
 integer :: i
 
-do i = 1 , MM % N_of_atoms
-     atom(i)% f_QM(:)   = atom(i)% Ehrenfest(:) + atom(i)% f_CSDM(:)
-     atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% f_QM(:)
-     end do
+If( driver == "slice_CSDM" ) then
+    do i = 1 , MM % N_of_atoms
+         atom(i)% f_QM(:)   = atom(i)% Ehrenfest(:) + atom(i)% f_CSDM(:)
+         atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% f_QM(:)
+         end do
+else
+    do i = 1 , MM % N_of_atoms
+         atom(i)% f_QM(:)   = atom(i)% Ehrenfest(:)
+         atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% f_QM(:)
+         end do
+endif
 
 end subroutine ForceQMMM
 !
 !
 !
-!=============================================================================
- subroutine StoreQMArgs( sys , vec , mtx1 , mtx2 , mtx3 , mtx4 , Eigen , PSE )
-!=============================================================================
+!==================================================================================
+ subroutine StoreQMArgs_CSDM( sys , vec , mtx1 , mtx2 , mtx3 , mtx4 , Eigen , PSE )
+!==================================================================================
  implicit none
  type(structure), intent(inout):: sys
  type(STO_basis), intent(in)   :: vec(:)
@@ -793,7 +816,37 @@ QM% L   = Eigen% L
 QM% R   = Eigen% R
 QM% Fermi_state = Eigen% Fermi_state
 
-end subroutine StoreQMArgs
+end subroutine StoreQMArgs_CSDM
+!
+!
+!
+!===================================================================================
+ subroutine StoreQMArgs_AO_and_FSSH( sys , vec , mtx1 , mtx2 , Eigen , delta , txt )
+!===================================================================================
+ implicit none
+ type(structure)             , intent(inout):: sys
+ type(STO_basis)             , intent(in)   :: vec(:)
+ complex*16                  , intent(in)   :: mtx1(:,:)
+ complex*16                  , intent(in)   :: mtx2(:,:)
+ type(R_eigen)               , intent(in)   :: Eigen
+ real*8           , optional , intent(in)   :: delta
+ character(len=*) , optional , intent(in)   :: txt
+
+! local variables ... 
+
+basis   = vec
+system  = sys
+MO_bra  = mtx1
+MO_ket  = mtx2
+if(present(delta)) t_rate  = delta
+if(present(txt  )) mode    = txt
+
+QM% erg = Eigen% erg
+QM% L   = Eigen% L
+QM% R   = Eigen% R
+QM% Fermi_state = Eigen% Fermi_state
+
+end subroutine StoreQMArgs_AO_and_FSSH
 !
 !
 !
@@ -804,11 +857,14 @@ implicit none
 integer , intent(in) :: BasisSize
 integer , intent(in) :: SystemSize
 
-allocate(basis      (BasisSize)        )
-allocate(MO_bra     (BasisSize,n_part) )
-allocate(MO_ket     (BasisSize,n_part) )
-allocate(MO_TDSE_bra(BasisSize,n_part) )
-allocate(MO_TDSE_ket(BasisSize,n_part) )
+allocate(basis  (BasisSize)        )
+allocate(MO_bra (BasisSize,n_part) )
+allocate(MO_ket (BasisSize,n_part) )
+
+If( driver == "slice_CSDM" ) then
+    allocate(MO_TDSE_bra(BasisSize,n_part) )
+    allocate(MO_TDSE_ket(BasisSize,n_part) )
+end if
 
 CALL Allocate_Structures( SystemSize , System )
 

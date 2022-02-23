@@ -43,11 +43,10 @@ module TDSE_adiabatic_m
                                         Restart_Sys                      
     use MM_dynamics_m           , only: MolecularMechanics ,             &
                                         preprocess_MM , MoveToBoxCM
-    use Ehrenfest_Builder       , only: EhrenfestForce 
-    use Surface_Hopping         , only: SH_Force , PES ,                 &
-                                        verify_FSSH_jump
+    use Surface_Hopping         , only: PES , verify_FSSH_jump
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
+    use F_intra_m               , only: BcastQMArgs
     use decoherence_m           , only: apply_decoherence
                                         
 
@@ -117,9 +116,9 @@ do frame = frame_init , frame_final , frame_step
         Net_Charge_MM = Net_Charge
         select case (driver)
             case("slice_FSSH") 
-                CALL SH_Force( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , t_rate )
+                CALL BcastQMArgs( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI, t_rate )
             case("slice_AO") 
-                CALL EhrenfestForce( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , representation="MO")
+                CALL BcastQMArgs( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI , txt="MO" )
             end select 
     end If
 
@@ -168,7 +167,7 @@ do frame = frame_init , frame_final , frame_step
             if( driver == "slice_FSSH" ) then
                 QMMM = QMMM .OR. (triggered == yes)
                 end if
-print*, QMMM
+
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -200,7 +199,7 @@ print*, QMMM
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL QMMM_erg_status( frame , t_rate , triggered )
+    CALL Write_Erg_Log( frame , t_rate , triggered )
         
 end do
 
@@ -332,10 +331,15 @@ If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 
 allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
+CALL BcastQMArgs( mm , Extended_Cell%atoms )
+
 Unit_Cell% QM_erg = update_QM_erg()
 !..........................................................................
 
 include 'formats.h'
+
+deallocate( el_FMO%L , el_FMO%R , el_FMO%erg )
+deallocate( hl_FMO%L , hl_FMO%R , hl_FMO%erg ) 
 
 end subroutine Preprocess
 !
@@ -561,7 +565,7 @@ end subroutine dump_Qdyn
 !
 !
 !========================================================
- subroutine QMMM_erg_status( frame , t_rate , triggered )
+ subroutine Write_Erg_Log( frame , t_rate , triggered )
 !========================================================
 use MM_input , only : Units_MM , MM_log_step
 implicit none
@@ -596,7 +600,7 @@ if( mod(frame,MM_log_step) == 0 ) then
 
 end if
 
-end subroutine  QMMM_erg_status 
+end subroutine Write_Erg_Log 
 !
 !
 !
@@ -610,7 +614,7 @@ logical, optional , intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
-real*8     :: QM_erg , Frontier_gap
+real*8     :: QM_erg , Gap
 complex*16 :: wp_energy(n_part)
 logical    :: jump
 
@@ -618,33 +622,30 @@ select case ( driver )
 
   case("slice_FSSH") 
 
-            If( it == 1) then
-                QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-                return
-            else
-                QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-            end If
+       If( it == 1) then
+           QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+           return
+       else
+           QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+       end If
 
-            If( PES(1) == PES(2) ) then
-            
-               call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
-               
-               Frontier_Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-               
-               if( (Unit_Cell% MD_Kin > Frontier_Gap) .AND. (jump == .true.) ) triggered = yes
-            
-            end if
+       If( PES(1) == PES(2) ) then
+       
+          call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
+          
+          Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+          
+          if( (Unit_Cell% MD_Kin > Gap) .AND. (jump == .true.) ) triggered = yes
+       
+       end if
 
   case("slice_AO")
 
-            do n = 1 , n_part
-
-                if( eh_tag(n) == "XX" ) cycle
-
-                wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-
-            end do
-            QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+       do n = 1 , n_part
+           if( eh_tag(n) == "XX" ) cycle
+           wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+           end do
+           QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
 
   end select
 
