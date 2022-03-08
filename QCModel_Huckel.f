@@ -45,7 +45,7 @@ integer          , optional , intent(in)    :: it
 real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
 real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:) , S_root(:,:)
 real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
-integer               :: i , j , N , info 
+integer               :: i , N , info 
 logical , save        :: first_call_ = .true.
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -68,7 +68,7 @@ else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
 
-if( driver == 'diagnostic' .AND. Band_Structure ) CALL EigenSystem_Reciprocal( basis , h , S_matrix )
+if( Band_Structure ) CALL EigenSystem_Reciprocal( basis , h , S_matrix )
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '

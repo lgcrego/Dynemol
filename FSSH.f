@@ -44,8 +44,8 @@ contains
  real*8          , intent(in)    :: t_rate
 
 ! local variables ... 
- integer :: i , j , nn , xyz
- logical :: jump 
+integer :: j , nn , xyz
+logical :: jump 
 
 mm = size(basis)
 nn = n_part
@@ -215,11 +215,11 @@ real*8                :: tmp_coord(3) , delta_b(3)
 
      Force(K) = two * sum( F_mtx(K,:,xyz) )
 
-     ! Rxd_NA = dot_product(velocity,force_NA) for El abd Hl 
+     ! Rxd_NA = dot_product(velocity,d_NA) for El abd Hl 
      ! summing over system%atoms (internal loop) and xyz (external loop)
      If( .not. present(instance) ) then
 
-         d_NA = NAcoupling( grad_S(:, BPk+1:BPk+DOSk) , k , DOSk , BPk )  ! <== units = eV/Angs
+         d_NA = NAcoupling( grad_S(:, BPk+1:BPk+DOSk) , DOSk , BPk )  ! <== units = 1/Angs
 
          d_NA_El(:,k,xyz) = d_NA(:,1)
          d_NA_Hl(:,k,xyz) = d_NA(:,2)
@@ -242,12 +242,11 @@ end function SHForce
 !
 !
 !=====================================================
- function NAcoupling( grad_Slice , k , DOSk , BPk ) &
+ function NAcoupling( grad_Slice , DOSk , BPk ) &
  result(d_NA)
 !=====================================================
 implicit none
 real*8  , intent(in)  :: grad_Slice(:,:)
-integer , intent(in)  :: k
 integer , intent(in)  :: DOSk
 integer , intent(in)  :: BPk
 ! result ...
@@ -455,7 +454,7 @@ end subroutine verify_FSSH_jump
  real*8  , parameter :: V_factor = 1.d-2  
  
  ! local variables ...
- integer :: i , j , xyz
+ integer :: i , xyz
  real*8  :: mass , imass , tmp , gama , dE_EH_jump , a_coef , b_coef , b24ac , F_coef
 
  a_coef = d_zero
