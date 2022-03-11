@@ -199,7 +199,7 @@ if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-!    CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
+    CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
 
     CALL Write_Erg_Log( frame , triggered )
 

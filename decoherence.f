@@ -132,9 +132,6 @@ if( .not. allocated(tau_inv) ) then
 N_atoms = system%atoms
 dim_E   = size(erg)
 
-! reset decoherence force to zero ...
-forall( i=1:N_atoms ) atom(i)% f_CSDM(:) = d_zero
-
 if( Unit_Cell% MD_Kin < mid_prec ) return
      
 allocate( rho(dim_E,n_part) )
@@ -147,10 +144,10 @@ write(32,'(5F9.6)') rho(51,2), rho(50,2), rho(49,2), rho(48,2), rho(47,2)
 allocate( v_x_s(dim_E,n_part) , source = d_zero )
 do i = 1 , dim_E
      do n = 1 , dim_N
-          aux = dot_product( nucleus(n)%v(:) , s_EL_ik(n,i)%vec(:) )
+          aux = dot_product( nucleus(n)% v(:) , s_EL_ik(n,i)% vec(:) )
           v_x_s(i,1) = v_x_s(i,1) + aux
      
-          aux = dot_product( nucleus(n)%v(:) , s_HL_ik(n,i)%vec(:) )
+          aux = dot_product( nucleus(n)% v(:) , s_HL_ik(n,i)% vec(:) )
           v_x_s(i,2) = v_x_s(i,2) + aux
           end do
 end do
@@ -186,10 +183,16 @@ end do
 
 h = 0
 do n = 1 , N_atoms 
-   If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
-   h = h + 1
-   atom(n)% f_CSDM(:) = ( Force(h,1)%vec(:) - Force(h,2)%vec(:) ) * eVAngs_2_Newton 
-   enddo
+
+     ! reset decoherence force to zero ...
+     atom(n)% f_CSDM(:) = d_zero
+
+     If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+
+     h = h + 1
+     atom(n)% f_CSDM(:) = ( Force(h,1)%vec(:) - Force(h,2)%vec(:) ) * eVAngs_2_Newton 
+
+     enddo
 
 if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
 
@@ -254,10 +257,9 @@ do n = 1 , dim_N
           s_El_ik(n,i)% vec = s_El_ik(n,i)% vec + nucleus(n)% V_vib     ! <== units = Ang/ps ...
 
           norm = dot_product( s_El_ik(n,i)% vec , s_El_ik(n,i)% vec )
-          norm = sqrt(d_one/norm)
 
           ! building decoherence force versor s_ik ...
-          s_El_ik(n,i)% vec = s_El_ik(n,i)% vec * norm
+          s_El_ik(n,i)% vec = s_El_ik(n,i)% vec  / sqrt(norm)
           !========================================================
           enddo
 
@@ -278,7 +280,7 @@ do n = 1 , dim_N
           norm = sqrt(d_one/norm)
 
           ! building decoherence force versor s_ik ...
-          s_Hl_ik(n,i)% vec = s_Hl_ik(n,i)% vec * norm
+          s_Hl_ik(n,i)% vec = s_Hl_ik(n,i)% vec / sqrt(norm)
           !========================================================
           enddo
 end do

@@ -8,10 +8,11 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart
+    use parameters_m     , only : EnvField_ , Induced_ , driver , verbose , restart , Band_Structure
     use Overlap_Builder  , only : Overlap_Matrix
     use Hamiltonians     , only : X_ij , even_more_extended_Huckel
     use Matrix_Math
+    use QCModel_Reciprocal_m 
 
     public :: EigenSystem , S_root_inv 
 

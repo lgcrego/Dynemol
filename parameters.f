@@ -42,9 +42,9 @@ logical :: dynamic
 !			
   Survival       = T_                       
   DP_Moment      = F_                       
-  QMMM           = F_
-  OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
-  ad_hoc         = F_                        ! <== ad hoc tuning of parameters
+  QMMM           = T_
+  OPT_parms      = T_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         = T_                        ! <== ad hoc tuning of parameters
   Band_structure = F_
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
