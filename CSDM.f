@@ -10,17 +10,18 @@ module Ehrenfest_CSDM
     use parameters_m     , only: verbose, n_part,electron_state, hole_state
     use Overlap_Builder  , only: Overlap_Matrix
 
-    public :: Ehrenfest , PST , d_NA_El , d_NA_Hl , NewPointerState
+    public :: Ehrenfest , PST , dNA_El , dNA_Hl , NewPointerState
 
     private
 
     !module variables ...
-    integer                                  :: space , PST(2) , Fermi , dim_3N
-    integer , allocatable , dimension(:)     :: BasisPointer, DOS
-    real*8  , allocatable , dimension(:)     :: erg, F_vec
-    real*8  , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA, d_NA_El, d_NA_Hl              
-    real*8  , allocatable , dimension(:,:,:) :: F_mtx
-    logical , allocatable , dimension(:,:)   :: mask
+    integer                                            :: dim_E , PST(2) , Fermi , dim_N
+    integer           , allocatable , dimension(:)     :: BasisPointer, DOS
+    real*8            , allocatable , dimension(:)     :: erg, F_vec
+    real*8            , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA
+    type(d_NA_vector) , allocatable , dimension(:,:)   :: dNA_El, dNA_Hl              
+    real*8            , allocatable , dimension(:,:,:) :: F_mtx
+    logical           , allocatable , dimension(:,:)   :: mask
 
     !module parameters ...
     logical , parameter :: T_ = .true. , F_ = .false.
@@ -48,20 +49,20 @@ contains
 !============================================================
 ! some preprocessing ...
 !============================================================
-space = size(basis)
+dim_E = size(basis)
 nn = n_part
 
 CALL setup_Module( system , basis , QM , A_ad_nd , B_ad_nd , rho_EH , aux )
 
 ! build up electron-hole density matrix ...
-forall( i=1:space , j=1:space ) rho_EH(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+forall( i=1:dim_E , j=1:dim_E ) rho_EH(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
 aux = transpose(rho_EH)
 rho_EH = ( rho_EH + aux ) / two 
 
 CALL symm( rho_EH , QM%L , aux )
 CALL gemm( QM%L , aux , A_ad_nd , 'T' , 'N' )
 
-forall( j=1:space ) rho_EH(:,j) = erg(j) * rho_EH(:,j) 
+forall( j=1:dim_E ) rho_EH(:,j) = erg(j) * rho_EH(:,j) 
 CALL gemm( rho_EH , QM%L , aux )
 CALL gemm( aux , QM%L  , B_ad_nd , 'T' , 'N' )
 
@@ -183,10 +184,9 @@ do xyz = 1 , 3
             ! calculation of d_NA ...
             d_NA = NAcoupling( grad_S( : , BP_K+1 : BP_K+DOS_k) , DOS_k , BP_K )  ! <== units = 1/Angs
        
-            indx = (atm_counter-1)*3 + xyz 
-            do concurrent (j=1:space)
-               d_NA_El(indx,j) = d_NA(j,1)
-               d_NA_Hl(indx,j) = d_NA(j,2)
+            do concurrent (j=1:dim_E)
+               dNA_El(atm_counter,j)% vec(xyz) = d_NA(j,1)
+               dNA_Hl(atm_counter,j)% vec(xyz) = d_NA(j,2)
                enddo
         
             ! recover original system ...
@@ -297,23 +297,23 @@ integer            :: i , j , newPST(2)
 real*8             :: rn , EH_jump
 real*8, allocatable:: rho(:,:) , base(:,:) , g_switch(:,:)
 
-allocate( rho(space, 2) )
+allocate( rho(dim_E, 2) )
 ! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
 do j = 1 , 2
    rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
    enddo
 
-allocate(g_switch(space,2))
+allocate(g_switch(dim_E,2))
 g_switch(:,:) = two * rho * Omega(QR)
 
 call random_number(rn)
 
 newPST = PST
-allocate( base(0:space,2) , source=d_zero )
+allocate( base(0:dim_E,2) , source=d_zero )
 base(0,:) = d_zero
 do j = 1 , 2 
-   do i = 1 , space
+   do i = 1 , dim_E
       base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
       if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
           newPST(j) = i     
@@ -374,16 +374,16 @@ logical               :: flip
 logical               , save :: done = F_
 real*8  , allocatable , save :: pastQR(:,:)
 
-allocate(newQR(space,2))
-allocate(Omega(space,2))
+allocate(newQR(dim_E,2))
+allocate(Omega(dim_E,2))
 
 if( .not. done ) then
     ! setup environment ...
-    allocate( pastQR (space,space) , source=QR )
+    allocate( pastQR (dim_E,dim_E) , source=QR )
     done = T_
 else
     ! used to calculate g_switch via Scattering Matrix (Omega): DynEMol method ...
-    do concurrent (i=1:space) shared(QR,pastQR) local(flip)
+    do concurrent (i=1:dim_E) shared(QR,pastQR) local(flip)
        flip = dot_product( QR(:,i) , pastQR(:,i) ) < 0
        if(flip) pastQR(:,i) = -pastQR(:,i)
        end do
@@ -422,6 +422,7 @@ real*8          , allocatable , intent(inout) :: rho_EH(:,:)
 real*8          , allocatable , intent(inout) :: aux(:,:) 
 
 ! local variables ...
+integer :: i , j
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis ) 
@@ -430,22 +431,27 @@ CALL preprocess( system )
 allocate( F_mtx(system%atoms,system%atoms,3) , source=d_zero )
 allocate( F_vec(system%atoms)                , source=d_zero )
 
-allocate( A_ad_nd (space,space) )
-allocate( B_ad_nd (space,space) )
-allocate( rho_EH  (space,space) )
-allocate( aux     (space,space) )
-allocate( Phi     (space, 2) )
-allocate( erg     (space)       , source = QM%erg )
-allocate( QL      (space,space) , source = QM%L   )
-allocate( d_NA    (space, 2)    , source = d_zero )
+allocate( A_ad_nd (dim_E,dim_E) )
+allocate( B_ad_nd (dim_E,dim_E) )
+allocate( rho_EH  (dim_E,dim_E) )
+allocate( aux     (dim_E,dim_E) )
+allocate( Phi     (dim_E, 2) )
+allocate( erg     (dim_E)       , source = QM%erg )
+allocate( QL      (dim_E,dim_E) , source = QM%L   )
+allocate( d_NA    (dim_E, 2)    , source = d_zero )
 
 If( .NOT. allocated(grad_S) ) then
-    allocate( grad_S  (space,space) )
-    allocate( Kernel  (space,space) )
+    allocate( grad_S  (dim_E,dim_E) )
+    allocate( Kernel  (dim_E,dim_E) )
 
-    dim_3N = 3*count( system%QMMM == "QM" .AND. system%flex == T_ )
-    allocate( d_NA_El (dim_3N,space) , source = d_zero )
-    allocate( d_NA_Hl (dim_3N,space) , source = d_zero )
+    dim_N = count( system%QMMM == "QM" .AND. system%flex == T_ )
+    allocate( dNA_El (dim_N,dim_E) )
+    allocate( dNA_Hl (dim_N,dim_E) )
+
+    do concurrent( i=1:dim_N , j=1:dim_E )
+       dNA_El (i,j)% vec(:) = d_zero
+       dNA_Hl (i,j)% vec(:) = d_zero
+       enddo
 
     PST(1) = electron_state
     PST(2) = hole_state
@@ -473,13 +479,13 @@ real*8           , allocatable , intent(out) :: Xij(:,:)
 !local variables ...
 integer :: i , j
 
-allocate ( Xij(space,space) )
+allocate ( Xij(dim_E,dim_E) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-do j = 1 , space 
-do i = j , space 
+do j = 1 , dim_E 
+do i = j , dim_E 
 
          Xij(i,j) = X_ij( i , j , basis )
          Xij(j,i) = Xij(i,j) 

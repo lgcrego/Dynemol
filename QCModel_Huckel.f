@@ -67,6 +67,8 @@ else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
 
+if( Band_Structure ) CALL EigenSystem_Reciprocal( basis , h , S_matrix )
+
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 

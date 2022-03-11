@@ -38,9 +38,9 @@ implicit none
 !------------------------------------------------------------------------------
 ! repeat the following information filling for all the different species ...
 !
-  species(1) % residue         = "BZN"      ! <== Residue label for species i ; character(len3)
+  species(1) % residue         = "AZP"      ! <== Residue label for species i ; character(len3)
   species(1) % N_of_molecules  = 1          ! <== Number of molecules of species i
-  species(1) % N_of_atoms      = 12         ! <== Number of atoms comprising a single molecule of species i
+  species(1) % N_of_atoms      = 35         ! <== Number of atoms comprising a single molecule of species i
   species(1) % flex            = T_         ! <== Flexible : T_ , F_
 
   Selective_Dynamics = F_                   ! <== ad_hoc_MM_tuning sets MegaMass to selected atoms
@@ -62,20 +62,20 @@ implicit none
   pressure_relaxation_time  = infty             ! <== Pressure coupling term 
                                                 ! <== SMALL = STRONG ; use "= infty" to decouple
 
-  cutoff_radius             = 50.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
-  damping_Wolf              = 0.0005d0          ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+  cutoff_radius             = 15.d0             ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
+  damping_Wolf              = 0.0220d0          ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
 !------------------------------------------------------------------------------
 ! GENERAL INFO ...
 !
   driver_MM              = "MM_Dynamics"       ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
 
-  read_velocities        = F_                   ! <== reads the initial velocities : T_ , F_
+  read_velocities        = T_                   ! <== reads the initial velocities : T_ , F_
 
   MM_input_format        = "GMX"                ! <== GMX, NAMD, GAFF
 
-  MM_log_step            =  50                  ! <== step for saving MM results & parameters
+  MM_log_step            =  10                  ! <== step for saving MM results & parameters
 
-  MM_frame_step          =  500                 ! <== step for saving MM results & parameters
+  MM_frame_step          =  100                 ! <== step for saving MM results & parameters
 
   Units_MM               = "eV"                 ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
 !--------------------------------------------------------------------

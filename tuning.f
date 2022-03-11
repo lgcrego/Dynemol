@@ -58,11 +58,11 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % El = .true.
+where(univ % atom % residue == "AZP") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
+where(univ % atom % residue == "AZP") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------

@@ -144,9 +144,10 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
+		  QCModel_Reciprocal.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
@@ -160,11 +161,11 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -190,7 +191,7 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
 		  TDSE_adiabatic.o \
 		  CSDM_adiabatic.o \

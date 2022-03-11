@@ -17,7 +17,7 @@ character (len=7)       :: argument
 character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
+logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces , Band_structure
 logical                 :: resume
 logical , parameter     :: T_ = .true. , F_ = .false. 
 
@@ -37,15 +37,15 @@ logical :: dynamic
 !
   DRIVER         = "slice_CSDM"              ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_[Cheb, AO, FSSH, CSDM] , MM_Dynamics
 !			
-  nuclear_matter = "extended_sys"               ! <== solvated_sys , extended_sys , MDynamics
+  nuclear_matter = "MDynamics"               ! <== solvated_sys , extended_sys , MDynamics
 !			
 !			
-  Survival       = F_                       
+  Survival       = T_                       
   DP_Moment      = F_                       
   QMMM           = F_
   OPT_parms      = F_                        ! <== read OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         = F_                        ! <== ad hoc tuning of parameters
-
+  Band_structure = F_
 !----------------------------------------------------------------------------------------
 !           MOLECULAR MECHANICS parameters are defined separately @ parameters_MM.f 
 !----------------------------------------------------------------------------------------
@@ -58,19 +58,19 @@ logical :: dynamic
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-  HFP_Forces        = F_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
+  HFP_Forces        = T_                      ! <== Hellman-Feynman-Pulay forces; MUST be T_ for QMMM calcs and F_ otherwise
                                               
   SPECTRUM          = F_                          
   Alpha_Tensor      = F_                      ! <== Embeded Finite Field Polarizability 
 
-  GaussianCube      = T_                       
+  GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
   NetCharge         = F_                      ! <== pdb format charge Occupancy 
   CH_and_DP_step    = 1000000                 ! <== time step for saving charge and Induced DP values
                                               ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
 
-  DensityMatrix     = T_                      ! <== generates data for postprocessing 
+  DensityMatrix     = F_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
   VDOS_             = F_
 !--------------------------------------------------------------------
@@ -97,18 +97,18 @@ logical :: dynamic
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  0.50d0                               ! <== final time in PICOseconds
-  n_t  =  100000                               ! <== number of time steps
+  t_f  =  1.00d0                               ! <== final time in PICOseconds
+  n_t  =  200000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 15                         ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state     = 50                         ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 17                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 52                         ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
