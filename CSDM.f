@@ -22,6 +22,7 @@ module Ehrenfest_CSDM
     type(d_NA_vector) , allocatable , dimension(:,:)   :: dNA_El, dNA_Hl              
     real*8            , allocatable , dimension(:,:,:) :: F_mtx
     logical           , allocatable , dimension(:,:)   :: mask
+    logical                                            :: instantiated = .false.
 
     !module parameters ...
     logical , parameter :: T_ = .true. , F_ = .false.
@@ -30,17 +31,15 @@ contains
 !
 !
 !
-!=========================================================================================
- subroutine Ehrenfest( system , basis , MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket , QM )
-!=========================================================================================
+!=============================================================
+ subroutine Ehrenfest( system , basis , MO_bra , MO_ket , QM )
+!=============================================================
  implicit none
- type(structure)  , intent(inout) :: system
- type(STO_basis)  , intent(in)    :: basis(:)
- complex*16       , intent(in)    :: MO_bra(:,:)
- complex*16       , intent(in)    :: MO_ket(:,:)
- complex*16       , intent(in)    :: MO_TDSE_bra(:,:)
- complex*16       , intent(in)    :: MO_TDSE_ket(:,:)
- type(R_eigen)    , intent(in)    :: QM
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
+ complex*16      , intent(in)    :: MO_bra(:,:)
+ complex*16      , intent(in)    :: MO_ket(:,:)
+ type(R_eigen)   , intent(in)    :: QM
 
 ! local variables ... 
  integer              :: i , j , nn
@@ -282,30 +281,49 @@ end function NAcoupling
 !
 !
 !
-!=====================================================================
- subroutine NewPointerState( QR , MO_TDSE_bra , MO_TDSE_ket , MOerg )
-!=====================================================================
+!==============================================================================
+ subroutine NewPointerState( system , MO_TDSE_bra , MO_TDSE_ket , QM , t_rate )
+!==============================================================================
 implicit none
 ! args
-real*8    , intent(in):: QR(:,:)
-complex*16, intent(in):: MO_TDSE_bra(:,:)
-complex*16, intent(in):: MO_TDSE_ket(:,:)
-real*8    , intent(in):: MOerg(:)
+type(structure), intent(in):: system
+complex*16     , intent(in):: MO_TDSE_bra(:,:)
+complex*16     , intent(in):: MO_TDSE_ket(:,:)
+type(R_eigen)  , intent(in):: QM
+real*8         , intent(in):: t_rate
 
 ! local variables ...
-integer            :: i , j , newPST(2)
-real*8             :: rn , EH_jump
-real*8, allocatable:: rho(:,:) , base(:,:) , g_switch(:,:)
+integer             :: i , j , newPST(2)
+real*8              :: rn , EH_jump
+real*8, allocatable :: rho(:,:) , base(:,:) , P_switch(:,:) , B_kl(:,:) , Omega(:,:)
+character(len=7)    :: method
 
 allocate( rho(dim_E, 2) )
-! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
+
+! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl) ...
 do j = 1 , 2
    rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
    enddo
 
-allocate(g_switch(dim_E,2))
-g_switch(:,:) = two * rho * Omega(QR)
+! choose method = "Dynemol" or "Tully" ...
+method = "Dynemol"
+
+! both methods are equivalent ...
+allocate(P_switch(dim_E,2))
+if ( method == "Dynemol" ) then
+
+   call Dynemol_way(QM,Omega)
+   P_switch(:,:) = two * rho * Omega
+   deallocate(Omega)
+
+else
+
+   call Tully_way( system , rho , B_kl )
+   forall( j=1:2 ) P_switch(:,j) = t_rate * B_kl(:,j) 
+   deallocate(B_kl)
+
+end if
 
 call random_number(rn)
 
@@ -314,15 +332,15 @@ allocate( base(0:dim_E,2) , source=d_zero )
 base(0,:) = d_zero
 do j = 1 , 2 
    do i = 1 , dim_E
-      base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
+      base(i,j) = base(i-1,j) + max(d_Zero,P_switch(i,j)) 
       if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
           newPST(j) = i     
-          cycle
+          exit
           end if
       end do
       end do
 
-EH_jump = (MOerg(newPST(1)) - MOerg(PST(1))) - (MOerg(newPST(2)) - MOerg(PST(2)))
+EH_jump = (QM%erg(newPST(1)) - QM%erg(PST(1))) - (QM%erg(newPST(2)) - QM%erg(PST(2)))
 
 if( EH_jump <= d_zero) then
          ! do nothing, transitions are allowed
@@ -347,11 +365,11 @@ if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
    endif
 
 If( newPST(1) < newPST(2) ) then
-    CALL system("sed '11i >>> ATTENTION: electron below hole state <<<' warning.signal |cat")
+    CALL systemQQ("sed '11i >>> ATTENTION: electron below hole state <<<' warning.signal |cat")
     stop 
     end If
 
-deallocate( rho , base , g_switch ) 
+deallocate( rho , base , P_switch ) 
 
 PST = newPST
 
@@ -359,53 +377,107 @@ end subroutine NewPointerState
 !
 !
 !
-!====================
- function Omega( QR ) 
-!====================
+!====================================
+ subroutine Dynemol_way( QM , Omega ) 
+!====================================
 implicit none
-real*8  , intent(in) :: QR(:,:)
+type(R_eigen)        , intent(in)  :: QM
+real*8 , allocatable , intent(out) :: Omega(:,:)
 
 ! local variables ...
-integer :: i
-real*8  , allocatable :: newQR(:,:) , Omega(:,:)
+integer               :: i , j
+real*8  , allocatable :: newQ(:,:) 
 logical               :: flip 
 
 !local saved variables ...
 logical               , save :: done = F_
-real*8  , allocatable , save :: pastQR(:,:)
+real*8  , allocatable , save :: pastQ(:,:)
 
-allocate(newQR(dim_E,2))
-allocate(Omega(dim_E,2))
+allocate( newQ  (dim_E,2) )
+allocate( Omega (dim_E,2) )
 
 if( .not. done ) then
     ! setup environment ...
-    allocate( pastQR (dim_E,dim_E) , source=QR )
+    allocate( pastQ (dim_E,dim_E) )
+    pastQ = QM%R
     done = T_
 else
-    ! used to calculate g_switch via Scattering Matrix (Omega): DynEMol method ...
-    do concurrent (i=1:dim_E) shared(QR,pastQR) local(flip)
-       flip = dot_product( QR(:,i) , pastQR(:,i) ) < 0
-       if(flip) pastQR(:,i) = -pastQR(:,i)
+    ! used to calculate P_switch via Scattering Matrix (Omega): DynEMol method ...
+    do i = 1 , dim_E 
+       flip = dot_product( QM%L(i,:) , pastQ(:,i) ) < 0
+       if(flip) pastQ(:,i) = -pastQ(:,i)
        end do
 
-    newQR = QR(:,PST(:))
+    forall(j=1:2) newQ(:,j) = QM%L(PST(j),:)
 
-    call gemm( pastQR , newQR , Omega , 'T' )    
+    call gemm( pastQ , newQ , Omega , 'T' )    
 
     !change sign for hole wvpckt ...
     Omega(:,2) = -Omega(:,2)
 
-    do i=1,2
-       Omega(PST(i),i) = d_zero
+    do j=1,2
+       Omega(PST(j),j) = d_zero
        end do
 
-    pastQR = QR
-
+    pastQ = QM%R
 end if
 
-deallocate( newQR )
+deallocate( newQ ) 
 
-end function Omega
+end subroutine Dynemol_way
+!
+!
+!
+!===========================================
+ subroutine Tully_way( system , rho , B_kl ) 
+!===========================================
+use MD_read_m , only: atom
+implicit none
+type(structure)               , intent(in)  :: system
+real*8          , allocatable , intent(in)  :: rho(:,:)
+real*8          , allocatable , intent(out) :: B_kl(:,:)
+
+! local parameters ...
+real*8, parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+
+!local variables ...
+integer             :: i , j , n
+real*8, allocatable :: v_x_dNA(:,:)
+
+!local saved variables ...
+logical               , save :: done = F_
+real*8  , allocatable , save :: past_rho(:,:) 
+
+allocate( v_x_dNA (dim_E,2) , source = d_zero )
+allocate( B_kl    (dim_E,2) )
+
+if( .not. done ) then
+    ! setup environment ...
+    allocate( past_rho (dim_E,2) )
+    past_rho = rho
+    done = T_
+else
+    do i = 1 , dim_E
+         do n = 1 , system%atoms
+            If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+            v_x_dNA(i,1) = v_x_dNA(i,1) + dot_product( atom(n)% vel(:) , dNA_El(n,i)% vec(:) )
+            v_x_dNA(i,2) = v_x_dNA(i,2) - dot_product( atom(n)% vel(:) , dNA_Hl(n,i)% vec(:) )
+            end do
+            enddo
+    v_x_dNA = v_x_dNA * V_factor
+
+    forall( j=1:2 ) B_kl(:,j) = - two * past_rho(:,j) * v_x_dNA(:,j)
+
+    do j=1,2
+       B_kl(PST(j),j) = d_zero
+       end do
+
+    past_rho = rho
+end if
+
+deallocate( v_x_dNA ) 
+
+end subroutine Tully_way
 !
 !
 !

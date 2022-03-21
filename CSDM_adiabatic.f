@@ -84,6 +84,8 @@ logical        :: triggered
 it = 1
 t  = t_i
 
+open (18, file='D_k.log', status='unknown')
+
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
@@ -103,11 +105,6 @@ else
     triggered = yes
 end If
 
-
-open (17, file='f_csdm.log', status='unknown')
-
-
-
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
 
 do frame = frame_init , frame_final , frame_step
@@ -121,7 +118,7 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI, PST )
+        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, UNI, PST )
     endif
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
@@ -199,7 +196,7 @@ if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
+    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
 
     CALL Write_Erg_Log( frame , triggered )
 
@@ -222,7 +219,7 @@ end subroutine CSDM_adiabatic
  subroutine Preprocess( QDyn )
 !=============================
 implicit none
-type(f_time)    , intent(out)   :: QDyn
+type(f_time) , intent(out) :: QDyn
 
 ! local variables
 integer         :: hole_save , n 
@@ -346,6 +343,7 @@ allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 CALL BcastQMArgs( mm , Extended_Cell%atoms )
 
 Unit_Cell% QM_erg = update_QM_erg()
+
 !..........................................................................
 
 include 'formats.h'

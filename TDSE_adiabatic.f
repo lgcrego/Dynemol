@@ -78,7 +78,7 @@ integer         , intent(out)   :: final_it
 integer        :: frame , frame_init , frame_final , frame_restart
 real*8         :: t_rate 
 type(universe) :: Solvated_System
-logical        :: triggered
+logical        :: triggered = yes
 
 it = 1
 t  = t_i
@@ -200,7 +200,7 @@ do frame = frame_init , frame_final , frame_step
     End If
 
     CALL Write_Erg_Log( frame , t_rate , triggered )
-        
+    
 end do
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )

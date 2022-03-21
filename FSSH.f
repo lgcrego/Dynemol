@@ -24,7 +24,7 @@ module Surface_Hopping
     integer , allocatable                    :: PB(:) , DOS(:) 
     logical , allocatable                    :: mask(:,:)
     real*8  , allocatable , dimension(:)     :: erg , F_vec 
-    real*8  , allocatable , dimension(:,:)   :: QL , Phi , X_ , Kernel , grad_S , d_NA , Rxd_NA , pastQR , rho_eh , g_switch , stored_PES_Force
+    real*8  , allocatable , dimension(:,:)   :: QL , Phi , X_ , Kernel , grad_S , d_NA , Rxd_NA , pastQR , rho_eh , P_switch , stored_PES_Force
     real*8  , allocatable , dimension(:,:,:) :: F_mtx , d_NA_El , d_NA_Hl
 
 contains
@@ -54,7 +54,7 @@ call setup_Module( system , basis , QM )
 
 CALL get_Forces_and_NAC( system , basis , QM , PES )
 
-call verify_FSSH_jump( QM%R , MO_bra , MO_ket , t_rate , jump ) 
+call verify_FSSH_jump( QM%R , MO_bra , MO_ket , t_rate , jump , method="Dynemol") 
 
 If( jump ) then
 ! Might as well jump/ Go ahead and jump (jump) ...
@@ -340,7 +340,7 @@ if( .not. done ) then
     allocate( pastQR (mm,mm) , source=QR )
     done = T_
 else
-    ! used to calculate g_switch via Scattering Matrix (Omega): DynEMol method ...
+    ! used to calculate P_switch via Scattering Matrix (Omega): DynEMol method ...
     do concurrent (i=1:mm) shared(QR,pastQR) local(flip)
        flip = dot_product( QR(:,i) , pastQR(:,i) ) < 0
        if(flip) pastQR(:,i) = -pastQR(:,i)
@@ -396,9 +396,9 @@ do j = 1 , 2
 
 ! both methods are equivalent ...
 if ( present(method) .AND. method == "Dynemol" ) then
-   g_switch(:,:) = two * rho_eh * Omega(QR)
+   P_switch(:,:) = two * rho_eh * Omega(QR)
 else
-   forall( j=1:2 ) g_switch(:,j) = two * t_rate * rho_eh(:,j) * Rxd_NA(:,j) * sgn(j)
+   forall( j=1:2 ) P_switch(:,j) = two * t_rate * rho_eh(:,j) * Rxd_NA(:,j) * sgn(j)
 end if
 
 allocate( base(0:mm,2) , source=D_zero )
@@ -408,7 +408,7 @@ call random_number(rn)
 base(0,:) = D_zero
 do j = 1 , 2 
    do i = 1 , mm
-      base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
+      base(i,j) = base(i-1,j) + max(d_Zero,P_switch(i,j)) 
       if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
           newPES(j) = i     
           cycle
@@ -575,7 +575,7 @@ If( .NOT. allocated(grad_S) ) then
     allocate( Rxd_NA   (mm, 2) )
     allocate( Phi      (mm, 2) )
     allocate( rho_eh   (mm, 2) )
-    allocate( g_switch (mm, 2) )
+    allocate( P_switch (mm, 2) )
 
     CALL Huckel_stuff( basis , X_ )
 

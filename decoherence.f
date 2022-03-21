@@ -94,8 +94,7 @@ do j = 1 , n_part
 do i = 1 , size(erg)
      if( i == PES(j) ) cycle 
         dE = abs(erg(i) - erg(PES(j)))
-        tau_inv(i,j) = h_bar * Const / dE
-        tau_inv(i,j) = d_one/tau_inv(i,j)
+        tau_inv(i,j) = dE / (h_bar * Const)
         end do
         end do
 
@@ -120,7 +119,7 @@ real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9
 
 ! local variables ...
 integer:: i, j, h, n, N_atoms, dim_E, xyz
-real*8 :: f_ik , aux , tmp
+real*8 :: f_ik , aux
 real*8           , allocatable, dimension(:,:):: rho, v_x_s
 type(d_NA_vector), allocatable, dimension(:,:):: s_El_ik, s_Hl_ik, Force 
 
@@ -138,8 +137,6 @@ allocate( rho(dim_E,n_part) )
 forall(j=1:2) rho(:,j) = MO_ket(:,j)*MO_bra(:,j) 
 
 CALL get_S_versor( s_El_ik , s_Hl_ik , system , PST , dim_E )
-
-write(32,'(5F9.6)') rho(51,2), rho(50,2), rho(49,2), rho(48,2), rho(47,2)
 
 allocate( v_x_s(dim_E,n_part) , source = d_zero )
 do i = 1 , dim_E
@@ -194,17 +191,6 @@ do n = 1 , N_atoms
 
      enddo
 
-if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
-
-aux = d_zero
-tmp = d_zero
-do n = 1 , N_atoms
-     aux = aux + sum( abs(Force(n,2)%vec(:)) )
-     tmp = tmp + sum( abs(Force(n,1)%vec(:)) )
-end do
-write(17,*)  tmp , aux
-
-
 deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , Force )  
 
 end subroutine DecoherenceForce
@@ -225,6 +211,7 @@ type(d_NA_vector), allocatable, intent(out):: s_Hl_ik(:,:)
 ! local variables ...
 integer :: i , n , N_atoms
 real*8  :: norm , R2 , v_x_R , v_x_dNA 
+real*8  :: auxE , auxH , aux_tmp
 
 N_atoms = system%atoms
 
@@ -284,6 +271,33 @@ do n = 1 , dim_N
           !========================================================
           enddo
 end do
+
+
+aux_tmp = d_zero
+auxE    = d_zero
+do i = 1 , dim_E
+     If( i == PST(1) ) cycle     
+     do n = 1 , dim_N
+!          v_x_dNA = dot_product( nucleus(n)% v(:) , dNA_El(n,i)% vec(:) ) 
+          v_x_dNA = dot_product( dNA_El(n,i)% vec(:) , dNA_El(n,i)% vec(:) ) 
+          aux_tmp = aux_tmp + v_x_dNA
+          enddo
+     auxE = auxE + abs(aux_tmp)
+     enddo
+
+aux_tmp = d_zero
+auxH    = d_zero
+do i = 1 , dim_E
+     If( i == PST(2) ) cycle     
+     do n = 1 , dim_N
+!          v_x_dNA = dot_product( nucleus(n)% v(:) , dNA_Hl(n,i)% vec(:) ) 
+          v_x_dNA = dot_product( dNA_Hl(n,i)% vec(:) , dNA_Hl(n,i)% vec(:) ) 
+          aux_tmp = aux_tmp + v_x_dNA
+          enddo
+     auxH = auxH + abs(aux_tmp)
+     enddo
+
+write(18,*)  auxE , auxH
 
 end subroutine get_S_versor
 !
