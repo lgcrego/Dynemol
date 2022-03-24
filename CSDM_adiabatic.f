@@ -84,6 +84,7 @@ logical        :: triggered
 it = 1
 t  = t_i
 
+open (17, file='switch.log', status='unknown')
 open (18, file='D_k.log', status='unknown')
 
 !--------------------------------------------------------------------------------
@@ -167,7 +168,7 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
-if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
+if( PST(1) /= 35 .or. pst(2) /= 33 )  print*, "before:", PST , triggered
         case default
 
             Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -196,7 +197,8 @@ if( PST(1) /= 52 .or. pst(2) /= 50 )  print*, "before:", PST
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
+    CALL NewPointerState( Extended_Cell , MO_bra , MO_ket , UNI , t_rate )
+!    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
 
     CALL Write_Erg_Log( frame , triggered )
 
@@ -610,20 +612,25 @@ do n = 1 , n_part
 
 If( it == 1) return
 
-if( (triggered == OFF) .AND. (QM_erg <= d_zero) ) then
-   ! remains in GS dynamics forever
-   PST(:)    = UNI % Fermi_state
-   QM_erg    = d_zero
-   triggered = NO
-elseif( (QM_erg < d_zero) .AND. (PST(1) /= PST(2)) ) then
-   ! decay to GS dynamics
-   CALL AdjustNuclearVeloc( Extended_Cell , QM_erg )
-   PST(:)    = UNI % Fermi_state
-   QM_erg    = d_zero
-   triggered = NO
-elseif( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-   ! excited-state dynamics
-   triggered = YES !!!
+if( triggered == YES ) then
+    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+        ! carry on with trigger ON
+    else 
+        ! remains in GS dynamics
+        PST(:)    = UNI % Fermi_state
+        QM_erg    = d_zero
+        triggered = NO
+    endif
+endif
+
+if( triggered == NO ) then
+    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+        ! back to excited-state dynamics
+        triggered = YES !!!
+    else
+        ! carry on with trigger OFF
+        QM_erg = d_zero
+    endif
 end if
 
 end function update_QM_erg

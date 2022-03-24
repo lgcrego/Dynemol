@@ -91,24 +91,24 @@ logical :: dynamic
 !           SECURITY COPY
 !
   restart       = F_                          ! <== TRUE for restarting dynamics
-  step_security = 10000                       ! <== step for saving backup files
+  step_security = 1000                       ! <== step for saving backup files
                                               ! <== default = 100 (QMMM) ; 1000 (MM) 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
   t_i  =  0.d0                              
-  t_f  =  1.00d0                               ! <== final time in PICOseconds
-  n_t  =  200000                               ! <== number of time steps
+  t_f  =  0.50d0                               ! <== final time in PICOseconds
+  n_t  =  100000                               ! <== number of time steps
 
   CT_dump_step = 1                            ! <== step for saving El&Hl survival charge density  
 
   n_part = 2                                  ! <== # of particles to be propagated: default is e=1 , e+h=2 
 
-  hole_state     = 50                         ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state    = 33                          ! <== GROUND STATE calcs     = 0 (ZERO)
                                               ! <== case STATIC & DP_calcs = hole state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state = 52                         ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = 35                          ! <== case STATIC & DP_calcs = excited state of special FMO
                                               ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO = F_                                   ! <== initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)

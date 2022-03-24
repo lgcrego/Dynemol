@@ -240,7 +240,10 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-11 if( file_err > 0 ) stop " <Restart_copy.dat> file not found; terminating execution"
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
 
 end subroutine Restart_State_Eigen   
 !
@@ -421,7 +424,10 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-11 if( file_err > 0 ) stop " <Restart_copy.dat> file not found; terminating execution"
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
 
 end subroutine Restart_State_Cheb
 !
@@ -588,7 +594,10 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-11 if( file_err > 0 ) stop " <Restart_copy.dat> file not found; terminating execution"
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
 
 end subroutine Restart_State_CSDM   
 !
