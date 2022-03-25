@@ -518,7 +518,7 @@ if( QMMM ) then
     select case (driver)
 
        case( "slice_CSDM" ) 
-           CALL Ehrenfest( system, basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, QM )
+           CALL Ehrenfest( system, basis, MO_bra, MO_ket, QM )
            CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
 
        case( "slice_AO")
@@ -787,16 +787,14 @@ end subroutine ForceQMMM
 !
 !
 !
-!==================================================================================
- subroutine StoreQMArgs_CSDM( sys , vec , mtx1 , mtx2 , mtx3 , mtx4 , Eigen , PSE )
-!==================================================================================
+!====================================================================
+ subroutine StoreQMArgs_CSDM( sys , vec , mtx1 , mtx2 , Eigen , PSE )
+!====================================================================
  implicit none
  type(structure), intent(inout):: sys
  type(STO_basis), intent(in)   :: vec(:)
  complex*16     , intent(in)   :: mtx1(:,:)
  complex*16     , intent(in)   :: mtx2(:,:)
- complex*16     , intent(in)   :: mtx3(:,:)
- complex*16     , intent(in)   :: mtx4(:,:)
  type(R_eigen)  , intent(in)   :: Eigen
  integer        , intent(in)   :: PSE(2)
 
@@ -808,8 +806,6 @@ PST    = PSE
 
 MO_bra      = mtx1
 MO_ket      = mtx2
-MO_TDSE_bra = mtx3
-MO_TDSE_ket = mtx4
 
 QM% erg = Eigen% erg
 QM% L   = Eigen% L
@@ -860,11 +856,6 @@ integer , intent(in) :: SystemSize
 allocate(basis  (BasisSize)        )
 allocate(MO_bra (BasisSize,n_part) )
 allocate(MO_ket (BasisSize,n_part) )
-
-If( driver == "slice_CSDM" ) then
-    allocate(MO_TDSE_bra(BasisSize,n_part) )
-    allocate(MO_TDSE_ket(BasisSize,n_part) )
-end if
 
 CALL Allocate_Structures( SystemSize , System )
 

@@ -30,11 +30,13 @@ module Backup_m
     interface Security_Copy
         module procedure Security_Copy_Eigen
         module procedure Security_Copy_Cheb
+        module procedure Security_Copy_CSDM
     end interface
 
     interface Restart_State
         module procedure Restart_State_Eigen
         module procedure Restart_State_Cheb
+        module procedure Restart_State_CSDM
     end interface
 
     interface Restart_Sys
@@ -238,7 +240,10 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-11 if( file_err > 0 ) stop " <Restart_copy.dat> file not found; terminating execution"
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
 
 end subroutine Restart_State_Eigen   
 !
@@ -419,9 +424,183 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 
 close( 33 )
 
-11 if( file_err > 0 ) stop " <Restart_copy.dat> file not found; terminating execution"
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
 
 end subroutine Restart_State_Cheb
+!
+!
+!
+!
+!================= CSDM Routines =====================
+!
+!
+!
+!
+!=============================================================================================================================================
+subroutine Security_Copy_CSDM  &
+( MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket , DUAL_bra , DUAL_ket , DUAL_TDSE_bra , DUAL_TDSE_ket , AO_bra , AO_ket , PST , t , it , frame )
+!=============================================================================================================================================
+implicit none
+complex*16 , intent(in) :: MO_bra        (:,:)
+complex*16 , intent(in) :: MO_ket        (:,:)
+complex*16 , intent(in) :: MO_TDSE_bra   (:,:)
+complex*16 , intent(in) :: MO_TDSE_ket   (:,:)
+complex*16 , intent(in) :: DUAL_bra      (:,:)
+complex*16 , intent(in) :: DUAL_ket      (:,:)
+complex*16 , intent(in) :: DUAL_TDSE_bra (:,:)
+complex*16 , intent(in) :: DUAL_TDSE_ket (:,:)
+complex*16 , intent(in) :: AO_bra        (:,:)
+complex*16 , intent(in) :: AO_ket        (:,:)
+integer    , intent(in) :: PST(2)
+real*8     , intent(in) :: t
+integer    , intent(in) :: it
+integer    , intent(in) :: frame
+
+! local variables ...
+integer         :: i , j , basis_size 
+logical , save  :: first_time = .true. 
+logical         :: exist
+
+write( * , 230 , advance='no' )  it , frame , t
+
+! check whether restart conditions are properly set ...
+If( first_time ) then
+
+    If( restart ) then
+        inquire( file="Security_copy.dat", EXIST=exist )   
+        If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
+    else
+        inquire( file="Restart_copy.dat", EXIST=exist )
+        If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
+    end If
+
+    ! get ride of Restart_copy.dat for new Security_copy.dat ...
+    inquire( file="Restart_copy.dat", EXIST=exist )
+    If( exist ) CALL system( "rm Restart_copy.dat" )
+
+    first_time = .false.
+
+end If
+
+CALL Saving_MM_Backup( frame , instance = "from_QM" )
+
+open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
+
+write(33) frame
+write(33) it
+write(33) t
+write(33) PST
+write(33) size(MO_bra(:,1))
+write(33) size(MO_bra(1,:))
+write(33) size(eh_tag)
+
+basis_size = size(MO_bra(:,1))
+
+write(33) ( orbital(i) , eh_tag(i) , i=1,n_part )
+
+do j = 1 , n_part
+
+    write(33) ( MO_bra(i,j)        , MO_ket   (i,j)      , i=1,basis_size )
+
+    write(33) ( MO_TDSE_bra(i,j)   , MO_TDSE_ket   (i,j) , i=1,basis_size )
+
+    write(33) ( DUAL_bra(i,j)      , DUAL_ket (i,j)      , i=1,basis_size )
+
+    write(33) ( DUAL_TDSE_bra(i,j) , DUAL_TDSE_ket (i,j) , i=1,basis_size )
+
+    write(33) ( AO_bra(i,j)        , AO_ket   (i,j)      , i=1,basis_size )
+
+end do
+
+write(33) ( Net_Charge , i=1,size(Net_Charge) )
+
+close( 33 )
+
+Print*, 'DONE <<<'
+
+include 'formats.h'
+
+end subroutine Security_Copy_CSDM
+!
+!
+!
+!=============================================================================================================================================
+subroutine Restart_State_CSDM  &
+( MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket , DUAL_bra , DUAL_ket , DUAL_TDSE_bra , DUAL_TDSE_ket , AO_bra , AO_ket , PST , t , it , frame )
+!=============================================================================================================================================
+implicit none
+complex*16  , allocatable   , intent(out) :: MO_bra        (:,:)
+complex*16  , allocatable   , intent(out) :: MO_ket        (:,:)
+complex*16  , allocatable   , intent(out) :: MO_TDSE_bra   (:,:)
+complex*16  , allocatable   , intent(out) :: MO_TDSE_ket   (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_bra      (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_ket      (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_TDSE_bra (:,:)
+complex*16  , allocatable   , intent(out) :: DUAL_TDSE_ket (:,:)
+complex*16  , allocatable   , intent(out) :: AO_bra        (:,:)
+complex*16  , allocatable   , intent(out) :: AO_ket        (:,:)
+integer                     , intent(out) :: PST(2)
+real*8                      , intent(out) :: t
+integer                     , intent(out) :: it
+integer                     , intent(out) :: frame
+
+! local variables ...
+integer :: i , j , size_r , size_c , file_err , size_eh_tag
+
+open(unit=33, file="Restart_copy.dat", form="unformatted", status="old", action="read" , iostat=file_err , err=11 )
+
+read(33) frame
+read(33) it
+read(33) t
+read(33) PST
+read(33) size_r
+read(33) size_c
+read(33) size_eh_tag
+
+allocate( MO_bra        ( size_r , size_c ) )
+allocate( MO_ket        ( size_r , size_c ) )
+allocate( MO_TDSE_bra   ( size_r , size_c ) )
+allocate( MO_TDSE_ket   ( size_r , size_c ) )
+allocate( DUAL_bra      ( size_r , size_c ) )
+allocate( DUAL_ket      ( size_r , size_c ) )
+allocate( DUAL_TDSE_bra ( size_r , size_c ) )
+allocate( DUAL_TDSE_ket ( size_r , size_c ) )
+allocate( AO_bra        ( size_r , size_c ) )
+allocate( AO_ket        ( size_r , size_c ) )
+
+if( .NOT. allocated( orbital) ) allocate( orbital(size_eh_tag) )
+if( .NOT. allocated( eh_tag ) ) allocate( eh_tag(size_eh_tag) )
+
+read(33) ( orbital(i) , eh_tag(i) , i=1,size_eh_tag )
+
+do j = 1 , size_c
+
+    read(33) ( MO_bra(i,j)        , MO_ket(i,j)        , i=1,size_r )
+
+    read(33) ( MO_TDSE_bra(i,j)   , MO_TDSE_ket(i,j)   , i=1,size_r )
+
+    read(33) ( DUAL_bra(i,j)      , DUAL_ket(i,j)      , i=1,size_r )
+
+    read(33) ( DUAL_TDSE_bra(i,j) , DUAL_TDSE_ket(i,j) , i=1,size_r )
+
+    read(33) ( AO_bra(i,j)        , AO_ket(i,j)        , i=1,size_r )
+
+end do
+
+read(33) ( Net_Charge , i=1,size(Net_Charge) )
+
+close( 33 )
+
+11 if( file_err > 0 ) then
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   stop
+endif
+
+end subroutine Restart_State_CSDM   
+!
 !
 !
 !

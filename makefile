@@ -15,7 +15,7 @@
 FC = ifort
 
 # Applied to all fortran files
-FC_ALL = -xHost -ip -align
+FC_ALL = -xHost -ip -align -no-wrap-margin
 
 # Parallelization flags
 FC_PARALLEL = -qopenmp -parallel
@@ -120,12 +120,12 @@ SOURCE2 = constants_m.o \
 		  OPT_parent.o \
 		  parameters.o \
 		  parameters_MM.o \
-          checklist.o \
+                  checklist.o \
 		  allocation_m.o \
 		  util.o \
 		  EHT_input.o \
 		  tuning.o \
-          IdentifyNonBonded.o \
+                  IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
 		  gmx2mdflex.o \

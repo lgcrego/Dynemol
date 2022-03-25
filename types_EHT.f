@@ -181,6 +181,9 @@ module type_m
 
     type R3_vector
         real*8 , dimension(3) :: dp
+        real*8 , dimension(3) :: r
+        real*8 , dimension(3) :: v
+        real*8 , dimension(3) :: V_vib
     end type R3_vector
  
 
@@ -188,6 +191,9 @@ module type_m
         complex*16 , dimension(3) :: dp
     end type C3_vector
 
+    type d_NA_vector
+        real*8 , dimension(3) :: vec
+    end type d_NA_vector
 
     type real_interval
         real*8 :: inicio 

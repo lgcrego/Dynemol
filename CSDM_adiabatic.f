@@ -47,7 +47,6 @@ module CSDM_adiabatic_m
     use F_intra_m               , only: BcastQMArgs
     use Ehrenfest_CSDM          , only: PST , NewPointerState , Ehrenfest
     use decoherence_m           , only: apply_decoherence ,              &
-                                        DecoherenceForce ,               &
                                         AdjustNuclearVeloc
                                         
 
@@ -85,6 +84,9 @@ logical        :: triggered
 it = 1
 t  = t_i
 
+open (17, file='switch.log', status='unknown')
+open (18, file='D_k.log', status='unknown')
+
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
@@ -98,7 +100,7 @@ else
 end If
 
 If( restart ) then
-    CALL Restart_stuff( QDyn , frame_restart )
+    CALL Restart_stuff( QDyn , frame_restart , triggered )
 else
     CALL Preprocess( QDyn )
     triggered = yes
@@ -117,7 +119,7 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
-        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI, PST )
+        CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, UNI, PST )
     endif
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
@@ -166,7 +168,7 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
-
+if( PST(1) /= 35 .or. pst(2) /= 33 )  print*, "before:", PST , triggered
         case default
 
             Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -188,14 +190,15 @@ do frame = frame_init , frame_final , frame_step
 
     CALL U_nad() ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
-    if( mod(frame,step_security) == 0 ) CALL Security_Copy( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame )
+    if( mod(frame,step_security) == 0 ) CALL SecurityCopy( frame )
 
     If( DensityMatrix ) then
         If( n_part == 1 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI )
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL NewPointerState( UNI%R , MO_TDSE_bra , MO_TDSE_ket , UNI%Erg )
+    CALL NewPointerState( Extended_Cell , MO_bra , MO_ket , UNI , t_rate )
+!    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
 
     CALL Write_Erg_Log( frame , triggered )
 
@@ -218,7 +221,7 @@ end subroutine CSDM_adiabatic
  subroutine Preprocess( QDyn )
 !=============================
 implicit none
-type(f_time)    , intent(out)   :: QDyn
+type(f_time) , intent(out) :: QDyn
 
 ! local variables
 integer         :: hole_save , n 
@@ -342,6 +345,7 @@ allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 CALL BcastQMArgs( mm , Extended_Cell%atoms )
 
 Unit_Cell% QM_erg = update_QM_erg()
+
 !..........................................................................
 
 include 'formats.h'
@@ -598,7 +602,7 @@ logical, optional , intent(inout) :: triggered
 
 ! local variables ...
 integer    :: n
-real*8     :: QM_erg , Gap
+real*8     :: QM_erg
 complex*16 :: wp_energy(n_part)
 
 do n = 1 , n_part
@@ -608,32 +612,25 @@ do n = 1 , n_part
 
 If( it == 1) return
 
-Gap = UNI% erg(PST(1)) - UNI% erg( UNI%Fermi_state )
-!if( triggered  == NO ) then
-!   if( (Unit_Cell% MD_Kin > Gap) .AND. (PST(1) /= PST(2)) ) then
-!      ! back to excited-state
-!      triggered = YES !!!
-!      QMMM      = YES !!!
-!      CALL Ehrenfest( Extended_Cell, ExCell_basis, MO_bra, MO_ket, MO_TDSE_bra, MO_TDSE_ket, UNI )
-!      CALL DecoherenceForce( Extended_Cell , MO_bra , MO_ket , UNI%erg , PST )
-!      return
-!   endif
-!endif
+if( triggered == YES ) then
+    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+        ! carry on with trigger ON
+    else 
+        ! remains in GS dynamics
+        PST(:)    = UNI % Fermi_state
+        QM_erg    = d_zero
+        triggered = NO
+    endif
+endif
 
-if( triggered == OFF ) then
-   ! remains in GS dynamics forever
-   PST(:)    = UNI % Fermi_state
-   QM_erg    = d_zero
-   triggered = NO
-elseif( (QM_erg < d_zero) .AND. (PST(1) /= PST(2)) ) then
-   ! decay to GS dynamics
-   CALL AdjustNuclearVeloc( Extended_Cell , QM_erg )
-   PST(:)    = UNI % Fermi_state
-   QM_erg    = d_zero
-   triggered = NO
-elseif( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-   ! excited-state dynamics
-   triggered = YES !!!
+if( triggered == NO ) then
+    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+        ! back to excited-state dynamics
+        triggered = YES !!!
+    else
+        ! carry on with trigger OFF
+        QM_erg = d_zero
+    endif
 end if
 
 end function update_QM_erg
@@ -641,16 +638,42 @@ end function update_QM_erg
 !
 !
 !
-!===============================================
-subroutine Restart_stuff( QDyn , frame_restart )
-!===============================================
+!===============================
+subroutine SecurityCopy( frame )
+!===============================
 implicit none
-type(f_time)    , intent(out) :: QDyn
-integer         , intent(out) :: frame_restart
+integer, intent(in) :: frame
+
+CALL Security_Copy( MO_bra        , MO_ket        , &
+                    MO_TDSE_bra   , MO_TDSE_ket   , &
+                    DUAL_bra      , DUAL_ket      , &
+                    DUAL_TDSE_bra , DUAL_TDSE_ket , &
+                    AO_bra        , AO_ket        , &
+                    PST , t , it , frame            &
+                   )
+
+end subroutine SecurityCopy
+!
+!
+!
+!
+!===========================================================
+subroutine Restart_stuff( QDyn , frame_restart , triggered )
+!===========================================================
+implicit none
+type(f_time) , intent(out) :: QDyn
+integer      , intent(out) :: frame_restart
+logical      , intent(out) :: triggered
 
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
-CALL Restart_State   ( MO_bra , MO_ket , DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_restart )
+CALL Restart_State ( MO_bra        , MO_ket        , &
+                     MO_TDSE_bra   , MO_TDSE_ket   , &
+                     DUAL_bra      , DUAL_ket      , &
+                     DUAL_TDSE_bra , DUAL_TDSE_ket , &
+                     AO_bra        , AO_ket        , &
+                     PST , t , it , frame_restart    &
+                    )
 
 allocate( phase(size(MO_bra(:,1))) )
 
@@ -666,7 +689,13 @@ If( Induced_ ) then
      CALL DP_stuff ( "Induced_DP" )
 end If
 
+! just setting the variable, to prevent triggered = NAN ...
+triggered = .true.
+Unit_Cell% QM_erg = update_QM_erg( triggered )
+
 end subroutine Restart_stuff
+!
+!
 !
 !
 end module CSDM_adiabatic_m

@@ -10,17 +10,18 @@ module Ehrenfest_CSDM
     use parameters_m     , only: verbose, n_part,electron_state, hole_state
     use Overlap_Builder  , only: Overlap_Matrix
 
-    public :: Ehrenfest , PST , d_NA_El , d_NA_Hl , NewPointerState
+    public :: Ehrenfest , PST , dNA_El , dNA_Hl , NewPointerState
 
     private
 
     !module variables ...
-    integer                                  :: space , PST(2) , Fermi , dim_3N
-    integer , allocatable , dimension(:)     :: BasisPointer, DOS
-    real*8  , allocatable , dimension(:)     :: erg, F_vec
-    real*8  , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA, d_NA_El, d_NA_Hl              
-    real*8  , allocatable , dimension(:,:,:) :: F_mtx
-    logical , allocatable , dimension(:,:)   :: mask
+    integer                                            :: dim_E , PST(2) , Fermi , dim_N
+    integer           , allocatable , dimension(:)     :: BasisPointer, DOS
+    real*8            , allocatable , dimension(:)     :: erg, F_vec
+    real*8            , allocatable , dimension(:,:)   :: Xij, Kernel, grad_S , QL, Phi, d_NA
+    type(d_NA_vector) , allocatable , dimension(:,:)   :: dNA_El, dNA_Hl              
+    real*8            , allocatable , dimension(:,:,:) :: F_mtx
+    logical           , allocatable , dimension(:,:)   :: mask
 
     !module parameters ...
     logical , parameter :: T_ = .true. , F_ = .false.
@@ -29,17 +30,15 @@ contains
 !
 !
 !
-!=========================================================================================
- subroutine Ehrenfest( system , basis , MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket , QM )
-!=========================================================================================
+!=============================================================
+ subroutine Ehrenfest( system , basis , MO_bra , MO_ket , QM )
+!=============================================================
  implicit none
- type(structure)  , intent(inout) :: system
- type(STO_basis)  , intent(in)    :: basis(:)
- complex*16       , intent(in)    :: MO_bra(:,:)
- complex*16       , intent(in)    :: MO_ket(:,:)
- complex*16       , intent(in)    :: MO_TDSE_bra(:,:)
- complex*16       , intent(in)    :: MO_TDSE_ket(:,:)
- type(R_eigen)    , intent(in)    :: QM
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
+ complex*16      , intent(in)    :: MO_bra(:,:)
+ complex*16      , intent(in)    :: MO_ket(:,:)
+ type(R_eigen)   , intent(in)    :: QM
 
 ! local variables ... 
  integer              :: i , j , nn
@@ -48,20 +47,20 @@ contains
 !============================================================
 ! some preprocessing ...
 !============================================================
-space = size(basis)
+dim_E = size(basis)
 nn = n_part
 
 CALL setup_Module( system , basis , QM , A_ad_nd , B_ad_nd , rho_EH , aux )
 
 ! build up electron-hole density matrix ...
-forall( i=1:space , j=1:space ) rho_EH(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+forall( i=1:dim_E , j=1:dim_E ) rho_EH(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
 aux = transpose(rho_EH)
 rho_EH = ( rho_EH + aux ) / two 
 
 CALL symm( rho_EH , QM%L , aux )
 CALL gemm( QM%L , aux , A_ad_nd , 'T' , 'N' )
 
-forall( j=1:space ) rho_EH(:,j) = erg(j) * rho_EH(:,j) 
+forall( j=1:dim_E ) rho_EH(:,j) = erg(j) * rho_EH(:,j) 
 CALL gemm( rho_EH , QM%L , aux )
 CALL gemm( aux , QM%L  , B_ad_nd , 'T' , 'N' )
 
@@ -183,10 +182,9 @@ do xyz = 1 , 3
             ! calculation of d_NA ...
             d_NA = NAcoupling( grad_S( : , BP_K+1 : BP_K+DOS_k) , DOS_k , BP_K )  ! <== units = 1/Angs
        
-            indx = (atm_counter-1)*3 + xyz 
-            do concurrent (j=1:space)
-               d_NA_El(indx,j) = d_NA(j,1)
-               d_NA_Hl(indx,j) = d_NA(j,2)
+            do concurrent (j=1:dim_E)
+               dNA_El(atm_counter,j)% vec(xyz) = d_NA(j,1)
+               dNA_Hl(atm_counter,j)% vec(xyz) = d_NA(j,2)
                enddo
         
             ! recover original system ...
@@ -282,54 +280,89 @@ end function NAcoupling
 !
 !
 !
-!=====================================================================
- subroutine NewPointerState( QR , MO_TDSE_bra , MO_TDSE_ket , MOerg )
-!=====================================================================
+!==============================================================================
+ subroutine NewPointerState( system , MO_TDSE_bra , MO_TDSE_ket , QM , t_rate )
+!==============================================================================
 implicit none
 ! args
-real*8    , intent(in):: QR(:,:)
-complex*16, intent(in):: MO_TDSE_bra(:,:)
-complex*16, intent(in):: MO_TDSE_ket(:,:)
-real*8    , intent(in):: MOerg(:)
+type(structure), intent(in):: system
+complex*16     , intent(in):: MO_TDSE_bra(:,:)
+complex*16     , intent(in):: MO_TDSE_ket(:,:)
+type(R_eigen)  , intent(in):: QM
+real*8         , intent(in):: t_rate
 
 ! local variables ...
-integer            :: i , j , newPST(2)
-real*8             :: rn , EH_jump
-real*8, allocatable:: rho(:,:) , base(:,:) , g_switch(:,:)
+integer             :: i , j , newPST(2)
+real*8              :: rn , EH_jump
+real*8, allocatable :: rho(:,:) , base(:,:) , P_switch(:,:) , B_kl(:,:) , Omega(:,:)
+character(len=7)    :: method
 
-allocate( rho(space, 2) )
-! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl)
+allocate( rho(dim_E, 2) )
+
+! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl) ...
 do j = 1 , 2
    rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
    enddo
 
-allocate(g_switch(space,2))
-g_switch(:,:) = two * rho * Omega(QR)
+!============================================
+! choose method = "Dynemol" or "Tully" ...
+  method = "Dynemol"
+!============================================
+! both methods are equivalent ...
+allocate(P_switch(dim_E,2))
+if ( method == "Dynemol" ) then
+
+   call Dynemol_way(QM,Omega)
+   P_switch(:,:) = two * rho * Omega
+!   deallocate(Omega)
+
+else
+
+   call Tully_way( system , rho , B_kl )
+   forall( j=1:2 ) P_switch(:,j) = t_rate * B_kl(:,j) 
+   deallocate(B_kl)
+
+end if
+!============================================
+
+write(17,*) P_switch(34,2), P_switch(33,2), P_switch(32,2)
+
+
 
 call random_number(rn)
 
 newPST = PST
-allocate( base(0:space,2) , source=d_zero )
+allocate( base(0:dim_E,2) , source=d_zero )
 base(0,:) = d_zero
 do j = 1 , 2 
-   do i = 1 , space
-      base(i,j) = base(i-1,j) + max(d_Zero,g_switch(i,j)) 
+   do i = 1 , dim_E
+      base(i,j) = base(i-1,j) + max(d_Zero,P_switch(i,j)) 
       if( rn > base(i-1,j) .AND. rn <= base(i,j) ) then
           newPST(j) = i     
-          cycle
+          exit
           end if
       end do
       end do
 
-EH_jump = (MOerg(newPST(1)) - MOerg(PST(1))) - (MOerg(newPST(2)) - MOerg(PST(2)))
+EH_jump = (QM%erg(newPST(1)) - QM%erg(PST(1))) - (QM%erg(newPST(2)) - QM%erg(PST(2)))
 
-if( EH_jump <= d_zero) then
-         ! do nothing, transitions are allowed
-   elseif( EH_jump >  Unit_Cell% MD_Kin ) then
-    !energy forbidden 
-    return
-    endif
+if( EH_jump > Unit_Cell% MD_Kin ) then
+   !transitions are not allowed ; energy forbidden 
+   return
+   endif
+
+
+if( (newPST(1) /= PST(1)) .or. (newPST(2) /= PST(2)) ) then
+  print*, "old" , PST , real(MO_TDSE_ket(PST(1),1)*MO_TDSE_bra(PST(1),1)), real(MO_TDSE_ket(PST(2),2)*MO_TDSE_bra(PST(2),2)) 
+  print*, "new" , newPST , real(MO_TDSE_ket(newPST(1),1)*MO_TDSE_bra(newPST(1),1)), real(MO_TDSE_ket(newPST(2),2)*MO_TDSE_bra(newPST(2),2))
+  print*, "dE = ",  EH_jump , "rn = ", rn
+  print*, "switch = ", P_switch(newPST(1),1) , P_switch(newPST(2),2) 
+  print*, "Omega = ", Omega(newPST(1),1) , Omega(newPST(2),2) 
+  pause
+endif
+deallocate(Omega)
+
 
 if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
          ! do nothing, transitions are allowed
@@ -347,11 +380,11 @@ if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
    endif
 
 If( newPST(1) < newPST(2) ) then
-    CALL system("sed '11i >>> ATTENTION: electron below hole state <<<' warning.signal |cat")
+    CALL systemQQ("sed '11i >>> ATTENTION: electron below hole state <<<' warning.signal |cat")
     stop 
     end If
 
-deallocate( rho , base , g_switch ) 
+deallocate( rho , base , P_switch ) 
 
 PST = newPST
 
@@ -359,53 +392,107 @@ end subroutine NewPointerState
 !
 !
 !
-!====================
- function Omega( QR ) 
-!====================
+!====================================
+ subroutine Dynemol_way( QM , Omega ) 
+!====================================
 implicit none
-real*8  , intent(in) :: QR(:,:)
+type(R_eigen)        , intent(in)  :: QM
+real*8 , allocatable , intent(out) :: Omega(:,:)
 
 ! local variables ...
-integer :: i
-real*8  , allocatable :: newQR(:,:) , Omega(:,:)
+integer               :: i , j
+real*8  , allocatable :: newQ(:,:) 
 logical               :: flip 
 
 !local saved variables ...
 logical               , save :: done = F_
-real*8  , allocatable , save :: pastQR(:,:)
+real*8  , allocatable , save :: pastQ(:,:)
 
-allocate(newQR(space,2))
-allocate(Omega(space,2))
+allocate( newQ  (dim_E,2) )
+allocate( Omega (dim_E,2) )
 
 if( .not. done ) then
     ! setup environment ...
-    allocate( pastQR (space,space) , source=QR )
+    allocate( pastQ (dim_E,dim_E) )
+    pastQ = QM%R
     done = T_
 else
-    ! used to calculate g_switch via Scattering Matrix (Omega): DynEMol method ...
-    do concurrent (i=1:space) shared(QR,pastQR) local(flip)
-       flip = dot_product( QR(:,i) , pastQR(:,i) ) < 0
-       if(flip) pastQR(:,i) = -pastQR(:,i)
+    ! used to calculate P_switch via Scattering Matrix (Omega): DynEMol method ...
+    do i = 1 , dim_E 
+       flip = dot_product( QM%L(i,:) , pastQ(:,i) ) < 0
+       if(flip) pastQ(:,i) = -pastQ(:,i)
        end do
 
-    newQR = QR(:,PST(:))
+    forall(j=1:2) newQ(:,j) = QM%L(PST(j),:)
 
-    call gemm( pastQR , newQR , Omega , 'T' )    
+    call gemm( pastQ , newQ , Omega , 'T' )    
 
     !change sign for hole wvpckt ...
-    Omega(:,2) = -Omega(:,2)
+!    Omega(:,2) = -Omega(:,2)
 
-    do i=1,2
-       Omega(PST(i),i) = d_zero
+    do j=1,2
+       Omega(PST(j),j) = d_zero
        end do
 
-    pastQR = QR
-
+    pastQ = QM%R
 end if
 
-deallocate( newQR )
+deallocate( newQ ) 
 
-end function Omega
+end subroutine Dynemol_way
+!
+!
+!
+!===========================================
+ subroutine Tully_way( system , rho , B_kl ) 
+!===========================================
+use MD_read_m , only: atom
+implicit none
+type(structure)               , intent(in)  :: system
+real*8          , allocatable , intent(in)  :: rho(:,:)
+real*8          , allocatable , intent(out) :: B_kl(:,:)
+
+! local parameters ...
+real*8, parameter :: V_factor  = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
+
+!local variables ...
+integer             :: i , j , n
+real*8, allocatable :: v_x_dNA(:,:)
+
+!local saved variables ...
+logical               , save :: done = F_
+real*8  , allocatable , save :: past_rho(:,:) 
+
+allocate( v_x_dNA (dim_E,2) , source = d_zero )
+allocate( B_kl    (dim_E,2) )
+
+if( .not. done ) then
+    ! setup environment ...
+    allocate( past_rho (dim_E,2) )
+    past_rho = rho
+    done = T_
+else
+    do i = 1 , dim_E
+         do n = 1 , system%atoms
+            If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+            v_x_dNA(i,1) = v_x_dNA(i,1) + dot_product( atom(n)% vel(:) , dNA_El(n,i)% vec(:) )
+            v_x_dNA(i,2) = v_x_dNA(i,2) - dot_product( atom(n)% vel(:) , dNA_Hl(n,i)% vec(:) )
+            end do
+            enddo
+    v_x_dNA = v_x_dNA * V_factor
+
+    forall( j=1:2 ) B_kl(:,j) = - two * past_rho(:,j) * v_x_dNA(:,j)
+
+    do j=1,2
+       B_kl(PST(j),j) = d_zero
+       end do
+
+    past_rho = rho
+end if
+
+deallocate( v_x_dNA ) 
+
+end subroutine Tully_way
 !
 !
 !
@@ -422,6 +509,7 @@ real*8          , allocatable , intent(inout) :: rho_EH(:,:)
 real*8          , allocatable , intent(inout) :: aux(:,:) 
 
 ! local variables ...
+integer :: i , j
 
 ! preprocess overlap matrix for Pulay calculations ...
 CALL Overlap_Matrix( system , basis ) 
@@ -430,22 +518,27 @@ CALL preprocess( system )
 allocate( F_mtx(system%atoms,system%atoms,3) , source=d_zero )
 allocate( F_vec(system%atoms)                , source=d_zero )
 
-allocate( A_ad_nd (space,space) )
-allocate( B_ad_nd (space,space) )
-allocate( rho_EH  (space,space) )
-allocate( aux     (space,space) )
-allocate( Phi     (space, 2) )
-allocate( erg     (space)       , source = QM%erg )
-allocate( QL      (space,space) , source = QM%L   )
-allocate( d_NA    (space, 2)    , source = d_zero )
+allocate( A_ad_nd (dim_E,dim_E) )
+allocate( B_ad_nd (dim_E,dim_E) )
+allocate( rho_EH  (dim_E,dim_E) )
+allocate( aux     (dim_E,dim_E) )
+allocate( Phi     (dim_E, 2) )
+allocate( erg     (dim_E)       , source = QM%erg )
+allocate( QL      (dim_E,dim_E) , source = QM%L   )
+allocate( d_NA    (dim_E, 2)    , source = d_zero )
 
 If( .NOT. allocated(grad_S) ) then
-    allocate( grad_S  (space,space) )
-    allocate( Kernel  (space,space) )
+    allocate( grad_S  (dim_E,dim_E) )
+    allocate( Kernel  (dim_E,dim_E) )
 
-    dim_3N = 3*count( system%QMMM == "QM" .AND. system%flex == T_ )
-    allocate( d_NA_El (dim_3N,space) , source = d_zero )
-    allocate( d_NA_Hl (dim_3N,space) , source = d_zero )
+    dim_N = count( system%QMMM == "QM" .AND. system%flex == T_ )
+    allocate( dNA_El (dim_N,dim_E) )
+    allocate( dNA_Hl (dim_N,dim_E) )
+
+    do concurrent( i=1:dim_N , j=1:dim_E )
+       dNA_El (i,j)% vec(:) = d_zero
+       dNA_Hl (i,j)% vec(:) = d_zero
+       enddo
 
     PST(1) = electron_state
     PST(2) = hole_state
@@ -473,13 +566,13 @@ real*8           , allocatable , intent(out) :: Xij(:,:)
 !local variables ...
 integer :: i , j
 
-allocate ( Xij(space,space) )
+allocate ( Xij(dim_E,dim_E) )
 
 !-------------------------------------------------
 !    constants for the Huckel Hamiltonian
 
-do j = 1 , space 
-do i = j , space 
+do j = 1 , dim_E 
+do i = j , dim_E 
 
          Xij(i,j) = X_ij( i , j , basis )
          Xij(j,i) = Xij(i,j) 

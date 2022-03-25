@@ -5,8 +5,8 @@ set border lw 2
 ##########################################
 # Adjust these ranges to your needs:
 #
-set yrange  [-12:-4]       # energy
-set xrange  [0:0.6]        # time
+set yrange  [-16:-6]       # energy
+set xrange  [0:0.1]        # time
 set cbrange [-1:1]     # occupation
 ##########################################
 
