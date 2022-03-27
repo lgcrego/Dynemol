@@ -211,7 +211,6 @@ type(d_NA_vector), allocatable, intent(out):: s_Hl_ik(:,:)
 ! local variables ...
 integer :: i , n , N_atoms
 real*8  :: norm , R2 , v_x_R , v_x_dNA 
-real*8  :: auxE , auxH , aux_tmp
 
 N_atoms = system%atoms
 
@@ -271,33 +270,6 @@ do n = 1 , dim_N
           !========================================================
           enddo
 end do
-
-
-aux_tmp = d_zero
-auxE    = d_zero
-do i = 1 , dim_E
-     If( i == PST(1) ) cycle     
-     do n = 1 , dim_N
-!          v_x_dNA = dot_product( nucleus(n)% v(:) , dNA_El(n,i)% vec(:) ) 
-          v_x_dNA = dot_product( dNA_El(n,i)% vec(:) , dNA_El(n,i)% vec(:) ) 
-          aux_tmp = aux_tmp + v_x_dNA
-          enddo
-     auxE = auxE + abs(aux_tmp)
-     enddo
-
-aux_tmp = d_zero
-auxH    = d_zero
-do i = 1 , dim_E
-     If( i == PST(2) ) cycle     
-     do n = 1 , dim_N
-!          v_x_dNA = dot_product( nucleus(n)% v(:) , dNA_Hl(n,i)% vec(:) ) 
-          v_x_dNA = dot_product( dNA_Hl(n,i)% vec(:) , dNA_Hl(n,i)% vec(:) ) 
-          aux_tmp = aux_tmp + v_x_dNA
-          enddo
-     auxH = auxH + abs(aux_tmp)
-     enddo
-
-write(18,*)  auxE , auxH
 
 end subroutine get_S_versor
 !
