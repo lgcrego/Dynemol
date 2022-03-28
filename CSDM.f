@@ -315,7 +315,7 @@ if ( method == "Dynemol" ) then
 
    call Dynemol_way(QM,Omega)
    P_switch(:,:) = two * rho * Omega
-!   deallocate(Omega)
+   deallocate(Omega)
 
 else
 
@@ -325,10 +325,6 @@ else
 
 end if
 !============================================
-
-write(17,*) P_switch(34,2), P_switch(33,2), P_switch(32,2)
-
-
 
 call random_number(rn)
 
@@ -351,18 +347,6 @@ if( EH_jump > Unit_Cell% MD_Kin ) then
    !transitions are not allowed ; energy forbidden 
    return
    endif
-
-
-if( (newPST(1) /= PST(1)) .or. (newPST(2) /= PST(2)) ) then
-  print*, "old" , PST , real(MO_TDSE_ket(PST(1),1)*MO_TDSE_bra(PST(1),1)), real(MO_TDSE_ket(PST(2),2)*MO_TDSE_bra(PST(2),2)) 
-  print*, "new" , newPST , real(MO_TDSE_ket(newPST(1),1)*MO_TDSE_bra(newPST(1),1)), real(MO_TDSE_ket(newPST(2),2)*MO_TDSE_bra(newPST(2),2))
-  print*, "dE = ",  EH_jump , "rn = ", rn
-  print*, "switch = ", P_switch(newPST(1),1) , P_switch(newPST(2),2) 
-  print*, "Omega = ", Omega(newPST(1),1) , Omega(newPST(2),2) 
-  pause
-endif
-deallocate(Omega)
-
 
 if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
          ! do nothing, transitions are allowed
@@ -428,7 +412,7 @@ else
     call gemm( pastQ , newQ , Omega , 'T' )    
 
     !change sign for hole wvpckt ...
-!    Omega(:,2) = -Omega(:,2)
+    Omega(:,2) = -Omega(:,2)
 
     do j=1,2
        Omega(PST(j),j) = d_zero

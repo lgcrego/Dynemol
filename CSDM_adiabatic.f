@@ -84,9 +84,6 @@ logical        :: triggered
 it = 1
 t  = t_i
 
-open (17, file='switch.log', status='unknown')
-open (18, file='D_k.log', status='unknown')
-
 !--------------------------------------------------------------------------------
 ! time slicing H(t) : Quantum Dynamics & All that Jazz ...
 
@@ -168,7 +165,7 @@ do frame = frame_init , frame_final , frame_step
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
-if( PST(1) /= 35 .or. pst(2) /= 33 )  print*, "before:", PST , triggered
+
         case default
 
             Print*, " >>> Check your nuclear_matter options <<< :" , nuclear_matter
@@ -188,7 +185,7 @@ if( PST(1) /= 35 .or. pst(2) /= 33 )  print*, "before:", PST , triggered
 
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
-    CALL U_nad() ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
+    CALL U_nad(t_rate) ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
     if( mod(frame,step_security) == 0 ) CALL SecurityCopy( frame )
 
@@ -201,8 +198,6 @@ if( PST(1) /= 35 .or. pst(2) /= 33 )  print*, "before:", PST , triggered
 !    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
 
     CALL Write_Erg_Log( frame , triggered )
-
-    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 
 enddo
 
@@ -380,18 +375,21 @@ end forall
 
 end subroutine U_ad
 !
-!==================
- subroutine U_nad()
-!==================
+!==========================
+ subroutine U_nad( t_rate )
+!==========================
 implicit none
+real*8  , intent(in) :: t_rate 
 
 ! NON-adiabatic component of the propagation ...
-! project back to MO_basis with UNI(t + t_rate)
-CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
-CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
-
+! project back to MO_basis with UNI(t + t_rate) ...
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
+
+CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+
+CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
+CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
 end subroutine U_nad
 !
@@ -614,9 +612,10 @@ If( it == 1) return
 
 if( triggered == YES ) then
     if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-        ! carry on with trigger ON
+        ! carry on QMMM with trigger ON
     else 
         ! remains in GS dynamics
+        CALL AdjustNuclearVeloc( Extended_Cell , QM_erg )
         PST(:)    = UNI % Fermi_state
         QM_erg    = d_zero
         triggered = NO
@@ -624,13 +623,13 @@ if( triggered == YES ) then
 endif
 
 if( triggered == NO ) then
-    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-        ! back to excited-state dynamics
-        triggered = YES !!!
-    else
+!    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
+!        ! back to excited-state dynamics
+!        triggered = YES !!!
+!    else
         ! carry on with trigger OFF
         QM_erg = d_zero
-    endif
+!    endif
 end if
 
 end function update_QM_erg
