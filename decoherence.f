@@ -28,41 +28,57 @@ contains
 !
 !
 !
-!========================================================================
- subroutine FirstOrderDecoherence( MO_bra , MO_ket , erg , PES , t_rate )
-!========================================================================
+!===============================================================================
+ subroutine FirstOrderDecoherence( bra , ket , erg , PES , t_rate , atenuation )
+!===============================================================================
 implicit none
-complex*16 , intent(inout) :: MO_bra(:,:)
-complex*16 , intent(inout) :: MO_ket(:,:)
-real*8     , intent(in)    :: erg(:)
-integer    , intent(in)    :: PES(:)
-real*8     , intent(in)    :: t_rate
+complex*16           , intent(inout) :: bra(:,:)
+complex*16           , intent(inout) :: ket(:,:)
+real*8               , intent(in)    :: erg(:)
+integer              , intent(in)    :: PES(:)
+real*8               , intent(in)    :: t_rate
+real      , optional , intent(in)    :: atenuation
 
 ! local variables ...
 integer :: n , i 
-real*8  :: dt , coeff , summ(2)
+real*8  :: dt , coeff , gauge , summ(2)
 
 ! J. Chem. Phys. 126, 134114 (2007)
 CALL  DecoherenceRate( erg , PES )
 ! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
 dt = t_rate * HALF
 
-summ = d_zero
-do n = 1 , n_part 
-do i = 1 , size(erg) 
-     if( i == PES(n) ) cycle
-     MO_bra(i,n) = MO_bra(i,n) * exp(-dt*tau_inv(i,n))
-     MO_ket(i,n) = MO_ket(i,n) * exp(-dt*tau_inv(i,n))
-     summ(n) = summ(n) + MO_bra(i,n)*MO_ket(i,n)
-     end do
-     end do
+if(.not. present(atenuation)) then
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PES(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*tau_inv(i,n))
+         ket(i,n) = ket(i,n) * exp(-dt*tau_inv(i,n))
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+else
+
+    gauge = 1.d0 / atenuation
+
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PES(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*tau_inv(i,n)*gauge)
+         ket(i,n) = ket(i,n) * exp(-dt*tau_inv(i,n)*gauge)
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+endif
 
 do n = 1 , n_part
-     coeff = MO_bra(PES(n),n) * MO_ket(PES(n),n)
+     coeff = bra(PES(n),n) * ket(PES(n),n)
      coeff = (d_one - summ(n)) / coeff
      coeff = sqrt(coeff)
-     MO_bra(PES(n),n) = MO_bra(PES(n),n) * coeff
-     MO_ket(PES(n),n) = MO_ket(PES(n),n) * coeff
+     bra(PES(n),n) = bra(PES(n),n) * coeff
+     ket(PES(n),n) = ket(PES(n),n) * coeff
      end do
 
 end subroutine FirstOrderDecoherence

@@ -194,8 +194,7 @@ do frame = frame_init , frame_final , frame_step
         If( n_part == 2 ) CALL MO_Occupation( t, MO_bra, MO_ket, UNI, UNI )
     End If
 
-    CALL NewPointerState( Extended_Cell , MO_bra , MO_ket , UNI , t_rate )
-!    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
+    CALL NewPointerState( Extended_Cell , MO_TDSE_bra , MO_TDSE_ket , UNI , t_rate )
 
     CALL Write_Erg_Log( frame , triggered )
 
@@ -390,6 +389,8 @@ CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
+
+CALL apply_decoherence( MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
 
 end subroutine U_nad
 !

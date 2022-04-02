@@ -58,6 +58,9 @@ do a = 1 , MM % N_of_species
 
     string = species(a) % residue // '.psf'
 
+    ! cloning the psf files into log.trunk ...
+    call systemQQ("cp "//string//" log.trunk/.")
+
     open(33, file=string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
@@ -342,6 +345,9 @@ allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 ! NAMD FF definitions ... 
 forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
   
+! cloning the input.prm file into log.trunk ...
+call systemQQ("cp input.prm log.trunk/.") 
+
 open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...

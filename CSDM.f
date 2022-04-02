@@ -280,14 +280,14 @@ end function NAcoupling
 !
 !
 !
-!==============================================================================
- subroutine NewPointerState( system , MO_TDSE_bra , MO_TDSE_ket , QM , t_rate )
-!==============================================================================
+!==============================================================
+ subroutine NewPointerState( system , bra , ket , QM , t_rate )
+!==============================================================
 implicit none
 ! args
 type(structure), intent(in):: system
-complex*16     , intent(in):: MO_TDSE_bra(:,:)
-complex*16     , intent(in):: MO_TDSE_ket(:,:)
+complex*16     , intent(in):: bra(:,:)
+complex*16     , intent(in):: ket(:,:)
 type(R_eigen)  , intent(in):: QM
 real*8         , intent(in):: t_rate
 
@@ -301,7 +301,7 @@ allocate( rho(dim_E, 2) )
 
 ! this loop: Symm. Re(rho_ij)/rho_ii, j=1(el), 2(hl) ...
 do j = 1 , 2
-   rho(:,j) = real( MO_TDSE_ket(:,j)*MO_TDSE_bra(PST(j),j) + MO_TDSE_ket(PST(j),j)*MO_TDSE_bra(:,j) ) / TWO
+   rho(:,j) = real( ket(:,j)*bra(PST(j),j) + ket(PST(j),j)*bra(:,j) ) / TWO
    rho(:,j) = rho(:,j) / rho( PST(j) , j )
    enddo
 
