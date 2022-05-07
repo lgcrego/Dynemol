@@ -89,11 +89,11 @@ select case (option)
         ! use cartesian vectors 
         write(*,'(/a)') '> enter translation vector (T_x,T_y,T_z) as a Real number:'
         write(*,'(a)',advance='no') 'T_x = '
-        read (*,'(f8.4)') T_vector(1)
+        read (*,*) T_vector(1)
         write(*,'(a)',advance='no') 'T_y = '
-        read (*,'(f8.4)') T_vector(2)
+        read (*,*) T_vector(2)
         write(*,'(a)',advance='no') 'T_z = '
-        read (*,'(f8.4)') T_vector(3)
+        read (*,*) T_vector(3)
 
    case(2) 
         ! define translation vector 
@@ -103,7 +103,7 @@ select case (option)
         write(*,'(a)',advance='no') 'index of atom 2 = '
         read(*,*) at2
         write(*,'(/a)') '> translation distance (Real number):'
-        read (*,'(f8.4)') distance
+        read (*,*) distance
 
         T_versor = (system% atom(at2)% xyz - system% atom(at1)% xyz) / sqrt(sum( (system% atom(at2)% xyz-system% atom(at1)% xyz)**2) )
         T_vector = distance * T_versor
@@ -146,7 +146,7 @@ select case (option)
         ! use cartesian vectors 
         ! define rotation ...
         write(*,'(a)',advance='no') '> enter angle for clockwise rotation (degrees)  = '
-        read (*,'(f8.3)') angle
+        read (*,*) angle
         write(*,'(\a)',advance='no') '> enter axis  = '
         read (*,*) axis
         write(*,'(\a)',advance='no') '> enter pivot atom  = '
@@ -633,9 +633,9 @@ character(len=10)   :: file_name
 
 ! reading parameters ...
 write(*,'(a)',advance='no') 'cutoff radius (Real)  = '
-read (*,'(F8.4)') cutoff
+read (*,*) cutoff
 write(*,'(a)',advance='no') 'scale factor  (Real)  = '
-read (*,'(F8.4)') ScaleFactor
+read (*,*) ScaleFactor
 write(*,'(a)',advance='no') 'residue name  (len=3 , use capital letters) = '
 read (*,'(A3)') residue
 
