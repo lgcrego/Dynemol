@@ -165,7 +165,7 @@ select case (option)
 
         axis = 'v'
         write(*,'(a)',advance='no') '> enter angle for clockwise rotation (degrees)  = '
-        read (*,'(f8.3)') angle
+        read (*,*) angle
         write(*,'(\a)',advance='no') '> enter pivot atom  = '
         read (*,*) pivot_atom
 
@@ -189,7 +189,7 @@ select case (option)
 
         axis = 'v'
         write(*,'(a)',advance='no') '> enter angle for clockwise rotation (degrees)  = '
-        read (*,'(f8.3)') angle
+        read (*,*) angle
         write(*,'(\a)',advance='no') '> enter pivot atom  = '
         read (*,*) pivot_atom
 
