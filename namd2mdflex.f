@@ -638,13 +638,13 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     ! conversion 
     ! factor1 = 1.0d26  <== Factor used to correct units 
     ! GAFF  vs  GMX  LJ parameters:
-    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
-    FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
-    FF % sig14 = ( FF % sig14 * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
+    FF % sig   = FF % sig   * 2**(5.d0/6.d0)  ! amber_LJ
+    FF % sig14 = FF % sig14 * 2**(5.d0/6.d0)  ! amber_LJ
 
     select case( MM % CombinationRule )
 
@@ -700,7 +700,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         ! conversion 
         ! factor1 = 1.0d26  <== Factor used to correct units 
         ! GAFF  vs  GMX  LJ parameters:
-        ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+        ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
         ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
         SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
