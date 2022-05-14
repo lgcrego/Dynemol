@@ -58,6 +58,9 @@ do a = 1 , MM % N_of_species
 
     string = species(a) % residue // '.psf'
 
+    ! cloning the psf files into log.trunk ...
+    call systemQQ("cp "//string//" log.trunk/.")
+
     open(33, file=string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
@@ -342,6 +345,9 @@ allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 ! NAMD FF definitions ... 
 forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
   
+! cloning the input.prm file into log.trunk ...
+call systemQQ("cp input.prm log.trunk/.") 
+
 open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
@@ -632,13 +638,13 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     ! conversion 
     ! factor1 = 1.0d26  <== Factor used to correct units 
     ! GAFF  vs  GMX  LJ parameters:
-    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
-    FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
-    FF % sig14 = ( FF % sig14 * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
+    FF % sig   = FF % sig   * 2**(5.d0/6.d0)  ! amber_LJ
+    FF % sig14 = FF % sig14 * 2**(5.d0/6.d0)  ! amber_LJ
 
     select case( MM % CombinationRule )
 
@@ -694,7 +700,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         ! conversion 
         ! factor1 = 1.0d26  <== Factor used to correct units 
         ! GAFF  vs  GMX  LJ parameters:
-        ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+        ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
         ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
         SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
