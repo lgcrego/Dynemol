@@ -55,6 +55,11 @@ do a = 1 , MM % N_of_species
 
     string = species(a) % residue // '.itp'
 
+    If( master ) then
+       ! cloning the itp files into log.trunk ...
+       call systemQQ("cp "//string//" log.trunk/.") 
+    End If
+
     open(33, file=string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
@@ -386,7 +391,12 @@ allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 forcefield = 2           ! 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
-  
+ 
+If( master ) then
+  ! cloning the topol.top file into log.trunk ...
+  call systemQQ("cp topol.top log.trunk/.") 
+End If
+ 
 open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
@@ -448,7 +458,7 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
     ! conversion 
     ! factor1 = 1.0d26      <== Factor used to correct units read from Gromacs
     ! GAFF  vs  GMX  LJ parameters:
-    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> epsilon_GAFF = epsilon_GMX / cal_2_J  
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
     FF % eps = sqrt( FF % eps * factor1 * imol )
@@ -510,8 +520,8 @@ open(33, file='topol.top', status='old', iostat=ioerr, err=10)
 
         ! conversion 
         ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-        SpecialPairs(:NBondParms) % Parms(1) = sqrt( SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    )
-        SpecialPairs(:NBondParms) % Parms(2) = sqrt( SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol )
+        SpecialPairs(:NBondParms) % Parms(1) = SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    
+        SpecialPairs(:NBondParms) % Parms(2) = SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol 
 
     EndIf
 

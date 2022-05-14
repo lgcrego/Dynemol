@@ -12,6 +12,7 @@ use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
 use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
+use setup_checklist        , only : Checking_Topology
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -45,6 +46,7 @@ character(10)                   :: string
 character(200)                  :: line 
 integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms
 integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers 
+logical                         :: TorF
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -56,6 +58,11 @@ counter = 0
 do a = 1 , MM % N_of_species
 
     string = species(a) % residue // '.psf'
+
+    If( master ) then
+        ! cloning the psf files into log.trunk ...
+        call systemQQ("cp "//string//" log.trunk/.")
+    End If
 
     open(33, file=string, status='old',iostat=ioerr,err=101)
 
@@ -342,7 +349,12 @@ allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! NAMD FF definitions ... 
 forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
-  
+
+If( master ) then
+  ! cloning the input.prm file into log.trunk ...
+  call systemQQ("cp input.prm log.trunk/.") 
+End If  
+
 open(33, file='input.prm', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
@@ -633,13 +645,13 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     ! conversion 
     ! factor1 = 1.0d26  <== Factor used to correct units 
     ! GAFF  vs  GMX  LJ parameters:
-    ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+    ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
-    FF % sig   = ( FF % sig   * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
-    FF % sig14 = ( FF % sig14 * TWO ) / (2**(1.d0/6.d0)) ! amber_LJ
+    FF % sig   = FF % sig   * 2**(5.d0/6.d0)  ! amber_LJ
+    FF % sig14 = FF % sig14 * 2**(5.d0/6.d0)  ! amber_LJ
 
     select case( MM % CombinationRule )
 
@@ -695,7 +707,7 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         ! conversion 
         ! factor1 = 1.0d26  <== Factor used to correct units 
         ! GAFF  vs  GMX  LJ parameters:
-        ! -> epsilon_GAFF = epsilon_GMX / (cal_2_J * 2) 
+        ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
         ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
         SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 

@@ -235,7 +235,7 @@ if ( calc_occ_der_pl == 'X' ) then
     PRINT_INIT(" Derivative (per level): d(occ)/dt")
 
     dt = (t(n_t)-t(1))/n_t
-    write(*,'(a,f10.8)') "  dt=",    dt
+    write(*,'(a,f11.8)') "  dt=",    dt
 
     allocate( occ_der(Nwindow,n_part,n_t) )
 
