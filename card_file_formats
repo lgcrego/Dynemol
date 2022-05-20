@@ -13,18 +13,18 @@
 ! 			STRUCTURE-FILE  input  FORMAT
 !
   nuclear_matter =           ! <== solvated_sys , extended_sys , MDynamics
-  file_type      =           ! <== structure or trajectory
-  file_format    =           ! <== xyz , pdb or vasp
+  file_type      =           ! <== structure or trajectory ; default = structure
+  file_format    =           ! <== xyz , pdb or vasp ; default = pdb
 !--------------------------------------------------------------------
 ! generate copies of the system by reflection
 ! 
   nnx = 0  ; nny = 0         ! <==  (nnx,nny) = (extended) REAL copies on each side
-                             ! Integers, keep format
+                             ! Integers, keep format ; default = (0,0)
 
 ! Periodic Boundary Conditions 
 
   PBC = [ 0 , 0 , 0 ]        ! <== PBC replicas : 1 = yes , 0 = no
-                             ! Integers, keep format
+                             ! Integers, keep format , default = (0,0,0)
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
@@ -32,7 +32,7 @@
   t_f  =                     ! <== final time in PICOseconds (Real)
   n_t  =                     ! <== number of time steps (Integer)
 
-  n_part =                   ! <== # of particles to be propagated: default is e=1 , e+h=2  
+  n_part =                   ! <== # of particles to be propagated: default is e=1 , e+h=2 ; default = 2 
 
   hole_state =               ! <== GROUND STATE calcs     = 0 (ZERO)
                              ! <== case STATIC & DP_calcs = hole state of special FMO
@@ -48,7 +48,7 @@
 !
   CT_dump_step  =            ! <== step for saving El&Hl survival charge density  (Integer); default = 1
 
-  frame_step    =            ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj)
+  frame_step    =            ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj) ; default = 1
 
   restart       =            ! <== .TRUE. for restarting dynamics
   step_security =            ! <== step for saving backup files
@@ -74,21 +74,21 @@
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-  EnvField_    =             ! <== .TRUE. for using electrostaic Potential produced by Environment
+  EnvField_    =             ! <== .TRUE. for using electrostaic Potential produced by Environment ; default = .FALSE.
   Environ_Type =             ! <== choose from { Ch_MM , DP_QM , DP_MM }; 
                              ! <== Ch_MM = point charges ; dipoles: { DP_QM , DP_MM } ...
                              ! <== DP_MM = dipole moment from classical point charges
                              ! <== DP_QM = dipole moment from quantum MO
 
-  Environ_step =             ! <== step for updating EnvField (Integer)
+  Environ_step =             ! <== step for updating EnvField (Integer) ; default = 5
 
-  Coulomb_     =             ! <== .TRUE. for dipole potential for solvent molecules
+  Coulomb_     =             ! <== .TRUE. for dipole potential for solvent molecules ; default = .FALSE.
 
   Induced_     =             ! <== .TRUE. for induced dipole potential 
 !--------------------------------------------------------------------
 !           DOS calculations
 !
-  sigma =                    ! <== Gaussian broadening of DOS peaks in eV (Real)                             
+  sigma =                    ! <== Gaussian broadening of DOS peaks in eV (Real)  ; default = 0.04
 
   DOS_range = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of DOS calculations 
 
@@ -126,14 +126,14 @@
   species(n) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
   species(n) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
 
-  Selective_Dynamics =                 ! <== .TRUE. for ad_hoc_MM_tuning of MegaMass to selected atoms
+  Selective_Dynamics =                 ! <== .TRUE. for ad_hoc_MM_tuning of MegaMass to selected atoms ; default = .FALSE.
 !------------------------------------------------------------------------------
 ! 							ENVIRONMENT parameters 
 !
   thermostat =                         ! <== choose from { Berendsen, Nose_Hoover, Microcanonical }
 
-  temperature =                        ! <== Bath Temperature (K) ; (Real)
-  pressure =                           ! <== Pressure in atm ; (Real)
+  temperature =                        ! <== Bath Temperature (K) , (Real) ; default = 300
+  pressure =                           ! <== Pressure in atm , (Real) ; default = 1
 
   thermal_relaxation_time =            ! <== Temperature coupling term with the bath (Real)
                                        ! <== SMALL = STRONG coupling ; use  "infty" to decouple
@@ -141,24 +141,25 @@
 
   pressure_relaxation_time =           ! <== Pressure coupling term (Real)
                                        ! <== SMALL = STRONG coupling ; use "infty" to decouple
-                                       ! <== picosecond ; default 0.5
+                                       ! <== picosecond ; default = infty
 
-  cutoff_radius =                      ! <== Cut off radius (Angs.) for electrostatic and LJ interactions (Real)
-  damping_Wolf =                       ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+  cutoff_radius =                      ! <== Cut off radius (Angs.) for electrostatic and LJ interactions (Real) ; default = 50.
+  damping_Wolf =                       ! <== damping parameter (Angs.^-1) ; default value = 0.001
                                        ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+                                       ! <== relevant quantity: R_c*Wolf ~ ....
 !------------------------------------------------------------------------------
 ! 							EXECUTION INFO 
 !
   driver_MM       =                    ! <== choose from { MM_Dynamics , MM_Optimize , NormalModes , Parametrize }
 
-  read_velocities =                    ! <== .TRUE. for reading the initial velocities : T_ , F_
+  read_velocities =                    ! <== .TRUE. for reading the initial velocities : T_ , F_ ; default = .TRUE.
 
   MM_input_format =                    ! <== choose from { GMX, NAMD, GAFF } ; GMX = OPLS , GAFF and NAMD = Amber
 
-  MM_log_step     =                    ! <== step for saving MM results & parameters (Integer)
+  MM_log_step     =                    ! <== step for saving MM results & parameters (Integer) ; default = 50
 
-  MM_frame_step   =                    ! <== step for saving MM results & parameters (Integer)
+  MM_frame_step   =                    ! <== step for saving MM results & parameters (Integer) ; default = 50
 
-  Units_MM        =                    ! <== choose OUTPUT energy units: "eV" or "kj-mol" 
+  Units_MM        =                    ! <== choose OUTPUT energy units: eV or kj-mol ; default = eV
 
 

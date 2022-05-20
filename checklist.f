@@ -68,7 +68,7 @@ implicit none
 character(len=3) :: month(12)=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
  
 ! local variables ... 
- integer :: i , date_time(8)
+ integer :: date_time(8)
  character(len=3)  :: tag
  character(len=12) :: number_string
 

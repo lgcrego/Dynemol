@@ -46,7 +46,7 @@ KAPPA         = damping_Wolf                    !  Wolf's method damping paramen
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
 atmax = sum( species(:) % N_of_atoms )
 
-If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check parameters_MM.f << '
+If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
 ! =====================================================================================
 ! types of molecules ...
@@ -538,7 +538,7 @@ end if
 
 ! check list of input data ...
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
-    CALL system("sed '11i >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check parameters_MM.f <<<' warning.signal |cat")
+    CALL system("sed '11i >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms <<<' warning.signal |cat")
     STOP 
 end If
 
@@ -548,7 +548,7 @@ If( Unit_Cell%atoms /= MM% N_of_atoms ) then
 end If
 
 If( maxval(atom%nr) < MM%N_of_species ) then
-    CALL system("sed '11i >>> # of residues must be (>=) # of species; check input.pdb and parameters_MM.f <<<' warning.signal |cat")
+    CALL system("sed '11i >>> # of residues must be (>=) # of species; check input.pdb and MM input parms <<<' warning.signal |cat")
     STOP 
 end If
 

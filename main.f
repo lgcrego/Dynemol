@@ -38,11 +38,17 @@ last_argument = COMMAND_ARGUMENT_COUNT()
 
 CALL GET_COMMAND_ARGUMENT( last_argument , this_argument )
 select case ( this_argument )
-                                                                                                                                                                    
+
     case( "read_card" )
          call ReadInputCard
 
     case default
+
+         if( (this_argument(1:4) == "read") .OR.  (this_argument(6:9) == "card") ) then
+             CALL system("sed '11i >>> Attention: check spelling of calling argument read_card  <<<' warning.signal |cat")
+             stop
+         end if
+
          CAll Define_Environment
          CALL Define_MM_Environment
 end select

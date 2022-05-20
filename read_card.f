@@ -17,13 +17,15 @@ contains
 implicit none
 
 ! local variables ...
-integer :: ioerr , i , m , n
-real*8  :: bottom, top
-character(len=1) :: firstChar , equal_sign , separator
-character(len=20) :: keyword , keyword1 , keyword2
-character(len=20) :: command , command1 , command2 , command3
+integer            :: ioerr , i , n
+real*8             :: bottom, top
+character(len=1)   :: equal_sign , separator
+character(len=20)  :: keyword , keyword1 , keyword2
+character(len=20)  :: command , command1 , command2 , command3
 character(len=120) :: line
-logical :: flag
+logical            :: flag
+
+call default_values()
 
 open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 
@@ -32,7 +34,7 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 
 !=====================================================================================
 !  reading  the input CARD ...
-i=0
+
 read_loop: do 
 
     read(33,'(A)',iostat=ioerr) line
@@ -264,9 +266,6 @@ read_loop: do
 
             empty = real_interval( bottom , top )
 
-
-
-
     case( "N_OF_MOLECULES" )
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') MM % N_of_molecules
@@ -282,11 +281,18 @@ read_loop: do
             backspace(33)
 
             do n = 1 , MM % N_of_species
+
+               i=1
                do 
+                  i = i + 1
                   read(33,'(A)',iostat=ioerr) line
                   read(line,*,iostat=ioerr) keyword
                   keyword = to_upper_case(keyword)
                   If( verify("SPECIES()",keyword) == 0 ) exit
+                  if( i > 10 ) then
+                      CALL system("sed '11i >>> halting: check N_of_species in card.inpt <<<' warning.signal |cat")
+                      stop
+                  end if
                end do
                read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
                species(n) % residue = command
@@ -379,7 +385,7 @@ end subroutine ReadInputCard
  subroutine allocate_species( N )
 !================================
 implicit none
-integer , intent(in)    :: N
+integer , intent(in) :: N
 
 ! local variables ...
 integer :: i
@@ -435,6 +441,65 @@ DO I = 1,LEN ( STRING )
 END DO
 
 END FUNCTION TO_UPPER_CASE
+!
+!
+!
+!
+!=========================
+ subroutine default_values
+!=========================
+implicit none
+
+! local parameters ...
+
+nuclear_matter = "extended_sys"
+Survival = .true.
+DP_moment = .false.
+QMMM = .false.
+OPT_parms = .true.
+ad_hoc = .true.
+file_type = "structure"
+file_format = "pdb"
+HFP_Forces = .false.
+SPECTRUM = .false.
+Alpha_Tensor = .false.
+GaussianCube = .false.
+GaussianCube_step = 5000000
+NetCharge = .false.
+CH_and_DP_step = 5000000
+DensityMatrix = .false.
+AutoCorrelation = .false.
+VDOS_ = .false.
+EnvField_ = .false.
+Environ_step = 5
+Coulomb_ = .false.
+Induced_ = .false.
+frame_step = 1
+restart = .false.
+step_security = 1000
+t_i = 0.d0
+CT_dump_step = 1
+n_part = 2
+nnx = 0
+nny = 0 
+PBC = [0 , 0 , 0]
+sigma = 0.04d0
+Selective_Dynamics = .false.
+MM % N_of_species = 1
+thermostat = "Microcanonical"
+temperature = 300.d0
+pressure = 1.d0
+thermal_relaxation_time = 0.25d0
+pressure_relaxation_time = infty
+cutoff_radius = 50.d0
+damping_Wolf = 0.001d0
+driver_MM = "MM_Dynamics"
+read_velocities = .true.
+MM_log_step = 50
+MM_frame_step = 50
+Units_mm = "eV"
+
+end subroutine default_values
 !
 !
 !
