@@ -45,187 +45,153 @@ read_loop: do
 
     select case ( keyword )
     
-        case( "DRIVER" , "driver" ) 
+        case( "DRIVER" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             DRIVER = command
     
-        case( "NUCLEAR_MATTER" , "nuclear_matter" )
+        case( "NUCLEAR_MATTER" )
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             nuclear_matter = command
 
-        case( "SURVIVAL" , "survival" , "Survival" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            Survival = flag
+        case( "SURVIVAL" ) 
+            Survival = get_logical(line)
     
-        case( "DP_Moment" , "dp_moment" , "DP_moment" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            DP_moment = flag
+        case( "DP_MOMENT" ) 
+            DP_moment = get_logical(line)
 
-        case( "QMMM" , "qmmm" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            QMMM = flag
+        case( "QMMM" ) 
+            QMMM = get_logical(line)
 
-        case( "OPT_PARMS" , "opt_parms" , "OPT_parms" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            OPT_parms = flag
+        case( "OPT_PARMS" ) 
+            OPT_parms = get_logical(line)
 
-        case( "AD_HOC" , "ad_hoc" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            ad_hoc = flag
+        case( "AD_HOC" ) 
+            ad_hoc = get_logical(line)
 
 !--------------------------------------------------------------------                                                                                                   
 !           READING FILE FORMAT
 !
-        case( "FILE_TYPE" , "file_type" ) 
+        case( "FILE_TYPE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             file_type = command
 
-        case( "FILE_FORMAT" , "file_format" ) 
+        case( "FILE_FORMAT" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             file_format = command
 
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-    case( "HFP_FORCES" , "hfp_forces" , "HFP_Forces" )  !######
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            HFP_Forces = flag
+    case( "HFP_FORCES" ) 
+            HFP_Forces = get_logical(line)
 
-    case( "SPECTRUM" , "spectrum" )  
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            SPECTRUM = flag
+    case( "SPECTRUM" )  
+            SPECTRUM = get_logical(line)
 
-    case( "Alpha_TENSOR" , "alpha_tensor" , "Alpha_Tensor") 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            Alpha_Tensor = flag
+    case( "ALPHA_TENSOR" ) 
+            Alpha_Tensor = get_logical(line)
 
-    case( "GAUSSIANCUBE" , "gaussiancube" , "GaussianCube" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            GaussianCube = flag
+    case( "GAUSSIANCUBE" ) 
+            GaussianCube = get_logical(line)
 
-    case( "GAUSSIANCUBE_STEP" , "gaussiancube_step" , "GaussianCube_step" ) 
+    case( "GAUSSIANCUBE_STEP" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') GaussianCube_step
 
-    case( "NetCHARGE" , "netcharge" , "NetCharge" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            NetCharge = flag
+    case( "NETCHARGE" ) 
+            NetCharge = get_logical(line)
 
-    case( "CH_AND_DP_STEP" , "ch_and_dp_step" , "CH_and_DP_step" ) 
+    case( "CH_AND_DP_STEP" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') CH_and_DP_step
 
-    case( "DENSITYMATRIX" , "densitymatrix" , "DensityMatrix" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            DensityMatrix = flag
+    case( "DENSITYMATRIX" ) 
+            DensityMatrix = get_logical(line)
 
-    case( "AUTOCORRELATION" , "autocorrelation" , "AutoCorrelation" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            AutoCorrelation = flag
+    case( "AUTOCORRELATION" ) 
+            AutoCorrelation = get_logical(line)
 
-    case( "VDOS_" , "vdos_" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            VDOS_ = flag
+    case( "VDOS_" ) 
+            VDOS_ = get_logical(line)
 
 !--------------------------------------------------------------------
 !           POTENTIALS
 !
-    case( "ENVFIELD_" , "envfield_" , "EnvField_" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            EnvField_ = flag
+    case( "ENVFIELD_" ) 
+            EnvField_ = get_logical(line)
 
-    case( "ENVIRON_TYPE" , "environ_type" , "Environ_Type" ) 
+    case( "ENVIRON_TYPE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             Environ_Type = command
 
-    case( "ENVIRON_STEP" , "environ_step" , "Environ_step" ) 
+    case( "ENVIRON_STEP" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') Environ_step
 
-    case( "COULOMB_" , "coulomb_" , "Coulomb_" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            Coulomb_ = flag
+    case( "COULOMB_" ) 
+            Coulomb_ = get_logical(line)
 
-    case( "INDUCED_" , "induced_" , "Induced_") 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            Induced_ = flag
+    case( "INDUCED_" ) 
+            Induced_ = get_logical(line)
 
 !--------------------------------------------------------------------
 !           SAMPLING parameters
 !
-    case( "FRAME_STEP" , "frame_step" ) 
+    case( "FRAME_STEP" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') frame_step
 
 !--------------------------------------------------------------------
 !           SECURITY COPY
 !
-    case( "RESTART" , "restart" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            restart = flag
+    case( "RESTART" ) 
+            restart = get_logical(line)
 
-    case( "STEP_SECURITY" , "step_security" ) 
+    case( "STEP_SECURITY" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') step_security
 
 !--------------------------------------------------------------------
 !           QDynamics parameters
 !
-    case( "T_i" , "t_i" , "t_I" , "T_I" ) 
+    case( "T_I" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,*) t_i
 
-    case( "T_f" , "t_f" , "t_F" , "T_F" ) 
+    case( "T_F" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,*) t_f
 
-    case( "N_t" , "n_t" , "n_T" , "N_T" ) 
+    case( "N_T" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') n_t
 
-    case( "CT_DUMP_STEP" , "ct_dump_step" , "CT_dump_step" ) 
+    case( "CT_DUMP_STEP" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') CT_dump_step
 
-    case( "N_PART" , "n_part" ) 
+    case( "N_PART" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') n_part
 
-    case( "HOLE_STATE" , "hole_state" ) 
+    case( "HOLE_STATE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') hole_state
 
-    case( "ELECTRON_STATE" , "electron_state" ) 
+    case( "ELECTRON_STATE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,'(i)') electron_state
 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
 !
-    case( "NNX" , "nnx" ) 
+    case( "NNX" ) 
             read(line,*,iostat=ioerr) keyword1 , equal_sign , command1 , separator , &
                                       keyword2 , equal_sign , command2
             read(command1,'(i)') nnx
             read(command2,'(i)') nny
 
-    case( "PBC" , "pbc" ) 
+    case( "PBC" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , separator , &
                                       command1 , command2 , command3
             read(command1,'(i)') PBC(1)
@@ -235,11 +201,11 @@ read_loop: do
 !--------------------------------------------------------------------
 !           DOS parameters
 !
-    case( "SIGMA" , "sigma" ) 
+    case( "SIGMA" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             read(command,*) sigma
 
-    case( "DOS_range" , "dos_range" ) 
+    case( "DOS_RANGE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
                                       command1 , command2 
             read(command1,*) bottom
@@ -250,7 +216,7 @@ read_loop: do
 !--------------------------------------------------------------------
 !           SPECTRUM  parameters
 !
-    case( "OCCUPIED" , "occupied" ) 
+    case( "OCCUPIED" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
                                       command1 , command2 
             read(command1,*) bottom
@@ -258,7 +224,7 @@ read_loop: do
 
             occupied = real_interval( bottom , top )
 
-    case( "EMPTY" , "empty" ) 
+    case( "EMPTY" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
                                       command1 , command2 
             read(command1,*) bottom
@@ -299,11 +265,11 @@ read_loop: do
 
                read(33,'(A)',iostat=ioerr) line
                read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               read(command,'(i)') species(n) % N_of_molecules 
+               read(command,'(i)',iostat=ioerr) species(n) % N_of_molecules 
 
                read(33,'(A)',iostat=ioerr) line
                read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               read(command,'(i)') species(n) % N_of_atoms 
+               read(command,'(i)',iostat=ioerr) species(n) % N_of_atoms 
 
                read(33,'(A)',iostat=ioerr) line
                read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
@@ -312,9 +278,7 @@ read_loop: do
             end do
     
     case( "SELECTIVE_DYNAMICS" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            Selective_Dynamics = flag
+            Selective_Dynamics = get_logical(line)
     
     case( "THERMOSTAT" )
             read(line,*,iostat=ioerr) keyword , equal_sign , command
@@ -345,9 +309,7 @@ read_loop: do
             driver_MM = command
 
     case( "READ_VELOCITIES" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
-            read_velocities = flag
+            read_velocities = get_logical(line)
 
     case( "MM_INPUT_FORMAT" )
             read(line,*,iostat=ioerr) keyword , equal_sign , command
@@ -410,6 +372,26 @@ do i = 1 , N
 end do
 
 end subroutine allocate_species
+!
+!
+!
+!=======================================
+ function get_logical(line) result(flag)
+!=======================================
+implicit none
+character(*) , intent(in) :: line
+
+!local variables ...
+integer           :: ioerr 
+character(len=1)  :: equal_sign 
+character(len=20) :: keyword , command
+logical           :: flag
+
+read(line,*,iostat=ioerr) keyword , equal_sign , command
+command = to_upper_case(command)
+flag = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == command ) ) 
+
+end function get_logical
 !
 !
 !
