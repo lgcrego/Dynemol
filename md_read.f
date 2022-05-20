@@ -3,6 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input       
+    use EH_environment          
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -35,8 +36,6 @@ integer         :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresi
 
 
 !=======================  setting up system  ============================= 
-
-CALL Define_MM_Environment
 
 bath_T        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure (atm)

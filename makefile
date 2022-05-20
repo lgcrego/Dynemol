@@ -117,7 +117,9 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
+          parms_var_module.o \
 		  OPT_parent.o \
+          read_card.o \
 		  parameters.o \
 		  parameters_MM.o \
                   checklist.o \

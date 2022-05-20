@@ -1,24 +1,8 @@
 module MM_input
 
-use type_m         
 use constants_m
-use parameters_m    , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
-use MM_types        , only : MM_molecular , MM_system 
-
-type(MM_system)                  :: MM
-type(MM_molecular) , allocatable :: species(:) 
-
-real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
-integer                :: MM_log_step, MM_frame_step 
-logical                :: read_velocities, gmx_input_format , Selective_Dynamics
-character (4)          :: MM_input_format
-character (5)          :: Units_MM
-character (len=14)     :: OPT_driver
-character (len=11)     :: driver_MM 
-character (len=14)     :: thermostat
-type(integer_interval) :: nmd_window
-
-logical , parameter :: T_ = .true. , F_ = .false. 
+use MM_parms_module 
+use EH_parms_module , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 
 contains
 
@@ -26,6 +10,9 @@ contains
  subroutine Define_MM_Environment
 !================================
 implicit none
+
+!local parameters ...
+logical, parameter :: T_ = .true. , F_ = .false. 
 
 !------------------------------------------------------------------------------
 ! SYSTEM  INFO

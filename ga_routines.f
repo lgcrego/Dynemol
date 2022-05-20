@@ -3,7 +3,7 @@ module GA_m
     use type_m
     use constants_m
     use MM_types                , only : LogicalKey
-    use parameters_m            , only : DP_Moment , F_ , T_ , CG_ ,    &
+    use parameters_m            , only : DP_Moment , CG_ ,              &
                                          Pop_size , N_generations ,     &
                                          Top_Selection , Pop_range ,    &
                                          Mutation_rate , Mutate_Cross , &
@@ -32,7 +32,11 @@ module GA_m
 
     private 
 
+    ! module variables ...
     type(GA_OPT) :: GA
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
 contains
 !

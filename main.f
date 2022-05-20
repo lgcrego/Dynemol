@@ -3,7 +3,9 @@ Program qdynamo
 use type_m
 use constants_m
 use setup_checklist      
+use card_reading            , only : ReadInputCard
 use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
+use MM_input                , only : Define_MM_Environment
 use MM_input                , only : driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
@@ -18,6 +20,8 @@ use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
 ! local variables ...
+integer          :: last_argument 
+character(len=9) :: this_argument
 
 ! Initialize GPU if necessary 
 call GPU_Init(0,1)
@@ -27,8 +31,23 @@ call GPU_Init(0,1)
 !                   DRIVER ROUTINE
 !========================================================
 
-CAll Define_Environment
-   
+!-------------------------------------------------------------
+! get command line argument to read card.inpt  ...
+
+last_argument = COMMAND_ARGUMENT_COUNT()
+
+CALL GET_COMMAND_ARGUMENT( last_argument , this_argument )
+select case ( this_argument )
+                                                                                                                                                                    
+    case( "read_card" )
+         call ReadInputCard
+
+    case default
+         CAll Define_Environment
+         CALL Define_MM_Environment
+end select
+!--------------------------------------------------------------
+
 CALL checklist
 
 If( .not. restart ) CALL system( "./env.sh" )

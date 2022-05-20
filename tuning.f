@@ -2,7 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m       , only : T_ , F_ , static , electron_state , hole_state , n_part , Survival
+    use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
     public :: ad_hoc_tuning , eh_tag , orbital 
 
@@ -11,6 +11,9 @@ module tuning_m
     ! module variables ...
     integer      , allocatable :: orbital(:)
     character(2) , allocatable :: eh_tag(:)
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
     contains
 !
@@ -160,7 +163,7 @@ end module tuning_m
 module MM_tuning_routines
 
     use constants_m     , only: large
-    use parameters_m    , only: T_ , F_ , static
+    use parameters_m    , only: static
     use MM_types        , only: MM_atomic, DefineBonds, DefineAngles
 
     private
@@ -170,6 +173,9 @@ module MM_tuning_routines
     ! module variables ...
     type(DefineBonds) , allocatable :: SpecialBonds(:)
     type(DefineAngles), allocatable :: SpecialAngs(:)
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
     contains
 
