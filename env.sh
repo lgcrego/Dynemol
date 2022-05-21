@@ -2,23 +2,23 @@
 
 if [ $# -eq 0 ]
 then 
-	rm -r -f dyn.trunk 2> qdynamo.err
-	mkdir dyn.trunk
+	rm -r -f $DYNEMOLWORKDIR/dyn.trunk 2> $DYNEMOLDIR/qdynamo.err
+	mkdir $DYNEMOLWORKDIR/dyn.trunk
 
-	rm -r -f dos.trunk 2> qdynamo.err
-	mkdir dos.trunk
+	rm -r -f $DYNEMOLWORKDIR/dos.trunk 2> $DYNEMOLDIR/qdynamo.err
+	mkdir $DYNEMOLWORKDIR/dos.trunk
 
-	rm -r -f MO.trunk 2> qdynamo.err
-	mkdir MO.trunk
+	rm -r -f $DYNEMOLWORKDIR/MO.trunk 2> $DYNEMOLDIR/qdynamo.err
+	mkdir $DYNEMOLWORKDIR/MO.trunk
 
-	mkdir opt.trunk 2> qdynamo.err
-	mv opt.trunk/view_cost.dat opt.trunk/old_view_cost.dat 2> qdynamo.err
+	mkdir $DYNEMOLWORKDIR/opt.trunk 2> $DYNEMOLDIR/qdynamo.err
+	mv $DYNEMOLWORKDIR/opt.trunk/view_cost.dat opt.trunk/old_view_cost.dat 2> $DYNEMOLDIR/qdynamo.err
 
-	rm -r -f log.trunk 2> qdynamo.err
-	mkdir log.trunk
+	rm -r -f $DYNEMOLWORKDIR/log.trunk 2> $DYNEMOLDIR/qdynamo.err
+	mkdir $DYNEMOLWORKDIR/log.trunk
 fi
 
 if [ "x$1" == 'xsave_cost_statement' ]
 then
-	paste opt.trunk/view_cost.dat <(grep "eval(me)" cost_tuning_EH.f | grep -v \!) > opt.trunk/ga_cost.statement
+	paste $DYNEMOLWORKDIR/opt.trunk/view_cost.dat <(grep "eval(me)" $DYNEMOLWORKDIR/cost_tuning_EH.f | grep -v \!) > $DYNEMOLWORKDIR/opt.trunk/ga_cost.statement
 fi

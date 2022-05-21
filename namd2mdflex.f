@@ -3,6 +3,7 @@
 module namd2mdflex
 
 use iso_fortran_env
+use type_m                 , only : dynemolworkdir
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
@@ -61,7 +62,7 @@ do a = 1 , MM % N_of_species
     ! cloning the psf files into log.trunk ...
     call systemQQ("cp "//string//" log.trunk/.")
 
-    open(33, file=string, status='old',iostat=ioerr,err=101)
+    open(33, file=dynemolworkdir//string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
             print*, string,' file not found; terminating execution' ; stop
@@ -348,7 +349,7 @@ forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
 ! cloning the input.prm file into log.trunk ...
 call systemQQ("cp input.prm log.trunk/.") 
 
-open(33, file='input.prm', status='old', iostat=ioerr, err=10)
+open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"input.prm" file not found; terminating execution'
@@ -1090,7 +1091,7 @@ if( choice == 'y' ) then
     if (exist) then
 
         ! read velocity file in pdb format, and convert units ...
-        open(unit=33 , file='velocity_MM.pdb' , status='old' , action='read')
+        open(unit=33 , file=dynemolworkdir//'velocity_MM.pdb' , status='old' , action='read')
         read(33,*) dumb
         do i = 1 , N_of_atoms
              read(33,15) vel(i,1) , vel(i,2) , vel(i,3)
@@ -1100,7 +1101,7 @@ if( choice == 'y' ) then
         close(33)
 
         ! write velocity file in xyz format ...
-        open(unit=33 , file='velocity_MM.inpt' , status='unknown')
+        open(unit=33 , file=dynemolworkdir//'velocity_MM.inpt' , status='unknown')
         do i = 1 , N_of_atoms
              write(33,*) vel(i,1) , vel(i,2) , vel(i,3)
         end do

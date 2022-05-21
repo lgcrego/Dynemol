@@ -4,6 +4,7 @@ module gmx2mdflex
 
 use constants_m
 use for_force
+use type_m                 , only : dynemolworkdir
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
@@ -57,7 +58,7 @@ do a = 1 , MM % N_of_species
     ! cloning the itp files into log.trunk ...
     call systemQQ("cp "//string//" log.trunk/.") 
 
-    open(33, file=string, status='old',iostat=ioerr,err=101)
+    open(33, file=dynemolworkdir//string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
             print*, string,' file not found; terminating execution' ; stop
@@ -390,7 +391,7 @@ forcefield = 2           ! 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (
 ! cloning the topol.top file into log.trunk ...
 call systemQQ("cp topol.top log.trunk/.") 
 
-open(33, file='topol.top', status='old', iostat=ioerr, err=10)
+open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"topol.top" file not found; terminating execution'

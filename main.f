@@ -52,11 +52,13 @@ select case ( this_argument )
          CAll Define_Environment
          CALL Define_MM_Environment
 end select
-!--------------------------------------------------------------
+!-------------------------------------------------------------
 
 CALL checklist
 
-If( .not. restart ) CALL system( "./env.sh" )
+CALL get_environment_vars
+
+If( .not. restart ) CALL system( dynemoldir//"/env.sh" )
 
 CALL read_EHT_parameters
 

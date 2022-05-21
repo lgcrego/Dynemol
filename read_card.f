@@ -335,6 +335,8 @@ keyword = "XXXXXXXXXXXXXXXXXXXXXX"
    
 end do read_loop
 
+call Checklist_and_Warnings
+
 !--------------------------------------------------------------------
 
 include 'formats.h'
@@ -423,6 +425,91 @@ DO I = 1,LEN ( STRING )
 END DO
 
 END FUNCTION TO_UPPER_CASE
+
+!
+!
+!
+!
+!=================================
+ subroutine Checklist_and_Warnings
+!=================================
+implicit none
+
+! local variables ...
+character (len=7) :: argument
+logical           :: dynamic 
+
+! local parameter ...
+logical, parameter :: T_ = .true. , F_ = .false.
+
+!--------------------------------------------------------------------
+!  hereafter only CHECKLIST and  WARNINGS !!!
+
+select case( DRIVER )
+
+    case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
+        
+        dynamic = T_ 
+
+    case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
+
+        dynamic = ( F_ .OR. Survival )
+
+        If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
+
+    case( "MM_Dynamics" )
+
+        QMMM = F_
+        dynamic = F_
+        
+    case default
+        Print*, " >>> Check your driver options <<< :" , driver
+        stop
+
+end select
+
+static = .not. dynamic
+
+! verbose is T_ only if ...
+verbose = (DRIVER /= "Genetic_Alg") .AND. (DRIVER /= "slice_AO") .AND. (DRIVER /= "slice_Cheb") .AND. (DRIVER /= "slice_FSSH") .AND. (DRIVER /= "slice_CSDM")
+
+If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type=="structure" ) then
+    Print*," >>> halting: " 
+    Print*,"     for fixed nuclei use DRIVER = q_dynamics; " 
+    Print*,"     for slice use either file_type=trajectory or nuclear_matter=MDynamics <<<" 
+    stop
+End If    
+
+If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
+    CALL system("sed '11i>>> HFP_Forces must be .true. with QMMM ; execution halted, check input card <<<' warning.signal |cat")
+    stop 
+elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
+    CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check input card <<<' warning.signal |cat")
+    stop 
+end if
+
+If ( nuclear_matter == "MDynamics" ) NetCharge = T_
+
+!-------------------------------------------------------------
+! get command line argument to preview input data, then stop  ...
+CALL GET_COMMAND_ARGUMENT( 1 , argument )
+preview = F_
+if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
+    select case ( argument )
+
+        case( "preview" )
+        preview = .true.
+
+        case( "resume" )
+        resume = .true.
+
+    end select
+end if
+!--------------------------------------------------------------
+
+include 'formats.h'
+
+end subroutine Checklist_and_Warnings
 !
 !
 !

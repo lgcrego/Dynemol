@@ -4,6 +4,7 @@ module MD_read_m
     use atomicmass
     use MM_input       
     use EH_environment          
+    use type_m                  , only : dynemolworkdir
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -519,7 +520,7 @@ if( read_velocities ) then
 
     inquire(file="velocity_MM.inpt", EXIST=exist)
     if (exist) then
-        open(unit=33 , file='velocity_MM.inpt' , status='old' , action='read')
+        open(unit=33 , file=dynemolworkdir//'/velocity_MM.inpt' , status='old' , action='read')
         do i = 1 , size(atom)
             read(33,*) atom(i) % vel(1) , atom(i) % vel(2) , atom(i) % vel(3)
         end do

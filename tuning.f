@@ -61,12 +61,11 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-
+where(univ % atom % residue == "BZN") univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-
-
+where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
@@ -200,37 +199,37 @@ select case ( instance )
 !      define flex
 !----------------------------------
 
-atom(195)  % flex = .true.
-atom(222)  % flex = .true.
-atom(346)  % flex = .true.
-atom(218)  % flex = .true.
-atom(74 )  % flex = .true.
-atom(136)  % flex = .true.
-atom(204)  % flex = .true.
-atom(71 )  % flex = .true.
-atom(192)  % flex = .true.
-atom(132)  % flex = .true.
-atom(194)  % flex = .true.
-atom(321)  % flex = .true.
-atom(196)  % flex = .true.
-atom(324)  % flex = .true.
-atom(197)  % flex = .true.
-atom(78 )  % flex = .true.
-atom(326)  % flex = .true.
-atom(266)  % flex = .true.
-atom(274)  % flex = .true.
-atom(100)  % flex = .true.
-atom(199)  % flex = .true.
-atom(75 )  % flex = .true.
-atom(328)  % flex = .true.
-atom(139)  % flex = .true.
-atom(277)  % flex = .true.
-atom(280)  % flex = .true.
-atom(436)  % flex = .true.
-atom(330)  % flex = .true.
-atom(111)  % flex = .true.
-atom(424)  % flex = .true.
-atom(265)  % flex = .true.
+!atom(195)  % flex = .true.
+!atom(222)  % flex = .true.
+!atom(346)  % flex = .true.
+!atom(218)  % flex = .true.
+!atom(74 )  % flex = .true.
+!atom(136)  % flex = .true.
+!atom(204)  % flex = .true.
+!atom(71 )  % flex = .true.
+!atom(192)  % flex = .true.
+!atom(132)  % flex = .true.
+!atom(194)  % flex = .true.
+!atom(321)  % flex = .true.
+!atom(196)  % flex = .true.
+!atom(324)  % flex = .true.
+!atom(197)  % flex = .true.
+!atom(78 )  % flex = .true.
+!atom(326)  % flex = .true.
+!atom(266)  % flex = .true.
+!atom(274)  % flex = .true.
+!atom(100)  % flex = .true.
+!atom(199)  % flex = .true.
+!atom(75 )  % flex = .true.
+!atom(328)  % flex = .true.
+!atom(139)  % flex = .true.
+!atom(277)  % flex = .true.
+!atom(280)  % flex = .true.
+!atom(436)  % flex = .true.
+!atom(330)  % flex = .true.
+!atom(111)  % flex = .true.
+!atom(424)  % flex = .true.
+!atom(265)  % flex = .true.
 !----------------------------------
 !      define MM atom types 
 !----------------------------------
@@ -242,11 +241,11 @@ atom(265)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(63:64) % residue = "DBB"
+!atom(63:64) % residue = "DBB"
 !----------------------------------
 !      define nr
 !----------------------------------
-atom(63:64) % nr = 1
+!atom(63:64) % nr = 1
 
 !----------------------------------
 !       charge of the atoms 

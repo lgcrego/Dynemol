@@ -3,6 +3,8 @@ module type_m
     use constants_m 
     use execution_time_m
 
+    character(len=:) , allocatable :: dynemoldir(:) , dynemolworkdir(:)
+
     type structure
         integer                    :: atoms 
         integer                    :: N_of_electrons
@@ -269,6 +271,39 @@ module type_m
     end interface debug_EH
  
 contains
+!
+!
+!
+!===============================
+ subroutine get_environment_vars
+!===============================
+use ifport
+implicit none
+
+! local variables ... 
+character(len=255) :: directory                                                                                                                                         
+
+!!to get current directory ...
+!integer :: length
+!directory = FILE$CURDRIVE
+!length = getdrivedirqq(directory)
+!print*, directory
+
+
+!-------------------------------------------------------------
+! get environment variables ...
+
+call get_environment_variable("DYNEMOLWORKDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemolworkdir(1))
+dynemolworkdir = trim(directory)//"/"
+
+call get_environment_variable("DYNEMOLDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemoldir(1))
+dynemoldir = trim(directory)//"/"
+
+!-------------------------------------------------------------
+
+end  subroutine get_environment_vars
 !
 !
 !

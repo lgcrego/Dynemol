@@ -210,7 +210,7 @@ close (10)
         open (10, file='log.trunk/driver_parms_and_tuning.log', status='old', access='append')
         write(10,'("==  Electronic Tuning  ==")')
         write(10,*)
-        CALL system("awk '/univ/ && NR >= 37 && NR <= 70' < tuning.f | awk '!/ !/' >> log.trunk/driver_parms_and_tuning.log")
+        CALL system("awk '/univ/ && NR >= 37 && NR <= 70' < $DYNEMOLDIR/tuning.f | awk '!/ !/' >> log.trunk/driver_parms_and_tuning.log")
         close(10)
     end if
 
@@ -220,7 +220,7 @@ close (10)
         write(10,*)
         write(10,'("==  Nuclear Tuning  ==")')
         write(10,*)
-        CALL system("awk '/atom/&&/%/&&/=/' < tuning.f | awk '!/univ/' | awk '!/ !/' | awk '{gsub(/^[ \t]+/,x); print}' >> log.trunk/driver_parms_and_tuning.log")
+        CALL system("awk '/atom/&&/%/&&/=/' < $DYNEMOLDIR/tuning.f | awk '!/univ/' | awk '!/ !/' | awk '{gsub(/^[ \t]+/,x); print}' >> log.trunk/driver_parms_and_tuning.log")
         close(10)
     end if
 
