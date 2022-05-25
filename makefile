@@ -1,6 +1,6 @@
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o
 
-#make a - standard compilation
+#make dynemol - standard compilation
 #make safe - compilation with safe features
 #make debug - adds flag -g for debugging
 #make serial - remove all parallelization flags
@@ -216,25 +216,25 @@ endif
 #########
 # RULES #
 #########
-a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
-	rm -f a
-	$(FC) $(FC_ALL) $(INCLUDES) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIBS)
+dynemol: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
+	rm -f dynemol
+	$(FC) $(FC_ALL) $(INCLUDES) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIBS)
 	-rm -f *.log
 
 # Program runs very slowly with this
 safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
-safe: a
+safe: dynemol
 
 # Just adds debug flag to everything
 debug: FC_ALL += -g
 debug: CC_ALL += -g
-debug: a
+debug: dynemol
 
 # Removes parallel flags
 serial: FC_PARALLEL =
 serial: CC_PARALLEL =
-serial: a
+serial: dynemol
 
 # Easiert do debug when there is no threads around
 gdb: F_FLAGS = -O0
@@ -267,7 +267,7 @@ vtune: debug
 
 
 clean:
-	-rm -fv a *.o *.mod *__genmod.f90 *.i
+	-rm -fv dynemol *.o *.mod *__genmod.f90 *.i
 
 depend:
 	@echo -en "Searching module dependencies..."

@@ -28,7 +28,7 @@ module Semi_Empirical_Parms
  integer          :: ioerr , i , AtNo , Ang , DOS_sum
  character(len=1) :: spdf
 
- OPEN(unit=3,file=dynemoldir//'/my_eht_parameters.dat',status='old')
+ OPEN(unit=3,file=dynemoldir//'my_eht_parameters.dat',status='old')
 
  AtNo = 1
  Ang  = 0

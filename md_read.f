@@ -3,7 +3,6 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input       
-    use EH_environment          
     use type_m                  , only : dynemolworkdir
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs

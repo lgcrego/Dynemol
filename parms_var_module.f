@@ -23,9 +23,9 @@ end module EH_parms_module
 
 module MM_parms_module
 
-use type_m       , only : integer_interval
-use MM_types     , only : MM_molecular , MM_system 
-use parameters_m , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
+use type_m          , only : integer_interval
+use MM_types        , only : MM_molecular , MM_system 
+use EH_parms_module , only : Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 
 real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
 integer                :: MM_log_step, MM_frame_step 

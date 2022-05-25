@@ -2,7 +2,7 @@ module MM_input
 
 use constants_m
 use MM_parms_module 
-use EH_parms_module , only : driver , Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
+use EH_parms_module , only : Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 
 contains
 
