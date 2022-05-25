@@ -273,7 +273,7 @@ read_loop: do
 
                read(33,'(A)',iostat=ioerr) line
                read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               flag = merge( .true. , .false. , command == "T_") 
+               flag = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == command ) )
                species(n) % flex = flag
             end do
     
@@ -313,7 +313,6 @@ read_loop: do
 
     case( "MM_INPUT_FORMAT" )
             read(line,*,iostat=ioerr) keyword , equal_sign , command
-            flag = merge( .true. , .false. , command == "T_") 
             mm_input_format = command
 
     case( "MM_LOG_STEP" )
