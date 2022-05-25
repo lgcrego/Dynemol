@@ -1,7 +1,8 @@
 module Backup_MM_m
 
-    use parameters_m    , only : restart
-    use MM_types        , only : MM_system , MM_atomic
+    use type_m       , only : dynemolworkdir
+    use parameters_m , only : restart 
+    use MM_types     , only : MM_system , MM_atomic
 
     public  :: Security_Copy_MM , Restart_MM
 
@@ -26,22 +27,22 @@ logical         :: exist
 If( first_time ) then
 
     If( restart ) then
-        inquire( file="Security_copy_MM.dat", EXIST=exist )   
+        inquire( file=dynemolworkdir//"Security_copy_MM.dat", EXIST=exist )   
         If( exist ) stop " <Security_copy_MM.dat> exists; check restart parameter or move Security_copy_MM.dat to Restart_copy_MM.dat"
     else
         inquire( file="Restart_copy_MM.dat", EXIST=exist )
         If( exist ) stop " <Restart_copy_MM.dat> exists; check restart parameter or delete Restart_copy_MM.dat"
     end If
 
-    ! get ride of Restart_copy_MM.dat for new Security_copy_MM.dat ...
-    inquire( file="Restart_copy_MM.dat", EXIST=exist )
+    ! get rid of Restart_copy_MM.dat for new Security_copy_MM.dat ...
+    inquire( file=dynemolworkdir//"Restart_copy_MM.dat", EXIST=exist )
     If( exist ) CALL system( "rm Restart_copy_MM.dat" )
 
     first_time = .false.
 
 end If
 
-open(unit=33, file="Security_copy_MM.dat", status="unknown", form="unformatted", action="write")
+open(unit=33, file="ancillary.trunk/Security_copy_MM.dat", status="unknown", form="unformatted", action="write")
 
 write(33) frame
 

@@ -281,14 +281,14 @@ use ifport
 implicit none
 
 ! local variables ... 
-character(len=255) :: directory                                                                                                                                         
+character(len=255) :: directory , this_command
+logical            :: TorF
 
 !!to get current directory ...
 !integer :: length
 !directory = FILE$CURDRIVE
 !length = getdrivedirqq(directory)
 !print*, directory
-
 
 !-------------------------------------------------------------
 ! get environment variables ...
@@ -302,6 +302,9 @@ allocate( character(len_trim(directory)+1) :: dynemoldir(1))
 dynemoldir = trim(directory)//"/"
 
 !-------------------------------------------------------------
+! copy warning.sign template to dynemolworkdir ...
+write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
+TorF = systemQQ( this_command )
 
 end  subroutine get_environment_vars
 !

@@ -169,7 +169,7 @@ end select
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ! save energies of the TOTAL system ...
-OPEN(unit=9,file='system-ergs.dat',status='unknown')
+OPEN(unit=9,file='ancillary.trunk/system-ergs.dat',status='unknown')
     do i = 1 , N
         write(9,*) i , QM%erg(i)
     end do

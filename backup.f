@@ -1,7 +1,7 @@
 module Backup_m
 
-    use type_m
     use blas95
+    use type_m               
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
@@ -136,15 +136,15 @@ write( * , 230 , advance='no' )  it , frame , t
 If( first_time ) then
 
     If( restart ) then
-        inquire( file="Security_copy.dat", EXIST=exist )   
+        inquire( file=dynemolworkdir//"Security_copy.dat", EXIST=exist )   
         If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
     else
-        inquire( file="Restart_copy.dat", EXIST=exist )
+        inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
         If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
     end If
 
-    ! get ride of Restart_copy.dat for new Security_copy.dat ...
-    inquire( file="Restart_copy.dat", EXIST=exist )
+    ! get rid of Restart_copy.dat for new Security_copy.dat ...
+    inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
     If( exist ) CALL system( "rm Restart_copy.dat" )
 
     first_time = .false.
@@ -153,7 +153,7 @@ end If
 
 if( nuclear_matter == "MDynamics" ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
 
-open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
+open(unit=33, file="ancillary.trunk/Security_copy.dat", status="unknown", form="unformatted", action="write")
 
 if( present(frame) ) write(33) frame
 write(33) it
@@ -241,7 +241,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
    stop
 endif
 
@@ -335,15 +335,15 @@ write( * , 230 , advance='no' )  it , frame , t
 If( first_time ) then
 
     If( restart ) then
-        inquire( file="Security_copy.dat", EXIST=exist )   
+        inquire( file=dynemolworkdir//"Security_copy.dat", EXIST=exist )   
         If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
     else
-        inquire( file="Restart_copy.dat", EXIST=exist )
+        inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
         If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
     end If
 
-    ! get ride of Restart_copy.dat for new Security_copy.dat ...
-    inquire( file="Restart_copy.dat", EXIST=exist )
+    ! get rid of Restart_copy.dat for new Security_copy.dat ...
+    inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
     If( exist ) CALL system( "rm Restart_copy.dat" )
 
     first_time = .false.
@@ -352,7 +352,7 @@ end If
 
 if( nuclear_matter == "MDynamics" ) CALL Saving_MM_Backup( frame , instance = "from_QM" )
 
-open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
+open(unit=33, file="ancillary.trunk/Security_copy.dat", status="unknown", form="unformatted", action="write")
 
 if( present(frame) ) write(33) frame
 write(33) it
@@ -425,7 +425,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
    stop
 endif
 
@@ -470,15 +470,15 @@ write( * , 230 , advance='no' )  it , frame , t
 If( first_time ) then
 
     If( restart ) then
-        inquire( file="Security_copy.dat", EXIST=exist )   
+        inquire( file=dynemolworkdir//"Security_copy.dat", EXIST=exist )   
         If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
     else
-        inquire( file="Restart_copy.dat", EXIST=exist )
+        inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
         If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
     end If
 
-    ! get ride of Restart_copy.dat for new Security_copy.dat ...
-    inquire( file="Restart_copy.dat", EXIST=exist )
+    ! get rid of Restart_copy.dat for new Security_copy.dat ...
+    inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
     If( exist ) CALL system( "rm Restart_copy.dat" )
 
     first_time = .false.
@@ -487,7 +487,7 @@ end If
 
 CALL Saving_MM_Backup( frame , instance = "from_QM" )
 
-open(unit=33, file="Security_copy.dat", status="unknown", form="unformatted", action="write")
+open(unit=33, file="ancillary.trunk/Security_copy.dat", status="unknown", form="unformatted", action="write")
 
 write(33) frame
 write(33) it
@@ -595,7 +595,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' warning.signal |cat") 
+   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
    stop
 endif
 

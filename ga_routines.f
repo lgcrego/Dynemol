@@ -739,7 +739,7 @@ select case ( selection_by )
     
      case default
 
-          CALL system("sed '11i>> execution stopped, check your 'selection_by' options in parameters.f <<' warning.signal |cat")
+          CALL system("sed '11i>> execution stopped, check your 'selection_by' options in parameters.f <<' .warning.signal |cat")
           stop
           
 end select

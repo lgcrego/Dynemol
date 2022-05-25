@@ -134,6 +134,8 @@ if( mod(frame,MM_log_step) == 0   ) then
 
     CALL output( Temperature , frame , dt )
 
+    open( unit = 13 , file = "ancillary.trunk/nuclear_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+
     select case (Units_MM)
 
         case( "eV" )    
@@ -147,6 +149,8 @@ if( mod(frame,MM_log_step) == 0   ) then
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
+
+    close(13)
 
 end if
 

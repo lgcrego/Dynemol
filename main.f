@@ -20,45 +20,29 @@ use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
 ! local variables ...
-integer          :: last_argument 
-character(len=9) :: this_argument
+logical :: go_without_card
 
 ! Initialize GPU if necessary 
 call GPU_Init(0,1)
 
+!========================================================
 !               THE TRUTH IS OUT THERE
 !========================================================
-!                   DRIVER ROUTINE
-!========================================================
-
-!-------------------------------------------------------------
-! get command line argument to read card.inpt  ...
-
-last_argument = COMMAND_ARGUMENT_COUNT()
-
-CALL GET_COMMAND_ARGUMENT( last_argument , this_argument )
-select case ( this_argument )
-
-    case( "read_card" )
-         call ReadInputCard
-
-    case default
-
-         if( (this_argument(1:4) == "read") .OR.  (this_argument(6:9) == "card") ) then
-             CALL system("sed '11i >>> Attention: check spelling of calling argument read_card  <<<' warning.signal |cat")
-             stop
-         end if
-
-         CAll Define_Environment
-         CALL Define_MM_Environment
-end select
-!-------------------------------------------------------------
-
-CALL checklist
 
 CALL get_environment_vars
 
-If( .not. restart ) CALL system( dynemoldir//"/env.sh" )
+inquire( file=dynemolworkdir//"parameters.f" , EXIST = go_without_card )
+
+if( go_without_card ) then
+     CAll Define_Environment
+     CALL Define_MM_Environment
+else
+     call ReadInputCard
+end if
+
+CALL checklist
+
+If( .not. restart ) CALL system( dynemoldir//"env.sh" )
 
 CALL read_EHT_parameters
 

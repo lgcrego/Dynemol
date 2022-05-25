@@ -110,7 +110,7 @@ if( MM_input_format == "GMX" ) CALL Sort_nr( unit_cell )
 
 ! nr indices must start with 1 ...
 if( any(unit_cell % nr == 0) ) then
-    TorF = systemQQ("sed '11i >> halted: check input.pdb, nr indice = 0 found <<  ' warning.signal |cat")
+    TorF = systemQQ("sed '11i >> halted: check input.pdb, nr indice = 0 found <<  ' .warning.signal |cat")
     STOP 
 end if 
 
@@ -215,7 +215,7 @@ do
     if ( keyword == "MASTER" ) exit
     N_of_atoms = N_of_atoms + 1
     if ( N_of_atoms > 20000 ) then
-       TorF = systemQQ("sed '11i *** reading of input.pdb halted forcibly ; ckeck input.pdb file format ***  ' warning.signal |cat")
+       TorF = systemQQ("sed '11i *** reading of input.pdb halted forcibly ; ckeck input.pdb file format ***  ' .warning.signal |cat")
        STOP 
     end if
 end do
@@ -316,7 +316,7 @@ end subroutine Read_from_PDB
 
  open(unit = 3, file = 'poscar.in', status = 'old', action = 'read', iostat = openstatus)
  if (openstatus > 0) then
-    TF_flag = systemQQ("sed '11i *** Cannot open the file poscar.in *** ' warning.signal |cat")
+    TF_flag = systemQQ("sed '11i *** Cannot open the file poscar.in *** ' .warning.signal |cat")
     STOP 
  end if
 
@@ -434,7 +434,7 @@ logical      :: TorF
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) then
-    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' warning.signal |cat")
+    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' .warning.signal |cat")
     STOP 
 end if
 
@@ -658,7 +658,7 @@ logical       :: TorF
 
 open(unit = 13, file = 'XYZ.trj', status = 'old', action = 'read', iostat = openstatus)
 if( openstatus > 0 ) then
-    TorF = systemQQ("sed '11i *** Cannot open the file XYZ.trj *** ' warning.signal |cat")
+    TorF = systemQQ("sed '11i *** Cannot open the file XYZ.trj *** ' .warning.signal |cat")
     STOP 
 end if
 
@@ -791,7 +791,7 @@ logical        :: TorF
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) then
-    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' warning.signal |cat")
+    TorF = systemQQ("sed '11i *** Cannot open the file frames.pdb *** ' .warning.signal |cat")
     STOP 
 end if
 

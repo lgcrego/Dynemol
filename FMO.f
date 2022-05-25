@@ -83,7 +83,7 @@
 
 ! check point ...
  If( any(FMO_system%QMMM /= "QM") ) then
-     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' warning.signal |cat")                                  
+     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' .warning.signal |cat")                                  
      stop     
 end If
 
@@ -327,9 +327,9 @@ implicit none
 
 ! save energies of the FMO system 
  If( present(fragment) .AND. (fragment=="H") ) then
-    OPEN(unit=9,file='hl_FMO-ergs.dat',status='unknown')
+    OPEN(unit=9,file='ancillary.trunk/hl_FMO-ergs.dat',status='unknown')
  else
-    OPEN(unit=9,file='el_FMO-ergs.dat',status='unknown')
+    OPEN(unit=9,file='ancillary.trunk/el_FMO-ergs.dat',status='unknown')
  end IF
 
  N_of_FMO_electrons = sum( system%Nvalen )

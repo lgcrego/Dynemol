@@ -234,7 +234,7 @@ If( present(ShowCost) ) then
       write(33,*) i , dabs(eval(i)) 
    end do 
 
-   CALL system( "./env.sh save_cost_statement " )
+   CALL system( dynemoldir//"env.sh save_cost_statement " )
 
    Print 218
 
