@@ -2,6 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
+    use card_reading       , only : electron_fragment , hole_fragment
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
     public :: ad_hoc_tuning , eh_tag , orbital 
@@ -43,10 +44,12 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
+univ % atom (63:64) % residue = "CCC"
 
 !-----------------------------------
 !      define %nr
 !-----------------------------------
+univ % atom(63:64) % nr = 2
 
 !---------------------------------------------------
 !      define %DPF     (Dipole Fragment) 
@@ -61,11 +64,11 @@ integer :: i
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % El = .true.
+where(univ % atom % residue == electron_fragment ) univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "BZN") univ % atom % Hl = .true.
+where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------

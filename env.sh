@@ -1,5 +1,8 @@
 #!/bin/bash
 
+DYNEMOLWORKDIR="$(pwd)"
+export DYNEMOLWORKDIR
+
 if [ $# -eq 0 ]
 then 
 	rm -r -f "$DYNEMOLWORKDIR"/dyn.trunk 2> "$DYNEMOLDIR"/qdynamo.err

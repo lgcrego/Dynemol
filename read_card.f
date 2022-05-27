@@ -6,7 +6,10 @@ use MM_parms_module
 
 private
 
-   public :: ReadInputCard
+   public :: ReadInputCard , electron_fragment , hole_fragment
+
+   ! module variables ...
+   character(len=3) :: electron_fragment , hole_fragment
 
 contains
 !
@@ -176,11 +179,17 @@ read_loop: do
 
     case( "HOLE_STATE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') hole_state
+            n = len_trim(command)
+            
+            read(command(5:n),'(i)') hole_state
+            hole_fragment = command(1:3)
 
     case( "ELECTRON_STATE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') electron_state
+            n = len_trim(command)
+            
+            read(command(5:n),'(i)') electron_state
+            electron_fragment = command(1:3)
 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters

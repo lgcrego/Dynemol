@@ -34,11 +34,15 @@
 
   n_part =                   ! <== # of particles to be propagated: default is e=1 , e+h=2 ; default = 2 
 
-  hole_state =               ! <== GROUND STATE calcs     = 0 (ZERO)
+  hole_state = char*3:Integer        ! <== char*3 = 3-letter fragment or residue ; Integer = MO of frag/res
+                             
+                             ! <== GROUND STATE calcs     = 0 (ZERO)
                              ! <== case STATIC & DP_calcs = hole state of special FMO
                              ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
 
-  electron_state =           ! <== case STATIC & DP_calcs = excited state of special FMO
+  electron_state = char*3:Integer    ! <== char*3 = 3-letter fragment or residue ; Integer = MO of frag/res
+
+                             ! <== case STATIC & DP_calcs = excited state of special FMO
                              ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
 
   LCMO =                     ! <== .TRUE. for initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
