@@ -4,7 +4,7 @@ module gmx2mdflex
 
 use constants_m
 use for_force
-use type_m                 , only : dynemolworkdir
+use type_m                 , only : dynemolworkdir , warning
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
@@ -40,7 +40,7 @@ character(15)   , allocatable   :: InputChars(:,:)
 real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:) 
 character(18)                   :: keyword 
-character(10)                   :: string
+character(10)                   :: string , word(3)
 character(200)                  :: line 
 logical                         :: TorF
 integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , Nbonds14 , N_of_atoms
@@ -69,7 +69,7 @@ do a = 1 , MM % N_of_species
         ! start reading the molecular structure of species(a) ...
         do
             read(33,100) keyword
-            if( trim(keyword) == "[ atoms ]" ) exit
+            if( trim(keyword) == "[ atoms ]" ) exit   ! <== looking for [ atoms ] in *.itp
         end do
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
@@ -139,7 +139,7 @@ do a = 1 , MM % N_of_species
         ! Bonding parameters :: reading ...
         do
             read(33,100) keyword
-            if( trim(keyword) == "[ bonds ]" ) exit
+            if( trim(keyword) == "[ bonds ]" ) exit   ! <== looking for [ bonds ] in *.itp
         end do
 
         i = 1
@@ -181,10 +181,10 @@ do a = 1 , MM % N_of_species
         ! Angle parameters :: reading ...
         do
             read(33,100) keyword
-            if ( trim(keyword) == "[ angles ]" ) exit
+            if ( trim(keyword) == "[ angles ]" ) exit   ! <== looking for [ angles ] in *.itp
         end do
 
-        InputIntegers = I_zero
+        InputIntegers = I_zero 
         i = 1
         read_loop3: do
             read(33, '(A)', iostat=ioerr) line
@@ -220,11 +220,12 @@ do a = 1 , MM % N_of_species
            end select
         end do
         rewind 33
+
 !==============================================================================================
         ! Dihedral parameters :: reading ...
         do
             read(33,100,iostat=ioerr) keyword
-            if ( trim(keyword) == "[ dihedrals ]" .OR. ioerr /= 0 ) exit
+            if ( trim(keyword) == "[ dihedrals ]" .OR. ioerr /= 0 ) exit   ! <== looking for [ dihedrals ] in *.itp
         end do
 
         if( trim(keyword) == "[ dihedrals ]" ) then
@@ -261,23 +262,22 @@ do a = 1 , MM % N_of_species
         end if
         rewind 33
 
-!==============================================================================================
-
+!----------------------------------------------------------------------------------------------
         ! the IMPROPER dihedrals must be at the END OF THE LIST ...
         Ntorsion = count( species(a)%dihedral_type /= "imp" )
 
         TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )
         If( TorF ) then
-            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' .warning.signal |cat")
+            CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
             stop
         End If
+!----------------------------------------------------------------------------------------------
 
 !==============================================================================================
-
             ! Pairs 1-4 parameters :: reading ...
         do
             read(33,100,iostat=ioerr) keyword
-            if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit
+            if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit      ! <== looking for [ pairs ] in *.itp
         end do
 
         if( trim(keyword) == "[ pairs ]" ) then
@@ -311,8 +311,6 @@ do a = 1 , MM % N_of_species
 
         end if
 
-!==============================================================================================
-
         If( species(a) % Nbonds /= 0 ) then 
 
             CALL Identify_NonBondPairs( species , a )
@@ -336,6 +334,55 @@ do a = 1 , MM % N_of_species
              
         end if
 
+        rewind(33)
+
+!==============================================================================================
+                         ! AD_HOC parameters :: reading ...
+        do
+            read(33,100,iostat=ioerr) keyword
+            if ( trim(keyword) == "[ ad-hoc ]" .OR. ioerr /= 0 ) exit  ! <== looking for [ ad-hoc ] in *.itp
+        end do
+
+        if( trim(keyword) == "[ ad-hoc ]" ) then
+
+           read(33,'(A)',iostat=ioerr) line
+           read(line,*,iostat=ioerr) keyword
+           keyword = to_upper_case(keyword)
+
+           select case (keyword)
+
+                  case( ";" )
+                  ! Go on now, go, walk out the door ...
+
+                  case( "FLEX" , "FLEX:") 
+
+                      read_loop: do
+                          read(33, '(A)', iostat=ioerr) line
+                          if( ioerr /= 0 )          exit  read_loop
+                          if( len_trim(line) == 0 ) cycle read_loop  ! <== empty line
+
+                          read(line,*,iostat=ioerr) string
+                          if( index(string,";") /= 0 ) cycle read_loop  ! <== comment line
+                          if( trim(string) == "[  "  ) exit  read_loop  ! <== end of block
+
+                          read(line,*, iostat=ioerr) ( word(j) , j=1,3 ) 
+
+                          read(word(1),'(i)') k
+
+                          keyword = to_upper_case(word(3))                                                                                                                                        
+                          TorF = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == keyword ) )
+
+                          atom(k) % flex = TorF 
+
+                      end do read_loop
+
+                  case default
+                      CALL warning("halting: check AD-HOC section of *.itp file")                                                    
+                      stop
+
+           end select
+
+        end if
 !==============================================================================================
 
     close(33)

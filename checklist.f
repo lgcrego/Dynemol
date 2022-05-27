@@ -31,7 +31,7 @@ select case( DRIVER )
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
        
        If( ad_hoc == F_ .OR. Survival == F_ ) then
-           CALL system("sed '11i >>> halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T <<<' .warning.signal |cat")
+           CALL warning("halting: the DRIVER you chose must go with Survival = T_  AND  ad_hoc = T")
            stop 
            end If
 
@@ -49,7 +49,7 @@ end select
 
 
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
-    CALL system("sed '11i >>> halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics <<<' .warning.signal |cat")
+    CALL warning("halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics")
     stop
 End If
 

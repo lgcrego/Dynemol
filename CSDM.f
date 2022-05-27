@@ -364,7 +364,7 @@ if( newPST(1) > Fermi .AND. newPST(2) <= Fermi ) then
    endif
 
 If( newPST(1) < newPST(2) ) then
-    CALL systemQQ("sed '11i >>> ATTENTION: electron below hole state <<<' .warning.signal |cat")
+    CALL warning("ATTENTION: electron below hole state")
     stop 
     end If
 

@@ -434,7 +434,7 @@ if( newPES(1) > Fermi .AND. newPES(2) <= Fermi ) then
 If( any(newPES /= PES) ) jump = T_
 
 If( newPES(1) < newPES(2) ) then
-    CALL system("sed '11i >>> ATTENTION: electron below hole state <<<' .warning.signal |cat")
+    CALL warning("ATTENTION: electron below hole state")
     stop 
     end If
 

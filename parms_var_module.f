@@ -1,6 +1,6 @@
 module EH_parms_module
 
-use type_m ,       only :  real_interval
+use type_m ,       only :  real_interval , warning
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step

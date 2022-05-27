@@ -3,7 +3,7 @@
 module namd2mdflex
 
 use iso_fortran_env
-use type_m                 , only : dynemolworkdir
+use type_m                 , only : dynemolworkdir , warning
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
@@ -266,7 +266,7 @@ do a = 1 , MM % N_of_species
 !----------------------------------------------------------------------------------------------
         TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
         If( TorF ) then
-            CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' .warning.signal |cat")
+            CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
             stop
         End If
 !----------------------------------------------------------------------------------------------
@@ -326,7 +326,7 @@ do a = 1 , MM % N_of_species
                end do
 
           case default
-               CALL system("sed '11i >>> halting: check AD-HOC section of psf file <<<' .warning.signal |cat")                                                    
+               CALL warning("halting: check AD-HOC section of psf file")                                                    
                stop
 
         end select

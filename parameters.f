@@ -176,7 +176,7 @@ End If
 If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
     stop ">>> conflict between QMMM and HFP_Forces; execution halted, check parameters.f <<<"
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
-    CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<' .warning.signal |cat")
+    CALL warning("MUST turn off HFP_Forces; execution halted, check parameters.f")
     stop 
 end if
 

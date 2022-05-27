@@ -256,7 +256,7 @@ read_loop: do
                   keyword = to_upper_case(keyword)
                   If( verify("SPECIES()",keyword) == 0 ) exit
                   if( i > 10 ) then
-                      CALL system("sed '11i >>> halting: check N_of_species in card.inpt <<<' .warning.signal |cat")
+                      CALL warning("halting: check N_of_species in card.inpt")
                       stop
                   end if
                end do
@@ -480,10 +480,10 @@ If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type==
 End If    
 
 If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
-    CALL system("sed '11i>>> HFP_Forces must be .true. with QMMM ; execution halted, check input card <<<' .warning.signal |cat")
+    CALL warning("HFP_Forces must be .true. with QMMM ; execution halted, check input card")
     stop 
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
-    CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check input card <<<' .warning.signal |cat")
+    CALL warning("MUST turn off HFP_Forces; execution halted, check input card")
     stop 
 end if
 

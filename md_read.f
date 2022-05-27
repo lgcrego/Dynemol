@@ -3,7 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input       
-    use type_m                  , only : dynemolworkdir
+    use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -513,7 +513,7 @@ if( read_velocities ) then
 
     inquire(file="velocity_MM.out", EXIST=exist)
     if (exist .AND. resume) then
-        CALL system("sed '11i >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt]   or   rm velocity_MM.out << ' .warning.signal |cat")
+        CALL warning("must update inpt file:   mv[velocity_MM.out ==> velocity.inpt]   or   rm velocity_MM.out")
         STOP 
     end If
 
@@ -531,24 +531,24 @@ if( read_velocities ) then
 elseif( resume ) then 
 
        ! read_velocity flag = F_
-        CALL system("sed '11i >> read_velocity = .false. in parametes_MM.f, must be true in resume simulations ! << ' .warning.signal |cat")
+        CALL warning("read_velocity = .false. in parametes_MM.f, must be true in resume simulations !")
         STOP 
 
 end if
 
 ! check list of input data ...
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
-    CALL system("sed '11i >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms <<<' .warning.signal |cat")
+    CALL warning("error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms")
     STOP 
 end If
 
 If( Unit_Cell%atoms /= MM% N_of_atoms ) then
-    CALL system("sed '11i >>> error: Unit_Cell%atoms /= MM% N_of_atoms <<<' .warning.signal |cat")
+    CALL warning("error: Unit_Cell%atoms /= MM% N_of_atoms")
     STOP 
 end If
 
 If( maxval(atom%nr) < MM%N_of_species ) then
-    CALL system("sed '11i >>> # of residues must be (>=) # of species; check input.pdb and MM input parms <<<' .warning.signal |cat")
+    CALL warning("# of residues must be (>=) # of species; check input.pdb and MM input parms")
     STOP 
 end If
 

@@ -135,19 +135,19 @@ If( any(a% El) ) then      ! <== first priority ...
 else If( any(a% Hl) ) then ! <== second priority, only for cationic systems ...
     where( a% Hl ) a% fragment = "A"
 else If(.NOT. static .AND. electron_state /= 0 ) then
-        CALL system("sed '11i>> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<' .warning.signal |cat")
+        CALL warning("execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_?")
         stop 
 end If
 
 propagate_el = any(a% El) .EQV. (electron_state /= 0)
 If( .not. propagate_el ) then
-        CALL system("sed '11i>> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<' .warning.signal |cat")
+        CALL warning("execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f)")
         stop 
 end If
 
 propagate_hl = any(a% Hl) .EQV. (hole_state /= 0)
 If( .not. propagate_hl ) then
-        CALL system("sed '11i>> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<' .warning.signal |cat")
+        CALL warning("execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f)")
         stop 
 end If
 
@@ -199,37 +199,6 @@ select case ( instance )
 !      define flex
 !----------------------------------
 
-!atom(195)  % flex = .true.
-!atom(222)  % flex = .true.
-!atom(346)  % flex = .true.
-!atom(218)  % flex = .true.
-!atom(74 )  % flex = .true.
-!atom(136)  % flex = .true.
-!atom(204)  % flex = .true.
-!atom(71 )  % flex = .true.
-!atom(192)  % flex = .true.
-!atom(132)  % flex = .true.
-!atom(194)  % flex = .true.
-!atom(321)  % flex = .true.
-!atom(196)  % flex = .true.
-!atom(324)  % flex = .true.
-!atom(197)  % flex = .true.
-!atom(78 )  % flex = .true.
-!atom(326)  % flex = .true.
-!atom(266)  % flex = .true.
-!atom(274)  % flex = .true.
-!atom(100)  % flex = .true.
-!atom(199)  % flex = .true.
-!atom(75 )  % flex = .true.
-!atom(328)  % flex = .true.
-!atom(139)  % flex = .true.
-!atom(277)  % flex = .true.
-!atom(280)  % flex = .true.
-!atom(436)  % flex = .true.
-!atom(330)  % flex = .true.
-!atom(111)  % flex = .true.
-!atom(424)  % flex = .true.
-!atom(265)  % flex = .true.
 !----------------------------------
 !      define MM atom types 
 !----------------------------------

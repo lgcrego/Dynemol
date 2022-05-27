@@ -310,6 +310,22 @@ end  subroutine get_environment_vars
 !
 !
 !
+!============================
+ subroutine warning( string )
+!============================
+implicit none
+character(*) , intent(in) :: string
+
+! local variables ... 
+character(len=120) :: command
+
+command = "sed '11i >>> "//string//" <<<' .warning.signal |cat"
+CALL system(command)
+
+end subroutine warning
+!
+!
+!
 !==================================
  subroutine debug_EH_structure( a )
 !==================================

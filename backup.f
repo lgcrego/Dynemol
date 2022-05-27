@@ -241,7 +241,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
+   CALL warning("<Restart_copy.dat> file not found; terminating execution") 
    stop
 endif
 
@@ -425,7 +425,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
+   CALL warning("<Restart_copy.dat> file not found; terminating execution") 
    stop
 endif
 
@@ -595,7 +595,7 @@ read(33) ( Net_Charge , i=1,size(Net_Charge) )
 close( 33 )
 
 11 if( file_err > 0 ) then
-   CALL system("sed '11i >>> <Restart_copy.dat> file not found; terminating execution <<<' .warning.signal |cat") 
+   CALL warning("<Restart_copy.dat> file not found; terminating execution") 
    stop
 endif
 
