@@ -3,6 +3,7 @@
     use IFPORT
     use type_m
     use constants_m
+    use MPI_definitions_m           , only : master
     use parameters_m                , only : file_type ,                &
                                              file_format ,              &
                                              nnx , nny ,                &
