@@ -99,7 +99,7 @@ module Semi_Empirical_Parms
  character(12)  :: EHSymbol_char 
  logical        :: flag1 , flag2 , flag3 , flag4
 
-OPEN(unit=3,file=dynemolworkdir//'/opt_eht_parms.input',status='old')
+OPEN(unit=3,file=dynemolworkdir//'opt_eht_parms.input',status='old')
 
 ! read file heading ...
 read(3,*,IOSTAT=ioerr) dumb 

@@ -182,14 +182,14 @@ read_loop: do
             n = len_trim(command)
             
             read(command(5:n),'(i)') hole_state
-            hole_fragment = command(1:3)
+            hole_fragment = to_upper_case(command(1:3))
 
     case( "ELECTRON_STATE" ) 
             read(line,*,iostat=ioerr) keyword , equal_sign , command
             n = len_trim(command)
             
             read(command(5:n),'(i)') electron_state
-            electron_fragment = command(1:3)
+            electron_fragment = to_upper_case(command(1:3))
 
 !--------------------------------------------------------------------
 !           STRUCTURAL  parameters
