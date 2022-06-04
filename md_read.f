@@ -1,9 +1,10 @@
 module MD_read_m
- 
+
     use constants_m
     use atomicmass
     use MM_input       
     use MPI_definitions_m       , only : master
+    use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, talt, talp, initial_density 
@@ -37,8 +38,6 @@ integer         :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresi
 
 !=======================  setting up system  ============================= 
 
-CALL Define_MM_Environment
-
 bath_T        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure (atm)
 rcut          = cutoff_radius                   !  Cutoff radius (Angs.)
@@ -48,7 +47,7 @@ KAPPA         = damping_Wolf                    !  Wolf's method damping paramen
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
 atmax = sum( species(:) % N_of_atoms )
 
-If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check parameters_MM.f << '
+If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
 ! =====================================================================================
 ! types of molecules ...
@@ -360,11 +359,15 @@ do i = 1 , N
     FF(i) % fdihed(:)    = 0.0d0
     FF(i) % fnonbd14(:)  = 0.0d0
     FF(i) % fnonch14(:)  = 0.0d0
+    FF(i) % f_MM(:)      = 0.0d0
+    FF(i) % f_QM(:)      = 0.0d0
+    FF(i) % f_CSDM(:)    = 0.0d0
     FF(i) % Ehrenfest(:) = 0.0d0
     FF(i) % ftotal(:)    = 0.0d0
     FF(i) % fch(:)       = 0.0d0
     FF(i) % fsr(:)       = 0.0d0
     FF(i) % mass         = 0.0d0
+    FF(i) % kinetic      = 0.0d0
     FF(i) % charge       = 0.0d0
     FF(i) % MM_charge    = 0.0d0
     FF(i) % eps          = 0.0d0
@@ -467,11 +470,15 @@ do j = 1 , MM % N_of_atoms
     atom(i) % fdihed(:)    = 0.d0
     atom(i) % fnonbd14(:)  = 0.d0
     atom(i) % fnonch14(:)  = 0.d0
+    atom(i) % f_MM(:)      = 0.d0
+    atom(i) % f_QM(:)      = 0.d0
+    atom(i) % f_CSDM(:)    = 0.d0
     atom(i) % Ehrenfest(:) = 0.d0
     atom(i) % ftotal(:)    = 0.d0
     atom(i) % fch(:)       = 0.d0
     atom(i) % fsr(:)       = 0.d0
     atom(i) % mass         = 0.d0
+    atom(i) % kinetic      = 0.d0
     atom(i) % charge       = 0.d0
     atom(i) % MM_charge    = 0.d0
     atom(i) % eps          = 0.d0
@@ -507,13 +514,13 @@ if( read_velocities ) then
 
     inquire(file="velocity_MM.out", EXIST=exist)
     if (exist .AND. resume) then
-        CALL system("sed '11i >> must update inpt file:   mv[velocity_MM.out ==> velocity.inpt]   or   rm velocity_MM.out << ' warning.signal |cat")
+        CALL warning("must update inpt file:   mv[velocity_MM.out ==> velocity.inpt]   or   rm velocity_MM.out")
         STOP 
     end If
 
     inquire(file="velocity_MM.inpt", EXIST=exist)
     if (exist) then
-        open(unit=33 , file='velocity_MM.inpt' , status='old' , action='read')
+        open(unit=33 , file=dynemolworkdir//'/velocity_MM.inpt' , status='old' , action='read')
         do i = 1 , size(atom)
             read(33,*) atom(i) % vel(1) , atom(i) % vel(2) , atom(i) % vel(3)
         end do
@@ -525,24 +532,24 @@ if( read_velocities ) then
 elseif( resume ) then 
 
        ! read_velocity flag = F_
-        CALL system("sed '11i >> read_velocity = .false. in parametes_MM.f, must be true in resume simulations ! << ' warning.signal |cat")
+        CALL warning("read_velocity = .false. in parametes_MM.f, must be true in resume simulations !")
         STOP 
 
 end if
 
 ! check list of input data ...
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
-    CALL system("sed '11i >>> error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check parameters_MM.f <<<' warning.signal |cat")
+    CALL warning("error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms")
     STOP 
 end If
 
 If( Unit_Cell%atoms /= MM% N_of_atoms ) then
-    CALL system("sed '11i >>> error: Unit_Cell%atoms /= MM% N_of_atoms <<<' warning.signal |cat")
+    CALL warning("error: Unit_Cell%atoms /= MM% N_of_atoms")
     STOP 
 end If
 
 If( maxval(atom%nr) < MM%N_of_species ) then
-    CALL system("sed '11i >>> # of residues must be (>=) # of species; check input.pdb and parameters_MM.f <<<' warning.signal |cat")
+    CALL warning("# of residues must be (>=) # of species; check input.pdb and MM input parms")
     STOP 
 end If
 

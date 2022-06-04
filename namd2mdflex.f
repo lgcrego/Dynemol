@@ -3,6 +3,7 @@
 module namd2mdflex
 
 use iso_fortran_env
+use type_m                 , only : dynemolworkdir , warning
 use MM_input               , only : MM_input_format
 use constants_m
 use for_force
@@ -42,9 +43,9 @@ real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:) 
 character(1)                    :: dummy_char
 character(18)                   :: keyword 
-character(10)                   :: string
+character(10)                   :: string  , word(10)
 character(200)                  :: line 
-integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms
+integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms , N_adhoc
 integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers 
 logical                         :: TorF
 
@@ -64,7 +65,7 @@ do a = 1 , MM % N_of_species
         call systemQQ("cp "//string//" log.trunk/.")
     End If
 
-    open(33, file=string, status='old',iostat=ioerr,err=101)
+    open(33, file=dynemolworkdir//string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
             print*, string,' file not found; terminating execution' ; stop
@@ -130,6 +131,7 @@ do a = 1 , MM % N_of_species
 
         end do
         rewind 33
+
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -264,18 +266,15 @@ do a = 1 , MM % N_of_species
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
 
         rewind 33
-
-!==============================================================================================
-
+!----------------------------------------------------------------------------------------------
         If( master ) then
             TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
             If( TorF ) then
-                CALL system("sed '11i >>> error detected in Topology , check log.trunk/Topology.test.log <<<' warning.signal |cat")
+                CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
                 stop
             End If
         End If
-
-!==============================================================================================
+!----------------------------------------------------------------------------------------------
 
         If( species(a) % Nbonds /= 0 ) then 
 
@@ -299,9 +298,51 @@ do a = 1 , MM % N_of_species
             species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
              
         end if
+
+!==============================================================================================
+        ! AD-HOC parameters :: reading ...
+
+        do
+          read(33,100) keyword
+          keyword = to_upper_case(keyword)
+          if( verify( "!AD-HOC" , keyword ) == 0 ) exit
+        end do
+        backspace(33)
+
+        read(33,'(A)',iostat=ioerr) line
+        read(line,*,iostat=ioerr) keyword
+        read(keyword,'(i)') N_adhoc
+        if( N_adhoc == 0 ) goto 11
+
+        read(line,*,iostat=ioerr) (word(i) , i=1,3)
+        keyword = to_upper_case(word(3))
+
+        select case (keyword)
+
+          case( "FLEX" ) 
+               do i = 1 , N_adhoc
+
+                  read(33,'(A)',iostat=ioerr) line
+                  read(line,*,iostat=ioerr) (word(j) , j=1,3)
+
+                  read(word(1),'(i)') k
+
+                  keyword = to_upper_case(word(3))                                                                                                                                        
+                  TorF = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == keyword ) )
+
+                  atom(k) % flex = TorF 
+ 
+               end do
+
+          case default
+               CALL warning("halting: check AD-HOC section of psf file")                                                    
+               stop
+
+        end select
+
 !==============================================================================================
 
-    close(33)
+11  close(33)
 
     If( master ) write(*,'(a9)') " << done "
 
@@ -355,8 +396,7 @@ If( master ) then
   call systemQQ("cp input.prm log.trunk/.") 
 End If  
 
-open(33, file='input.prm', status='old', iostat=ioerr, err=10)
-
+open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"input.prm" file not found; terminating execution'
 
@@ -1097,7 +1137,7 @@ if( choice == 'y' ) then
     if (exist) then
 
         ! read velocity file in pdb format, and convert units ...
-        open(unit=33 , file='velocity_MM.pdb' , status='old' , action='read')
+        open(unit=33 , file=dynemolworkdir//'velocity_MM.pdb' , status='old' , action='read')
         read(33,*) dumb
         do i = 1 , N_of_atoms
              read(33,15) vel(i,1) , vel(i,2) , vel(i,3)
@@ -1107,7 +1147,7 @@ if( choice == 'y' ) then
         close(33)
 
         ! write velocity file in xyz format ...
-        open(unit=33 , file='velocity_MM.inpt' , status='unknown')
+        open(unit=33 , file=dynemolworkdir//'velocity_MM.inpt' , status='unknown')
         do i = 1 , N_of_atoms
              write(33,*) vel(i,1) , vel(i,2) , vel(i,3)
         end do

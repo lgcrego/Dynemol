@@ -6,8 +6,8 @@ module MM_dynamics_m
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame
-    use f_inter_m           , only : FORCEINTER
-    use f_intra_m           , only : FORCEINTRA
+    use f_inter_m           , only : ForceINTER
+    use f_intra_m           , only : ForceINTRA , ForceQMMM
     use QMMM_m              , only : QMMM_FORCE
     use for_force           , only : pot_total
     use Babel_m             , only : QMMM_key
@@ -85,6 +85,7 @@ end subroutine MolecularMechanics
 !
 !==============================================================
 subroutine VelocityVerlet( this , t_rate , frame , Net_Charge )
+! nuclear velocities in units of m/s in atom%vel
 !==============================================================
 implicit none
 class(VV)          , intent(inout) :: this
@@ -94,17 +95,20 @@ real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
-integer :: i
+integer :: i 
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
 
-atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
+atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
 
 ! Molecular dynamics ...
+
+If( QMMM ) CALL ForceQMMM
+
 CALL this % VV1( dt )
 
-CALL move_to_box_CM
+if( driver /= "slice_FSSH" ) CALL move_to_box_CM
 
 CALL Molecular_CM
 
@@ -112,17 +116,14 @@ CALL ForceInter
 
 CALL ForceIntra
 
-! QMMM coupling ...
-if( QMMM ) CALL QMMM_FORCE( Net_Charge )
+If( QMMM ) CALL ForceQMMM
 
 CALL this% VV2( dt )
 
 if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
 
-
-Unit_Cell% MD_Kin    = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% MD_Pot    = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
-Unit_Cell% Total_erg = Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg 
+Unit_Cell% MD_Kin = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
+Unit_Cell% MD_Pot = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
 
 if( mod(frame,MM_log_step) == 0   ) then 
 
@@ -133,26 +134,24 @@ if( mod(frame,MM_log_step) == 0   ) then
 
     CALL output( Temperature , frame , dt )
 
+    open( unit = 13 , file = "ancillary.trunk/nuclear_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+
     select case (Units_MM)
 
         case( "eV" )    
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
-
         write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg, Unit_Cell% Total_erg
 
         case( "kj-mol" )
         write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-
-        write(13,'(I7,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-        write(16,'(I7,2F15.5)') frame, Unit_Cell% QM_erg*eV_2_kJmol, Unit_Cell% Total_erg*eV_2_kJmol
 
         case default
         write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
 
     end select
 
-! total energy in eV; for classical dynamics Unit_Cell%QM_erg = 0  ...
+    close(13)
+
 end if
 
 ! pass nuclear configuration to QM ...
@@ -215,7 +214,9 @@ else
     CALL Cleanup
 
     CALL ForceInter
+    QMMM = NO
     CALL ForceIntra
+    QMMM = YES
 
     ! QMMM coupling ...
     if( QMMM ) CALL QMMM_FORCE( Net_Charge )

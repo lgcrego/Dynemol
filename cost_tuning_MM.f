@@ -2,7 +2,6 @@ module cost_MM
 
     use type_m
     use constants_m
-    use parameters_m  , only: T_ , F_
     use MM_input      , only: nmd_window
     use MM_types      , only: MMOPT_Control, LogicalKey
 
@@ -15,6 +14,9 @@ module cost_MM
     real*8           , allocatable :: nmd_REF_erg(:) , nmd_NOPT_ERG(:) , overweight(:)
     real*8                         :: chi(100) = D_zero 
     type(LogicalKey) , allocatable :: KeyHolder(:)
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
 contains
 !

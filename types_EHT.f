@@ -3,6 +3,8 @@ module type_m
     use constants_m 
     use execution_time_m
 
+    character(len=:) , allocatable :: dynemoldir(:) , dynemolworkdir(:)
+
     type structure
         integer                    :: atoms 
         integer                    :: N_of_electrons
@@ -181,6 +183,9 @@ module type_m
 
     type R3_vector
         real*8 , dimension(3) :: dp
+        real*8 , dimension(3) :: r
+        real*8 , dimension(3) :: v
+        real*8 , dimension(3) :: V_vib
     end type R3_vector
  
 
@@ -188,6 +193,9 @@ module type_m
         complex*16 , dimension(3) :: dp
     end type C3_vector
 
+    type d_NA_vector
+        real*8 , dimension(3) :: vec
+    end type d_NA_vector
 
     type real_interval
         real*8 :: inicio 
@@ -263,6 +271,58 @@ module type_m
     end interface debug_EH
  
 contains
+!
+!
+!
+!===============================
+ subroutine get_environment_vars
+!===============================
+use ifport
+implicit none
+
+! local variables ... 
+character(len=255) :: directory , this_command
+logical            :: TorF
+
+!!to get current directory ...
+!integer :: length
+!directory = FILE$CURDRIVE
+!length = getdrivedirqq(directory)
+!print*, directory
+
+!-------------------------------------------------------------
+! get environment variables ...
+
+call get_environment_variable("DYNEMOLWORKDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemolworkdir(1))
+dynemolworkdir = trim(directory)//"/"
+
+call get_environment_variable("DYNEMOLDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemoldir(1))
+dynemoldir = trim(directory)//"/"
+
+!-------------------------------------------------------------
+! copy warning.sign template to dynemolworkdir ...
+write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
+TorF = systemQQ( this_command )
+
+end  subroutine get_environment_vars
+!
+!
+!
+!============================
+ subroutine warning( string )
+!============================
+implicit none
+character(*) , intent(in) :: string
+
+! local variables ... 
+character(len=120) :: command
+
+command = "sed '11i >>> "//string//" <<<' .warning.signal |cat"
+CALL system(command)
+
+end subroutine warning
 !
 !
 !

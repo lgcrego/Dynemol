@@ -1,0 +1,169 @@
+!--------------------------------------------------------------------
+! 				EXECUTION CONTROL
+!
+  DRIVER =                   ! <== q_dynamics , avrg_confgs , Genetic_Alg , diagnostic , slice_{Cheb, AO, FSSH, CSDM} , MM_Dynamics
+			
+  Survival       =           ! <== .TRUE. for any dynamics simulation
+  DP_Moment      =           ! <== .TRUE. or .FALSE. ; dipole moment fragment must be especified ad-hoc               
+  QMMM           =           ! <== .TRUE. for Non-Adabatic simulations; couples electronic and nuclear dynamics
+  OPT_parms      =           ! <== .TRUE. for reading OPT_basis parameters from "opt_eht_parms.input"
+  ad_hoc         =           ! <== .TRUE. for using ad hoc tuning of parameters
+  Band_structure =           ! <== .TRUE. for static band-structure calculations
+!--------------------------------------------------------------------
+! 			STRUCTURE-FILE  input  FORMAT
+!
+  nuclear_matter =           ! <== solvated_sys , extended_sys , MDynamics
+  file_type      =           ! <== structure or trajectory ; default = structure
+  file_format    =           ! <== xyz , pdb or vasp ; default = pdb
+!--------------------------------------------------------------------
+! generate copies of the system by reflection
+! 
+  nnx = 0  ; nny = 0         ! <==  (nnx,nny) = (extended) REAL copies on each side
+                             ! Integers, keep format ; default = (0,0)
+
+! Periodic Boundary Conditions 
+
+  PBC = [ 0 , 0 , 0 ]        ! <== PBC replicas : 1 = yes , 0 = no
+                             ! Integers, keep format , default = (0,0,0)
+!--------------------------------------------------------------------
+!           QDynamics parameters
+!
+  t_i  =                     ! <== default = 0.d0         
+  t_f  =                     ! <== final time in PICOseconds (Real)
+  n_t  =                     ! <== number of time steps (Integer)
+
+  n_part =                   ! <== # of particles to be propagated: default is e=1 , e+h=2 ; default = 2 
+
+  hole_state = char*3:Integer        ! <== char*3 = 3-letter fragment or residue ; Integer = MO of frag/res
+                             
+                             ! <== GROUND STATE calcs     = 0 (ZERO)
+                             ! <== case STATIC & DP_calcs = hole state of special FMO
+                             ! <== case DYNAMIC           = intial MO for < HOLE > wavepacket in DONOR fragment
+
+  electron_state = char*3:Integer    ! <== char*3 = 3-letter fragment or residue ; Integer = MO of frag/res
+
+                             ! <== case STATIC & DP_calcs = excited state of special FMO
+                             ! <== case DYNAMIC           = intial MO for < ELECTRON > wavepacket in DONOR fragment
+
+  LCMO =                     ! <== .TRUE. for initial wavepackets as Linear Combination of Molecular Orbitals (LCMO)
+							 ! <== default = .FALSE.
+!--------------------------------------------------------------------
+!           SAMPLING parameters and SECURITY COPY
+!
+  CT_dump_step  =            ! <== step for saving El&Hl survival charge density  (Integer); default = 1
+
+  frame_step    =            ! <== step for avrg_confgs and time-slice dynamics ; frame_step =< size(trj) ; default = 1
+
+  restart       =            ! <== .TRUE. for restarting dynamics
+  step_security =            ! <== step for saving backup files
+                             ! <== default = 100 (QMMM) ; 1000 (MM) 
+!--------------------------------------------------------------------
+!           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
+!
+  HFP_Forces        =        ! <== .TRUE._for QMMM calcs and .FALSE. otherwise; Hellman-Feynman-Pulay forces
+                             
+  SPECTRUM          =        ! <== .TRUE. for absorption spectrum calculations    
+  Alpha_Tensor      =        ! <== .TRUE. for polarizability calcs; Embeded Finite Field Polarizability 
+
+  GaussianCube      =        ! <== .TRUE. for generating cube files for MO visualization 
+  GaussianCube_step =        ! <== time step for saving Gaussian Cube files (Integer)
+
+  NetCharge         =        ! <== .TRUE. for dumping charge Occupancy in pdb format 
+  CH_and_DP_step    =        ! <== time step for saving charge and Induced DP values (Integer)
+                             ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
+
+  DensityMatrix     =        ! <== .TRUE. for generating data for postprocessing with manipulate program
+  AutoCorrelation   =        ! <== .TRUE. for generating data for postprocessing with manipulate program
+  VDOS_             =        ! <== .TRUE. velocity DOS data for postprocessing with manipulate program
+!--------------------------------------------------------------------
+!           POTENTIALS
+!
+  EnvField_    =             ! <== .TRUE. for using electrostaic Potential produced by Environment ; default = .FALSE.
+  Environ_Type =             ! <== choose from { Ch_MM , DP_QM , DP_MM }; 
+                             ! <== Ch_MM = point charges ; dipoles: { DP_QM , DP_MM } ...
+                             ! <== DP_MM = dipole moment from classical point charges
+                             ! <== DP_QM = dipole moment from quantum MO
+
+  Environ_step =             ! <== step for updating EnvField (Integer) ; default = 5
+
+  Coulomb_     =             ! <== .TRUE. for dipole potential for solvent molecules ; default = .FALSE.
+
+  Induced_     =             ! <== .TRUE. for induced dipole potential 
+!--------------------------------------------------------------------
+!           DOS calculations
+!
+  sigma =                    ! <== Gaussian broadening of DOS peaks in eV (Real)  ; default = 0.04
+
+  DOS_range = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of DOS calculations 
+
+!--------------------------------------------------------------------
+!           SPECTRUM  calculations
+!
+  occupied  = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of occupied MOs
+  empty     = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of empty MOs
+
+
+
+!----------------------------------------------------------------------------------------
+!                           MOLECULAR MECHANICS parameters 
+!----------------------------------------------------------------------------------------
+! 									SYSTEM  INFO
+!
+  N_of_molecules =                     ! <== total number of molecules (Integer)
+  N_of_species   =                     ! <== total number of species   (Integer)
+!------------------------------------------------------------------------------
+! repeat the following information filling for all the different species ...
+  attention: KEEP FORMAT
+!
+  species(1) % residue        =        ! <== Residue label for species 1 ; character(len3)
+  species(1) % N_of_molecules =        ! <== Number of molecules of species (Integer)
+  species(1) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
+  species(1) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
+                                      
+  species(2) % residue        =        ! <== Residue label for species 2 ; character(len3)
+  species(2) % N_of_molecules =        ! <== Number of molecules of species (Integer)
+  species(2) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
+  species(2) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
+                                      
+  species(n) % residue        =        ! <== Residue label for species n ; character(len3)
+  species(n) % N_of_molecules =        ! <== Number of molecules of species (Integer)
+  species(n) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
+  species(n) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
+
+  Selective_Dynamics =                 ! <== .TRUE. for ad_hoc_MM_tuning of MegaMass to selected atoms ; default = .FALSE.
+!------------------------------------------------------------------------------
+! 							ENVIRONMENT parameters 
+!
+  thermostat =                         ! <== choose from { Berendsen, Nose_Hoover, Microcanonical }
+
+  temperature =                        ! <== Bath Temperature (K) , (Real) ; default = 300
+  pressure =                           ! <== Pressure in atm , (Real) ; default = 1
+
+  thermal_relaxation_time =            ! <== Temperature coupling term with the bath (Real)
+                                       ! <== SMALL = STRONG coupling ; use  "infty" to decouple
+                                       ! <== picosecond ; default 0.25
+
+  pressure_relaxation_time =           ! <== Pressure coupling term (Real)
+                                       ! <== SMALL = STRONG coupling ; use "infty" to decouple
+                                       ! <== picosecond ; default = infty
+
+  cutoff_radius =                      ! <== Cut off radius (Angs.) for electrostatic and LJ interactions (Real) ; default = 50.
+  damping_Wolf =                       ! <== damping parameter (Angs.^-1) ; default value = 0.001
+                                       ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+                                       ! <== relevant quantity: R_c*Wolf ~ ....
+!------------------------------------------------------------------------------
+! 							EXECUTION INFO 
+!
+  driver_MM       =                    ! <== choose from { MM_Dynamics , MM_Optimize , NormalModes , Parametrize }
+
+  read_velocities =                    ! <== .TRUE. for reading the initial velocities : T_ , F_ ; default = .TRUE.
+
+  MM_input_format =                    ! <== choose from { GMX, NAMD, GAFF } ; GMX = OPLS , GAFF and NAMD = Amber
+
+  MM_log_step     =                    ! <== step for saving MM results & parameters (Integer) ; default = 50
+
+  MM_frame_step   =                    ! <== step for saving MM results & parameters (Integer) ; default = 50
+
+  Units_MM        =                    ! <== choose OUTPUT energy units: eV or kj-mol ; default = eV
+
+

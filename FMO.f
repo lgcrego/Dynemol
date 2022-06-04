@@ -1,5 +1,6 @@
  module FMO_m
 
+    use IFPORT
     use type_m
     use f95_precision
     use blas95
@@ -55,6 +56,7 @@
  integer                       :: i
  character(1)                  :: fragment
  character(1)    , allocatable :: system_fragment(:) , basis_fragment(:)
+ logical                       :: TorF
 
  CALL preprocess( system, basis, system_fragment , basis_fragment , fragment , instance )
 
@@ -81,7 +83,10 @@
  FMO_system%copy_No    =  0
 
 ! check point ...
- If( any(FMO_system%QMMM /= "QM") ) stop ">> FMO fragment contains MM atoms <<"
+ If( any(FMO_system%QMMM /= "QM") ) then
+     TorF = systemQQ("sed '11i >>> FMO fragment contains MM atoms <<<' .warning.signal |cat")                                  
+     stop     
+end If
 
  CALL Basis_Builder( FMO_system , FMO_basis )
 
@@ -191,7 +196,7 @@ implicit none
  character(len=2)            , intent(in)  :: instance
 
 ! local variables ...
- integer :: i , j , k
+ integer :: i , k
  real*8  :: check
  real*8  , allocatable :: aux(:,:)
 
@@ -323,9 +328,9 @@ implicit none
 
 ! save energies of the FMO system 
  If( present(fragment) .AND. (fragment=="H") ) then
-    OPEN(unit=9,file='hl_FMO-ergs.dat',status='unknown')
+    OPEN(unit=9,file='ancillary.trunk/hl_FMO-ergs.dat',status='unknown')
  else
-    OPEN(unit=9,file='el_FMO-ergs.dat',status='unknown')
+    OPEN(unit=9,file='ancillary.trunk/el_FMO-ergs.dat',status='unknown')
  end IF
 
  N_of_FMO_electrons = sum( system%Nvalen )

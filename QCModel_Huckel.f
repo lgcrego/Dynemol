@@ -57,9 +57,9 @@ Allocate( dumb_S(N,N) )
 dumb_s = S_matrix
 
 If( EnvField_ .OR. Induced_ ) then
-    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it )
+    h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 else
-    h(:,:) = Build_Huckel( basis , S_matrix )
+    h(:,:) = Build_Huckel( basis , S_matrix ) 
 end If
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )

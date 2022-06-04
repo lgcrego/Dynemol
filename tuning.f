@@ -2,7 +2,8 @@ module tuning_m
 
     use type_m
     use constants_m
-    use parameters_m       , only : T_ , F_ , static , electron_state , hole_state , n_part , Survival
+    use card_reading       , only : electron_fragment , hole_fragment
+    use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
     public :: ad_hoc_tuning , eh_tag , orbital 
 
@@ -11,6 +12,9 @@ module tuning_m
     ! module variables ...
     integer      , allocatable :: orbital(:)
     character(2) , allocatable :: eh_tag(:)
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
     contains
 !
@@ -40,16 +44,16 @@ integer :: i
 !-----------------------------------
 !      define %residue
 !-----------------------------------
-univ % atom (45:46) % residue = "CCC"
+
 !-----------------------------------
 !      define %nr
 !-----------------------------------
-univ % atom(45:46) % nr = 2
+
 !---------------------------------------------------
 !      define %DPF     (Dipole Fragment) 
 !      define %V_shift (FMO offset shift)
 !---------------------------------------------------
-where( univ% atom% residue == "PDB" ) univ% atom% V_shift = +0.3d0
+
 !---------------------------------------------------
 !      define %QMMM  
 !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
@@ -58,14 +62,15 @@ where( univ% atom% residue == "PDB" ) univ% atom% V_shift = +0.3d0
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
-where(univ % atom % residue == "PDB") univ % atom % El = .true.
+where(univ % atom % residue == electron_fragment ) univ % atom % El = .true.
 !---------------------------------------------------
 !      define %Hl   : must be T_ for El/Hl calcs ...
 !---------------------------------------------------
-where(univ % atom % residue == "PDB") univ % atom % Hl = .true.
+where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
+
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -131,19 +136,19 @@ If( any(a% El) ) then      ! <== first priority ...
 else If( any(a% Hl) ) then ! <== second priority, only for cationic systems ...
     where( a% Hl ) a% fragment = "A"
 else If(.NOT. static .AND. electron_state /= 0 ) then
-        CALL system("sed '11i>> execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_? <<' warning.signal |cat")
+        CALL warning("execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_?")
         stop 
 end If
 
 propagate_el = any(a% El) .EQV. (electron_state /= 0)
 If( .not. propagate_el ) then
-        CALL system("sed '11i>> execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f) <<' warning.signal |cat")
+        CALL warning("execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f)")
         stop 
 end If
 
 propagate_hl = any(a% Hl) .EQV. (hole_state /= 0)
 If( .not. propagate_hl ) then
-        CALL system("sed '11i>> execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f) <<' warning.signal |cat")
+        CALL warning("execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f)")
         stop 
 end If
 
@@ -159,7 +164,7 @@ end module tuning_m
 module MM_tuning_routines
 
     use constants_m     , only: large
-    use parameters_m    , only: T_ , F_ , static
+    use parameters_m    , only: static
     use MM_types        , only: MM_atomic, DefineBonds, DefineAngles
 
     private
@@ -169,6 +174,9 @@ module MM_tuning_routines
     ! module variables ...
     type(DefineBonds) , allocatable :: SpecialBonds(:)
     type(DefineAngles), allocatable :: SpecialAngs(:)
+
+    ! module parameters ...
+    logical, parameter :: T_ = .true. , F_ = .false.
 
     contains
 
@@ -234,11 +242,11 @@ atom(247)  % flex = .true.
 !----------------------------------
 !      define residues
 !----------------------------------
-atom(45:46) % residue = "PDB"
+
 !----------------------------------
 !      define nr
 !----------------------------------
-atom(45:46) % nr = 1
+
 !----------------------------------
 !       charge of the atoms 
 !----------------------------------

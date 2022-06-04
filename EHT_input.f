@@ -29,7 +29,7 @@ module Semi_Empirical_Parms
  integer          :: ioerr , i , AtNo , Ang , DOS_sum
  character(len=1) :: spdf
 
- OPEN(unit=3,file='my_eht_parameters.dat',status='old')
+ OPEN(unit=3,file=dynemoldir//'my_eht_parameters.dat',status='old')
 
  AtNo = 1
  Ang  = 0
@@ -100,7 +100,7 @@ module Semi_Empirical_Parms
  character(12)  :: EHSymbol_char 
  logical        :: flag1 , flag2 , flag3 , flag4
 
-OPEN(unit=3,file='opt_eht_parms.input',status='old')
+OPEN(unit=3,file=dynemolworkdir//'opt_eht_parms.input',status='old')
 
 ! read file heading ...
 read(3,*,IOSTAT=ioerr) dumb 
@@ -160,7 +160,10 @@ do i = 1 , size(EH_atom)
     flag3 = ( (EH_atom(i)% coef(0,2) == 0.0) .AND. (EH_atom(i)% Nzeta(0) == 2) )
     flag4 = ( (EH_atom(i)% coef(0,2) /= 0.0) .AND. (EH_atom(i)% Nzeta(0) == 1) )
 
-    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) STOP ">>> error in opt_eht_parms.input ; check Nzeta parameter <<<"
+    If( flag1 .OR. flag2 .OR. flag3 .OR. flag4 ) then
+        CALL warning("error in opt_eht_parms.input ; check Nzeta parameter")
+        STOP 
+    end If
  
 end do
 

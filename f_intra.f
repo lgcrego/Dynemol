@@ -1,43 +1,63 @@
 module F_intra_m
-   
+
+    use type_m   
     use constants_m
-    use MM_input     , only : MM_input_format
-    use parameters_m , only : PBC , QMMM
-    use setup_m      , only : offset
-    use for_force    , only : rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
-                              vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
-                              Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                              harm_dih, imp_dih, harm_bond, morse_bond
-    use MD_read_m    , only : atom , molecule , MM 
-    use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use gmx2mdflex   , only : SpecialPairs , SpecialPairs14 , SpecialMorse
+    use MM_input          , only: MM_input_format
+    use parameters_m      , only: PBC , QMMM , driver , n_part
+    use Allocation_m      , only: Allocate_Structures
+    use setup_m           , only: offset
+    use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
+                                  vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
+                                  Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
+                                  harm_dih, imp_dih, harm_bond, morse_bond
+    use MD_read_m         , only: atom , molecule , MM 
+    use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
+    use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
+    use Ehrenfest_CSDM    , only: Ehrenfest 
+    use Ehrenfest_Builder , only: EhrenfestForce 
+    use Surface_Hopping   , only: SH_Force
+    use decoherence_m     , only: DecoherenceForce
 
     private
 
-    public :: FORCEINTRA, pot_INTRA
+    public :: ForceINTRA, pot_INTRA, BcastQMArgs, ForceQMMM
 
     ! module variables ...
-    integer                 :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
-    integer , allocatable   :: species_offset(:)
-    real*8  , dimension (3) :: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
-    real*8                  :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
-                               rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
-                               sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
-                               term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
-                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
-                               term4 , dphi1 , dphi2
-    real*8                  :: pot_INTRA
-    logical                 :: flag1, flag2, flag3, flag4, flag5
-    logical                 :: there_are_NB_SpecialPairs   = .false.
-    logical                 :: there_are_NB_SpecialPairs14 = .false.
+    real*8  , dimension (3):: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
+    real*8                 :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
+                              rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
+                              sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
+                              term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
+                              sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
+                              term4 , dphi1 , dphi2
+    real*8                 :: pot_INTRA
+    integer                :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
+    logical                :: flag1, flag2, flag3, flag4, flag5
+    logical                :: there_are_NB_SpecialPairs   = .false.
+    logical                :: there_are_NB_SpecialPairs14 = .false.
+    integer , allocatable  :: species_offset(:)
 
+    ! imported module variables ...
+    integer         :: PST(2)
+    real*8          :: t_rate
+    character(2)    :: mode
+    type(structure) :: system
+    type(R_eigen)   :: QM
+    type(STO_basis) , allocatable , dimension(:)   :: basis(:)
+    Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , MO_TDSE_bra , MO_TDSE_ket
+
+    interface BcastQMArgs
+        module procedure AllocateQMArgs
+        module procedure StoreQMArgs_AO_and_FSSH
+        module procedure StoreQMArgs_CSDM
+    end interface
 
 contains
 !
 !
 !
 !====================
-subroutine FORCEINTRA
+subroutine ForceINTRA
 !====================
 implicit none
 
@@ -411,25 +431,39 @@ pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + C
 pot_total = pot_INTER + pot_INTRA
 pot_total = pot_total * mol * micro / MM % N_of_molecules
 
-! Get total force; force units = J/mts = Newtons ...
+if( QMMM ) then
+    select case (driver)
+
+       case( "slice_CSDM" ) 
+           CALL Ehrenfest( system, basis, MO_bra, MO_ket, QM )
+           CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
+
+       case( "slice_AO")
+           CALL EhrenfestForce( system , basis , MO_bra , MO_ket , QM , representation=mode)    
+
+       case("slice_FSSH")
+           CALL SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )
+    
+    end select
+endif
+
+! Get total MM force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
     
-    atom(i) % ftotal(:) = atom(i) % ftotal(:) + ( atom(i) % fbond(:)    +  &
-                                                  atom(i) % fang(:)     +  &
-                                                  atom(i) % fdihed(:)   +  &
-                                                  atom(i) % fnonbd14(:) +  & 
-                                                  atom(i) % fnonch14(:) +  &
-                                                  atom(i) % fnonbd(:)   +  & 
-                                                  atom(i) % fMorse(:)   +  & 
-                                                  atom(i) % fnonch(:)      &
-                                                  ) * Angs_2_mts
+    atom(i)% f_MM(:) = atom(i)% f_MM(:) + (atom(i) % fbond(:)    +  &
+                                           atom(i) % fang(:)     +  &
+                                           atom(i) % fdihed(:)   +  &
+                                           atom(i) % fnonbd14(:) +  & 
+                                           atom(i) % fnonch14(:) +  &
+                                           atom(i) % fnonbd(:)   +  & 
+                                           atom(i) % fMorse(:)   +  & 
+                                           atom(i) % fnonch(:)      &
+                                          ) * Angs_2_mts
 
-    ! Append total forces with Excited State Ehrenfest terms; nonzero only if QMMM = T_ ...
-    IF( QMMM ) atom(i)% ftotal(:) = atom(i)% ftotal(:) + atom(i)% Ehrenfest(:)
+    atom(i)% ftotal(:) = atom(i)% f_MM(:) 
+    enddo
 
-end do
-
-end subroutine FORCEINTRA
+end subroutine ForceINTRA
 !
 !
 !
@@ -609,35 +643,24 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
 end select
 
 end subroutine not_gmx
-
-! Error function.
 !
-! Used to approximate values in statistics.
-! For more info, see:
-!   https://en.wikipedia.org/wiki/Error_function#Approximation_with_elementary_functions
 !
-! @param X[in]
 !
-! @return ERFC
 !===================
  function ERFC ( X )
-!==================
+!===================
  real*8 :: ERFC
- real*8, intent(in) :: X
- real*8 :: A1, A2, A3, A4, A5, P, T, TP
- ! Values taken from the wikipedia article
-    parameter (A1 =  0.254829592)
-    parameter (A2 = -0.284496736)
-    parameter (A3 =  1.421413741)
-    parameter (A4 = -1.453122027)
-    parameter (A5 =  1.061405429)
-    parameter (P  =  0.3275911)
+ real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
+ parameter ( A1 = 0.254829592, A2 = -0.284496736 ) 
+ parameter ( A3 = 1.421413741, A4 = -1.453122027 ) 
+ parameter ( A5 = 1.061405429, P  =  0.3275911   ) 
 
-    T = 1.0 / (1.0 + P * X)
-    TP = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
-    ERFC = TP * EXP(-(X ** 2))
+ T    = 1.0 / ( 1.0 + P * X )
+ XSQ  = X * X
+ TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
+ ERFC = TP * EXP ( -XSQ )
+
 end function ERFC
-
 !
 !
 !
@@ -803,11 +826,110 @@ end subroutine GET_FLAGS
     !$OMP end parallel do
 
 end subroutine LENNARD_JONES
+!
+!
+!
+!=====================
+ subroutine ForceQMMM
+!=====================
+ implicit none
 
+! local variables ...
+integer :: i
 
+If( driver == "slice_CSDM" ) then
+    do i = 1 , MM % N_of_atoms
+         atom(i)% f_QM(:)   = atom(i)% Ehrenfest(:) + atom(i)% f_CSDM(:)
+         atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% f_QM(:)
+         end do
+else
+    do i = 1 , MM % N_of_atoms
+         atom(i)% f_QM(:)   = atom(i)% Ehrenfest(:)
+         atom(i)% ftotal(:) = atom(i)% f_MM(:) + atom(i)% f_QM(:)
+         end do
+endif
+
+end subroutine ForceQMMM
+!
+!
+!
+!====================================================================
+ subroutine StoreQMArgs_CSDM( sys , vec , mtx1 , mtx2 , Eigen , PSE )
+!====================================================================
+ implicit none
+ type(structure), intent(inout):: sys
+ type(STO_basis), intent(in)   :: vec(:)
+ complex*16     , intent(in)   :: mtx1(:,:)
+ complex*16     , intent(in)   :: mtx2(:,:)
+ type(R_eigen)  , intent(in)   :: Eigen
+ integer        , intent(in)   :: PSE(2)
+
+! local variables ... 
+
+basis  = vec
+system = sys
+PST    = PSE
+
+MO_bra      = mtx1
+MO_ket      = mtx2
+
+QM% erg = Eigen% erg
+QM% L   = Eigen% L
+QM% R   = Eigen% R
+QM% Fermi_state = Eigen% Fermi_state
+
+end subroutine StoreQMArgs_CSDM
+!
+!
+!
+!===================================================================================
+ subroutine StoreQMArgs_AO_and_FSSH( sys , vec , mtx1 , mtx2 , Eigen , delta , txt )
+!===================================================================================
+ implicit none
+ type(structure)             , intent(inout):: sys
+ type(STO_basis)             , intent(in)   :: vec(:)
+ complex*16                  , intent(in)   :: mtx1(:,:)
+ complex*16                  , intent(in)   :: mtx2(:,:)
+ type(R_eigen)               , intent(in)   :: Eigen
+ real*8           , optional , intent(in)   :: delta
+ character(len=*) , optional , intent(in)   :: txt
+
+! local variables ... 
+
+basis   = vec
+system  = sys
+MO_bra  = mtx1
+MO_ket  = mtx2
+if(present(delta)) t_rate  = delta
+if(present(txt  )) mode    = txt
+
+QM% erg = Eigen% erg
+QM% L   = Eigen% L
+QM% R   = Eigen% R
+QM% Fermi_state = Eigen% Fermi_state
+
+end subroutine StoreQMArgs_AO_and_FSSH
+!
+!
+!
+!===================================================
+ subroutine AllocateQMArgs( BasisSize , SystemSize )
+!===================================================
+implicit none
+integer , intent(in) :: BasisSize
+integer , intent(in) :: SystemSize
+
+allocate(basis  (BasisSize)        )
+allocate(MO_bra (BasisSize,n_part) )
+allocate(MO_ket (BasisSize,n_part) )
+
+CALL Allocate_Structures( SystemSize , System )
+
+allocate(QM%erg(BasisSize)          )
+allocate(QM%L  (BasisSize,BasisSize))
+allocate(QM%R  (BasisSize,BasisSize))
+
+end subroutine AllocateQMArgs
 !
 !
 end module F_intra_m
-
-
-

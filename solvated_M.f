@@ -4,7 +4,7 @@ module Solvated_m
 
     use type_m
     use constants_m
-    use parameters_m            , only : nnx , nny , PBC , T_ , F_
+    use parameters_m            , only : nnx , nny , PBC 
     use Allocation_m            , only : Allocate_UnitCell
     use Babel_m                 , only : System_Characteristics , trj
     use Structure_Builder       , only : Unit_Cell
@@ -19,6 +19,9 @@ integer         , allocatable   , save  :: data_B(:,:)
 logical                         , save  :: first_time = .true.
 logical                         , save  :: done_preprocess
 type(universe)                  , save  :: Solvated_System_0
+
+! module parameters ...
+logical, parameter :: T_ = .true. , F_ = .false.
 
 contains
 !

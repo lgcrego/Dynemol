@@ -70,8 +70,7 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
-!$OMP parallel  default(shared)
-!$OMP do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp)
+!$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
 do i = 1 , MM % N_of_atoms 
 
     nresid = atom(i) % nr
@@ -96,11 +95,11 @@ do i = 1 , MM % N_of_atoms
         end do
     end if
 end do
-!$OMP end do
+!$OMP end parallel do
 
 pikap = HALF * vrecut + rsqpi * KAPPA * coulomb * factor3
 
-!$OMP do private(i,nresid,j1,j2,j,erfkrq) reduction( + : vself )
+!$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
     vself  = vself + pikap * atom(i) % charge * atom(i) % charge
@@ -121,8 +120,7 @@ do i = 1 , MM % N_of_atoms
        end do
     endif
 end do
-!$OMP end do
-!$OMP end parallel 
+!$OMP end parallel do
 
 eintra = eintra + vself
 
@@ -291,7 +289,7 @@ do i = 1, MM % N_of_atoms
         atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
         atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
-    atom(i) % ftotal(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
+    atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
 deallocate ( tmp_fsr , tmp_fch , erfkr )

@@ -3,7 +3,7 @@
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
 #FC=ifort -xHost -ip -fpp
-FC = mpif90 -xHost -ip -fpp
+FC = mpiifort -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
@@ -80,6 +80,8 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
+                  parms_var_module.o \
+                  read_card.o \
 		  parameters.o \
                   MPI_defs.o \
 		  OPT_parent.o \
@@ -117,6 +119,9 @@ SOURCE2 = constants_m.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
+                  CSDM.o \
+                  FSSH.o \
+                  decoherence.o \
 		  CoulInt_QMMM.o \
 		  FMO.o \
 		  electron_hole_DP.o \
@@ -156,6 +161,7 @@ SOURCE2 = constants_m.o \
 		  ElHl_Chebyshev.o \
                   ElHl_Chebyshev_GPU.o \
 		  AO_adiabatic.o \
+                  CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \

@@ -1,24 +1,6 @@
 MODULE parameters_m 
 
-use type_m
-
-integer                 :: nnx , nny , n_t , step_security , PBC(3)
-integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
-integer                 :: Pop_Size , N_generations , Top_Selection , file_size , CT_dump_step , Environ_step
-real*8                  :: t_i , t_f , sigma
-real*8                  :: Pop_range , Mutation_rate  
-type (real_interval)    :: occupied , empty , DOS_range 
-type (integer_interval) :: holes , electrons , rho_range
-character (len=5)       :: Environ_type
-character (len=4)       :: file_format
-character (len=11)      :: DRIVER , file_type 
-character (len=12)      :: nuclear_matter
-character (len=7)       :: argument
-logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , exist , preview , Adaptive_
-logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
-logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces 
-logical                 :: resume
-logical , parameter     :: T_ = .true. , F_ = .false. 
+use EH_parms_module
 
 contains
 !
@@ -29,7 +11,11 @@ contains
 implicit none
 
 ! local variables ...
-logical :: dynamic
+character (len=7) :: argument
+logical           :: dynamic
+
+! local parameter ...
+logical, parameter :: T_ = .true. , F_ = .false. 
 
 !--------------------------------------------------------------------
 ! ACTION	flags
@@ -194,7 +180,7 @@ End If
 If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
     stop ">>> conflict between QMMM and HFP_Forces; execution halted, check parameters.f <<<"
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
-    CALL system("sed '11i>>> MUST turn off HFP_Forces; execution halted, check parameters.f <<<' warning.signal |cat")
+    CALL warning("MUST turn off HFP_Forces; execution halted, check parameters.f")
     stop 
 end if
 

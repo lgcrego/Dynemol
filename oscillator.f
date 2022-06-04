@@ -7,7 +7,6 @@ module Oscillator_m
     use DP_main_m                   , only  : DP_matrix_AO
     use parameters_m                , only  : empty ,               &
                                               occupied ,            &
-                                              rho_range ,           &
                                               sigma ,               &
                                               verbose
 
@@ -128,44 +127,23 @@ real*8          , dimension(:,:) , allocatable :: a, left, right, matrix, R_vect
 type(R3_vector) , dimension(:,:) , allocatable :: origin_Dependent, origin_Independent
 
 ! . define bra-&-ket states
-select case (DP%flag)
-
-    case('Redfield')
-
-        DP % bra_indx_range % inicio = max( rho_range % inicio , 1           )
-        DP % bra_indx_range % fim    = min( rho_range % fim    , size(basis) )
-        dim_bra                      = DP % bra_indx_range % fim - DP % bra_indx_range % inicio + 1
-   
-        DP % ket_indx_range % inicio = DP % bra_indx_range % inicio 
-        DP % ket_indx_range % fim    = DP % bra_indx_range % fim    
-        dim_ket                      = dim_bra
-
-        allocate( DP % bra_PTR (dim_bra) )
-        allocate( DP % ket_PTR (dim_ket) )
-
-        DP % bra_PTR = [ (i , i = DP % bra_indx_range % inicio , DP % bra_indx_range % fim) ] 
-        DP % ket_PTR = [ (i , i = DP % ket_indx_range % inicio , DP % ket_indx_range % fim) ] 
   
-    case default
+dim_bra = count( (QM%erg >= DP%bra_range%inicio) .AND. (QM%erg <= DP%bra_range%fim) )
+dim_ket = count( (QM%erg >= DP%ket_range%inicio) .AND. (QM%erg <= DP%ket_range%fim) )
 
-        dim_bra = count( (QM%erg >= DP%bra_range%inicio) .AND. (QM%erg <= DP%bra_range%fim) )
-        dim_ket = count( (QM%erg >= DP%ket_range%inicio) .AND. (QM%erg <= DP%ket_range%fim) )
-
-        allocate(DP%bra_PTR(dim_bra))
-        allocate(DP%ket_PTR(dim_ket)) 
-        j_bra = 1
-        j_ket = 1
-        do i  = 1 , size(QM%erg) 
-            if( (QM%erg(i) >= DP%bra_range%inicio) .AND. (QM%erg(i) <= DP%bra_range%fim) ) then
-                DP%bra_PTR(j_bra) = i 
-                j_bra = j_bra + 1
-            else if( (QM%erg(i) >= DP%ket_range%inicio) .AND. (QM%erg(i) <= DP%ket_range%fim) ) then
-                DP%ket_PTR(j_ket) = i
-                j_ket = j_ket + 1
-            end if
-        end do
-
-end select
+allocate(DP%bra_PTR(dim_bra))
+allocate(DP%ket_PTR(dim_ket)) 
+j_bra = 1
+j_ket = 1
+do i  = 1 , size(QM%erg) 
+    if( (QM%erg(i) >= DP%bra_range%inicio) .AND. (QM%erg(i) <= DP%bra_range%fim) ) then
+        DP%bra_PTR(j_bra) = i 
+        j_bra = j_bra + 1
+    else if( (QM%erg(i) >= DP%ket_range%inicio) .AND. (QM%erg(i) <= DP%ket_range%fim) ) then
+        DP%ket_PTR(j_ket) = i
+        j_ket = j_ket + 1
+    end if
+end do
 
 ! . atomic positions measured from the Center of Charge
 allocate(R_vector(system%atoms,3))
