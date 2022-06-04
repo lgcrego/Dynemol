@@ -5,8 +5,7 @@ use constants_m
 use setup_checklist      
 use card_reading            , only : ReadInputCard
 use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
-use MM_input                , only : Define_MM_Environment
-use MM_input                , only : driver_MM
+use MM_input                , only : Define_MM_Environment , driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
