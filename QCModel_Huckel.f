@@ -9,12 +9,13 @@
     use lapack95
     use type_m
     use constants_m
+    use Matrix_Math
     use MPI_definitions_m           , only : ForceCrew , KernelCrew 
-    use parameters_m                , only : EnvField_ , Induced_ , verbose 
+    use parameters_m                , only : EnvField_ , Induced_ , driver , verbose , restart
     use Overlap_Builder             , only : Overlap_Matrix
     use Hamiltonians                , only : X_ij , even_more_extended_Huckel
 
-    public :: EigenSystem 
+    public :: EigenSystem , S_root_inv 
 
     private
 
@@ -23,6 +24,9 @@
         module procedure EigenSystem_just_erg
     end interface
 
+    ! module variables ...
+    real*8 , allocatable :: S_root_inv(:,:) 
+
  contains
 !
 !
@@ -30,18 +34,19 @@
 !==================================================
  subroutine EigenSystem( system , basis , QM , it )
 !==================================================
-use Matrix_math
 implicit none
 type(structure)             , intent(in)    :: system
 type(STO_basis)             , intent(in)    :: basis(:)
 type(R_eigen)               , intent(inout) :: QM
 integer          , optional , intent(in)    :: it
 
-! local variables ...
-integer               :: i , N , info 
-real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , dumb_S(:,:) , h(:,:) , S_matrix(:,:)
 
-CALL Overlap_Matrix( system , basis , S_matrix )
+! local variables ...
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8  , ALLOCATABLE :: h(:,:) , S_matrix(:,:) , S_root(:,:)
+real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:) 
+integer               :: i , N , info 
+logical , save        :: first_call_ = .true.
 
 ! After instantiating Overlap_matrix, processes wait outside ...
 If( ForceCrew .OR. KernelCrew ) return
@@ -65,33 +70,103 @@ end If
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
 If ( info /= 0 ) write(*,*) 'info = ',info,' in SYGVD in EigenSystem '
 
-!     ---------------------------------------------------
-!   RIGHT EIGENVECTOR ALSO CHANGE: C^R = SC 
-!
-!   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
-!     ---------------------------------------------------
+select case ( driver ) 
 
-Allocate( Lv(N,N) )
-Allocate( Rv(N,N) )
+    case default
 
-Lv = h
-Deallocate( h , dumb_S )
+          !---------------------------------------------------
+          !   ROTATES THE HAMILTONIAN:  H --> H*S_inv 
+          !
+          !   RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S.|C> 
+          !
+          !   normalizes the L&R eigenvectors as < L(i) | R(i) > = 1 
+          !---------------------------------------------------
 
-If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
-! eigenvectors in the rows of QM%L
-QM%L = transpose(Lv) 
+          Allocate( Lv(N,N) )
+          Allocate( Rv(N,N) )
 
-! Rv = S * Lv ...
-CALL symm( S_matrix , Lv , Rv )
+          Lv = h
+          Deallocate( h , dumb_S )
+          
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N))
+          ! eigenvectors in the rows of QM%L
+          QM%L = transpose(Lv) 
 
-If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
-! eigenvectors in the columns of QM%R
-QM%R = Rv
+          ! Rv = S * Lv ...
+          CALL symm( S_matrix , Lv , Rv )
+          
+          DEALLOCATE( S_matrix )
 
-Deallocate( Lv , Rv , S_matrix )
+          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+          ! eigenvectors in the columns of QM%R
+          QM%R = Rv
 
-! save energies of the TOTAL system 
-OPEN(unit=9,file='system-ergs.dat',status='unknown')
+          Deallocate( Lv , Rv )
+
+    case ("slice_FSSH" )
+
+          !--------------------------------------------------------
+          ! Overlap Matrix Factorization: S^(1/2) ...
+
+          dumb_s = S_matrix
+
+          Allocate( S_eigen(N)  )
+
+          CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
+
+          Allocate( tool(N,N) , source = transpose(dumb_S) )
+
+          forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
+
+          allocate( S_root(N,N) )
+          CALL gemm(dumb_S , tool , S_root , 'N' , 'N')
+
+          !now S_root   = S^(1/2) Lowdin Orthogonalization matrix ...
+          !now S_matrix = S ...
+
+          DEALLOCATE( S_eigen , dumb_S , tool )
+
+          !---------------------------------------------------
+          !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
+          !
+          !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+          !---------------------------------------------------
+
+          Allocate( Lv(N,N) )
+          Allocate( Rv(N,N) )
+
+          Lv = h
+          Deallocate( h )
+
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+          ! eigenvectors in the rows of QM%L
+          ! keeping the nonorthogonal representation of %L for future use ...
+          QM%L = transpose(Lv) 
+
+          If( first_call_ .AND. (.NOT. restart) ) then
+
+              ! Rv = S * Lv ...
+              call symm( S_matrix, Lv, Rv )
+              call invert( S_root )
+              first_call_ = .false.
+          else
+
+              ! Rv = S^(1/2) * Lv ...
+              ! Lowding representation ...
+              CALL symm( S_root , Lv , Rv )
+          end If
+
+          If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
+          ! eigenvectors in the columns of QM%R
+          QM%R = Rv
+
+          Deallocate( Lv , Rv , S_matrix , S_root )
+
+end select
+
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+! save energies of the TOTAL system ...
+OPEN(unit=9,file='ancillary.trunk/system-ergs.dat',status='unknown')
     do i = 1 , N
         write(9,*) i , QM%erg(i)
     end do
@@ -173,6 +248,26 @@ end function Build_Huckel
  DEALLOCATE( h , S_matrix )
 
  end subroutine EigenSystem_just_erg
+!
+!
+!
+!===========================
+ subroutine invert( matrix )
+!===========================
+implicit none
+real*8  , intent(inout) :: matrix(:,:) 
+
+!local variables ...
+integer :: N
+
+N = size(matrix(:,1))
+
+CALL syInvert( matrix, return_full ) ! <== matrix content is destroyed and matrix_inv is returned
+#define matrix_inv matrix
+allocate( S_root_inv(N,N) , source = matrix_inv )
+#undef matrix_inv
+
+end subroutine invert
 !
 !
 !

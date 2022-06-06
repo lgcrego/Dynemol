@@ -160,7 +160,7 @@ SOURCE2 = constants_m.o \
                   Taylor.o \
 		  ElHl_Chebyshev.o \
                   ElHl_Chebyshev_GPU.o \
-		  AO_adiabatic.o \
+		  TDSE_adiabatic.o \
                   CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
