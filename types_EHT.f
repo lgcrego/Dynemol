@@ -282,7 +282,7 @@ implicit none
 
 ! local variables ... 
 character(len=255) :: directory , this_command
-logical            :: TorF
+logical            :: TorF , exist
 
 !!to get current directory ...
 !integer :: length
@@ -305,6 +305,12 @@ dynemoldir = trim(directory)//"/"
 ! copy warning.sign template to dynemolworkdir ...
 write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
 TorF = systemQQ( this_command )
+
+inquire(file=dynemoldir//"warning.signal", EXIST=exist)
+if ( .NOT. exist ) then
+    CALL warning("halting: check whether env variable $DYNEMOLDIR was exported")
+    stop
+    end If
 
 end  subroutine get_environment_vars
 !
