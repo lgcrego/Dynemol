@@ -288,7 +288,7 @@ allocate( h_sup ( n , n ) , source = C_zero )
 ! the intra-atomic matrix elements: Eq. (9) of https://doi.org/10.1021/acs.nanolett.1c02636 - Supporting information
 atom = 0
 j    = n / 2
-do i = 1 , n / 2
+do i = 1 , j
 
     if( basis( i ) % l /= 0 .AND. basis( i ) % atom /= atom ) then
 
