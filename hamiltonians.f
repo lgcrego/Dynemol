@@ -274,7 +274,7 @@ real*8                        , intent(in)    :: S_matrix(:,:)
 
 ! local variables ...
 complex*16 , allocatable :: h_sup(:,:)
-complex*16 :: sum1 , sum2 , ty1 , ty2 , ty
+complex*16 :: sum1 , sum2 , ty1 , ty2 , ty , az
 real*8     :: a , b , eps , tx1 , tx2 , tx , tz , dx , dy , dz , dist_ij , dist_it , dist_jt , dist_maxz , dist_minz 
 integer    :: i , j , k , l , l1 , l2 , r , s , c , n , t , atom , atomi , atomj , alpha , beta
 
@@ -285,10 +285,10 @@ n = size( basis )
 
 allocate( h_sup ( n , n ) , source = C_zero )
 
-! orbitals i and j in the same sitio ...
+! the intra-atomic matrix elements: Eq. (9) of https://doi.org/10.1021/acs.nanolett.1c02636 - Supporting information
 atom = 0
 j    = n / 2
-do i = 1 , j
+do i = 1 , n / 2
 
     if( basis( i ) % l /= 0 .AND. basis( i ) % atom /= atom ) then
 
@@ -296,70 +296,76 @@ do i = 1 , j
 
         CALL SOC_constant( basis( i ) % AtNo , 1 , eps )
 
-        a = HALF * eps
+        a  = HALF * eps
+        az = a * zi
 
         ! <i,up|SL|j,up> terms, with i,j={p-orbitals}...
-        h_sup( i + 2 , i ) = - a * zi
-        h_sup( i , i + 2 ) = - h_sup( i + 2 , i )
+        h_sup( i + 2 , i     ) = - az
+        h_sup( i     , i + 2 ) =   az
 
-        ! <i,up|SL|j,down> and <i,down|SL|j,up> terms, with i,j={p-orbitals}...
-        h_sup( i + j + 1 , i ) =   a * zi
-        h_sup( i , i + j + 1 ) = - h_sup( i + j + 1 , i )
-        h_sup( i + j , i + 1 ) = - a * zi
-        h_sup( i + 1 , i + j ) = - h_sup( i + j , i + 1 )
+        ! <i,down|SL|j,up> terms, with i,j={p-orbitals}...
+        h_sup( i + j + 1 , i     ) =   az
+        h_sup( i + j     , i + 1 ) = - az
         h_sup( i + j + 2 , i + 1 ) = - a
-        h_sup( i + 1 , i + j + 2 ) =   h_sup( i + j + 2 , i + 1 )
         h_sup( i + j + 1 , i + 2 ) =   a
-        h_sup( i + 2 , i + j + 1 ) =   h_sup( i + j + 1 , i + 2 )
+
+        ! <i,up|SL|j,down> terms, with i,j={p-orbitals}...
+        h_sup( i + 1 , i + j     ) =   az
+        h_sup( i     , i + j + 1 ) = - az
+        h_sup( i + 2 , i + j + 1 ) =   a
+        h_sup( i + 1 , i + j + 2 ) = - a
 
         ! <i,down|SL|j,down> terms, with i,j={p-orbitals}...
-        h_sup( i + j + 2 , i + j ) =   a * zi
-        h_sup( i + j , i + j + 2 ) = - h_sup( i + j + 2 , i + j )
+        h_sup( i + j + 2 , i + j     ) =   az
+        h_sup( i + j     , i + j + 2 ) = - az
 
         if( basis( i + 3 ) % l == 2 ) then
 
             CALL SOC_constant( basis( i ) % AtNo , 2 , eps )
 
-            a = HALF * eps
-            b = dsqrt( THREE )
+            a  = HALF * eps
+            b  = dsqrt(THREE)
+            az = a * zi
 
             ! <i,up|SL|j,up> terms, with i,j={d-orbitals}...
-            h_sup( i + 7 , i + 3 ) = - TWO * a * zi
-            h_sup( i + 3 , i + 7 ) = - h_sup( i + 7 , i + 3 )
-            h_sup( i + 6 , i + 4 ) = - a * zi
-            h_sup( i + 4 , i + 6 ) = - h_sup( i + 6 , i + 4 )
+            h_sup( i + 7 , i + 3 ) = - TWO * az
+            h_sup( i + 6 , i + 4 ) = - az
+            h_sup( i + 4 , i + 6 ) =   az
+            h_sup( i + 3 , i + 7 ) =   TWO * az
 
-            ! <i,up|SL|j,down> and <i,down|SL|j,up> terms, with i,j={d-orbitals}...
+            ! <i,down|SL|j,up> terms, with i,j={d-orbitals}...
             h_sup( i + j + 4 , i + 3 ) =   a
-            h_sup( i + 3 , i + j + 4 ) =   h_sup( i + j + 4 , i + 3 )
-            h_sup( i + j + 6 , i + 3 ) =   a * zi
-            h_sup( i + 3 , i + j + 6 ) = - h_sup( i + j + 6 , i + 3 )
+            h_sup( i + j + 6 , i + 3 ) =   az
             h_sup( i + j + 3 , i + 4 ) = - a
-            h_sup( i + 4 , i + j + 3 ) =   h_sup( i + j + 3 , i + 4 )
-            h_sup( i + j + 5 , i + 4 ) =   a * b * zi
-            h_sup( i + 4 , i + j + 5 ) = - h_sup( i + j + 5 , i + 4 )
-            h_sup( i + j + 7 , i + 4 ) =   a * zi
-            h_sup( i + 4 , i + j + 7 ) = - h_sup( i + j + 7 , i + 4 )
-            h_sup( i + j + 4 , i + 5 ) = - a * b * zi
-            h_sup( i + 5 , i + j + 4 ) = - h_sup( i + j + 4 , i + 5 )
+            h_sup( i + j + 5 , i + 4 ) =   b * az
+            h_sup( i + j + 7 , i + 4 ) =   az
+            h_sup( i + j + 4 , i + 5 ) = - b * az
             h_sup( i + j + 6 , i + 5 ) = - a * b
-            h_sup( i + 5 , i + j + 6 ) =   h_sup( i + j + 6 , i + 5 )
-            h_sup( i + j + 3 , i + 6 ) = - a * zi
-            h_sup( i + 6 , i + j + 3 ) = - h_sup( i + j + 3 , i + 6 )
+            h_sup( i + j + 3 , i + 6 ) = - az
             h_sup( i + j + 5 , i + 6 ) =   a * b
-            h_sup( i + 6 , i + j + 5 ) =   h_sup( i + j + 5 , i + 6 )
             h_sup( i + j + 7 , i + 6 ) = - a
-            h_sup( i + 6 , i + j + 7 ) =   h_sup( i + j + 7 , i + 6 )
-            h_sup( i + j + 4 , i + 7 ) = - a * zi
-            h_sup( i + 7 , i + j + 4 ) = - h_sup( i + j + 4 , i + 7 )
+            h_sup( i + j + 4 , i + 7 ) = - az
             h_sup( i + j + 6 , i + 7 ) =   a
-            h_sup( i + 7 , i + j + 6 ) =   h_sup( i + j + 6 , i + 7 )
+
+            ! <i,up|SL|j,down> terms, with i,j={d-orbitals}...
+            h_sup( i + 4 , i + j + 3 ) = - a
+            h_sup( i + 6 , i + j + 3 ) =   az
+            h_sup( i + 3 , i + j + 4 ) =   a
+            h_sup( i + 5 , i + j + 4 ) =   b * az
+            h_sup( i + 7 , i + j + 4 ) =   az
+            h_sup( i + 4 , i + j + 5 ) = - b * az
+            h_sup( i + 6 , i + j + 5 ) =   a * b
+            h_sup( i + 3 , i + j + 6 ) = - az
+            h_sup( i + 5 , i + j + 6 ) = - a * b
+            h_sup( i + 7 , i + j + 6 ) =   a
+            h_sup( i + 4 , i + j + 7 ) = - az
+            h_sup( i + 6 , i + j + 7 ) = - a
 
             ! <i,down|SL|j,down> terms, with i,j={d-orbitals}...
-            h_sup( i + j + 7 , i + j + 3 ) =   TWO * a * zi
-            h_sup( i + j + 3 , i + j + 7 ) = - h_sup( i + j + 7 , i + j + 3 )
-            h_sup( i + j + 6 , i + j + 4 ) =   a * zi
-            h_sup( i + j + 4 , i + j + 6 ) = - h_sup( i + j + 6 , i + j + 4 )
+            h_sup( i + j + 7 , i + j + 3 ) =   TWO * az
+            h_sup( i + j + 6 , i + j + 4 ) =   az
+            h_sup( i + j + 4 , i + j + 6 ) = - az
+            h_sup( i + j + 3 , i + j + 7 ) = - TWO * az
 
         end if
     end if
@@ -367,15 +373,16 @@ end do
 
 allocate( h ( n , n ) , source = C_zero )
 
+! orbitals i and j in the same sitio (contrubution of one and two centers). First term of Eq. (14) of https://doi.org/10.1021/acs.nanolett.1c02636 - Supporting information
 beta = 0
-do i = 1 , N/2
+do i = 1 , n / 2
 
     if( basis( i ) % atom /= beta ) then
 
         beta = basis( i ) % atom
 
         alpha = 0
-        do j = 1 , N / 2
+        do j = 1 , n / 2
 
             if( basis( j ) % atom /= alpha ) then
 
@@ -384,61 +391,58 @@ do i = 1 , N/2
                 do k = j , j + count( basis % atom == alpha ) / 2 - 1
                     do l = j , j + count( basis % atom == alpha ) / 2 - 1
 
-                        do r = 0 , 3
-                            do s = r , 3
-
+                        do r = 0 , count( basis % atom == beta ) / 2 - 1
+                            do s = r , count( basis % atom == beta ) / 2 - 1
                                 ! <i,up|SL|j,up> terms, with i,j={p-orbitals}...
-                                h(i+s,i+r) = h(i+s,i+r) + S_matrix(i+s,k    ) * S_matrix(l    ,i+r) * h_sup(k    ,l    ) + &
-                                                          S_matrix(i+s,k+N/2) * S_matrix(l    ,i+r) * h_sup(k+N/2,l    ) + &
-                                                          S_matrix(i+s,k    ) * S_matrix(l+N/2,i+r) * h_sup(k    ,l+N/2) + &
-                                                          S_matrix(i+s,k+N/2) * S_matrix(l+N/2,i+r) * h_sup(k+N/2,l+N/2)
-
+                                h(i+s,i+r) = h(i+s,i+r) + &
+                                             S_matrix(i+s,k    ) * S_matrix(l    ,i+r) * h_sup(k    ,l    ) + &
+                                             S_matrix(i+s,k+n/2) * S_matrix(l    ,i+r) * h_sup(k+n/2,l    ) + &
+                                             S_matrix(i+s,k    ) * S_matrix(l+n/2,i+r) * h_sup(k    ,l+n/2) + &
+                                             S_matrix(i+s,k+n/2) * S_matrix(l+n/2,i+r) * h_sup(k+n/2,l+n/2)
                                 ! <i,down|SL|j,down> terms, with i,j={p-orbitals}...
-                                h(i+s+N/2,i+r+N/2) = h(i+s+N/2,i+r+N/2) + &
-                                                     S_matrix(i+s+N/2,k    ) * S_matrix(l    ,i+r+N/2) * h_sup(k    ,l    ) + &
-                                                     S_matrix(i+s+N/2,k+N/2) * S_matrix(l    ,i+r+N/2) * h_sup(k+N/2,l    ) + &
-                                                     S_matrix(i+s+N/2,k    ) * S_matrix(l+N/2,i+r+N/2) * h_sup(k    ,l+N/2) + &
-                                                     S_matrix(i+s+N/2,k+N/2) * S_matrix(l+N/2,i+r+N/2) * h_sup(k+N/2,l+N/2)
-
+                                h(i+s+n/2,i+r+n/2) = h(i+s+n/2,i+r+n/2) + &
+                                                     S_matrix(i+s+n/2,k    ) * S_matrix(l    ,i+r+n/2) * h_sup(k    ,l    ) + &
+                                                     S_matrix(i+s+n/2,k+n/2) * S_matrix(l    ,i+r+n/2) * h_sup(k+n/2,l    ) + &
+                                                     S_matrix(i+s+n/2,k    ) * S_matrix(l+n/2,i+r+n/2) * h_sup(k    ,l+n/2) + &
+                                                     S_matrix(i+s+n/2,k+n/2) * S_matrix(l+n/2,i+r+n/2) * h_sup(k+n/2,l+n/2)
                             end do
-                        end do
-
-                        do r = 0 , 3
-                            do s = 0 , 3
-
+                            do s = 0 , count( basis % atom == beta ) / 2 - 1
                                 ! <i,down|SL|j,up> terms, with i,j={p-orbitals}...
-                                h(i+s+N/2,i+r) = h(i+s+N/2,i+r) + S_matrix(i+s+N/2,k    ) * S_matrix(l    ,i+r) * h_sup(k    ,l    ) + &
-                                                                  S_matrix(i+s+N/2,k+N/2) * S_matrix(l    ,i+r) * h_sup(k+N/2,l    ) + &
-                                                                  S_matrix(i+s+N/2,k    ) * S_matrix(l+N/2,i+r) * h_sup(k    ,l+N/2) + &
-                                                                  S_matrix(i+s+N/2,k+N/2) * S_matrix(l+N/2,i+r) * h_sup(k+N/2,l+N/2)
-
+                                h(i+s+n/2,i+r) = h(i+s+n/2,i+r) + &
+                                                 S_matrix(i+s+n/2,k    ) * S_matrix(l    ,i+r) * h_sup(k    ,l    ) + &
+                                                 S_matrix(i+s+n/2,k+n/2) * S_matrix(l    ,i+r) * h_sup(k+n/2,l    ) + &
+                                                 S_matrix(i+s+n/2,k    ) * S_matrix(l+n/2,i+r) * h_sup(k    ,l+n/2) + &
+                                                 S_matrix(i+s+n/2,k+n/2) * S_matrix(l+n/2,i+r) * h_sup(k+n/2,l+n/2)
                             end do
                         end do
-                    end do
-                end do
+
+                    end do ! do l
+                end do     ! do k
+
             end if
+
         end do
 
-        do r = 0 , 2
-            do s = r + 1 , 3
+        do r = 0 , count( basis % atom == beta ) / 2 - 2
+            do s = r + 1 , count( basis % atom == beta ) / 2 - 1
                 ! <i,up|SL|j,up> terms, with i,j={p-orbitals}...
                 h(i+r,i+s) = dconjg(h(i+s,i+r))
                 ! <i,down|SL|j,down> terms, with i,j={p-orbitals}...
-                h(i+r+N/2,i+s+N/2) = dconjg(h(i+s+N/2,i+r+N/2))
+                h(i+r+n/2,i+s+n/2) = dconjg(h(i+s+n/2,i+r+n/2))
             end do
         end do
 
         ! <i,down|SL|j,up> terms, with i,j={p-orbitals}...
-        do r = 0 , 3
-            do s = 0 , 3
-                h(i+r,i+s+N/2) = dconjg(h(i+s+N/2,i+r))
+        do r = 0 , count( basis % atom == beta ) / 2 - 1
+            do s = 0 , count( basis % atom == beta ) / 2 - 1
+                h(i+r,i+s+n/2) = dconjg(h(i+s+n/2,i+r))
             end do
         end do
 
     end if
 end do
 
-! orbitals i and j in different sitios ...
+! orbitals i and j in different sitios. Second term of Eq. (14) of https://doi.org/10.1021/acs.nanolett.1c02636 - Supporting information
 do i = 1 , n
     do j = i + 1 , n
 
@@ -466,13 +470,16 @@ do i = 1 , n
 
                         case( 1 )
 
-                            sum1 = h_sup( j , k     ) * S_matrix( k     , i ) + h_sup( j , k + 1 ) * S_matrix( k + 1 , i ) + &
+                            sum1 = h_sup( j , k     ) * S_matrix( k     , i ) + &
+                                   h_sup( j , k + 1 ) * S_matrix( k + 1 , i ) + &
                                    h_sup( j , k + 2 ) * S_matrix( k + 2 , i )
 
                         case( 2 )
 
-                            sum1 = h_sup( j , k     ) * S_matrix( k     , i ) + h_sup( j , k + 1 ) * S_matrix( k + 1 , i ) + &
-                                   h_sup( j , k + 2 ) * S_matrix( k + 2 , i ) + h_sup( j , k + 3 ) * S_matrix( k + 3 , i ) + &
+                            sum1 = h_sup( j , k     ) * S_matrix( k     , i ) + &
+                                   h_sup( j , k + 1 ) * S_matrix( k + 1 , i ) + &
+                                   h_sup( j , k + 2 ) * S_matrix( k + 2 , i ) + &
+                                   h_sup( j , k + 3 ) * S_matrix( k + 3 , i ) + &
                                    h_sup( j , k + 4 ) * S_matrix( k + 4 , i )
 
                     end select
@@ -505,13 +512,16 @@ do i = 1 , n
 
                         case( 1 )
 
-                            sum2 = S_matrix( j , k     ) * h_sup( k     , i ) + S_matrix( j , k + 1 ) * h_sup( k + 1 , i ) + &
+                            sum2 = S_matrix( j , k     ) * h_sup( k     , i ) + &
+                                   S_matrix( j , k + 1 ) * h_sup( k + 1 , i ) + &
                                    S_matrix( j , k + 2 ) * h_sup( k + 2 , i )
 
                         case( 2 )
 
-                            sum2 = S_matrix( j , k     ) * h_sup( k     , i ) + S_matrix( j , k + 1 ) * h_sup( k + 1 , i ) + &
-                                   S_matrix( j , k + 2 ) * h_sup( k + 2 , i ) + S_matrix( j , k + 3 ) * h_sup( k + 3 , i ) + &
+                            sum2 = S_matrix( j , k     ) * h_sup( k     , i ) + &
+                                   S_matrix( j , k + 1 ) * h_sup( k + 1 , i ) + &
+                                   S_matrix( j , k + 2 ) * h_sup( k + 2 , i ) + &
+                                   S_matrix( j , k + 3 ) * h_sup( k + 3 , i ) + &
                                    S_matrix( j , k + 4 ) * h_sup( k + 4 , i )
 
                     end select
@@ -627,7 +637,7 @@ real*8  , intent(inout) :: eps
 
 ! Ref. 3: Manne, R; et. al; Molecular Physics, 1975, 29, 485−500
 
-! Ref. 4: Wittel, K. e Manne, R; Theoret. Chim. Acta (Berl.), 1974, 33, 347-349
+! Ref. 4: Wittel, K. e Manne, R; Theoret. Chim. Acta (Berl.), 1974, 33, 347-349 (Atomic Spin-Orbit Interaction Parameters from Spectral Data for i9 Elements)
 
 ! Ref. 5: Geyer, M; et. al; J. Phys. Chem. C, 2019, 123, 27230-27241
 
@@ -637,8 +647,11 @@ real*8  , intent(inout) :: eps
 ! coupling and rovibrational structure in the iododiacetylene radial cation by
 ! PFI-ZEKE photoelectron spectroscopy)
 
-! Ref. 8: Küfner,S ;et.al; Phys. Rev. B, 2013, 87, 235307 (Structural and
+! Ref. 8: Küfner,S; et. al; Phys. Rev. B, 2013, 87, 235307 (Structural and
 ! electronic properties of alpha-tin nanocrystals from first principles)
+
+! Ref. 9: Abel, C; et.al; J. Chem. Phys; 2020, 153, 214107 (Calculation of spin–orbit couplings using RASCI spinless one-particle
+! density matrices: Theory and applications)
 
 select case( AtNo )
 
@@ -649,18 +662,26 @@ select case( AtNo )
 
     case( 6 )
 
-!        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
-        if( l == 1 ) eps = 6.0d0    ! teste
+        if( l == 1 ) eps = 6.0d-3    ! Ref. 5
+!        if( l == 1 ) eps = 6.0d0    ! teste
 !        if( l == 1 ) eps = 454.0923d-6 ! Ref. 2
 !        if( l == 1 ) eps = 4.541d0 ! teste
 
     case( 7 )
 
-        if( l == 1 ) eps = 649.3675d-6 ! Ref. 2
+        if( l == 1 ) eps = - 649.3675d-6 ! Ref. 2
+
+    case( 8 )
+
+        if( l == 1 ) eps = - 1.91928d-2 ! Ref. 9
 
     case( 15 )
 
         if( l == 1 ) eps = - 0.00889d0 ! Ref. 2 <-- Neff = 1.51 (Ref.6)
+
+    case( 16 )
+
+        if( l == 1 ) eps = - 0.05d0 ! Ref. 2
 
     case( 35 )
 
@@ -684,6 +705,7 @@ select case( AtNo )
     case default
 
         print'("Problem with the spin-orbit coupling constants: Hamiltonians.f --> SOC_constant ")'
+        print*, "AtNo = " , AtNo
 
 end select
 
