@@ -31,7 +31,7 @@ call GPU_Init(0,1)
 
 CALL get_environment_vars
 
-inquire( file=dynemolworkdir//"parameters.f" , EXIST = go_without_card )
+inquire( file=dynemolworkdir//"makefile" , EXIST = go_without_card )
 
 if( go_without_card ) then
      CAll Define_Environment

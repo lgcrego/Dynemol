@@ -2,7 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use card_reading       , only : electron_fragment , hole_fragment
+    use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
     public :: ad_hoc_tuning , eh_tag , orbital 
@@ -12,6 +12,7 @@ module tuning_m
     ! module variables ...
     integer      , allocatable :: orbital(:)
     character(2) , allocatable :: eh_tag(:)
+    logical                    :: done = .false.
 
     ! module parameters ...
     logical, parameter :: T_ = .true. , F_ = .false.
@@ -28,6 +29,7 @@ type(universe) , intent(inout) :: univ
 
 !local variables ...
 integer :: i
+logical :: exist
 
 ! edit structure  ...
 
@@ -36,7 +38,6 @@ integer :: i
 !      univ % atom(:) % etc
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 !-----------------------------------
 !      define %atom
 !-----------------------------------
@@ -95,6 +96,13 @@ DO i = 1 , size(univ%atom)
     end select
 
 END DO
+
+inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
+if( (.NOT. exist) .AND. (.NOT. done) ) then
+    call ReadInputCard_ADHOC( structure=univ )
+    done = .true.
+    return
+endif
 
 call warnings( univ%atom ) 
 
@@ -164,7 +172,9 @@ end module tuning_m
 module MM_tuning_routines
 
     use constants_m     , only: large
+    use type_m          , only: dynemolworkdir
     use parameters_m    , only: static
+    use card_reading    , only: ReadInputCard_ADHOC 
     use MM_types        , only: MM_atomic, DefineBonds, DefineAngles
 
     private
@@ -174,6 +184,7 @@ module MM_tuning_routines
     ! module variables ...
     type(DefineBonds) , allocatable :: SpecialBonds(:)
     type(DefineAngles), allocatable :: SpecialAngs(:)
+    logical :: done = .false.
 
     ! module parameters ...
     logical, parameter :: T_ = .true. , F_ = .false.
@@ -187,11 +198,22 @@ implicit none
 type(MM_atomic) , optional , intent(inout) :: atom(:)
 character(*)               , intent(in)    :: instance
 
+! local variables ...
+logical :: exist 
+
+inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
+if( (.NOT. exist) .AND. (.NOT. done) ) then
+    call ReadInputCard_ADHOC( atom=atom )
+    done = .true.
+    return
+endif
+
+! edit structure  ...
+
 select case ( instance ) 
 
 !==================================
     case ("General")
-
 !----------------------------------
 !      define SPECIAL atoms 
 !----------------------------------

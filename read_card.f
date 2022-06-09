@@ -6,7 +6,7 @@ use MM_parms_module
 
 private
 
-   public :: ReadInputCard , electron_fragment , hole_fragment
+   public :: ReadInputCard ,ReadInputCard_ADHOC , electron_fragment , hole_fragment
 
    ! module variables ...
    character(len=3) :: electron_fragment , hole_fragment
@@ -71,6 +71,16 @@ read_loop: do
         case( "AD_HOC" ) 
             ad_hoc = get_logical(line)
 
+            ! skip, to be read later ...
+            if( ad_hoc == .true. ) then
+                do 
+                   read(33,'(A)',iostat=ioerr) line
+                   read(line,*,iostat=ioerr) command
+                   command = to_upper_case(command)
+                   If( command(1:6) /= "AD_HOC" ) exit
+                end do
+            end if
+
 !--------------------------------------------------------------------                                                                                                   
 !           READING FILE FORMAT
 !
@@ -85,263 +95,265 @@ read_loop: do
 !--------------------------------------------------------------------
 !           DIAGNOSTIC & DATA-ANALYSIS & VISUALIZATION flags
 !
-    case( "HFP_FORCES" ) 
-            HFP_Forces = get_logical(line)
+        case( "HFP_FORCES" ) 
+                HFP_Forces = get_logical(line)
 
-    case( "SPECTRUM" )  
-            SPECTRUM = get_logical(line)
+        case( "SPECTRUM" )  
+                SPECTRUM = get_logical(line)
 
-    case( "ALPHA_TENSOR" ) 
-            Alpha_Tensor = get_logical(line)
+        case( "ALPHA_TENSOR" ) 
+                Alpha_Tensor = get_logical(line)
 
-    case( "GAUSSIANCUBE" ) 
-            GaussianCube = get_logical(line)
+        case( "GAUSSIANCUBE" ) 
+                GaussianCube = get_logical(line)
 
-    case( "GAUSSIANCUBE_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') GaussianCube_step
+        case( "GAUSSIANCUBE_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') GaussianCube_step
 
-    case( "NETCHARGE" ) 
-            NetCharge = get_logical(line)
+        case( "NETCHARGE" ) 
+                NetCharge = get_logical(line)
 
-    case( "CH_AND_DP_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') CH_and_DP_step
+        case( "CH_AND_DP_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') CH_and_DP_step
 
-    case( "DENSITYMATRIX" ) 
-            DensityMatrix = get_logical(line)
+        case( "DENSITYMATRIX" ) 
+                DensityMatrix = get_logical(line)
 
-    case( "AUTOCORRELATION" ) 
-            AutoCorrelation = get_logical(line)
+        case( "AUTOCORRELATION" ) 
+                AutoCorrelation = get_logical(line)
 
-    case( "VDOS_" ) 
-            VDOS_ = get_logical(line)
+        case( "VDOS_" ) 
+                VDOS_ = get_logical(line)
 
-!--------------------------------------------------------------------
-!           POTENTIALS
+!------------------------------------------------------------------------
+!               POTENTIALS
 !
-    case( "ENVFIELD_" ) 
-            EnvField_ = get_logical(line)
+        case( "ENVFIELD_" ) 
+                EnvField_ = get_logical(line)
 
-    case( "ENVIRON_TYPE" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            Environ_Type = command
+        case( "ENVIRON_TYPE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                Environ_Type = command
 
-    case( "ENVIRON_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') Environ_step
+        case( "ENVIRON_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') Environ_step
 
-    case( "COULOMB_" ) 
-            Coulomb_ = get_logical(line)
+        case( "COULOMB_" ) 
+                Coulomb_ = get_logical(line)
 
-    case( "INDUCED_" ) 
-            Induced_ = get_logical(line)
+        case( "INDUCED_" ) 
+                Induced_ = get_logical(line)
 
-!--------------------------------------------------------------------
-!           SAMPLING parameters
+!------------------------------------------------------------------------
+!               SAMPLING parameters
 !
-    case( "FRAME_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') frame_step
+        case( "FRAME_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') frame_step
 
-!--------------------------------------------------------------------
-!           SECURITY COPY
+!------------------------------------------------------------------------
+!               SECURITY COPY
 !
-    case( "RESTART" ) 
-            restart = get_logical(line)
+        case( "RESTART" ) 
+                restart = get_logical(line)
 
-    case( "STEP_SECURITY" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') step_security
+        case( "STEP_SECURITY" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') step_security
 
-!--------------------------------------------------------------------
-!           QDynamics parameters
+!------------------------------------------------------------------------
+!               QDynamics parameters
 !
-    case( "T_I" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) t_i
+        case( "T_I" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) t_i
 
-    case( "T_F" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) t_f
+        case( "T_F" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) t_f
 
-    case( "N_T" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') n_t
+        case( "N_T" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') n_t
 
-    case( "CT_DUMP_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') CT_dump_step
+        case( "CT_DUMP_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') CT_dump_step
 
-    case( "N_PART" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') n_part
+        case( "N_PART" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') n_part
 
-    case( "HOLE_STATE" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            n = len_trim(command)
-            
-            read(command(5:n),'(i)') hole_state
-            hole_fragment = to_upper_case(command(1:3))
+        case( "HOLE_STATE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                n = len_trim(command)
+                
+                read(command(5:n),'(i)') hole_state
+                hole_fragment = to_upper_case(command(1:3))
 
-    case( "ELECTRON_STATE" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            n = len_trim(command)
-            
-            read(command(5:n),'(i)') electron_state
-            electron_fragment = to_upper_case(command(1:3))
+        case( "ELECTRON_STATE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                n = len_trim(command)
+                
+                read(command(5:n),'(i)') electron_state
+                electron_fragment = to_upper_case(command(1:3))
 
-!--------------------------------------------------------------------
-!           STRUCTURAL  parameters
+!------------------------------------------------------------------------
+!               STRUCTURAL  parameters
 !
-    case( "NNX" ) 
-            read(line,*,iostat=ioerr) keyword1 , equal_sign , command1 , separator , &
-                                      keyword2 , equal_sign , command2
-            read(command1,'(i)') nnx
-            read(command2,'(i)') nny
+        case( "NNX" ) 
+                read(line,*,iostat=ioerr) keyword1 , equal_sign , command1 , separator , &
+                                          keyword2 , equal_sign , command2
+                read(command1,'(i)') nnx
+                read(command2,'(i)') nny
 
-    case( "PBC" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , separator , &
-                                      command1 , command2 , command3
-            read(command1,'(i)') PBC(1)
-            read(command2,'(i)') PBC(2)
-            read(command3,'(i)') PBC(3)
+        case( "PBC" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , separator , &
+                                          command1 , command2 , command3
+                read(command1,'(i)') PBC(1)
+                read(command2,'(i)') PBC(2)
+                read(command3,'(i)') PBC(3)
 
-!--------------------------------------------------------------------
-!           DOS parameters
+!------------------------------------------------------------------------
+!               DOS parameters
 !
-    case( "SIGMA" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) sigma
+        case( "SIGMA" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) sigma
 
-    case( "DOS_RANGE" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
-                                      command1 , command2 
-            read(command1,*) bottom
-            read(command2,*) top
+        case( "DOS_RANGE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
+                                          command1 , command2 
+                read(command1,*) bottom
+                read(command2,*) top
 
-            DOS_range = real_interval( bottom , top )
+                DOS_range = real_interval( bottom , top )
 
-!--------------------------------------------------------------------
-!           SPECTRUM  parameters
+!------------------------------------------------------------------------
+!               SPECTRUM  parameters
 !
-    case( "OCCUPIED" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
-                                      command1 , command2 
-            read(command1,*) bottom
-            read(command2,*) top
+        case( "OCCUPIED" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
+                                          command1 , command2 
+                read(command1,*) bottom
+                read(command2,*) top
 
-            occupied = real_interval( bottom , top )
+                occupied = real_interval( bottom , top )
 
-    case( "EMPTY" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
-                                      command1 , command2 
-            read(command1,*) bottom
-            read(command2,*) top
+        case( "EMPTY" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , keyword1 , &
+                                          command1 , command2 
+                read(command1,*) bottom
+                read(command2,*) top
 
-            empty = real_interval( bottom , top )
+                empty = real_interval( bottom , top )
 
-    case( "N_OF_MOLECULES" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') MM % N_of_molecules
+        case( "N_OF_MOLECULES" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') MM % N_of_molecules
 
-    case( "N_OF_SPECIES" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') MM % N_of_species
+        case( "N_OF_SPECIES" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') MM % N_of_species
 
-    case( "SPECIES(1)" )
+        case( "SPECIES(1)" )
 
-            CALL allocate_species( MM % N_of_species )
+                CALL allocate_species( MM % N_of_species )
 
-            backspace(33)
+                backspace(33)
 
-            do n = 1 , MM % N_of_species
+                do n = 1 , MM % N_of_species
 
-               i=1
-               do 
-                  i = i + 1
-                  read(33,'(A)',iostat=ioerr) line
-                  read(line,*,iostat=ioerr) keyword
-                  keyword = to_upper_case(keyword)
-                  If( verify("SPECIES()",keyword) == 0 ) exit
-                  if( i > 10 ) then
-                      CALL warning("halting: check N_of_species in card.inpt")
-                      stop
-                  end if
-               end do
-               read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               species(n) % residue = command
+                   i=1
+                   do 
+                      i = i + 1
+                      read(33,'(A)',iostat=ioerr) line
+                      read(line,*,iostat=ioerr) keyword
+                      keyword = to_upper_case(keyword)
+                      If( verify("SPECIES()",keyword) == 0 ) exit
+                      if( i > 10 ) then
+                          CALL warning("halting: check N_of_species in card.inpt")
+                          stop
+                      end if
+                   end do
+                   read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
+                   species(n) % residue = command
 
-               read(33,'(A)',iostat=ioerr) line
-               read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               read(command,'(i)',iostat=ioerr) species(n) % N_of_molecules 
+                   read(33,'(A)',iostat=ioerr) line
+                   read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
+                   read(command,'(i)',iostat=ioerr) species(n) % N_of_molecules 
 
-               read(33,'(A)',iostat=ioerr) line
-               read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               read(command,'(i)',iostat=ioerr) species(n) % N_of_atoms 
+                   read(33,'(A)',iostat=ioerr) line
+                   read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
+                   read(command,'(i)',iostat=ioerr) species(n) % N_of_atoms 
 
-               read(33,'(A)',iostat=ioerr) line
-               read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
-               flag = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == command ) )
-               species(n) % flex = flag
-            end do
-    
-    case( "SELECTIVE_DYNAMICS" )
-            Selective_Dynamics = get_logical(line)
-    
-    case( "THERMOSTAT" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            thermostat = command
+                   read(33,'(A)',iostat=ioerr) line
+                   read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
+                   flag = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == command ) )
+                   species(n) % flex = flag
+                end do
+        
+        case( "SELECTIVE_DYNAMICS" )
+                Selective_Dynamics = get_logical(line)
+        
+        case( "THERMOSTAT" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                thermostat = command
 
-    case( "TEMPERATURE" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) temperature
-    
-    case( "PRESSURE" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) pressure
-    
-    case( "THERMAL_RELAXATION_T" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) thermal_relaxation_time
-    
-    case( "CUTOFF_RADIUS" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) , cutoff_radius 
-    
-    case( "DAMPING_WOLF" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,*) , damping_Wolf 
-    
-    case( "DRIVER_MM" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            driver_MM = command
+        case( "TEMPERATURE" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) temperature
+        
+        case( "PRESSURE" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) pressure
+        
+        case( "THERMAL_RELAXATION_T" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) thermal_relaxation_time
+        
+        case( "CUTOFF_RADIUS" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) , cutoff_radius 
+        
+        case( "DAMPING_WOLF" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) , damping_Wolf 
+        
+        case( "DRIVER_MM" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                driver_MM = command
 
-    case( "READ_VELOCITIES" )
-            read_velocities = get_logical(line)
+        case( "READ_VELOCITIES" )
+                read_velocities = get_logical(line)
 
-    case( "MM_INPUT_FORMAT" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            mm_input_format = command
+        case( "MM_INPUT_FORMAT" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                mm_input_format = command
 
-    case( "MM_LOG_STEP" )
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') MM_log_step
-    
-    case( "MM_FRAME_STEP" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            read(command,'(i)') MM_frame_step
-    
-    case( "UNITS_MM" ) 
-            read(line,*,iostat=ioerr) keyword , equal_sign , command
-            Units_mm = command
-    
-end select
+        case( "MM_LOG_STEP" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') MM_log_step
+        
+        case( "MM_FRAME_STEP" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') MM_frame_step
+        
+        case( "UNITS_MM" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                Units_mm = command
+        
+    end select
 
-!this prevents double reading in the case of blank lines ...
-keyword = "XXXXXXXXXXXXXXXXXXXXXX"
-   
+    !this prevents double reading in the case of blank lines ...
+    keyword = "XXXXXXXXXXXXXXXXXXXXXX"
+       
 end do read_loop
+
+close(33)
 
 call Checklist_and_Warnings
 
@@ -350,6 +362,80 @@ call Checklist_and_Warnings
 include 'formats.h'
 
 end subroutine ReadInputCard
+!
+!
+!
+!==================================================
+ subroutine ReadInputCard_ADHOC( structure , atom )
+!==================================================
+implicit none
+type(universe)  , optional , intent(inout) :: structure
+type(MM_atomic) , optional , intent(inout) :: atom(:)
+
+! local variables ...
+integer            :: ioerr , start , finale , int_value
+real*8             :: real_value
+character(len=3)   :: label
+character(len=20)  :: keyword , EH_MM , feature
+character(len=120) :: line
+logical            :: done
+
+open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
+
+!   file error msg ...
+10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
+
+!==============================
+!  reading  the input CARD ...
+
+read_loop: do 
+
+    read(33,'(A)',iostat=ioerr) line
+    if ( ioerr /= 0 ) exit read_loop
+    read(line,*,iostat=ioerr) keyword
+    keyword = to_upper_case(keyword)
+    if( index(keyword,"!") /= 0 ) cycle read_loop 
+
+    if( keyword == "AD_HOC" ) then
+        do 
+           read(33,'(A)',iostat=ioerr) line
+
+           CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
+           if( done ) exit
+
+           if( EH_MM == "QM" ) then
+                   select case(feature)
+
+                          case( "RESIDUE" )
+                              structure%atom(start:finale) % residue = label 
+                          case( "NR" )
+                              structure%atom(start:finale) % nr = int_value 
+                          case( "V_SHIFT" )
+                              structure%atom(start:finale) % v_shift = real_value 
+                          end select
+
+           elseif( EH_MM == "MM" ) then
+                   select case(feature)
+
+                          case( "RESIDUE" )
+                              atom(start:finale) % residue = label 
+                          case( "NR" )
+                              atom(start:finale) % nr = int_value 
+                          end select
+           endif
+
+        end do
+
+    end if
+    !this prevents double reading in the case of blank lines ...
+    keyword = "XXXXXXXXXXXXXXXXXXXXXX"
+   
+end do read_loop
+
+include 'formats.h'
+
+end subroutine ReadInputCard_ADHOC
+!
 !
 !                                                                                                                                                                       
 !
@@ -382,6 +468,88 @@ do i = 1 , N
 end do
 
 end subroutine allocate_species
+!
+!
+!
+!=======================================
+ subroutine get_line_apart(  line , done , EH_MM , feature , start , finale , label , int_value , real_value )
+!=======================================
+implicit none
+character(*)            , intent(in)  :: line
+logical                 , intent(out) :: done 
+character(*)            , intent(out) :: EH_MM
+character(*)            , intent(out) :: feature
+integer                 , intent(out) :: start
+integer                 , intent(out) :: finale
+character(*) , optional , intent(out) :: label
+integer      , optional , intent(out) :: int_value
+real*8       , optional , intent(out) :: real_value
+
+! local variables ...
+integer            :: n , n1 , n2 , ioerr
+character(len=10)  :: interval , string
+character(len=40)  :: command , command1 , command2 
+
+done = .false.
+
+read(line,*,iostat=ioerr) command , command1 , command2
+command = to_upper_case(command)
+If( command(1:6) /= "AD_HOC" ) then
+    done = .true. 
+    return
+    endif
+
+EH_MM = command(8:9) 
+
+n1 = index(command,"(") 
+n2 = index(command,")") 
+
+feature = command(11:n1-1)
+
+interval = command(n1+1:n2-1)
+n = index(interval,":") 
+if( n /= 0 ) then
+    read(interval(:n-1),'(i)') start
+    read(interval(n+1:),'(i)') finale
+else  
+    read(interval,'(i)') start
+    finale = start
+end if
+
+if( index(command,"=") /= 0 ) then
+    if( len_trim(command) > index(command,"=") ) then
+        n1 = index(command,"=") 
+        n2 = len_trim(command) 
+        string = trim(command(n1+1:))
+    elseif( len_trim(command) == index(command,"=") ) then
+        string = trim(command1)
+    endif
+endif
+
+if( index(command1,"=") /= 0 ) then
+    if( len_trim(command1) > index(command1,"=") ) then
+        n1 = index(command1,"=") 
+        n2 = len_trim(command1) 
+        string = trim(command1(n1+1:))
+    elseif( len_trim(command1) == index(command1,"=") ) then
+        string = trim(command2)
+    endif
+endif
+
+select case(feature) 
+
+       case( "RESIDUE" )
+       label = trim(string)
+
+       case( "V_SHIFT" )
+       read(string,'(f9.5)') real_value
+
+       case( "NR" )
+       read(string,'(i)') int_value
+
+end select
+
+end subroutine get_line_apart
 !
 !
 !
