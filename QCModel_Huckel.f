@@ -89,15 +89,15 @@ select case ( driver )
           Allocate( Rv(N,N) )
 
           Lv = h
-          Deallocate(h)
-
-          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N)) 
+          Deallocate( h , dumb_S )
+          
+          If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N))
           ! eigenvectors in the rows of QM%L
           QM%L = transpose(Lv) 
 
           ! Rv = S * Lv ...
-          call Multiply( S_matrix, Lv, Rv )
-
+          CALL symm( S_matrix , Lv , Rv )
+          
           DEALLOCATE( S_matrix )
 
           If( .NOT. ALLOCATED(QM%R) ) ALLOCATE(QM%R(N,N))
@@ -106,7 +106,7 @@ select case ( driver )
 
           Deallocate( Lv , Rv )
 
-    case ("slice_FSSH" )    
+    case ("slice_FSSH" )
 
           !--------------------------------------------------------
           ! Overlap Matrix Factorization: S^(1/2) ...
