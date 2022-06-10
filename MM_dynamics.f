@@ -104,7 +104,7 @@ atom( QMMM_key )% charge = atom( QMMM_key )% MM_charge
 
 ! Molecular dynamics ...
 
-If( QMMM ) CALL ForceQMMM
+If( QMMM ) CALL ForceQMMM  ! <== new QM , old MM ...
 
 CALL this % VV1( dt )
 
@@ -116,7 +116,7 @@ CALL ForceInter
 
 CALL ForceIntra
 
-If( QMMM ) CALL ForceQMMM
+If( QMMM ) CALL ForceQMMM  ! <== new QM , new MM ...
 
 CALL this% VV2( dt )
 

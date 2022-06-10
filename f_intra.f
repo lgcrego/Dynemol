@@ -439,7 +439,7 @@ if( QMMM ) then
            CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
 
        case( "slice_AO")
-           CALL EhrenfestForce( system , basis , MO_bra , MO_ket , QM , representation=mode)    
+           CALL EhrenfestForce( system , basis , QM, MO_bra , MO_ket )    
 
        case("slice_FSSH")
            CALL SH_Force( system , basis , MO_bra , MO_ket , QM , t_rate )

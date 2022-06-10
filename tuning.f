@@ -2,7 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
-    use card_reading       , only : electron_fragment , hole_fragment
+    use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
     public :: ad_hoc_tuning , eh_tag , orbital 
@@ -12,6 +12,7 @@ module tuning_m
     ! module variables ...
     integer      , allocatable :: orbital(:)
     character(2) , allocatable :: eh_tag(:)
+    logical                    :: done = .false.
 
     ! module parameters ...
     logical, parameter :: T_ = .true. , F_ = .false.
@@ -28,6 +29,7 @@ type(universe) , intent(inout) :: univ
 
 !local variables ...
 integer :: i
+logical :: exist
 
 ! edit structure  ...
 
@@ -95,6 +97,13 @@ DO i = 1 , size(univ%atom)
     end select
 
 END DO
+
+inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
+if( (.NOT. exist) .AND. (.NOT. done) ) then
+    call ReadInputCard_ADHOC( structure=univ )
+    done = .true.
+    return
+endif
 
 call warnings( univ%atom ) 
 
@@ -164,7 +173,9 @@ end module tuning_m
 module MM_tuning_routines
 
     use constants_m     , only: large
+    use type_m          , only: dynemolworkdir
     use parameters_m    , only: static
+    use card_reading    , only: ReadInputCard_ADHOC 
     use MM_types        , only: MM_atomic, DefineBonds, DefineAngles
 
     private
@@ -174,6 +185,7 @@ module MM_tuning_routines
     ! module variables ...
     type(DefineBonds) , allocatable :: SpecialBonds(:)
     type(DefineAngles), allocatable :: SpecialAngs(:)
+    logical :: done = .false.
 
     ! module parameters ...
     logical, parameter :: T_ = .true. , F_ = .false.
@@ -187,6 +199,18 @@ implicit none
 type(MM_atomic) , optional , intent(inout) :: atom(:)
 character(*)               , intent(in)    :: instance
 
+! local variables ...
+logical :: exist 
+
+inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
+if( (.NOT. exist) .AND. (.NOT. done) ) then
+    call ReadInputCard_ADHOC( atom=atom )
+    done = .true.
+    return
+endif
+
+! edit structure  ...
+
 select case ( instance ) 
 
 !==================================
@@ -199,37 +223,6 @@ select case ( instance )
 !----------------------------------
 !      define flex
 !----------------------------------
-atom(177)  % flex = .true.
-atom(204)  % flex = .true.
-atom(328)  % flex = .true.
-atom(200)  % flex = .true.
-atom(56 )  % flex = .true.
-atom(118)  % flex = .true.
-atom(186)  % flex = .true.
-atom(53 )  % flex = .true.
-atom(174)  % flex = .true.
-atom(114)  % flex = .true.
-atom(176)  % flex = .true.
-atom(303)  % flex = .true.
-atom(178)  % flex = .true.
-atom(306)  % flex = .true.
-atom(179)  % flex = .true.
-atom(60 )  % flex = .true.
-atom(308)  % flex = .true.
-atom(248)  % flex = .true.
-atom(256)  % flex = .true.
-atom(82 )  % flex = .true.
-atom(181)  % flex = .true.
-atom(57 )  % flex = .true.
-atom(310)  % flex = .true.
-atom(121)  % flex = .true.
-atom(259)  % flex = .true.
-atom(262)  % flex = .true.
-atom(418)  % flex = .true.
-atom(312)  % flex = .true.
-atom(93 )  % flex = .true.
-atom(406)  % flex = .true.
-atom(247)  % flex = .true.
 
 !----------------------------------
 !      define MM atom types 

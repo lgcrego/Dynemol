@@ -24,7 +24,7 @@ end module EH_parms_module
 module MM_parms_module
 
 use type_m          , only : integer_interval
-use MM_types        , only : MM_molecular , MM_system 
+use MM_types        , only : MM_molecular , MM_system , MM_atomic
 use EH_parms_module , only : Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
 
 real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf

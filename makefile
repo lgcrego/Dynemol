@@ -99,8 +99,6 @@ SOURCE2 = constants_m.o \
 		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
-		  f_intra.o \
-		  f_inter.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -123,6 +121,8 @@ SOURCE2 = constants_m.o \
                   FSSH.o \
                   decoherence.o \
 		  CoulInt_QMMM.o \
+		  f_intra.o \
+		  f_inter.o \
 		  FMO.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
@@ -178,9 +178,9 @@ SOURCE_CUDA= Chebyshev_gpu_kernels.o \
 endif
 
 
-a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
-	rm -f a
-	$(FC) $(INCS) $(LDFLAGS) -o a $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
+dynemol: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
+	rm -f dynemol
+	$(FC) $(INCS) $(LDFLAGS) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
 
 
 .F.o:
@@ -200,7 +200,7 @@ a: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 
 
 clean: 
-	-rm -f a *.o *.mod; touch *.f
+	-rm -f dynemol *.o *.mod; touch *.f
 
 depend:
 	@echo -en "Searching module dependencies..."

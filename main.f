@@ -19,7 +19,6 @@ use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
-use Ehrenfest_Builder       , only : EhrenfestForce
 
 ! local variables ...
 integer :: err
@@ -38,7 +37,7 @@ CALL GPU_Init(myid,1)
 
 CALL get_environment_vars
 
-inquire( file=dynemolworkdir//"parameters.f" , EXIST = go_without_card )
+inquire( file=dynemolworkdir//"makefile" , EXIST = go_without_card )
 
 if( go_without_card ) then
      CAll Define_Environment

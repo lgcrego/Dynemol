@@ -48,6 +48,10 @@ real*8  , ALLOCATABLE :: dumb_S(:,:) , tool(:,:) , S_eigen(:)
 integer               :: i , N , info 
 logical , save        :: first_call_ = .true.
 
+!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+CALL Overlap_Matrix( system , basis , S_matrix )                                                                                                                        
+
 ! After instantiating Overlap_matrix, processes wait outside ...
 If( ForceCrew .OR. KernelCrew ) return
 

@@ -32,11 +32,13 @@ module Backup_m
     interface Security_Copy
         module procedure Security_Copy_Eigen
         module procedure Security_Copy_Cheb
+        module procedure Security_Copy_CSDM
     end interface
 
     interface Restart_State
         module procedure Restart_State_Eigen
         module procedure Restart_State_Cheb
+        module procedure Restart_State_CSDM
     end interface
 
     interface Restart_Sys

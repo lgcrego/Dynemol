@@ -102,8 +102,6 @@
   occupied  = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of occupied MOs
   empty     = real_interval( min , max )   ! <== (min,max) Real values; defines energy range of empty MOs
 
-
-
 !----------------------------------------------------------------------------------------
 !                           MOLECULAR MECHANICS parameters 
 !----------------------------------------------------------------------------------------
@@ -124,13 +122,27 @@
   species(2) % N_of_molecules =        ! <== Number of molecules of species (Integer)
   species(2) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
   species(2) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
-                                      
+  .
+  .
+  .
+  .
   species(n) % residue        =        ! <== Residue label for species n ; character(len3)
   species(n) % N_of_molecules =        ! <== Number of molecules of species (Integer)
   species(n) % N_of_atoms     =        ! <== Number of atoms comprosing a single molecule of species i (Integer)
   species(n) % flex           =        ! <== .TRUE. for Flexible ; .FALSE. for rigid 
 
   Selective_Dynamics =                 ! <== .TRUE. for ad_hoc_MM_tuning of MegaMass to selected atoms ; default = .FALSE.
+
+!------------------------------------------------------------------------------                                                                                         
+!                                AD-HOC settings
+!                                (ad_hoc = true)
+  
+  ad_hoc:QM_MM:feature(start:end) = fixing          ! <== QM_MM = QM or MM (apply settings to either realm)
+  ad_hoc:QM_MM:feature(start:end) = fixing          ! <== feature = {residue , nr , fragment , V_shift , etc ...}; check types
+  ad_hoc:QM_MM:feature(start:end) = fixing          ! <== (start:end) range of change, end >= start; atom index
+  .                                                 ! <== fixing, depends on feature: 3-letter label, int_value, or real_value
+  .
+
 !------------------------------------------------------------------------------
 ! 							ENVIRONMENT parameters 
 !

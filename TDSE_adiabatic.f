@@ -47,6 +47,7 @@ module TDSE_adiabatic_m
                                         Restart_Sys                      
     use MM_dynamics_m           , only: MolecularMechanics ,             &
                                         preprocess_MM , MoveToBoxCM
+    use Ehrenfest_Builder       , only: EhrenfestForce 
     use Surface_Hopping         , only: PES , verify_FSSH_jump
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
@@ -127,8 +128,12 @@ do frame = frame_init , frame_final , frame_step
         CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
         CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
 
-        CALL EhrenfestForce( Extended_Cell , ExCell_basis )
-
+        select case (driver)
+            case("slice_FSSH") 
+                CALL BcastQMArgs( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI, t_rate )
+            case("slice_AO") 
+                CALL BcastQMArgs( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
+            end select 
     end If
 
     ! propagate t -> (t + t_rate) with UNI%erg(t) ...
@@ -327,9 +332,8 @@ do n = 1 , n_part
             MO_bra( : , n ) = hl_FMO%L( orbital(n) , : )    
             MO_ket( : , n ) = hl_FMO%R( : , orbital(n) )   
 
-            If( master ) Print 592, orbital(n) , hl_FMO%erg(orbital(n))
-            If( (orbital(n) > hl_FMO%Fermi_State) .and.  master ) Print*,'>>> warning: hole state above the Fermi level <<<'
-
+            Print 592, orbital(n) , hl_FMO%erg(orbital(n))
+            If( (orbital(n) > hl_FMO%Fermi_State) ) print*,'>>> warning: hole state above the Fermi level <<<'
 
         end select
 end do
