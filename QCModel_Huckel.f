@@ -33,7 +33,6 @@
 !==================================================
  subroutine EigenSystem( system , basis , QM , it )
 !==================================================
-use Matrix_math
 implicit none
 type(structure)             , intent(in)    :: system
 type(STO_basis)             , intent(in)    :: basis(:)
