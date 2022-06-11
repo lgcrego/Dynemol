@@ -37,6 +37,10 @@ CALL GPU_Init(myid,1)
 
 CALL get_environment_vars
 
+If( master ) then 
+    If( .not. restart ) CALL system( dynemoldir//"env.sh" )
+end If
+
 inquire( file=dynemolworkdir//"makefile" , EXIST = go_without_card )
 
 if( go_without_card ) then
@@ -44,12 +48,14 @@ if( go_without_card ) then
      CALL Define_MM_Environment
 else
      call ReadInputCard
+    If( master ) then
+        ! cloning the psf files into trunk directories ...
+        call system("cp card.inpt log.trunk/.")
+        CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/card.inpt ")
+        end if
 end if
 
-If( master ) then 
-    CALL checklist
-    If( .not. restart ) CALL system( dynemoldir//"env.sh" )
-end If
+If( master ) CALL checklist
 
 CALL read_EHT_parameters
 

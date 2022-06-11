@@ -78,6 +78,8 @@ read_loop: do
                    read(line,*,iostat=ioerr) command
                    command = to_upper_case(command)
                    If( command(1:6) /= "AD_HOC" ) exit
+                   !this prevents double reading in the case of blank lines ...
+                   line = "XXXXXXXXXXXXXXXXXXXXXX"
                 end do
             end if
 
@@ -406,12 +408,16 @@ read_loop: do
            if( EH_MM == "QM" ) then
                    select case(feature)
 
+                          case( "ATOM" )
+
                           case( "RESIDUE" )
                               structure%atom(start:finale) % residue = label 
                           case( "NR" )
                               structure%atom(start:finale) % nr = int_value 
                           case( "V_SHIFT" )
                               structure%atom(start:finale) % v_shift = real_value 
+                          case( "QMMM" )
+
                           end select
 
            elseif( EH_MM == "MM" ) then
@@ -423,7 +429,9 @@ read_loop: do
                               atom(start:finale) % nr = int_value 
                           end select
            endif
-
+           !this prevents double reading in the case of blank lines ...
+           line = "XXXXXXXXXXXXXXXXXXXXXX"
+           
         end do
 
     end if
@@ -538,7 +546,7 @@ endif
 
 select case(feature) 
 
-       case( "RESIDUE" )
+       case( "RESIDUE" , "ATOM" , "QMMM" )
        label = trim(string)
 
        case( "V_SHIFT" )
@@ -701,7 +709,7 @@ nuclear_matter = "extended_sys"
 Survival = .true.
 DP_moment = .false.
 QMMM = .false.
-OPT_parms = .true.
+OPT_parms = .false.
 ad_hoc = .true.
 file_type = "structure"
 file_format = "pdb"
