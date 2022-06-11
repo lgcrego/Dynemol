@@ -406,12 +406,16 @@ read_loop: do
            if( EH_MM == "QM" ) then
                    select case(feature)
 
+                          case( "ATOM" )
+
                           case( "RESIDUE" )
                               structure%atom(start:finale) % residue = label 
                           case( "NR" )
                               structure%atom(start:finale) % nr = int_value 
                           case( "V_SHIFT" )
                               structure%atom(start:finale) % v_shift = real_value 
+                          case( "QMMM" )
+
                           end select
 
            elseif( EH_MM == "MM" ) then
@@ -701,7 +705,7 @@ nuclear_matter = "extended_sys"
 Survival = .true.
 DP_moment = .false.
 QMMM = .false.
-OPT_parms = .true.
+OPT_parms = .false.
 ad_hoc = .true.
 file_type = "structure"
 file_format = "pdb"

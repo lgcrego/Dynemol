@@ -46,8 +46,6 @@ do frame = frame_init , frame_final , frame_step
 
     CALL MolecularMechanics( t_rate , frame )
 
-    print*, frame
-
 end do
 
 end subroutine MMechanics

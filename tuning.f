@@ -39,27 +39,38 @@ logical :: exist
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-!-----------------------------------
-!      define %atom
-!-----------------------------------
+inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
 
-!-----------------------------------
-!      define %residue
-!-----------------------------------
+if( (.NOT. exist) .AND. (.NOT. done) ) then
 
-!-----------------------------------
-!      define %nr
-!-----------------------------------
+    call ReadInputCard_ADHOC( structure=univ )
+    done = .true.
 
-!---------------------------------------------------
-!      define %DPF     (Dipole Fragment) 
-!      define %V_shift (FMO offset shift)
-!---------------------------------------------------
+else
 
-!---------------------------------------------------
-!      define %QMMM  
-!      default is QMMM = QM; set QMMM = MM for classical atoms ... 
-!---------------------------------------------------
+    !-----------------------------------
+    !      define %atom
+    !-----------------------------------
+    
+    !-----------------------------------
+    !      define %residue
+    !-----------------------------------
+    
+    !-----------------------------------
+    !      define %nr
+    !-----------------------------------
+    
+    !---------------------------------------------------
+    !      define %DPF     (Dipole Fragment) 
+    !      define %V_shift (FMO offset shift)
+    !---------------------------------------------------
+    
+    !---------------------------------------------------
+    !      define %QMMM  
+    !      default is QMMM = QM; set QMMM = MM for classical atoms ... 
+    !---------------------------------------------------
+
+end if
 
 !---------------------------------------------------
 !      define %El   : mandatory !!
@@ -72,7 +83,6 @@ where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !----------------------------------------------------
 !      define %fragment 
 !----------------------------------------------------
-
 
 ! ---------- Table of fragments -------------
 !   Acceptor    =   A       
@@ -97,13 +107,6 @@ DO i = 1 , size(univ%atom)
     end select
 
 END DO
-
-inquire( file=dynemolworkdir//"makefile" , EXIST = exist )
-if( (.NOT. exist) .AND. (.NOT. done) ) then
-    call ReadInputCard_ADHOC( structure=univ )
-    done = .true.
-    return
-endif
 
 call warnings( univ%atom ) 
 
