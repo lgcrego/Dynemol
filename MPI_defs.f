@@ -10,7 +10,7 @@ module MPI_definitions_m
     public :: EnvComm    , EnvCrew    , myEnvId  , npEnv
     public :: ChebyKernelComm , myChebyKernel
 
-    public :: launch_MPI
+    public :: launch_MPI , setup_MPI_labor_force
 
     private
 
@@ -52,19 +52,28 @@ contains
  if( myid == 0 ) master = .true.
  if( myid == 0 ) slave  = .false.
 
- select case ( driver )
-
-    case ( "slice_AO" , "slice_ElHl" )
-        CALL setup_Adiabatic_Crew
-
-    case ( "slice_Cheb" )
-        CALL setup_Chebyshev_Crew
-
-    case default
-
- end select
-
  end subroutine launch_MPI
+!
+!
+!
+!================================
+ subroutine setup_MPI_labor_force
+!================================
+implicit none
+
+select case ( driver )
+
+       case ( "slice_AO" , "slice_ElHl" )
+           CALL setup_Adiabatic_Crew
+
+       case ( "slice_Cheb" )
+           CALL setup_Chebyshev_Crew
+
+       case default
+
+end select
+
+end subroutine setup_MPI_labor_force
 !
 !
 !

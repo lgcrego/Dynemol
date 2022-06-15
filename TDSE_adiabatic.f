@@ -60,11 +60,11 @@ module TDSE_adiabatic_m
     private
 
     ! module variables ...
+    type(R_eigen)                                  :: UNI , el_FMO , hl_FMO
     type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
     Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16      , allocatable , dimension(:)   :: phase
     real*8          , allocatable , dimension(:)   :: Net_Charge_MM
-    type(R_eigen)   :: UNI , el_FMO , hl_FMO
     real*8          :: t
     integer         :: it , mm , nn
 

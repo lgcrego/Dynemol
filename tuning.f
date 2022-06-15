@@ -2,6 +2,7 @@ module tuning_m
 
     use type_m
     use constants_m
+    use MPI_definitions_m  , only: master
     use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
 
@@ -110,7 +111,7 @@ END DO
 
 call warnings( univ%atom ) 
 
-Print 46
+If( master ) Print 46
 
 include 'formats.h'
 

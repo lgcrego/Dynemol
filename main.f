@@ -5,7 +5,7 @@ use type_m
 use constants_m
 use setup_checklist      
 use card_reading            , only : ReadInputCard
-use MPI_definitions_m       , only : launch_MPI , master , world , myid
+use MPI_definitions_m       , only : launch_MPI , setup_MPI_labor_force , master , world , myid
 use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
 use MM_input                , only : Define_MM_Environment , driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -54,6 +54,8 @@ else
         CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/card.inpt ")
         end if
 end if
+
+CALL setup_MPI_labor_force
 
 If( master ) CALL checklist
 

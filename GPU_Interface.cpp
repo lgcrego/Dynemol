@@ -257,7 +257,7 @@ void GPU_Init(const int *pid, const int *procs_per_dev)
         fflush(stdout);
     }
 #else
-    printf("Using only CPU\n");
+//    printf("Using only CPU\n");
     fflush(stdout);
 #endif
 }

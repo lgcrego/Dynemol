@@ -665,8 +665,7 @@ If ( DRIVER(1:5)=="slice" .AND. nuclear_matter=="extended_sys" .AND. file_type==
 End If    
 
 If ( QMMM == T_ .AND. HFP_Forces == F_ ) then
-    CALL warning("HFP_Forces must be .true. with QMMM ; execution halted, check input card")
-    stop 
+    HFP_Forces = T_
 elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     CALL warning("MUST turn off HFP_Forces; execution halted, check input card")
     stop 
@@ -737,6 +736,7 @@ nnx = 0
 nny = 0 
 PBC = [0 , 0 , 0]
 sigma = 0.04d0
+DOS_range = real_interval( -15.d0 , 0.d0 )
 Selective_Dynamics = .false.
 MM % N_of_species = 1
 thermostat = "Microcanonical"
