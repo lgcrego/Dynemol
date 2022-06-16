@@ -178,4 +178,16 @@
 
   Units_MM        =                    ! <== choose OUTPUT energy units: eV or kj-mol ; default = eV
 
-
+!------------------------------------------------------------------------------
+!                Genetic_Alg and CG OPTIMIZATION parameters
+!
+  Pop_Size        =  Integer           ! <== Population size of candidate solutions for Genetic-Algorithm (Integer)
+  N_generations   =  Integer           ! <== number of iterations (Integer)
+  Pop_range       =  Real              ! <== range of variation of parameters [0:1] (Real)
+  selection_by    =                    ! <== option = {roullete,ranking,sorting}; fitness selection method
+  Mutation_rate   =  Real              ! <== range of variation of parameters [0:1] (Real)
+  Adaptive_       =  Logical           ! <== true -> Adaptive GA method; gradually tights cost function on-the-fly (Logical)
+  Mutate_Cross    =  Logical           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning! (Logical)
+  CG_             =  Logical           ! <== for using CONJUGATE GRADIENT method on Top_Selection after genetic algorithm (Logical)
+  Top_Selection   =  Integer           ! <== top selection to undergo CG_
+  profiling       =  Logical           ! <== generates analysis of the optimization process

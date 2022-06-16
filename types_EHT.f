@@ -323,7 +323,7 @@ implicit none
 character(*) , intent(in) :: string
 
 ! local variables ... 
-character(len=120) :: command
+character(len=140) :: command
 
 command = "sed '11i >>> "//string//" <<<' .warning.signal |cat"
 CALL system(command)
