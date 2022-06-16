@@ -347,7 +347,47 @@ read_loop: do
         case( "UNITS_MM" ) 
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
                 Units_mm = command
+
+!--------------------------------------------------------------------
+!           Genetic_Alg and CG OPTIMIZATION parameters
+!
+
+        case( "POP_SIZE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') Pop_size
         
+        case( "N_GENERATIONS" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') N_generations
+
+        case( "POP_RANGE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) , Pop_range 
+
+        case( "SELECTION_BY" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                selection_by = command
+
+        case( "MUTATION_RATE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) , Mutation_rate 
+
+        case( "ADAPTIVE_" , "ADAPTIVE" ) 
+                Adaptive_ = get_logical(line)
+
+        case( "MUTATE_CROSS" , "MUTATE-CROSS" ) 
+                Mutate_Cross = get_logical(line)
+
+        case( "CG_" , "CG" ) 
+                CG_ = get_logical(line)
+
+        case( "TOP_SELECTION" , "TOP-SELECTION" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') Top_Selection
+
+        case( "PROFILING" ) 
+                profiling = get_logical(line)
+
     end select
 
     !this prevents double reading in the case of blank lines ...
