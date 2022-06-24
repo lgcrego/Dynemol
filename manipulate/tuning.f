@@ -59,7 +59,7 @@ character(3) :: MMSymbols(60)
 !      define operations: 
 ! copy, delete, translate, rotate, group
 !----------------------------------
-where(system % atom % resid == "MOL") system % atom % copy = .true.
+system % atom % copy = .true.
 !----------------------------------
 !      define resid's
 !----------------------------------

@@ -293,6 +293,7 @@ read_loop: do
                    read(command,'(i)',iostat=ioerr) species(n) % N_of_atoms 
 
                    read(33,'(A)',iostat=ioerr) line
+                   line = to_upper_case(line)
                    read(line,*,iostat=ioerr) ( keyword , i=1,4) , command
                    flag = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == command ) )
                    species(n) % flex = flag
@@ -457,6 +458,7 @@ read_loop: do
                           case( "V_SHIFT" )
                               structure%atom(start:finale) % v_shift = real_value 
                           case( "QMMM" )
+                              structure%atom(start:finale) % QMMM = label 
 
                           end select
 
