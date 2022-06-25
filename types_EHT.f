@@ -301,16 +301,19 @@ call get_environment_variable("DYNEMOLDIR",directory)
 allocate( character(len_trim(directory)+1) :: dynemoldir(1))
 dynemoldir = trim(directory)//"/"
 
-!-------------------------------------------------------------
-! copy warning.sign template to dynemolworkdir ...
-write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
-TorF = systemQQ( this_command )
-
 inquire(file=dynemoldir//"warning.signal", EXIST=exist)
 if ( .NOT. exist ) then
     CALL warning("halting: check whether env variable $DYNEMOLDIR was exported")
     stop
     end If
+
+!-------------------------------------------------------------
+! copy warning.sign template to dynemolworkdir ...
+inquire(file=dynemolworkdir//".warning.signal", EXIST=exist)
+If( .not. exist ) then
+    write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
+    TorF = systemQQ( this_command )
+endif
 
 end  subroutine get_environment_vars
 !
