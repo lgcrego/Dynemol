@@ -59,7 +59,7 @@ character(3) :: MMSymbols(60)
 !      define operations: 
 ! copy, delete, translate, rotate, group
 !----------------------------------
-system % atom % copy = .true.
+system % atom % group = .true.
 !----------------------------------
 !      define resid's
 !----------------------------------
