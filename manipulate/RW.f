@@ -41,9 +41,8 @@ type(universe) , intent(out) :: system
 
 ! local variables
 integer          , allocatable  :: atom_No(:)
-integer                         :: i , j , ioerr , InputStatus , indx , N_of_elements
+integer                         :: i , j , ioerr , N_of_elements
 real*8                          :: x0 , y0 , z0 , factor
-character(len=3)                :: temp(20) , dumb
 character(len=3), allocatable   :: element(:) 
 
 ! read System Characteristics and list of chemical elements ...
@@ -123,7 +122,7 @@ implicit none
 type(universe) , intent(out) :: system
 
 !	local variables
-integer :: i , j , ioerr , N_of_atoms , dummy_int
+integer :: i , j , ioerr , dummy_int
 real*8  :: dummy_real
 
 OPEN(unit=3,file='config.inpt',status='old',iostat=ioerr,err=10)
@@ -178,7 +177,7 @@ implicit none
 type(universe) , intent(out) :: system
 
 !	local variables
-integer :: i , j , ioerr , N_of_atoms , ASCII
+integer :: i , j , ioerr , ASCII
 
 OPEN(unit=3,file='input.xyz',status='old',iostat=ioerr,err=10)
 read(3,*) system%N_of_atoms
@@ -446,7 +445,6 @@ type(universe) , intent(inout) :: system
 ! local variables ...
 integer      :: i , j , N_of_tags, io_err, ioerr
 character(20) :: dumb
-logical      :: exist
 
 OPEN(unit=33,file='TorF.dat',status='old',iostat=ioerr,err=10)
 
@@ -481,7 +479,7 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-integer        :: i , j , N_of_elements , N_of_atoms ,  iptr
+integer        :: i , j , N_of_atoms ,  iptr
 type(universe) :: temp
 
 allocate( temp%atom(1) )

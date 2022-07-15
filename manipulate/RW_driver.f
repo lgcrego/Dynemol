@@ -2,7 +2,7 @@ module RW_driver
 
 use RW_routines  , only : View_XYZ, View_Yaehmop, Save_POSCAR, Save_MD_Urht
 use types_m      , only : universe
-use GMX_routines , only : Save_GROMACS 
+use GMX_routines , only : Save_GROMACS, dump_itp
 use Read_Parms   , only : atom 
 use diagnosis_m    
 
@@ -35,7 +35,7 @@ write(*,'(/a)') '1 : XYZ format'
 write(*,'(/a)') '2 : Yaehmop format '
 write(*,'(/a)') '3 : POSCAR format '
 write(*,'(/a)') '4 : PDB format '
-write(*,'(/a)') '5 : Urht format '
+write(*,'(/a)') '5 : Generate itp file '
 write(*,'(/a)') '6 : DONE '
 write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') Writing_Method
@@ -56,7 +56,7 @@ select case ( Writing_Method )
         CALL Save_GROMACS( structure )
 
     case ('5')
-        CALL Save_MD_Urht( structure )
+        CALL dump_itp( structure )
 
     case default
         

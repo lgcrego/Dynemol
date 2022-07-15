@@ -93,7 +93,7 @@ type(universe)  , intent(in) :: trj(:)
 ! local variables ....
 real*8   , allocatable  :: d_AB(:)
 real*8                  :: d_AB_avg , d_AB_sigma
-integer                 :: i , j , indx1 , indx2
+integer                 :: j , indx1 , indx2
 
 ! calcule of the distance between the atoms ...
 write (*, '(1x,a)'),  "Enter the index of atoms whose distance (d_AB) is calculated: "
@@ -127,7 +127,7 @@ type(universe)  , intent(in)    :: trj(:)
 ! local variables ...
 real*8  , allocatable   :: angle_ABC(:)
 real*8                  :: d2_AB , d2_AC , d2_BC , angle_ABC_sigma , angle_ABC_avg
-integer                 :: i , j , indx_A , indx_B , indx_C
+integer                 :: i , indx_A , indx_B , indx_C
 
 ! enter data to define the bond angle formed by atoms ABC ...
 write (*, '(1x,a)'),  "index of the first atom (A): "
@@ -183,8 +183,8 @@ type(universe)  , intent(in)    :: trj(:)
 
 ! local variables ...
 real*8  , allocatable   , dimension(:) :: atom_i , atom_j , atom_k , atom_l , ij , jk , lk , dihedro , m , n
-real*8                                 :: angle_dihedro , cosseno , seno  , pico_1 , pico_2 , number_angle_1(50) , number_angle_2(50)
-integer                                :: indx_i , indx_j , indx_k , indx_l , frame , t , div
+real*8                                 :: angle_dihedro , cosseno , seno
+integer                                :: indx_i , indx_j , indx_k , indx_l , frame , t
 integer , parameter                    :: a = 1
 
 ! enter data to define the bond angle formed by atoms ABC ...
@@ -281,8 +281,8 @@ integer         , intent(in)    :: step
 type(atomic)    , dimension(:)   , allocatable :: trj_PBC
 real*8          , dimension(:,:) , allocatable :: vec_A , vec_B , distance_AB , g_AB , g_AB_from_A
 real*8          , dimension(:)   , allocatable :: x , g_AB_total 
-real*8                                         :: side(3) , radius_max , delta_R , V_local , rho_B_bulk
-integer                                        :: l , i , j , n , N_A , N_B , frame , sampling_number , PBC_sys_size
+real*8                                         :: side(3) , radius_max , delta_R , rho_B_bulk
+integer                                        :: i , j , n , N_A , N_B , frame , sampling_number , PBC_sys_size
 integer         , dimension(:)   , allocatable :: resid_A , resid_B , index_max 
 logical         , dimension(:,:) , allocatable :: mask
 
@@ -394,8 +394,8 @@ integer         , intent(in)    :: step
 ! local variables ...
 real*8  , dimension(:,:) , allocatable  :: LDF
 real*8  , dimension(:)   , allocatable  :: x , location , distance , LDF_final
-real*8                                  :: delta_L , Area , surface , norm
-integer                                 :: l , i , j , n , N_atom , frame , sampling_number
+real*8  :: delta_L , Area , surface , norm
+integer :: i , n , N_atom , frame , sampling_number
 
 ! local parameters ...
 integer , parameter :: N_interval = 500
@@ -545,13 +545,14 @@ end subroutine sort
 !=========================================================
  subroutine Most_Representative_Configuration( trj , sys )
 !=========================================================
+implicit none
 type(universe)  , allocatable , intent(inout)  :: trj(:)
 type(universe)                , intent(out)    :: sys
 
 ! local variables ....
 real*8   , allocatable  :: xyz(:,:,:) , cost(:)
 real*8                  :: soma
-integer                 :: i , j , k , typical
+integer                 :: i , j , k , typical, i1 , i2
 character(1)            :: answer
 logical  , allocatable  :: mask(:,:)
 

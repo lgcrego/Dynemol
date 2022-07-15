@@ -23,11 +23,10 @@ implicit none
 ! local variables
 type(universe)                  :: structure
 type(universe)  , allocatable   :: trajectories(:)
-type(molecular)                 :: sol_mol
-character(len=1)                :: Reading_Method , Writing_Method
+character(len=1)                :: Reading_Method
 character(len=2)                :: Editing_Method 
 character(len=3)                :: resid
-integer                         :: i ,j , ioerr , N_of_atoms, N_of_C, N_of_M, N_of_S, AtNo, N_of_atom_type
+integer                         :: AtNo, N_of_atom_type
 integer                         :: file_type
 
 

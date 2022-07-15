@@ -16,10 +16,8 @@ contains
 implicit none
 
 ! local varibles ...
-character(len=1)                :: file_format , YorN , wait
-integer                         :: frame , n_frames , i , j , choice , option
-real*8                          :: delta_t 
-type(universe)  , allocatable   :: frozen_trj(:)
+character(len=1)                :: wait
+integer                         :: choice
 
 CALL system( "clear" )
 

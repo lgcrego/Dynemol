@@ -22,9 +22,8 @@ subroutine Work_Multiple_Trajectories
 implicit none
 
 ! local varibles ...
-character(len=1)                :: file_format , YorN , choice , wait
-integer                         :: frame , n_frames , i , j
-real*8                          :: delta_t
+character(len=1)                :: file_format , choice , wait
+integer                         :: i
 type(universe)  , allocatable   :: trj1(:) , trj2(:)
 
 CALL system( "clear" )
@@ -94,7 +93,7 @@ type(universe)  , allocatable   , intent(out)   :: trj(:)
 character(len=11)               , intent(in)    :: file_name
 
 ! local variables ...
-integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , n , m , dumb_number
+integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , dumb_number
 real*8                          :: time_1 , time_2 , delta_t 
 character(1)                    :: test
 character(4)                    :: keyword
@@ -303,7 +302,7 @@ character(2)    :: Symbol
 character(3)    :: MMSymbol
 
 real*8  , allocatable :: d1_ij(:) , d2_ij(:) , C_ij(:) , C_ij_mean(:) , C_ij_2mean(:) , Sigma(:) , numerator(:) , denominator(:)
-real*8                :: weight, a_mean , b_mean , aa_mean , bb_mean , ab_mean
+real*8                :: a_mean , b_mean , aa_mean , bb_mean , ab_mean
 integer               :: N_of_samples , N_of_atoms , length_trj , i , j, k , n , counter
 
 CALL system( "clear" )

@@ -370,7 +370,7 @@ type(universe) , intent(inout) ::  sys
 integer        , intent(in)    :: NewOrder(:)
 
 ! local variables ...
-integer ::  i , j , k , nr 
+integer ::  i , j , k
 
 !----------------------------------------------
 !     generate pdb file for GROMACS

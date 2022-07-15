@@ -287,8 +287,8 @@ subroutine AutoCorrl_ErgConfig
 !=============================
 implicit none
 real*8  , allocatable   :: Erg_Config(:) , Corrl(:) , Erg_tmp(:) , time_tmp(:) , time(:)
-real*8                  :: sum1 , sum2 , sum3 , suport_s1 , suport_s2 , suport_s3
-integer                 :: i , inputstatus , tau , n , size_sys
+real*8                  :: sum1 , sum2 , sum3
+integer                 :: i , inputstatus , size_sys
 character(15)           :: word
 
 print'("")'
@@ -369,7 +369,7 @@ subroutine Auto_Correlation_Population
 implicit none
 real*8  , allocatable   :: survival(:) , Corrl(:) , time(:)
 real*8                  :: weight , sum1 , sum2 , sum3
-integer                 :: i , counter , inputstatus , tau , n
+integer                 :: i , counter , tau , n
 character               :: input
 
 print'("")'
@@ -551,8 +551,8 @@ subroutine Vibration_Population
 !==============================
 implicit none
 real*8  , allocatable   :: pop_1(:) , pop_2(:) , Corrl(:) , time_1(:) , time(:)
-real*8                  :: weight , med_1 , med_2 , med_3 , med_4 , med_5 , suport_1 , suport_2 , suport_3 , suport_4
-integer                 :: i , j , n
+real*8                  :: weight , med_1 , med_2 , med_3 , med_4 , med_5 , suport_1 , suport_2
+integer                 :: i , n
 character               :: input_1 , input_2
 
 print'("")'
@@ -654,8 +654,8 @@ subroutine Vibration_Dipole
 !==========================
 implicit none
 real*8  , allocatable   :: dipole_1(:) , dipole_2(:) , Corrl(:) , time_1(:) , time_2(:) , time(:)
-real*8                  :: weight , med_1 , med_2 , med_3 , med_4 , med_5 , suport_1 , suport_2 , suport_3 , suport_4
-integer                 :: i , j , size_1 , size_2 , inputstatus , n
+real*8                  :: weight , med_1 , med_2 , med_3 , med_4 , med_5 , suport_1 , suport_2
+integer                 :: i , size_1 , size_2 , inputstatus , n
 character(6)            :: word
 
 print'("")'
