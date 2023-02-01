@@ -7,7 +7,7 @@ module Ehrenfest_Builder
     use lapack95
     use type_m
     use constants_m
-    use MPI_definitions_m       , only  : myForce , master , npForce , myKernel , KernelComm , ForceComm , KernelCrew , ForceCrew 
+    use MPI_definitions_m       , only  : myForce , master , npForce , myKernel , KernelComm , ForceComm , KernelCrew , ForceCrew , world
     use parameters_m            , only  : driver , verbose , n_part , QMMM
     use Structure_Builder       , only  : Unit_Cell 
     use Overlap_Builder         , only  : Overlap_Matrix
@@ -49,6 +49,7 @@ contains
  integer :: mpi_status(mpi_status_size) , request
  integer :: mpi_D_R = mpi_double_precision
  integer :: mpi_D_C = mpi_double_complex
+ logical :: job_done
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -67,10 +68,20 @@ If( .NOT. allocated(Kernel) ) then
         allocate( F_vec  (system%atoms)                ) 
 end If
 
-! ForceCrew in stand-by ...
-99 If( .not. master ) CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+! Force+Kernel Crew in stand-by ...
+99 If( .not. master ) then
 
-! preprocess overlap matrix for Pulay calculations, all ForceCrew must do it ...
+       CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+
+       CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err ) 
+       If( job_done ) then ! <== Force+Kernel Crew pack and stop here ...
+           call packing
+           call MPI_FINALIZE(err)
+           STOP
+           end if
+end if
+
+! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...
  CALL Overlap_Matrix( system , basis )
  CALL preprocess    ( system , mytasks)
 
@@ -109,9 +120,9 @@ if( KernelCrew ) then
 
            CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
 
-           Kernel = X_ij * A_ad_nd - B_ad_nd
+           Kernel = X_ij * A_ad_nd - B_ad_nd  ! <== all this to calculate Kernel ...
 
-        case (2)  ! <== firstmate of KernelCrew ...
+        case (2) 
 
            CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
 
@@ -367,6 +378,23 @@ mytasks = count( scheduler(:,myForce+1) /= 0 )
 !-------------------------------------------------------------------
 
 end subroutine Preprocess
+!
+!
+!
+!
+!==================
+ subroutine packing
+!==================
+implicit none
+
+deallocate( Kernel , F_snd , F_rcv , F_vec )
+
+if( KernelCrew ) then
+     deallocate( rho_eh , B_ad_nd , tool )
+     If( myKernel == 1 ) deallocate( A_ad_nd )
+end if
+
+end subroutine packing
 !
 !
 !

@@ -85,7 +85,8 @@ integer        :: mpi_D_R = mpi_double_precision
 integer        :: mpi_D_C = mpi_double_complex
 real*8         :: t_rate 
 type(universe) :: Solvated_System
-logical        :: triggered = yes
+logical        :: triggered  = yes
+logical        :: job_status = no
 
 it = 1
 t  = t_i
@@ -177,6 +178,7 @@ do frame = frame_init , frame_final , frame_step
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
+            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
             if( driver == "slice_FSSH" ) then
                 QMMM = QMMM .OR. (triggered == yes)
@@ -194,7 +196,7 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Generate_Structure( frame )
 
-    ! export new coordinates for ForceCrew, only if QMMM = true, to avoid halting ...
+    ! export new coordinates to ForceCrew, for advancing their tasks in Force calculations ...
     If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
@@ -217,6 +219,9 @@ do frame = frame_init , frame_final , frame_step
     End If
 
     CALL Write_Erg_Log( frame , t_rate , triggered )
+
+    job_status = check( frame , frame_final , t_rate ) 
+    CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
     
 end do
 
@@ -240,6 +245,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         :: hole_save , n , err
 integer         :: mpi_D_R = mpi_double_precision
 type(universe)  :: Solvated_System
+logical         :: job_status = no
 
 ! preprocessing stuff .....................................................
 
@@ -290,7 +296,7 @@ If( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
 end If
 
-! ForceCrew only calculate S_matrix and return ; EnvCrew stay in hamiltonians.f ...
+! ForceCrew only calculates S_matrix and return ; EnvCrew stays in hamiltonians.f ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! done for ForceCrew ; ForceCrew dwells in EhrenfestForce ...
@@ -310,7 +316,7 @@ CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
                           
 ! done for KernelCrew ; KernelCrew dwells in EhrenfestForce ...
-If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
+If( KernelCrew ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 do n = 1 , n_part                         
@@ -367,6 +373,7 @@ allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
 !..........................................................................
@@ -739,6 +746,29 @@ end If
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
 end subroutine Restart_stuff
+!
+!
+!
+!
+!=============================================================
+ function check( frame , frame_final , t_rate ) result( flag )
+!=============================================================
+implicit none
+integer , intent(in) :: frame
+integer , intent(in) :: frame_final
+real*8  , intent(in) :: t_rate
+
+! local variables ...
+logical :: flag , flag1 , flag2 , flag3
+
+flag1 = frame + frame_step > frame_final
+flag2 = it >= n_t
+flag3 = t  + t_rate >= t_f
+
+! if any of these hold, job done ...
+flag = flag1 .OR. flag2 .OR. flag3
+
+end  function check
 !
 !
 end module TDSE_adiabatic_m

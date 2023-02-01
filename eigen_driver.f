@@ -3,12 +3,12 @@ module QMDynamicSlice_driver_m
 
     use type_m
     use constants_m
-    use parameters_m                , only : survival , driver , n_part
-    use Data_Output                 , only : Dump_stuff 
-    use Schroedinger_m              , only : DeAllocate_QDyn
-    use TDSE_adiabatic_m            , only : TDSE_adiabatic
-    use CSDM_adiabatic_m            , only : CSDM_adiabatic
-    use Chebyshev_driver_m          , only : Chebyshev_driver
+    use parameters_m        , only : survival , driver , n_part
+    use Data_Output         , only : Dump_stuff 
+    use Schroedinger_m      , only : DeAllocate_QDyn
+    use TDSE_adiabatic_m    , only : TDSE_adiabatic
+    use CSDM_adiabatic_m    , only : CSDM_adiabatic
+    use Chebyshev_driver_m  , only : Chebyshev_driver
 
     public :: QMDynamicSlice_driver
 
@@ -23,7 +23,7 @@ contains
 implicit none
 
 ! local variables ...
-integer                :: it 
+integer                :: it
 real*8  , allocatable  :: QDyn_temp(:,:,:)
 type(f_time)           :: QDyn
 
@@ -47,7 +47,7 @@ select case ( DRIVER )
         CALL Chebyshev_driver ( QDyn , it )
 
     case default
-                Print*, " >>> Check your QMDynamicSlice_driver options <<< :" , driver
+        Print*, " >>> Check your QMDynamicSlice_driver options <<< :" , driver
 
 end select
 

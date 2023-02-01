@@ -70,7 +70,6 @@ If( DIPOLE_ ) CALL Util_multipoles
 
 ! Optimization of Huckel parameters ... 
 CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
-if( slave ) return
 
 ! calculations with new parameters ...
 CALL GA_eigen( Extended_Cell, OPT_basis, UNI , info )

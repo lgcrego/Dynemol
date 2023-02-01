@@ -106,10 +106,11 @@ Adaptive_GA%mode = Adaptive_
 do generation = 1 , N_generations
 
 99  CALL MPI_BCAST( done , 1 , mpi_logical , 0 ,world , err ) 
-    If( done ) then ! <== slaves pack and leave ...
+    If( done ) then ! <== slaves pack and stop here ...
         deallocate( GA_basis , cost , snd_cost , Pop )
-        return
-    End If
+        call MPI_FINALIZE(err)
+        STOP
+        end If
 
     CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
     ! for on_the_fly cost evaluation ...
