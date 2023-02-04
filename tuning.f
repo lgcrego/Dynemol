@@ -89,7 +89,7 @@ where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !   Acceptor    =   A       
 !   Donor       =   D 
 !   Molecule    =   M
-!   Solvent     =   S
+!   Solvent     =   S  (default residue = SOL)
 !   Solute      =   R
 !   Cluster     =   C 
 !   Passivator  =   P 
@@ -101,7 +101,7 @@ DO i = 1 , size(univ%atom)
     select case(univ%atom(i)%residue)
 
         ! this is water, this is water, this is water ...
-        case( 'H2O' , 'WAT' , 'TIP' )
+        case( 'H2O' , 'WAT' , 'TIP' , 'COH' , 'SOL' )
             univ%atom(i)%fragment = 'S'
             univ%atom(i)%solvation_hardcore = 3.d0
 

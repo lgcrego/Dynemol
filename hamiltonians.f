@@ -7,7 +7,7 @@
     use type_m
     use omp_lib
     use constants_m
-    use MPI_definitions_m     , only : master , myEnvId , npEnv , EnvCrew , EnvComm , myid
+    use MPI_definitions_m     , only : master , myEnvId , npEnv , EnvCrew , EnvComm , world
     use parameters_m          , only : EnvField_ , Induced_ , Environ_type , Environ_step
     use Dielectric_Potential  , only : Q_phi
     use DP_potential_m        , only : DP_phi
@@ -80,7 +80,7 @@ integer               :: err
 integer               :: mpi_D_R = mpi_double_precision
 real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) , snd_h(:,:)
-logical               :: evaluate
+logical               :: evaluate , job_done
 
 ! instantiating DP_4_matrix ...
 if( EnvCrew .AND. (.not. done) ) CALL allocate_DP_4_matrix
@@ -102,7 +102,7 @@ N = size(basis)
 Allocate( h(N,N) , source = D_zero )
     
 ! EnvCrew dwells here ...
-99  CALL MPI_BCAST( evaluate , 1 , mpi_logical , 0 , EnvComm , err )
+99 CALL MPI_BCAST( evaluate , 1 , mpi_logical , 0 , EnvComm , err )
 
 ! export new coordinates for EnvCrew ...
 CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , EnvComm, err )
@@ -174,6 +174,12 @@ If( EnvCrew ) then ! <== evaluates snd_h ...
     !$OMP END PARALLEL DO
 
     CALL MPI_reduce( snd_h , h , N*N , MPI_D_R , mpi_SUM , 0 , EnvComm , err )
+
+    CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err )
+    If( job_done ) then 
+        call MPI_FINALIZE(err)
+        STOP
+        end If
 
 else ! master waits for snd_h ...
 

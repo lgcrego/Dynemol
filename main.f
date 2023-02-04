@@ -112,6 +112,10 @@ select case ( driver )
 
 end select
 
+if( master ) then
+    CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+    end if
+
 include 'formats.h'
 
 ! Finalize MPI 

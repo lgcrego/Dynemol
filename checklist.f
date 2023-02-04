@@ -226,8 +226,6 @@ if( ad_hoc ) then
 
 end if
 
-CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
-
 include 'formats.h'
 
 end subroutine dump_driver_parameters_and_tuning
