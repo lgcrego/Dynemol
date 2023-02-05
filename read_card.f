@@ -71,7 +71,7 @@ read_loop: do
         case( "AD_HOC" ) 
             ad_hoc = get_logical(line)
 
-            ! skip, to be read later ...
+            ! skip for now, entry to be fully read later from subroutine ! ad_hoc_tuning ...            
             if( ad_hoc == .true. ) then
                 do 
                    read(33,'(A)',iostat=ioerr) line
@@ -132,7 +132,7 @@ read_loop: do
 !------------------------------------------------------------------------
 !               POTENTIALS
 !
-        case( "ENVFIELD_" ) 
+        case( "ENVFIELD_" , "ENVFIELD" ) 
                 EnvField_ = get_logical(line)
 
         case( "ENVIRON_TYPE" ) 

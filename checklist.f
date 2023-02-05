@@ -78,6 +78,8 @@ call date_and_time(values=date_time)
 
 write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
 
+write(10,'(a/)') " Powered   by   SingleNode"
+
 write(10,'(''<======  ###############  ==>'')')
 write(10,'(''<====    PARAMETERS.F   ====>'')')
 write(10,'(''<==  ###############  ======>'')')
@@ -225,8 +227,6 @@ if( ad_hoc ) then
    end if
 
 end if
-
-CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
 
 include 'formats.h'
 

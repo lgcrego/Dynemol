@@ -29,7 +29,7 @@ contains
 implicit none
 type(structure) , intent(in)  :: sys
 
-If( EnvField_ .and. (.not. any(sys%fragment=="S")) ) stop 'execution halted: check your option for Environ_Type in parameters.f'
+If( EnvField_ .and. (.not. any(sys%fragment=="S")) ) stop 'execution halted: did not define solvent fragment'
 
 select case (Environ_Type)
 

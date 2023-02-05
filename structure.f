@@ -328,59 +328,70 @@ system% BasisPointer = 0
 ! local variables ...
 integer :: N_of_orbitals, N_of_atom_type, AtNo , residue , N_of_residue_type , fragment , N_of_fragment_type
 integer :: first_nr , last_nr , N_of_residue_members 
+integer :: i , output_units(2) = [ 6 , 10 ]
+
+open (10, file='log.trunk/driver_parms_and_tuning.log', status='old', access='append')
+write(10,'(''<======  ###############  ==>'')')
+write(10,'(''<====      HEADINGS     ====>'')')
+write(10,'(''<==  ###############  ======>'')')
 
 call sleep(3) ! waits 3 seconds ...
 
-! total number of orbitals ...
-N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
-Print 120 , N_of_orbitals                       
+do i = 1 , size(output_units) 
 
-! total number of electrons ...
-a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
-Print 140 , a%N_of_electrons
+      ! total number of orbitals ...
+      N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
+      write(output_units(i),120) N_of_orbitals
+      
+      ! total number of electrons ...
+      a%N_of_electrons = sum( a%Nvalen , a%QMMM == "QM" )
+      write(output_units(i),140) a%N_of_electrons
+      
+      ! total number of atoms ...
+      write(output_units(i),141) a%atoms , count(a%flex)
+      
+      ! total number of QM atoms ...
+      write(output_units(i),142) count( a%QMMM == "QM" )
+      
+      ! total number of MM atoms ...
+      write(output_units(i),143) count( a%QMMM == "MM" )
+      
+      ! total number of atoms of given type ...
+      do AtNo = 1 , size(atom)
+      
+          N_of_atom_type = count( a%AtNo == AtNo )
+         
+          If( N_of_atom_type /= 0 ) write(output_units(i),121) , atom(AtNo)%symbol , N_of_atom_type
+      
+      end do
 
-! total number of atoms ...
-Print 141 , a%atoms , count(a%flex)
+     ! total number of residues ...
+      do residue = 1 , size(Unit_Cell%list_of_residues)
+      
+          N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
+         
+      !   finding positions of residues in structure and number of residue members ; for continuous blocks ...
+          first_nr = minval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
+          last_nr  = maxval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
+      
+          N_of_residue_members = last_nr - first_nr + 1
+      
+          If( N_of_residue_type /= 0 ) write(output_units(i),122) , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
+      
+      end do
+      
+      ! total number of fragments ...
+      do fragment = 1 , size(a%list_of_fragments)
+      
+          N_of_fragment_type = count( a%fragment == a%list_of_fragments(fragment) )
+          
+          If( N_of_fragment_type /= 0 ) write(output_units(i),123) , a%list_of_fragments(fragment) , N_of_fragment_type
+      
+      end do
 
-! total number of QM atoms ...
-Print 142 , count( a%QMMM == "QM" )
+end do 
 
-! total number of MM atoms ...
-Print 143 , count( a%QMMM == "MM" )
-
-! total number of atoms of given type ...
-! total number of atoms of given type ...
-do AtNo = 1 , size(atom)
-
-    N_of_atom_type = count( a%AtNo == AtNo )
-   
-    If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
-
-end do
-
-! total number of residues ...
-do residue = 1 , size(Unit_Cell%list_of_residues)
-
-    N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
-   
-!   finding positions of residues in structure and number of residue members ; for continuous blocks ...
-    first_nr = minval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
-    last_nr  = maxval( a%nr , (a%residue == Unit_Cell%list_of_residues(residue)) .AND. (a%copy_No == 0) )
-
-    N_of_residue_members = last_nr - first_nr + 1
-
-    If( N_of_residue_type /= 0 ) Print 122 , Unit_Cell%list_of_residues(residue) , N_of_residue_members , N_of_residue_type
-
-end do
-
-! total number of fragments ...
-do fragment = 1 , size(a%list_of_fragments)
-
-    N_of_fragment_type = count( a%fragment == a%list_of_fragments(fragment) )
-    
-    If( N_of_fragment_type /= 0 ) Print 123 , a%list_of_fragments(fragment) , N_of_fragment_type
-
-end do
+close(10)
 
 Print 47
 

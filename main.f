@@ -99,6 +99,8 @@ select case ( driver )
 
 end select
 
+CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+
 include 'formats.h'
 
 ! Finalize GPU if necessary 
