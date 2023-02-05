@@ -78,6 +78,8 @@ call date_and_time(values=date_time)
 
 write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
 
+write(10,'(a/)') " Powered   by   Master/MPI"
+
 write(10,'(''<======  ###############  ==>'')')
 write(10,'(''<====    PARAMETERS.F   ====>'')')
 write(10,'(''<==  ###############  ======>'')')

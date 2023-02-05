@@ -358,7 +358,6 @@ do i = 1 , size(output_units)
       write(output_units(i),143) count( a%QMMM == "MM" )
       
       ! total number of atoms of given type ...
-      ! total number of atoms of given type ...
       do AtNo = 1 , size(atom)
       
           N_of_atom_type = count( a%AtNo == AtNo )
