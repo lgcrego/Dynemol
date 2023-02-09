@@ -127,14 +127,14 @@ do a = 1 , MM % N_of_species
         i = 1
         do
 
+            if( i > size(atom) ) exit
+
             if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
                 atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
                 i = i + N_of_atoms
             else
                 i = i + 1
             end if
-
-            if( i > size(atom) ) exit
 
         end do
         rewind 33
@@ -253,7 +253,7 @@ do a = 1 , MM % N_of_species
             species(a) % Ndiheds = Ndiheds
 
             allocate( species(a) % diheds  ( Ndiheds , 4 ) )
-            allocate( species(a) % funct_dihed ( Ndiheds     ) )
+            allocate( species(a) % funct_dihed ( Ndiheds ) )
 
             forall(i=1:4) species(a) % diheds(:Ndiheds,i) = InputIntegers(:Ndiheds,i)
 
@@ -268,6 +268,9 @@ do a = 1 , MM % N_of_species
 !----------------------------------------------------------------------------------------------
         ! the IMPROPER dihedrals must be at the END OF THE LIST ...
         Ntorsion = count( species(a)%dihedral_type /= "imp" )
+
+        species(a)% NTorsions  = Ntorsion
+        species(a)% NImpropers = Ndiheds - Ntorsion
 
         If( master ) then
             TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )

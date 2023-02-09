@@ -119,6 +119,7 @@ do a = 1 , MM % N_of_species
 
         i = 1
         do
+            if( i > size(atom) ) exit
 
             if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
                 atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
@@ -126,8 +127,6 @@ do a = 1 , MM % N_of_species
             else
                 i = i + 1
             end if
-
-            if( i > size(atom) ) exit
 
         end do
         rewind 33

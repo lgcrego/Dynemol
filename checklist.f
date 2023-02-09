@@ -3,6 +3,8 @@ MODULE setup_checklist
  use type_m
  use parameters_m
  use MM_input        
+ use OMP_lib
+ use MPI_definitions_m , only : np
 
  public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
 
@@ -78,7 +80,8 @@ call date_and_time(values=date_time)
 
 write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
 
-write(10,'(a/)') " Powered   by   Master/MPI"
+write(10,27) np
+write(10,28) OMP_GET_MAX_threads()
 
 write(10,'(''<======  ###############  ==>'')')
 write(10,'(''<====    PARAMETERS.F   ====>'')')
