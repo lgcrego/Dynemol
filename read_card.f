@@ -435,18 +435,22 @@ read_loop: do
 
     read(33,'(A)',iostat=ioerr) line
     if ( ioerr /= 0 ) exit read_loop
-    read(line,*,iostat=ioerr) keyword
+    read(line,*,iostat=ioerr) keyword ! <== keyword = first contiguous string from line
     keyword = to_upper_case(keyword)
+
     if( index(keyword,"!") /= 0 ) cycle read_loop 
 
     if( keyword == "AD_HOC" ) then
+
         do 
            read(33,'(A)',iostat=ioerr) line
 
            CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
+
            if( done ) exit
 
-           if( EH_MM == "QM" ) then
+           if( EH_MM == "QM" .AND. present(structure) ) then
+
                    select case(feature)
 
                           case( "ATOM" )
@@ -461,8 +465,10 @@ read_loop: do
                               structure%atom(start:finale) % QMMM = label 
 
                           end select
+                          end if
 
-           elseif( EH_MM == "MM" ) then
+           if( EH_MM == "MM" .AND. present(atom) ) then
+
                    select case(feature)
 
                           case( "RESIDUE" )
@@ -470,7 +476,8 @@ read_loop: do
                           case( "NR" )
                               atom(start:finale) % nr = int_value 
                           end select
-           endif
+                          endif
+
            !this prevents double reading in the case of blank lines ...
            line = "XXXXXXXXXXXXXXXXXXXXXX"
            
@@ -481,6 +488,8 @@ read_loop: do
     keyword = "XXXXXXXXXXXXXXXXXXXXXX"
    
 end do read_loop
+
+close(33)
 
 include 'formats.h'
 
