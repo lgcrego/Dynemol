@@ -45,19 +45,17 @@ contains
  complex*16      , optional , intent(inout) :: MO_ket(:,:)
 
 ! local variables ... 
- integer :: i , j , N , xyz , err , mytasks , myatom
- integer :: mpi_status(mpi_status_size) , request
+ integer :: i , N , xyz , err , mytasks , myatom
  integer :: mpi_D_R = mpi_double_precision
- integer :: mpi_D_C = mpi_double_complex
  logical :: job_done
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
  logical , parameter :: T_ = .true. , F_ = .false.
 
-!================================================================================================
+!======================================================================================
 ! some preprocessing ...
-!================================================================================================
+!======================================================================================
 
 N = size(basis)
 
@@ -86,64 +84,11 @@ end if
  CALL preprocess    ( system , mytasks)
 
 if( KernelCrew ) then
-
-    ! KernelCrew in stand-by to receive data from master ...
-    CALL MPI_BCAST( QM%erg , N   , mpi_D_R , 0 , KernelComm , err )
-    CALL MPI_BCAST( QM%L   , N*N , mpi_D_R , 0 , KernelComm , err )
-    CALL MPI_BCAST( MO_bra , N*2 , mpi_D_C , 0 , KernelComm , err )
-    CALL MPI_BCAST( MO_ket , N*2 , mpi_D_C , 0 , KernelComm , err )
-
-    If( .NOT. allocated(rho_eh) ) then
-        allocate( rho_eh  (N,N) )
-        allocate( B_ad_nd (N,N) )
-        allocate( tool    (N,N) )
-        If( myKernel == 1 ) then
-             allocate( A_ad_nd (N,N) )
-             CALL Huckel_stuff( basis )
-        end If
-    end If
-
-    select case (myKernel)
-
-        case (1)
-
-           ! build up electron-hole density matrix ...
-           forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
-           tool   = transpose(rho_eh)
-           rho_eh = ( rho_eh + tool ) / two
-
-           CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
-           CALL MPI_Request_Free( request , err )
-
-           CALL symm( rho_eh , QM%L , tool )
-           CALL gemm( QM%L , tool , A_ad_nd , 'T' , 'N' )
-
-           CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
-
-           Kernel = X_ij * A_ad_nd - B_ad_nd  ! <== all this to calculate Kernel ...
-
-        case (2) 
-
-           CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
-
-           forall( j=1:N ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
-
-           CALL gemm( rho_eh , QM%L , tool )
-           CALL gemm( tool , QM%L  , B_ad_nd , 'T' , 'N' )
-
-           CALL MPI_ISend( B_ad_nd , N*N , mpi_D_R , 1 , 0 , KernelComm , request , err )
-           CALL MPI_Request_Free( request , err )
-
-    end select
-
-end if
-
+    call get_Kernel( basis , QM , MO_bra , MO_ket )
+    end if
 call MPI_BCAST( Kernel , N*N , mpi_D_R , 1 , ForceComm , err )
 
-! Run, Forrest, Run ...
-!================================================================================================
 ! set all forces to zero beforehand ...
-
 forall( i=1:system% atoms ) atom(i)% Ehrenfest(:) = D_zero
 F_rcv = D_zero ; F_snd = D_zero ; F_vec = D_zero 
 
@@ -151,6 +96,7 @@ select case( driver )
 
     case( "slice_AO" )
 
+        ! Run, Forrest, Run ...
         do i = 1 , mytasks
 
             myatom = scheduler(i,myForce+1)
@@ -266,6 +212,77 @@ system% coord (K,:) = tmp_coord
 deallocate(pairs)
 
 end subroutine Ehrenfest_AO
+!
+!
+!
+!
+!=====================================================
+ subroutine get_Kernel( basis , QM , MO_bra , MO_ket ) 
+!=====================================================
+implicit none
+type(STO_basis)          , intent(in)    :: basis(:)
+type(R_eigen) , optional , intent(in)    :: QM
+complex*16    , optional , intent(inout) :: MO_bra(:,:)
+complex*16    , optional , intent(inout) :: MO_ket(:,:)
+
+! local variables ... 
+integer :: i , j , N , err 
+integer :: mpi_status(mpi_status_size) , request
+integer :: mpi_D_R = mpi_double_precision
+integer :: mpi_D_C = mpi_double_complex
+
+N = size(basis)
+
+! KernelCrew in stand-by to receive data from master ...
+CALL MPI_BCAST( QM%erg , N   , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( QM%L   , N*N , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( MO_bra , N*2 , mpi_D_C , 0 , KernelComm , err )
+CALL MPI_BCAST( MO_ket , N*2 , mpi_D_C , 0 , KernelComm , err )
+
+If( .NOT. allocated(rho_eh) ) then
+    allocate( rho_eh  (N,N) )
+    allocate( B_ad_nd (N,N) )
+    allocate( tool    (N,N) )
+    If( myKernel == 1 ) then
+         allocate( A_ad_nd (N,N) )
+         CALL Huckel_stuff( basis )
+    end If
+end If
+
+select case (myKernel)
+
+    case (1)
+
+       ! build up electron-hole density matrix ...
+       forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
+       tool   = transpose(rho_eh)
+       rho_eh = ( rho_eh + tool ) / two
+
+       CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
+       CALL MPI_Request_Free( request , err )
+
+       CALL symm( rho_eh , QM%L , tool )
+       CALL gemm( QM%L , tool , A_ad_nd , 'T' , 'N' )
+
+       CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
+
+       Kernel = X_ij * A_ad_nd - B_ad_nd  ! <== all this to calculate Kernel ...
+
+    case (2) 
+
+       CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
+
+       forall( j=1:N ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
+
+       CALL gemm( rho_eh , QM%L , tool )
+       CALL gemm( tool , QM%L  , B_ad_nd , 'T' , 'N' )
+
+       CALL MPI_ISend( B_ad_nd , N*N , mpi_D_R , 1 , 0 , KernelComm , request , err )
+       CALL MPI_Request_Free( request , err )
+
+end select
+
+end subroutine get_Kernel
 !
 !
 !
