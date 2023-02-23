@@ -27,20 +27,22 @@
     use Hamiltonians                , only : X_ij , Huckel_with_Fields 
     use LCMO_m                      , only : LCMO_Builder
 
-    public :: FMO_analysis , eh_tag , orbital
+    public  :: FMO_analysis , eh_tag , orbital , PointerState
+
 
     private
 
     integer       :: UNI_size , FMO_size 
+    integer       :: PointerState(2)
     type(R_eigen) :: Dual , tmp
 
  contains
 !
 !
 !
-!=================================================================
+!==================================================================
  subroutine FMO_analysis( system, basis, UNI, FMO , AO , instance )
-!=================================================================
+!==================================================================
  implicit none
  type(structure)           , intent(inout) :: system
  type(STO_basis)           , intent(inout) :: basis(:)
@@ -243,6 +245,9 @@ implicit none
                     ! %L*%R = A^T.S.C.C^T.S.A = 1
                     check = check + sum( FMO%L(i,:)*FMO%R(:,i) ) 
                  end do
+
+                 PointerState(1) = maxloc( abs(FMO%R(:,electron_state)) , dim=1 )
+                 PointerState(2) = maxloc( abs(FMO%R(:,hole_state    )) , dim=1 )
 
                  if( dabs(check-FMO_size) < low_prec ) then
                      Print*, '>> projection done <<'

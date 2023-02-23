@@ -71,7 +71,7 @@ read_loop: do
         case( "AD_HOC" ) 
             ad_hoc = get_logical(line)
 
-            ! skip for now, entry to be fully read later from subroutine ! ad_hoc_tuning ...            
+            ! skip for now, entry to be fully read later from subroutine ad_hoc_tuning ...
             if( ad_hoc == .true. ) then
                 do 
                    read(33,'(A)',iostat=ioerr) line

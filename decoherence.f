@@ -134,7 +134,7 @@ integer        , intent(in):: PST(:)
 real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9 
 
 ! local variables ...
-integer:: i, j, h, n, N_atoms, dim_E, xyz
+integer:: i, j, h, n, N_atoms, dim_E
 real*8 :: f_ik , aux
 real*8           , allocatable, dimension(:,:):: rho, v_x_s
 type(d_NA_vector), allocatable, dimension(:,:):: s_El_ik, s_Hl_ik, Force 
@@ -312,9 +312,10 @@ If(.NOT. allocated(nucleus)) then
 k = 0
 do n = 1 , system%atoms 
    If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+   k = k + 1
    do xyz = 1 , 3 
-      nucleus(n)% r(xyz) = system% coord(n,xyz)
-      nucleus(n)% v(xyz) = atom(n)% vel(xyz) * V_factor
+      nucleus(k)% r(xyz) = system% coord(n,xyz)
+      nucleus(k)% v(xyz) = atom(n)% vel(xyz) * V_factor
       enddo
       enddo
 

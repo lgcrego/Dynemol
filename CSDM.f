@@ -6,6 +6,7 @@ module Ehrenfest_CSDM
     use lapack95
     use type_m
     use constants_m
+    use FMO_m            , only: PointerState
     use Structure_Builder, only: Unit_Cell
     use parameters_m     , only: verbose, n_part,electron_state, hole_state
     use Overlap_Builder  , only: Overlap_Matrix
@@ -524,8 +525,8 @@ If( .NOT. allocated(grad_S) ) then
        dNA_Hl (i,j)% vec(:) = d_zero
        enddo
 
-    PST(1) = electron_state
-    PST(2) = hole_state
+    PST(1) = PointerState(1)
+    PST(2) = PointerState(2)
 
     CALL init_random_seed()
 
