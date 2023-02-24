@@ -3,9 +3,13 @@
 ! Subroutine for computing time evolution adiabatic on the AO
 module CSDM_adiabatic_m
 
+    use MPI
     use type_m
     use constants_m
     use blas95
+    use MPI_definitions_m       , only: master , world , myid,           &
+                                        KernelComm , KernelCrew ,        &
+                                        ForceComm , ForceCrew! , EnvCrew 
     use parameters_m            , only: t_i , n_t , t_f , n_part ,       &
                                         frame_step , nuclear_matter ,    &
                                         EnvField_ , DP_Moment ,          &
@@ -55,12 +59,12 @@ module CSDM_adiabatic_m
     private
 
     ! module variables ...
+    type(R_eigen)                                  :: UNI , el_FMO , hl_FMO
     type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
     Complex*16      , allocatable , dimension(:,:) :: MO_TDSE_bra , MO_TDSE_ket , DUAL_TDSE_bra , DUAL_TDSE_ket ! <== TDSE wvpckt
     Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra   ! <== CSDM wvpckt
     Complex*16      , allocatable , dimension(:)   :: phase
     real*8          , allocatable , dimension(:)   :: Net_Charge_MM
-    type(R_eigen)   :: UNI , el_FMO , hl_FMO
     real*8          :: t
     integer         :: it , mm , nn
 
@@ -76,10 +80,13 @@ type(f_time)    , intent(out)   :: QDyn
 integer         , intent(out)   :: final_it
 
 ! local variables ...
-integer        :: frame , frame_init , frame_final , frame_restart
+integer        :: frame , frame_init , frame_final , frame_restart , err
+integer        :: mpi_D_R = mpi_double_precision
+integer        :: mpi_D_C = mpi_double_complex
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
+logical        :: job_status = no
 
 it = 1
 t  = t_i
@@ -116,6 +123,12 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
+
+        CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
+        CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
+
         CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, UNI, PST )
     endif
 
@@ -174,7 +187,10 @@ do frame = frame_init , frame_final , frame_step
     end select
 
     CALL Generate_Structure( frame )
-    
+   
+    ! export new coordinates to ForceCrew, for advancing their tasks in Force calculations ...
+    If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+ 
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
     If( EnvField_ ) CALL DP_stuff( "EnvField" )
@@ -182,8 +198,9 @@ do frame = frame_init , frame_final , frame_step
     If( Induced_ )  CALL DP_stuff( "Induced_DP" )
 
     Deallocate ( UNI%R , UNI%L , UNI%erg )
-
+call start_clock
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
+call stop_clock("QCModel")
 
     CALL U_nad(t_rate) ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
@@ -198,6 +215,9 @@ do frame = frame_init , frame_final , frame_step
 
     CALL Write_Erg_Log( frame , triggered )
 
+    job_status = check( frame , frame_final , t_rate ) 
+    CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
+    
 enddo
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
@@ -218,8 +238,10 @@ implicit none
 type(f_time) , intent(out) :: QDyn
 
 ! local variables
-integer         :: hole_save , n 
+integer         :: hole_save , n  ,err
+integer         :: mpi_D_R = mpi_double_precision
 type(universe)  :: Solvated_System
+logical         :: job_status = no
 
 ! preprocessing stuff .....................................................
 
@@ -252,10 +274,6 @@ CALL Generate_Structure( 1 )
 
 CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
-mm = size(ExCell_basis) ; nn = n_part
-
-CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
 If( EnvField_ ) then
@@ -274,7 +292,27 @@ If( EnvField_ ) then
 
 end If
 
+! ForceCrew only calculates S_matrix and return ; EnvCrew stays in hamiltonians.f ...
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
+
+! done for ForceCrew ; ForceCrew dwells in Ehrenfest ...
+If( ForceCrew  ) CALL Ehrenfest( Extended_Cell , ExCell_basis )
+
+mm = size(ExCell_basis) ; nn = n_part
+
+If( KernelCrew ) then                                                                                           
+        allocate( UNI%erg (mm)    )
+        allocate( UNI%L   (mm,mm) )
+        allocate( UNI%R   (mm,mm) )
+end if
+CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+
+CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
+
+! done for KernelCrew ; KernelCrew dwells in EhrenfestForce ...
+If( KernelCrew ) CALL Ehrenfest( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 do n = 1 , n_part                         
@@ -337,6 +375,10 @@ If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
 allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 CALL BcastQMArgs( mm , Extended_Cell%atoms )
+
+! ForceCrew is on stand-by for this ...
+CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
 
@@ -696,6 +738,27 @@ Unit_Cell% QM_erg = update_QM_erg( triggered )
 end subroutine Restart_stuff
 !
 !
+!
+!
+!=============================================================
+ function check( frame , frame_final , t_rate ) result( flag )
+!=============================================================
+implicit none
+integer , intent(in) :: frame
+integer , intent(in) :: frame_final
+real*8  , intent(in) :: t_rate
+
+! local variables ...
+logical :: flag , flag1 , flag2 , flag3
+
+flag1 = frame + frame_step > frame_final
+flag2 = it >= n_t
+flag3 = t  + t_rate >= t_f
+
+! if any of these hold, job done ...
+flag = flag1 .OR. flag2 .OR. flag3
+
+end  function check
 !
 !
 end module CSDM_adiabatic_m

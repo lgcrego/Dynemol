@@ -117,13 +117,13 @@ SOURCE2 = constants_m.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
+		  FMO.o \
                   CSDM.o \
                   FSSH.o \
                   decoherence.o \
 		  CoulInt_QMMM.o \
 		  f_intra.o \
 		  f_inter.o \
-		  FMO.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
 		  data_output.o \

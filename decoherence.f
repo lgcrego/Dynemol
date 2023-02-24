@@ -312,9 +312,10 @@ If(.NOT. allocated(nucleus)) then
 k = 0
 do n = 1 , system%atoms 
    If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+   k = k + 1
    do xyz = 1 , 3 
-      nucleus(n)% r(xyz) = system% coord(n,xyz)
-      nucleus(n)% v(xyz) = atom(n)% vel(xyz) * V_factor
+      nucleus(k)% r(xyz) = system% coord(n,xyz)
+      nucleus(k)% v(xyz) = atom(n)% vel(xyz) * V_factor
       enddo
       enddo
 

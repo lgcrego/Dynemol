@@ -1,7 +1,8 @@
 module MPI_definitions_m
 
     use MPI
-    use parameters_m     , only : driver , EnvField_
+    use type_m       , only : warning
+    use parameters_m , only : driver , EnvField_
 
     public :: world , myid , master , slave , np 
     public :: ChebyComm  , ChebyCrew  , myCheby 
@@ -52,6 +53,12 @@ contains
  if( myid == 0 ) master = .true.
  if( myid == 0 ) slave  = .false.
 
+ if( np < 3 ) then
+     if( master ) CALL warning("halting: # of MPI processes < 3; # of MPI processes must be at least 3")
+     Call mpi_barrier( world , err )
+     stop
+     end if
+
  end subroutine launch_MPI
 !
 !
@@ -69,11 +76,69 @@ select case ( driver )
        case ( "slice_Cheb" )
            CALL setup_Chebyshev_Crew
 
+       case ( "slice_CSDM" )
+           CALL setup_CSDM_Crew
+
        case default
 
 end select
 
 end subroutine setup_MPI_labor_force
+!
+!
+!
+!===============================
+ subroutine setup_CSDM_Crew
+!===============================
+ implicit none
+
+! local variables ...
+ integer :: err , my_color , ForceCrewLimit
+ logical :: drafted = .false.
+
+! define sub_groups and new communicators ...
+!------------------------------------------------------------------------
+! KernelComm group = (0,1,2) ; to work in "EhrenfestForce" ...
+ select case ( myid )
+    case (0)
+        my_color   = 0
+    case (1:2)
+        my_color   = 0
+        KernelCrew = .true.
+    case (3:)
+        my_color   = MPI_undefined
+ end select
+
+ CALL MPI_Comm_split( world , my_color , myid , KernelComm  , err )
+ If( KernelCrew ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
+ 
+!------------------------------------------------------------------------
+! ForceComm group = KernelCrew + ForceCrew ; to work in "EhrenfestForce" ...
+
+ ForceCrewLimit = (np-1) !- merge( EnvProcs , 0 , EnvField_ )
+
+ If( myid <= 2) then                                        ! <== case(0:2)
+        my_color = 0
+        drafted  = .true.
+ ElseIf( (3 <= myid) .AND. (myid <= ForceCrewLimit) ) then  ! <== case(3:ForceCrewLimit)
+        my_color  = 0
+        drafted   = .true.
+        ForceCrew = .true.
+ Else                                                       ! <== case(ForceCrewLimit+1:)
+        my_color = MPI_undefined
+ EndIf
+
+ CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )
+
+ If( drafted ) then
+    CALL MPI_COMM_RANK (ForceComm , myForce , err )   ! <== sets the rank of processes
+    CALL MPI_COMM_SIZE (ForceComm , npForce , err )   ! <== gets the total number of processes
+ end If 
+
+! processes released for next drafting ...
+ drafted = .false.
+
+ end subroutine setup_CSDM_Crew
 !
 !
 !
