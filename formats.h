@@ -1,6 +1,6 @@
 27    FORMAT("Powered   by   Master/MPI => total #_of tasks (processes) = ",I3)
 
-28    FORMAT(t27,"=> cpus per task = ",I3,/)
+28    FORMAT(t27,"=> threads per task = ",I3,/)
 
 29    FORMAT(/,"DATE: ",A3,"/",I2,"/",I4,"    ---    TIME: ",I2,"h:",I2,"min",/)
 

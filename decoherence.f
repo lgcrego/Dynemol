@@ -196,7 +196,6 @@ end do
 
 h = 0
 do n = 1 , N_atoms 
-
      ! reset decoherence force to zero ...
      atom(n)% f_CSDM(:) = d_zero
 
@@ -204,7 +203,6 @@ do n = 1 , N_atoms
 
      h = h + 1
      atom(n)% f_CSDM(:) = ( Force(h,1)%vec(:) - Force(h,2)%vec(:) ) * eVAngs_2_Newton 
-
      enddo
 
 deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , Force )  
@@ -254,16 +252,16 @@ do n = 1 , dim_N
           norm         = dot_product( dNA_El(n,i)% vec(:) , dNA_El(n,i)% vec(:) ) 
           v_x_dNA      = v_x_dNA / sqrt(norm)
 
-          s_El_ik(n,i)% vec = a_Bohr * v_x_dNA * dNA_El(n,i)%vec 
+          s_El_ik(n,i)% vec = a_Bohr * v_x_dNA * dNA_El(n,i)% vec 
 
           s_El_ik(n,i)% vec = s_El_ik(n,i)% vec + nucleus(n)% V_vib     ! <== units = Ang/ps ...
 
           norm = dot_product( s_El_ik(n,i)% vec , s_El_ik(n,i)% vec )
 
           ! building decoherence force versor s_ik ...
-          s_El_ik(n,i)% vec = s_El_ik(n,i)% vec  / sqrt(norm)
-          !========================================================
-          enddo
+          s_El_ik(n,i)% vec = s_El_ik(n,i)% vec / sqrt(norm)
+         !========================================================
+         enddo
 
      do i = 1 , dim_E
           If( i == PST(2) ) cycle     
@@ -274,7 +272,7 @@ do n = 1 , dim_N
           norm         = dot_product( dNA_Hl(n,i)% vec(:) , dNA_Hl(n,i)% vec(:) ) 
           v_x_dNA      = v_x_dNA / sqrt(norm)
 
-          s_Hl_ik(n,i)% vec = a_Bohr * v_x_dNA * dNA_Hl(n,i)%vec 
+          s_Hl_ik(n,i)% vec = a_Bohr * v_x_dNA * dNA_Hl(n,i)% vec 
 
           s_Hl_ik(n,i)% vec = s_Hl_ik(n,i)% vec + nucleus(n)% V_vib     ! <== units = Ang/ps ...
 

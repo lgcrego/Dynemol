@@ -436,7 +436,7 @@ if( QMMM ) then
 
        case( "slice_CSDM" ) 
 call start_clock
-           CALL Ehrenfest( system, basis, MO_bra, MO_ket, QM )
+           CALL Ehrenfest( system , basis , QM )
 call stop_clock("Ehrenfest")
            CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
 

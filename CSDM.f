@@ -7,9 +7,9 @@ module Ehrenfest_CSDM
     use lapack95
     use type_m
     use constants_m
-    use FMO_m             , only: PointerState
     use MD_read_m         , only: atom
-    use MPI_definitions_m , only: myForce, master, npForce, myKernel, KernelComm, ForceComm, KernelCrew, ForceCrew, world, myid
+    use MPI_definitions_m , only: master, myKernel, KernelComm, ForceComm, KernelCrew, ForceCrew, ForceCrewComm , world, myid , myforce
+    use MPI_definitions_m , only: myAxisComm , AxisCrew , myaxis_rank , np_per_axis
     use Structure_Builder , only: Unit_Cell
     use parameters_m      , only: verbose, n_part,electron_state, hole_state
     use Overlap_Builder   , only: Overlap_Matrix
@@ -19,10 +19,11 @@ module Ehrenfest_CSDM
     private
 
     !module variables ...
-    integer                                            :: dim_E , dim_N , PST(2) , Fermi
-    integer           , allocatable , dimension(:)     :: BasisPointer, DOS
+    integer                                            :: dim_E , dim_N , PST(2) , mytasks
+    integer           , allocatable , dimension(:)     :: BasisPointer, DOS , list
+    integer           , allocatable , dimension(:,:)   :: my_axis_todo_list
     real*8            , allocatable , dimension(:)     :: erg, F_vec
-    real*8            , allocatable , dimension(:,:)   :: Kernel, grad_S , QL, Phi, d_NA, Xij, F_mtx, tmp_El, tmp_Hl
+    real*8            , allocatable , dimension(:,:)   :: Kernel, grad_S , QL, Phi, d_NA, Xij, tmp_El, tmp_Hl
     type(d_NA_vector) , allocatable , dimension(:,:)   :: dNA_El, dNA_Hl              
     real*8            , allocatable , dimension(:,:,:) :: tmp_El_xyz , tmp_Hl_xyz
     logical           , allocatable , dimension(:,:)   :: mask
@@ -34,34 +35,31 @@ contains
 !
 !
 !
-!=============================================================
- subroutine Ehrenfest( system , basis , MO_bra , MO_ket , QM )
-!=============================================================
+!======================================
+ subroutine Ehrenfest( system , basis , QM )
+!======================================
  implicit none
- type(structure)            , intent(inout) :: system
- type(STO_basis)            , intent(in)    :: basis(:)
- complex*16      , optional , intent(inout) :: MO_bra(:,:)
- complex*16      , optional , intent(inout) :: MO_ket(:,:)
+ type(structure) , intent(inout) :: system
+ type(STO_basis) , intent(in)    :: basis(:)
  type(R_eigen)   , optional , intent(in)    :: QM
 
 ! local variables ... 
  real*8  , allocatable :: Force(:) , Force_xyz(:,:)
- real*8  :: dumb
- integer :: i , j , xyz , N , nn , err
+ real*8  :: real_dumb
+ integer :: i , j , xyz , N , nn , err , int_dumb
  integer :: mpi_status(mpi_status_size)
  integer :: mpi_D_R = mpi_double_precision
  logical :: job_done
+ integer :: displs(4) , recv_counts(4)
 
-!========================
-! some preprocessing ...
-!========================
+ real*8 , allocatable :: test(:,:) , big_test(:,:,:)
+
 dim_E = size(basis)
 N  = dim_E 
 nn = n_part
 
 ! Force+Kernel Crew in stand-by ...
 99 If( .not. master ) then
-
        CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm , err )
 
        CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err ) 
@@ -69,33 +67,45 @@ nn = n_part
            call MPI_FINALIZE(err)
            STOP
            end if
-end if
 
-! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...                                                                                
-CALL Overlap_Matrix( system , basis )
-CALL setup_Module( system , basis , QM )
+       ! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...                                                                                
+       CALL preprocess( system , basis )
+       CALL Overlap_Matrix( system , basis )
 
-if( KernelCrew ) then
-   CALL get_Kernel( basis , QM , MO_bra , MO_ket )
-end if
-CALL MPI_BCAST( Kernel , N*N , mpi_D_R , 1 , ForceComm , err )
-CALL MPI_BCAST( PST , 2 , mpi_Integer , 0 , ForceComm , err )
+       if( KernelCrew ) then
+          CALL get_Kernel( basis )
+          end if
+       CALL MPI_BCAST( Kernel , N*N , mpi_D_R , 0 , ForceCrewComm , err )
 
-do xyz = myKernel+1 , 3 , 3  ! <== (xyz-1) = myid ; myid=myForce=myKernel
+       xyz = mod(myforce,3)+1
        CALL EhrenfestForce( system , basis , Force , xyz )
-       end do
+else
+
+       CALL preprocess( system , basis , QM )
+
+end if
+
 
 if( master ) then
-    allocate( Force_xyz(system%atoms,3) , source = D_zero )
-    CALL MPI_Gather( Force , system%atoms , mpi_D_R , Force_xyz , system%atoms , mpi_D_R , 0 , KernelComm , err ) 
 
-    CALL MPI_Gather( tmp_El , dim_N*dim_E , mpi_D_R , tmp_El_xyz , dim_N*dim_E , mpi_D_R , 0 , KernelComm , err ) 
-    CALL MPI_Gather( tmp_Hl , dim_N*dim_E , mpi_D_R , tmp_Hl_xyz , dim_N*dim_E , mpi_D_R , 0 , KernelComm , err ) 
+    displs = [ 0 , 0 , system%atoms , 2*system%atoms ]
+    recv_counts = [ 0 , system%atoms , system%atoms , system%atoms ]
+
+    allocate( Force(0) )
+    allocate( Force_xyz(system%atoms,3) , source = D_zero )
+
+    CALL MPI_GatherV( Force , 0 , mpi_D_R , Force_xyz , recv_counts , displs , mpi_D_R , 0 , KernelComm , err ) 
 
     do concurrent ( xyz=1:3 , i=1:system% atoms )
        atom(i)% Ehrenfest(xyz) = Force_xyz(i,xyz)
        end do
        deallocate( Force_xyz )
+
+    displs = [0 , 0 , dim_N*dim_E , 2*dim_N*dim_E ]
+    recv_counts = [0 , dim_N*dim_E , dim_N*dim_E , dim_N*dim_E ]
+
+    CALL MPI_GatherV( tmp_El , 0 , mpi_D_R , tmp_El_xyz , recv_counts , displs , mpi_D_R , 0 , KernelComm , err ) 
+    CALL MPI_GatherV( tmp_Hl , 0 , mpi_D_R , tmp_Hl_xyz , recv_counts , displs , mpi_D_R , 0 , KernelComm , err ) 
 
     do xyz=1,3 
     do j=1,dim_E
@@ -106,18 +116,20 @@ if( master ) then
        end do
        end do
        deallocate( tmp_El_xyz , tmp_Hl_xyz )
-else
-    CALL MPI_Gather( Force , system%atoms   , mpi_D_R , dumb , 1 , mpi_D_R , 0 , KernelComm , err ) 
 
-    CALL MPI_Gather( tmp_El , dim_N*dim_E , mpi_D_R , dumb , 1 , mpi_D_R , 0 , KernelComm , err ) 
-    CALL MPI_Gather( tmp_Hl , dim_N*dim_E , mpi_D_R , dumb , 1 , mpi_D_R , 0 , KernelComm , err ) 
+elseif(KernelCrew) then
+
+    CALL MPI_GatherV( Force , system%atoms , mpi_D_R , real_dumb , int_dumb , int_dumb , mpi_D_R , 0 , KernelComm , err ) 
+
+    CALL MPI_GatherV( tmp_El , dim_N*dim_E , mpi_D_R , real_dumb , int_dumb , int_dumb , mpi_D_R , 0 , KernelComm , err ) 
+    CALL MPI_GatherV( tmp_Hl , dim_N*dim_E , mpi_D_R , real_dumb , int_dumb , int_dumb , mpi_D_R , 0 , KernelComm , err ) 
+
 end if
 
-deallocate( mask , F_vec , F_mtx , QL , erg , d_NA , Phi , Force , tmp_El , tmp_Hl )
-
+deallocate( mask , F_vec , QL , erg , d_NA , Phi , Force , tmp_El , tmp_Hl )
 
 ! return Extended ForceCrew to stand-by ...
-If( KernelCrew ) goto 99
+If( ForceCrew ) goto 99
 
 include 'formats.h'
 
@@ -142,34 +154,32 @@ real*8  , parameter :: delta = 1.d-8
 real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
 
 ! local variables ...
-integer :: i , j , jL , L , indx , atm_counter
-integer :: k , ik , DOS_k , BP_k 
+integer :: i , j , jL , L , indx , err
+integer :: k , ik , DOS_k , BP_k , task , AllAtoms , address
+integer :: mpi_D_R = mpi_double_precision
 
 ! local arrays ...
 integer , allocatable :: pairs(:)
-real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:)
+real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:), F_mtx(:,:) 
 real*8                :: tmp_coord(3) , delta_b(3) 
 
-verbose = .false.
+AllAtoms = system%atoms
 
-allocate( Force(system%atoms) )
+allocate( F_mtx(AllAtoms,AllAtoms) )
+allocate( Force(AllAtoms) )
+F_mtx = d_zero ; Force  = d_zero
 
 grad_S = d_zero
-Force  = d_zero 
 
-atm_counter = 0
+do task = 1 , mytasks
 
-do k = 1 , system% atoms
-
-    If( system%QMMM(k) == "MM" .OR. system%flex(k) == F_ ) cycle
-
-    atm_counter = atm_counter + 1
+    k = my_axis_todo_list( task , myAxis_rank+1 )
 
     !force on atom site ...
     DOS_k = ChemAtom( system% AtNo(k) )% DOS
     BP_k  = system% BasisPointer(k) 
 
-    allocate( pairs , source = pack([( L , L=1,system% atoms )] , mask(:,K)) )
+    allocate( pairs , source = pack([( L , L=1,AllAtoms )] , mask(:,K)) )
     
     ! save coordinate ...
     tmp_coord = system% coord(k,:)
@@ -212,7 +222,7 @@ do k = 1 , system% atoms
     !==============================================================================================
      
     ! anti-symmetric F_mtx (action-reaction) ...
-    do L = K+1, system% atoms
+    do L = K+1, AllAtoms
        F_mtx(K,L) =   F_vec(L)
        F_mtx(L,K) = - F_mtx(K,L) 
     end do
@@ -223,9 +233,10 @@ do k = 1 , system% atoms
     ! calculation of d_NA ...
     d_NA = NAcoupling( grad_S( : , BP_K+1 : BP_K+DOS_k) , DOS_k , BP_K )  ! <== units = 1/Angs
 
+    address = findloc( list , value=k , dim=1 )
     do concurrent (j=1:dim_E)
-       tmp_El(atm_counter,j) = d_NA(j,1)
-       tmp_Hl(atm_counter,j) = d_NA(j,2)
+       tmp_El(address,j) = d_NA(j,1)
+       tmp_Hl(address,j) = d_NA(j,2)
        enddo
 
     ! recover original system ...
@@ -235,8 +246,88 @@ do k = 1 , system% atoms
     ! ready for next atom in system
 
 end do 
+deallocate( F_mtx )
+
+
+if( myAxis_rank == 0 ) then
+    call MPI_reduce( MPI_in_Place , Force , AllAtoms , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
+    call MPI_reduce( MPI_in_Place , tmp_El , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+    call MPI_reduce( MPI_in_Place , tmp_Hl , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+else
+    call MPI_reduce( Force , Force , AllAtoms , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
+    call MPI_reduce( tmp_El , tmp_El , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+    call MPI_reduce( tmp_Hl , tmp_Hl , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+endif
 
 end  subroutine EhrenfestForce
+!
+!
+!
+!
+!==============================
+ subroutine get_Kernel( basis ) 
+!==============================
+implicit none
+type(STO_basis) , intent(in) :: basis(:)
+
+! local variables ... 
+integer :: i , j , N , err 
+integer :: mpi_status(mpi_status_size) , request
+integer :: mpi_D_R = mpi_double_precision
+integer :: mpi_D_C = mpi_double_complex
+real*8     , allocatable :: A_ad_nd(:,:) , B_ad_nd(:,:) , rho_eh(:,:) , tool(:,:)
+complex*16 , allocatable :: MObra(:,:) , MOket(:,:)
+
+N = dim_E
+
+allocate( rho_eh  (N,N) )
+allocate( B_ad_nd (N,N) )
+allocate( tool    (N,N) )
+allocate( MObra   (N,2) )
+allocate( MOket   (N,2) )
+
+! KernelCrew in stand-by to receive data from master ...
+CALL MPI_BCAST( MObra  , N*2 , mpi_D_C , 0 , KernelComm ,  err )
+CALL MPI_BCAST( MOket  , N*2 , mpi_D_C , 0 , KernelComm ,  err )
+
+select case (myKernel)
+
+    case (1)
+
+          ! build up electron-hole density matrix ...
+          forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MOket(j,1)*MObra(i,1) - MOket(j,2)*MObra(i,2) )
+          tool   = transpose(rho_eh)
+          rho_eh = ( rho_eh + tool ) / two
+
+          CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
+          CALL MPI_Request_Free( request , err )
+
+          allocate( A_ad_nd (N,N) )
+          CALL symm( rho_eh , QL , tool )
+          CALL gemm( QL , tool , A_ad_nd , 'T' , 'N' )
+
+          CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
+
+          Kernel = Xij * A_ad_nd - B_ad_nd  ! <== all this to calculate Kernel ...
+
+          deallocate( A_ad_nd )
+
+    case (2) 
+
+          CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
+
+          forall( j=1:N ) rho_eh(:,j) = erg(j) * rho_eh(:,j) 
+
+          CALL gemm( rho_eh , QL , tool )
+          CALL gemm( tool , QL  , B_ad_nd , 'T' , 'N' )
+
+          CALL MPI_Send( B_ad_nd , N*N , mpi_D_R , 1 , 0 , KernelComm , err )
+
+end select
+
+deallocate( rho_eh , B_ad_nd , tool , MObra , MOket )
+
+end subroutine get_Kernel
 !
 !
 !
@@ -316,6 +407,155 @@ end function NAcoupling
 !
 !
 !
+!====================================
+ subroutine preprocess( sys , basis , QM )
+!====================================
+use Semi_empirical_parms , only: ChemAtom => atom
+implicit none
+type(structure) , intent(in) :: sys
+type(STO_basis) , intent(in) :: basis(:)
+type(R_eigen)   , optional , intent(in) :: QM
+
+! local variables ...
+real*8  :: R_LK
+integer :: i , j , K , L , err
+integer :: mpi_D_R = mpi_double_precision , request
+logical :: flag1 , flag2 , flag3
+logical , save :: first_time = .true.                                                                                                                           
+
+dim_N = count( sys%QMMM == "QM" .AND. sys%flex == T_ )
+
+allocate( F_vec(sys%atoms)           , source=d_zero )
+
+allocate( Phi (dim_E, 2) )
+allocate( d_NA(dim_E, 2) , source = d_zero )
+
+if( master ) then
+
+    allocate( tmp_El (0,0) )
+    allocate( tmp_Hl (0,0) )
+
+    allocate( tmp_El_xyz (dim_N,dim_E,3) , source = d_zero ) 
+    allocate( tmp_Hl_xyz (dim_N,dim_E,3) , source = d_zero ) 
+
+    allocate( erg (dim_E)       , source = QM%erg )
+    allocate( QL  (dim_E,dim_E) , source = QM%L   )
+
+else
+
+    allocate( tmp_El (dim_N,dim_E) , source = d_zero )
+    allocate( tmp_Hl (dim_N,dim_E) , source = d_zero )
+
+    allocate( erg(dim_E)      )
+    allocate( QL(dim_E,dim_E) )
+
+    CALL MPI_BCAST( erg , dim_E       , mpi_D_R     , 0 , ForceComm ,  err )
+    CALL MPI_BCAST( QL  , dim_E*dim_E , mpi_D_R     , 0 , ForceComm ,  err )
+    CALL MPI_BCAST( PST , 2           , mpi_Integer , 0 , ForceComm ,  err )
+
+end if
+
+if( first_time ) then
+    call setup_Module( sys , basis )
+    first_time = F_
+    end if
+
+!-------------------------------------------------------------------
+If( .NOT. allocated(BasisPointer) ) allocate( BasisPointer(sys%atoms) , DOS(sys%atoms) )
+
+Allocate( mask(sys%atoms,sys%atoms) , source = .false. )
+
+do K = 1   , sys% atoms
+   do L = K+1 , sys% atoms
+   
+       R_LK = sqrt(sum( (sys%coord(K,:)-sys%coord(L,:))**2 ) )
+   
+       flag1 = R_LK < cutoff_Angs  
+        
+       flag2 = sys% flex(K) .AND. sys% flex(L)
+   
+       flag3 = (sys% QMMM(L) == "QM") .AND. (sys% QMMM(K) == "QM")
+   
+       mask(L,K) = flag1 .AND. flag2 .AND. flag3
+
+   end do
+   BasisPointer(K) = sys% BasisPointer(K) 
+   DOS(K)          = ChemAtom( sys% AtNo(K) )% DOS
+end do    
+!-------------------------------------------------------------------
+
+end subroutine Preprocess
+!
+!
+!
+!
+!======================================
+ subroutine setup_Module( sys , basis )
+!======================================
+implicit none
+type(structure) , intent(in) :: sys
+type(STO_basis) , intent(in) :: basis(:)
+
+! local variables ...
+integer :: NFold , remainder 
+integer :: i , j , k , j1 , j2 , step_j , aux , L
+
+allocate( grad_S  (dim_E,dim_E) )
+allocate( Kernel  (dim_E,dim_E) )
+
+allocate( dNA_El (dim_N,dim_E) )
+allocate( dNA_Hl (dim_N,dim_E) )
+
+do concurrent( i=1:dim_N , j=1:dim_E )
+   dNA_El (i,j)% vec(:) = d_zero
+   dNA_Hl (i,j)% vec(:) = d_zero
+   enddo
+
+CALL init_random_seed()
+
+CALL Huckel_stuff( basis , Xij )
+
+if( .not. master ) then
+
+         ! list of atoms subject to Ehrenfest force ...
+         allocate( list , &
+         source = pack( [( L , L=1,sys%atoms )] , sys%QMMM(:) == "QM" .AND. sys%flex(:) == T_ ) &
+         )
+
+         !-------------------------------------------------------------------
+         ! define Load Balance for MPI HFP calculations in EhrenfestForce ...
+         !-------------------------------------------------------------------
+         NFold = int(dim_N/np_per_axis) + merge( 1 , 0 , mod(dim_N,np_per_axis)/=0 )
+         remainder = mod(dim_N,np_per_axis)
+         
+         allocate( my_axis_todo_list(nFold,np_per_axis) , source = 0 )
+         
+         k = 0; j1 = 1 ; j2 = np_per_axis ; step_j = 1
+         do i = 1 , NFold
+            do j = j1 , j2 , step_j
+         
+               k = k + 1
+               if( k > size(list) ) exit
+
+               my_axis_todo_list(i,j) = list(k)
+         
+            end do
+         
+            aux = j1
+            j1  = j - step_j
+            j2  = aux
+            step_j = step_j * (-1)
+         
+         end do
+         mytasks = count( my_axis_todo_list(:,myAxis_rank+1) /= 0 )
+        
+end if
+!-------------------------------------------------------------------
+
+end subroutine setup_Module
+!
+!
+!
 !
 !==============================================================
  subroutine NewPointerState( system , bra , ket , QM , t_rate )
@@ -329,10 +569,12 @@ type(R_eigen)  , intent(in):: QM
 real*8         , intent(in):: t_rate
 
 ! local variables ...
-integer             :: i , j , newPST(2)
+integer             :: i , j , Fermi , newPST(2)
 real*8              :: rn , EH_jump
 real*8, allocatable :: rho(:,:) , base(:,:) , P_switch(:,:) , B_kl(:,:) , Omega(:,:)
 character(len=7)    :: method
+
+Fermi = QM%Fermi_state
 
 allocate( rho(dim_E, 2) )
 
@@ -517,136 +759,26 @@ end subroutine Tully_way
 !
 !
 !
-!=====================================================
- subroutine get_Kernel( basis , QM , MO_bra , MO_ket ) 
-!=====================================================
+!==============================
+ subroutine init_random_seed ()
+!==============================
 implicit none
-type(STO_basis)          , intent(in) :: basis(:)
-type(R_eigen) , optional , intent(in) :: QM
-complex*16    , optional , intent(inout) :: MO_bra(:,:)
-complex*16    , optional , intent(inout) :: MO_ket(:,:)
 
-! local variables ... 
-integer :: i , j , N , err 
-integer :: mpi_status(mpi_status_size) , request
-integer :: mpi_D_R = mpi_double_precision
-integer :: mpi_D_C = mpi_double_complex
-real*8  , allocatable :: A_ad_nd(:,:) , B_ad_nd(:,:) , rho_eh(:,:) , tool(:,:)
+!local variables ...
+integer :: seed(5)
 
-N = dim_E
+seed = [10051965,27092004,2092002,22021967,-76571]
 
-! KernelCrew in stand-by to receive data from master ...
-CALL MPI_BCAST( QM%erg , N   , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( QM%L   , N*N , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( MO_bra , N*2 , mpi_D_C , 0 , KernelComm , err )
-CALL MPI_BCAST( MO_ket , N*2 , mpi_D_C , 0 , KernelComm , err )
-
-allocate( rho_eh  (N,N) )
-allocate( B_ad_nd (N,N) )
-allocate( tool    (N,N) )
-
-select case (myKernel)
-
-    case (1)
-
-          ! build up electron-hole density matrix ...
-          forall( i=1:N , j=1:N ) rho_eh(i,j) = real( MO_ket(j,1)*MO_bra(i,1) - MO_ket(j,2)*MO_bra(i,2) )
-          tool   = transpose(rho_eh)
-          rho_eh = ( rho_eh + tool ) / two
-
-          CALL MPI_ISend( rho_eh , N*N , mpi_D_R , 2 , 0 , KernelComm , request , err )
-          CALL MPI_Request_Free( request , err )
-
-          allocate( A_ad_nd (N,N) )
-          CALL symm( rho_eh , QM%L , tool )
-          CALL gemm( QM%L , tool , A_ad_nd , 'T' , 'N' )
-
-          CALL MPI_Recv( B_ad_nd , N*N , mpi_D_R , 2 , mpi_any_tag , KernelComm , mpi_status , err )
-
-          Kernel = Xij * A_ad_nd - B_ad_nd  ! <== all this to calculate Kernel ...
-
-          deallocate( A_ad_nd )
-
-    case (2) 
-
-          CALL MPI_Recv( rho_eh , N*N , mpi_D_R , 1 , mpi_any_tag , KernelComm , mpi_status , err )
-
-          forall( j=1:N ) rho_eh(:,j) = QM%erg(j) * rho_eh(:,j) 
-
-          CALL gemm( rho_eh , QM%L , tool )
-          CALL gemm( tool , QM%L  , B_ad_nd , 'T' , 'N' )
-
-          CALL MPI_ISend( B_ad_nd , N*N , mpi_D_R , 1 , 0 , KernelComm , request , err )
-          CALL MPI_Request_Free( request , err )
-
-end select
-
-deallocate( rho_eh , B_ad_nd , tool )
-
-end subroutine get_Kernel
-!
-!
-!
-!==============================================
- subroutine setup_Module( system , basis , QM )
-!==============================================
-implicit none
-type(structure) , intent(in) :: system
-type(R_eigen)   , intent(in) :: QM
-type(STO_basis) , intent(in) :: basis(:)
-
-! local variables ...
-integer :: i , j
-
-CALL preprocess( system )
-
-dim_N = count( system%QMMM == "QM" .AND. system%flex == T_ )
-
-allocate( F_mtx(system%atoms,system%atoms) , source=d_zero )
-allocate( F_vec(system%atoms)              , source=d_zero )
-
-allocate( Phi (dim_E, 2) )
-allocate( erg (dim_E)       , source = QM%erg )
-allocate( QL  (dim_E,dim_E) , source = QM%L   )
-allocate( d_NA(dim_E, 2)    , source = d_zero )
-
-if( master ) then
-    allocate( tmp_El_xyz (dim_N,dim_E,3) )
-    allocate( tmp_Hl_xyz (dim_N,dim_E,3) )
-end if
-allocate( tmp_El (dim_N,dim_E) )
-allocate( tmp_Hl (dim_N,dim_E) )
-
-If( .NOT. allocated(grad_S) ) then
-    allocate( grad_S  (dim_E,dim_E) )
-    allocate( Kernel  (dim_E,dim_E) )
-
-    allocate( dNA_El (dim_N,dim_E) )
-    allocate( dNA_Hl (dim_N,dim_E) )
-
-    do concurrent( i=1:dim_N , j=1:dim_E )
-       dNA_El (i,j)% vec(:) = d_zero
-       dNA_Hl (i,j)% vec(:) = d_zero
-       enddo
-
-    PST(1) = PointerState(1)
-    PST(2) = PointerState(2)
-
-    CALL init_random_seed()
-
-    CALL Huckel_stuff( basis , Xij )
-
-    Fermi = QM%Fermi_state
-end if
-
-end subroutine setup_Module
+call random_seed(put=seed(1:5))
+    
+end subroutine init_random_seed
 !
 !
 !
 !
-!=====================================
+!======================================
  subroutine Huckel_stuff( basis , Xij ) 
-!=====================================
+!======================================
 use Hamiltonians , only : X_ij
 implicit none
 type(STO_basis)  , intent(in) :: basis(:)
@@ -670,62 +802,6 @@ do i = j , dim_E
          end do
 
 end subroutine Huckel_stuff
-!
-!
-!
-!
-!============================
- subroutine Preprocess( sys ) 
-!============================
-use Semi_empirical_parms , only: ChemAtom => atom
-implicit none
-type(structure) , intent(in) :: sys
-
-!local variables ...
-real*8                :: R_LK
-integer               :: K , L
-logical               :: flag1 , flag2 , flag3
-
-If( .NOT. allocated(BasisPointer) ) allocate( BasisPointer(sys%atoms) , DOS(sys%atoms) )
-
-Allocate( mask(sys%atoms,sys%atoms) , source = .false. )
-
-do K = 1   , sys% atoms
-   do L = K+1 , sys% atoms
-   
-       R_LK = sqrt(sum( (sys%coord(K,:)-sys%coord(L,:))**2 ) )
-   
-       flag1 = R_LK < cutoff_Angs  
-        
-       flag2 = sys% flex(K) .AND. sys% flex(L)
-   
-       flag3 = (sys% QMMM(L) == "QM") .AND. (sys% QMMM(K) == "QM")
-   
-       mask(L,K) = flag1 .AND. flag2 .AND. flag3
-
-   end do
-   BasisPointer(K) = sys% BasisPointer(K) 
-   DOS(K)          = ChemAtom( sys% AtNo(K) )% DOS
-end do    
-
-end subroutine Preprocess
-!
-!
-!
-!
-!==============================
- subroutine init_random_seed ()
-!==============================
-implicit none
-
-!local variables ...
-integer :: seed(5)
-
-seed = [10051965,27092004,2092002,22021967,-76571]
-
-call random_seed(put=seed(1:5))
-    
-end subroutine init_random_seed
 !
 !
 !

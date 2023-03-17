@@ -7,9 +7,11 @@ module MPI_definitions_m
     public :: world , myid , master , slave , np 
     public :: ChebyComm  , ChebyCrew  , myCheby 
     public :: KernelComm , KernelCrew , myKernel 
-    public :: ForceComm  , ForceCrew  , myForce  , npForce
-    public :: EnvComm    , EnvCrew    , myEnvId  , npEnv
+    public :: ForceComm  , ForceCrew  , myForce   , npForce
+    public :: EnvComm    , EnvCrew    , myEnvId   , npEnv
+    public :: myAxisComm   , AxisCrew   , myAxis_rank , np_per_axis
     public :: ChebyKernelComm , myChebyKernel
+    public :: ForceCrewComm
 
     public :: launch_MPI , setup_MPI_labor_force
 
@@ -21,11 +23,14 @@ module MPI_definitions_m
     integer :: ChebyComm , myCheby
     integer :: ChebyKernelComm , myChebyKernel
     integer :: ForceComm , myForce , npForce
+    integer :: ForceCrewComm
+    integer :: myAxisComm , myAxis_rank , np_per_axis
     integer :: EnvComm , myEnvId , npEnv
     logical :: master = .false. , slave = .true. 
     logical :: ChebyCrew  = .false. 
     logical :: ForceCrew  = .false. 
     logical :: KernelCrew = .false.
+    logical :: AxisCrew   = .false.
     logical :: EnvCrew    = .false.
 
     ! module parameters ...
@@ -93,19 +98,19 @@ end subroutine setup_MPI_labor_force
  implicit none
 
 ! local variables ...
- integer :: err , my_color , ForceCrewLimit
+ integer :: err , my_color , my_tune , ForceCrewLimit , xyz , my_rank
  logical :: drafted = .false.
 
 ! define sub_groups and new communicators ...
 !------------------------------------------------------------------------
-! KernelComm group = (0,1,2) ; to work in "EhrenfestForce" ...
+! KernelComm group = (0,1,2,3) ; to work in "EhrenfestForce" along xyz ...
  select case ( myid )
     case (0)
         my_color   = 0
-    case (1:2)
+    case (1:3)
         my_color   = 0
         KernelCrew = .true.
-    case (3:)
+    case (4:)
         my_color   = MPI_undefined
  end select
 
@@ -113,30 +118,47 @@ end subroutine setup_MPI_labor_force
  If( KernelCrew ) CALL MPI_COMM_RANK ( KernelComm , myKernel , err )   ! <== sets the rank of processes in KernelComm
  
 !------------------------------------------------------------------------
-! ForceComm group = KernelCrew + ForceCrew ; to work in "EhrenfestForce" ...
 
- ForceCrewLimit = (np-1) !- merge( EnvProcs , 0 , EnvField_ )
+ ForceCrewLimit = (np-1) - merge( EnvProcs , 0 , EnvField_ )
 
- If( myid <= 2) then                                        ! <== case(0:2)
-        my_color = 0
-        drafted  = .true.
- ElseIf( (3 <= myid) .AND. (myid <= ForceCrewLimit) ) then  ! <== case(3:ForceCrewLimit)
-        my_color  = 0
-        drafted   = .true.
-        ForceCrew = .true.
- Else                                                       ! <== case(ForceCrewLimit+1:)
-        my_color = MPI_undefined
- EndIf
-
+! defining ForceComm = master + ForceCrew ...
+ my_color = MPI_undefined
+ if( myid <= ForceCrewLimit ) then
+     my_color = 0
+     drafted  = .true.
+ end if
  CALL MPI_Comm_split( world , my_color , myid , ForceComm  , err )
+ if( drafted ) then
+     CALL MPI_COMM_RANK (ForceComm , my_rank , err )               ! <== sets the rank of processes
+ end if
 
- If( drafted ) then
-    CALL MPI_COMM_RANK (ForceComm , myForce , err )   ! <== sets the rank of processes
-    CALL MPI_COMM_SIZE (ForceComm , npForce , err )   ! <== gets the total number of processes
- end If 
+! defining myAxisComm = a Communication channel for each axis (x;y;z) ...
+! AxisCrew  dwells inside xyz loop ; Kernel Crew joins AxisCrew   ...
+ my_color = MPI_undefined
+ my_tune  = MPI_undefined
+ if( master ) then
+     ! do nothing
+ elseif( myid <= ForceCrewLimit ) then
 
-! processes released for next drafting ...
- drafted = .false.
+     xyz = mod( (myid-1) , 3 ) + 1
+     my_color = xyz
+     AxisCrew = .true. 
+
+     my_tune = 0
+     ForceCrew = .true. 
+
+ end if
+ CALL MPI_Comm_split( world , my_color , myid , myAxisComm , err )  ! <== a Communication channel for each axis
+ if( AxisCrew ) then
+     CALL MPI_COMM_RANK (myAxisComm , myAxis_rank , err )               ! <== sets the rank of processes
+     CALL MPI_COMM_SIZE (myAxisComm , np_per_axis , err )               ! <== gets the total number of processes
+ end if
+
+ CALL MPI_Comm_split( world , my_tune , myid , ForceCrewComm , err )   ! <== a Communication channel for each axis
+ if( ForceCrew ) then
+     CALL MPI_COMM_RANK (ForceCrewComm , myForce , err )               ! <== sets the rank of processes
+     CALL MPI_COMM_SIZE (ForceCrewComm , npforce , err )               ! <== gets the total number of processes
+ end if
 
  end subroutine setup_CSDM_Crew
 !

@@ -335,8 +335,6 @@ logical :: flag1 , flag2 , flag3
 integer :: NFold , remainder 
 integer :: i , j , j1 , j2 , step_j , aux
 
-
-
 If( .NOT. allocated(BasisPointer) ) allocate( BasisPointer(sys%atoms) , DOS(sys%atoms) )
 
 ! define (update) matrix of atom pairs for HFP calculations ...

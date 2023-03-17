@@ -30,7 +30,7 @@ module CSDM_adiabatic_m
                                         Generate_Structure ,             &
                                         Basis_Builder
     use FMO_m                   , only: FMO_analysis ,                   &
-                                        orbital , eh_tag                 
+                                        orbital , eh_tag , PointerState                 
     use DP_main_m               , only: Dipole_Matrix ,                  &
                                         Dipole_Moment
     use TD_Dipole_m             , only: wavepacket_DP                                        
@@ -83,6 +83,8 @@ integer         , intent(out)   :: final_it
 integer        :: frame , frame_init , frame_final , frame_restart , err
 integer        :: mpi_D_R = mpi_double_precision
 integer        :: mpi_D_C = mpi_double_complex
+integer        :: req1 , req2
+!type(MPI_Request) :: mpi_request_null
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
@@ -119,13 +121,15 @@ do frame = frame_init , frame_final , frame_step
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
-
+call start_clock()
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
 
-        CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
-        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
+        CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , ForceComm  ,  err )
+        CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , ForceComm  ,  err )
+        CALL MPI_BCAST( PST , 2 , mpi_Integer     , 0 , ForceComm  ,  err )
+                                                                       
         CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
         CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
 
@@ -150,7 +154,7 @@ do frame = frame_init , frame_final , frame_step
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
-
+call stop_clock("before")
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
@@ -185,7 +189,7 @@ do frame = frame_init , frame_final , frame_step
             stop
 
     end select
-
+call start_clock()
     CALL Generate_Structure( frame )
    
     ! export new coordinates to ForceCrew, for advancing their tasks in Force calculations ...
@@ -217,7 +221,7 @@ call stop_clock("QCModel")
 
     job_status = check( frame , frame_final , t_rate ) 
     CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
-    
+call stop_clock("after")    
 enddo
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
@@ -296,23 +300,11 @@ end If
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! done for ForceCrew ; ForceCrew dwells in Ehrenfest ...
-If( ForceCrew  ) CALL Ehrenfest( Extended_Cell , ExCell_basis )
+If( ForceCrew ) CALL Ehrenfest( Extended_Cell , ExCell_basis )
 
 mm = size(ExCell_basis) ; nn = n_part
 
-If( KernelCrew ) then                                                                                           
-        allocate( UNI%erg (mm)    )
-        allocate( UNI%L   (mm,mm) )
-        allocate( UNI%R   (mm,mm) )
-end if
-CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
-
 CALL Allocate_Brackets( mm , MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )
-
-! done for KernelCrew ; KernelCrew dwells in EhrenfestForce ...
-If( KernelCrew ) CALL Ehrenfest( Extended_Cell , ExCell_basis , MO_bra , MO_ket , UNI )
 
 ! building up the electron and hole wavepackets with expansion coefficients at t = 0  ...
 do n = 1 , n_part                         
@@ -378,9 +370,11 @@ CALL BcastQMArgs( mm , Extended_Cell%atoms )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
+CALL MPI_BCAST( job_status , 1 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
+
+PST = PointerState
 
 !..........................................................................
 
