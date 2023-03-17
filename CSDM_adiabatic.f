@@ -84,7 +84,6 @@ integer        :: frame , frame_init , frame_final , frame_restart , err
 integer        :: mpi_D_R = mpi_double_precision
 integer        :: mpi_D_C = mpi_double_complex
 integer        :: req1 , req2
-!type(MPI_Request) :: mpi_request_null
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
@@ -130,8 +129,8 @@ call start_clock()
         CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , ForceComm  ,  err )
         CALL MPI_BCAST( PST , 2 , mpi_Integer     , 0 , ForceComm  ,  err )
                                                                        
-        CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
-        CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm , err )
+        CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm ,  err )
+        CALL MPI_BCAST( MO_ket  , mm*2  , mpi_D_C , 0 , KernelComm ,  err )
 
         CALL BcastQMArgs( Extended_Cell, ExCell_basis,  MO_bra, MO_ket, UNI, PST )
     endif

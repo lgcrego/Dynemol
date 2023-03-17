@@ -62,15 +62,16 @@ nn = n_part
 99 If( .not. master ) then
        CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm , err )
 
+       ! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...                                                                                
+       CALL Overlap_Matrix( system , basis )
+
        CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err ) 
        If( job_done ) then ! <== Force+Kernel Crew pack and stop here ...
            call MPI_FINALIZE(err)
            STOP
            end if
 
-       ! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...                                                                                
        CALL preprocess( system , basis )
-       CALL Overlap_Matrix( system , basis )
 
        if( KernelCrew ) then
           CALL get_Kernel( basis )
@@ -272,7 +273,7 @@ type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ... 
 integer :: i , j , N , err 
-integer :: mpi_status(mpi_status_size) , request
+integer :: mpi_status(mpi_status_size) , request , req1 , req2
 integer :: mpi_D_R = mpi_double_precision
 integer :: mpi_D_C = mpi_double_complex
 real*8     , allocatable :: A_ad_nd(:,:) , B_ad_nd(:,:) , rho_eh(:,:) , tool(:,:)
@@ -287,8 +288,8 @@ allocate( MObra   (N,2) )
 allocate( MOket   (N,2) )
 
 ! KernelCrew in stand-by to receive data from master ...
-CALL MPI_BCAST( MObra  , N*2 , mpi_D_C , 0 , KernelComm ,  err )
-CALL MPI_BCAST( MOket  , N*2 , mpi_D_C , 0 , KernelComm ,  err )
+CALL MPI_BCAST( MObra  , N*2 , mpi_D_C , 0 , KernelComm , err )
+CALL MPI_BCAST( MOket  , N*2 , mpi_D_C , 0 , KernelComm , err )
 
 select case (myKernel)
 
