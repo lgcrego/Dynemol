@@ -13,7 +13,7 @@ module F_intra_m
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
-    use Ehrenfest_CSDM    , only: Ehrenfest 
+    use CSDM_master       , only: Ehrenfest_master
     use Ehrenfest_Builder , only: EhrenfestForce 
     use Surface_Hopping   , only: SH_Force
     use decoherence_m     , only: DecoherenceForce
@@ -436,7 +436,7 @@ if( QMMM ) then
 
        case( "slice_CSDM" ) 
 call start_clock
-           CALL Ehrenfest( system , basis , QM )
+           CALL Ehrenfest_master( system , size(basis) )
 call stop_clock("Ehrenfest")
            CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
 

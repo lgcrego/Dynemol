@@ -49,7 +49,8 @@ module CSDM_adiabatic_m
     use Auto_Correlation_m      , only: MO_Occupation
     use Dielectric_Potential    , only: Environment_SetUp
     use F_intra_m               , only: BcastQMArgs
-    use Ehrenfest_CSDM          , only: PST , NewPointerState , Ehrenfest
+    use CSDM_master             , only: PST , NewPointerState
+    use CSDM_workers            , only: Ehrenfest_workers
     use decoherence_m           , only: apply_decoherence ,              &
                                         AdjustNuclearVeloc
                                         
@@ -299,7 +300,7 @@ end If
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
 
 ! done for ForceCrew ; ForceCrew dwells in Ehrenfest ...
-If( ForceCrew ) CALL Ehrenfest( Extended_Cell , ExCell_basis )
+If( ForceCrew ) CALL Ehrenfest_workers( Extended_Cell , ExCell_basis )
 
 mm = size(ExCell_basis) ; nn = n_part
 

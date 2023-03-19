@@ -214,7 +214,7 @@ end subroutine DecoherenceForce
 !===================================================================
  subroutine get_S_versor( s_El_ik , s_Hl_ik , system , PST , dim_E ) 
 !===================================================================
-use Ehrenfest_CSDM, only: dNA_El , dNA_Hl
+use CSDM_master , only: dNA_El , dNA_Hl
 implicit none
 type(structure)               , intent(in) :: system
 integer                       , intent(in) :: PST(:)

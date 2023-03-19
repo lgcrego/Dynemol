@@ -83,7 +83,7 @@ SOURCE2 = constants_m.o \
                   parms_var_module.o \
                   read_card.o \
 		  parameters.o \
-                  MPI_defs.o \
+                  MPI_topologies.o \
 		  OPT_parent.o \
 		  parameters_MM.o \
 		  checklist.o \
@@ -118,7 +118,8 @@ SOURCE2 = constants_m.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
 		  FMO.o \
-                  CSDM.o \
+                  CSDM_master.o \
+                  CSDM_workers.o \
                   FSSH.o \
                   decoherence.o \
 		  CoulInt_QMMM.o \
