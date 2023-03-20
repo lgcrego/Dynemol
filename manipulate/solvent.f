@@ -469,7 +469,7 @@ type(universe)  , intent(inout)   :: system
 
 ! local variables
 integer                         :: Nx , Ny , N_layers , New_No_of_atoms , Old_No_of_atoms
-integer                         :: i , j , k , n , counter , layer , nresid
+integer                         :: i , j , k , counter , layer , nresid
 real                            :: random
 real*8                          :: x0 , y0 , delta_x , delta_y , delta_z , geo_center_x , geo_center_y , geo_center_z
 real*8                          :: cell_height , cell_area , density , solvent_mass 

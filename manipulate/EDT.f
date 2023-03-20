@@ -306,7 +306,6 @@ type(universe) , intent(inout) :: system
 
 !local variables
 integer          :: New_No_of_atoms
-character(len=1) :: choice
 type(universe)   :: temp
 
 New_No_of_atoms = count( .NOT. system%atom%delete )

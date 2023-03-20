@@ -3,7 +3,7 @@
 SUFFIX=.f
 
 FC=ifort
-SAFE = -g -traceback
+SAFE = -g -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
 
 LIB    =  -liomp5
@@ -19,7 +19,7 @@ SOURCE = types_m.o \
 		 parms.o \
 		 tuning.o \
 		 topol.o \
-                 amber.o \
+         amber.o \
 		 RW.o \
 		 gmx.o \
 		 EDT.o \
@@ -32,7 +32,7 @@ SOURCE = types_m.o \
 		 trj.o \
 		 multiple_trj.o \
 		 occupation_bin.o \
-                 aminoacids.o \
+         aminoacids.o \
 		 edview.o
 
 a: $(SOURCE)  

@@ -224,7 +224,7 @@ end subroutine Read_Trajectories
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ...
-integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , n , m , dumb_number
+integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , dumb_number
 real*8                          :: time_1 , time_2 , delta_t 
 character(1)                    :: test
 character(4)                    :: keyword
@@ -393,12 +393,10 @@ implicit none
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ....
-integer                         :: openstatus , inputstatus , N_of_atoms , lines , model , i , j , k , ligation , indx1 , indx2 , N_of_elements
+integer                         :: openstatus , inputstatus , N_of_atoms , lines , model , i , j , k , N_of_elements
 integer         , allocatable   :: atom_No(:)
 real*8                          :: x0 , y0 , z0 , factor , box(3) 
-real*8          , allocatable   :: distance_ligation(:,:) , distance_T(:)
 character(1)                    :: idx
-character(3)                    :: dumb , temp(20)
 character(72)                   :: System_Characteristics
 character(3)    , allocatable   :: elements(:) 
 
@@ -560,11 +558,8 @@ type(universe)  , allocatable   , intent(out) :: trj(:)
 
 ! local variables ....
 character(1)                    :: idx , dumb
-integer                         :: openstatus , inputstatus , atoms , i , j , k , indx1 , indx2 , model  , line
-integer                         :: n_residues 
+integer                         :: openstatus , inputstatus , atoms , i , j , k , model  , line
 real*8                          :: box(3)
-character(1)                    :: fragment
-character(3)                    :: residue
 character(72)                   :: System_Characteristics
 
 open(unit = 13, file = 'frames.xyz', status = 'old', action = 'read', iostat = openstatus)
@@ -664,10 +659,7 @@ type(universe)  , allocatable   , intent(out) :: trj(:)
 
 ! local variables ....
 character(1)                    :: dumb
-integer                         :: openstatus , inputstatus , atoms , i , j , k , indx1 , indx2 , model , lines
-integer                         :: n_residues 
-character(1)                    :: fragment
-character(3)                    :: residue
+integer                         :: openstatus , inputstatus , atoms , i , j , k , model , lines
 character(72)                   :: System_Characteristics
 
 open(unit = 13, file = 'DICE.trj', status = 'old', action = 'read', iostat = openstatus)

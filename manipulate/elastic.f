@@ -79,7 +79,7 @@ integer                      , intent(in)    :: file_type
 integer                             :: i , i1 , i2 , n , N_Confgs 
 integer             , allocatable   :: N_of_elements(:) 
 real*8                              :: versor(3) , Trans(3)
-real*8                              :: bond_stretch , bond_length , norm , distance , step
+real*8                              :: bond_stretch , bond_length , norm , step
 type(real_interval)                 :: bond
 character(len=96)                   :: string
 character(4)        , parameter     :: file_format(2)=["vasp","pdb"] 

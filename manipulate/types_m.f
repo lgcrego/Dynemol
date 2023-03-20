@@ -6,12 +6,14 @@ module types_m
         real*8              :: charge
         integer             :: indx
         integer             :: AtNo
+        integer             :: my_intra_id
         integer             :: nrcg
         integer             :: nresid
         character(len=4)    :: resid
         character(len=3)    :: Symbol
         character(len=4)    :: MMSymbol
         character(len=4)    :: AASymbol
+        character(len=4)    :: FFSymbol
         character(len=1)    :: TorF(3)
         character(len=1)    :: fragment
         logical             :: copy
@@ -55,6 +57,7 @@ module types_m
         real*8                        :: Surface_Boundary
         real*8                        :: time
         integer                       :: N_of_atoms
+        integer                       :: Total_conect
         integer                       :: N_of_aminos
         integer                       :: N_of_Surface_Atoms
         integer                       :: N_of_Solvent_Atoms

@@ -25,9 +25,7 @@ type(universe)  , intent(inout) :: system
 integer         , optional      :: frame
 
 ! local variables ...
-integer      :: i 
 real*8       :: delta_t = 0.d0
-character(3) :: MMSymbols(60)
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
@@ -103,7 +101,6 @@ implicit none
 type(universe)  , intent(inout) :: system
 
 ! local variables ...
-integer                     :: i , ioerr
 character(1)  , allocatable :: fragment(:)
 
 ! setting up residue structure ...

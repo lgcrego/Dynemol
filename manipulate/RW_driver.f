@@ -1,9 +1,10 @@
 module RW_driver
 
-use RW_routines  , only : View_XYZ, View_Yaehmop, Save_POSCAR, Save_MD_Urht
-use types_m      , only : universe
-use GMX_routines , only : Save_GROMACS 
-use Read_Parms   , only : atom 
+use RW_routines       , only : View_XYZ, View_Yaehmop, Save_POSCAR, Save_MD_Urht
+use types_m           , only : universe
+use GMX_routines      , only : Save_GROMACS
+use Topology_routines , only : get_topology
+use Read_Parms        , only : atom 
 use diagnosis_m    
 
 public :: WritingRoutines
@@ -19,7 +20,7 @@ implicit none
 type(universe) , intent(inout) :: structure
 
 ! local variables
-integer            :: AtNo, N_of_atom_type
+integer            :: AtNo, N_of_atom_type, file_type
 character(len=1)   :: Writing_Method
 
 !-----------------------------------------------------------
@@ -29,38 +30,50 @@ CALL system( "clear" )
 
 CALL diagnosis( structure )
 
-write(*,'(/a)') '>>>    Writing the output file     <<<'
+do
 
-write(*,'(/a)') '1 : XYZ format'
-write(*,'(/a)') '2 : Yaehmop format '
-write(*,'(/a)') '3 : POSCAR format '
-write(*,'(/a)') '4 : PDB format '
-write(*,'(/a)') '5 : Urht format '
-write(*,'(/a)') '6 : DONE '
-write(*,'(/a)',advance='no') '>>>   '
-read (*,'(a)') Writing_Method
+     write(*,'(/a)') '>>>    Writing the output file     <<<'
+     
+     write(*,'(/a)') '1 : XYZ format'
+     write(*,'(/a)') '2 : Yaehmop format '
+     write(*,'(/a)') '3 : POSCAR format '
+     write(*,'(/a)') '4 : PDB format '
+     write(*,'(/a)') '5 : Generate Topology ( must have CONECT in the pdb file; "obabel -ipdb input.pdb -opdb -O output.pdb" ) '
+     write(*,'(/a)') '6 : DONE '
+     write(*,'(/a)',advance='no') '>>>   '
+     read (*,'(a)') Writing_Method
+     
+     select case ( Writing_Method )
+     
+         case ('1')
+             CALL View_XYZ( structure )
+     
+         case ('2')
+             CALL View_Yaehmop( structure )
+             CALL system("tbind seed")      !<== uses Yaehmop software tbind
+     
+         case ('3')
+             CALL Save_POSCAR( structure )
+            
+         case ('4')
+             CALL Save_GROMACS( structure )
+     
+         case ('5')
+             write(*,'(/a)') 'Choose format: 1=OPLS , 2=GAFF/NAMD/Amber'
+             write(*,'(/a)',advance='no') '>>>   '
+             read (*,*) file_type
+             
+             CALL get_topology( structure , file_type )
+             pause ">>> DONE <<<"
+     
+         case default
+             exit
+             
+     end select
 
-select case ( Writing_Method )
+     call system("clear")
 
-    case ('1')
-        CALL View_XYZ( structure )
-
-    case ('2')
-        CALL View_Yaehmop( structure )
-        CALL system("tbind seed")      !<== uses Yaehmop software tbind
-
-    case ('3')
-        CALL Save_POSCAR( structure )
-       
-    case ('4')
-        CALL Save_GROMACS( structure )
-
-    case ('5')
-        CALL Save_MD_Urht( structure )
-
-    case default
-        
-end select
+end do
 
 ! total number of atoms of given type ...
 If( Writing_Method /= '3' ) then

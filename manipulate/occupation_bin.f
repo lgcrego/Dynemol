@@ -40,13 +40,9 @@ character :: option,             &
              calc_occ_pl,        &
              calc_occ_der_pl,    &
              calc_coherences_pl, &
-             calc_unif_grid,     &
              calc_occ_smear,     &
              calc_rho_abxdE_ab,  &
-
-             calc_rho_ab_smear,  &
-             calc_rho_int_dt,    &
-             calc_rho_int_dE
+             calc_rho_ab_smear
 
 logical :: done, need_grid(2)
 
