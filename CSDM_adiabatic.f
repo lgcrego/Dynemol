@@ -121,7 +121,7 @@ do frame = frame_init , frame_final , frame_step
     If( (it >= n_t) .OR. (t >= t_f) ) exit    
 
     it = it + 1
-call start_clock()
+
     ! calculate for use in MM ...
     if( QMMM ) then
         Net_Charge_MM = Net_Charge
@@ -154,7 +154,7 @@ call start_clock()
 
     CALL DeAllocate_Structures  ( Extended_Cell )
     DeAllocate                  ( ExCell_basis  )
-call stop_clock("before")
+
     ! build new UNI(t + t_rate) ...
     !============================================================================
 
@@ -189,7 +189,7 @@ call stop_clock("before")
             stop
 
     end select
-call start_clock()
+
     CALL Generate_Structure( frame )
    
     ! export new coordinates to ForceCrew, for advancing their tasks in Force calculations ...
@@ -202,9 +202,8 @@ call start_clock()
     If( Induced_ )  CALL DP_stuff( "Induced_DP" )
 
     Deallocate ( UNI%R , UNI%L , UNI%erg )
-call start_clock
+
     CALL EigenSystem( Extended_Cell , ExCell_basis , UNI , it )
-call stop_clock("QCModel")
 
     CALL U_nad(t_rate) ! <== NON-adiabatic component of the propagation ; 2 of 2 ... 
 
@@ -221,7 +220,7 @@ call stop_clock("QCModel")
 
     job_status = check( frame , frame_final , t_rate ) 
     CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
-call stop_clock("after")    
+
 enddo
 
 deallocate( MO_bra , MO_ket , AO_bra , AO_ket , DUAL_bra , DUAL_ket , phase )

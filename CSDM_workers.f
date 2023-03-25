@@ -181,8 +181,6 @@ do task = 1 , mytasks
     end do
     F_mtx(K,K) = d_zero
 
-    Force(K) = two * sum( F_mtx(K,:) ) * eVAngs_2_Newton
-
     ! calculation of d_NA ...
     d_NA = NAcoupling( grad_S( : , BP_K+1 : BP_K+DOS_k) , DOS_k , BP_K )  ! <== units = 1/Angs
 
@@ -197,19 +195,27 @@ do task = 1 , mytasks
             
     deallocate(pairs)
     ! ready for next atom in system
-
 end do 
-deallocate( F_mtx )
 
 if( myAxis_rank == 0 ) then
-    call MPI_reduce( MPI_in_Place , Force , AllAtoms , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
+ 
+    call MPI_reduce( MPI_in_Place , F_mtx  , AllAtoms**2 , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
     call MPI_reduce( MPI_in_Place , tmp_El , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
     call MPI_reduce( MPI_in_Place , tmp_Hl , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+
+    do L = 1 , AllAtoms
+       Force(L) = two * sum( F_mtx(L,:) ) * eVAngs_2_Newton
+       enddo
 else
-    call MPI_reduce( Force , Force , AllAtoms , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
+
+    call MPI_reduce( F_mtx  , F_mtx  , AllAtoms**2 , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
     call MPI_reduce( tmp_El , tmp_El , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
     call MPI_reduce( tmp_Hl , tmp_Hl , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
+
 endif
+
+CALL MPI_barrier( myAxisComm , err )
+deallocate( F_mtx )
 
 end  subroutine EhrenfestForce
 !

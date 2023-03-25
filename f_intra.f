@@ -435,9 +435,7 @@ if( QMMM ) then
     select case (driver)
 
        case( "slice_CSDM" ) 
-call start_clock
            CALL Ehrenfest_master( system , size(basis) )
-call stop_clock("Ehrenfest")
            CALL DecoherenceForce( system , MO_bra , MO_ket , QM%erg , PST )
 
        case( "slice_AO")
