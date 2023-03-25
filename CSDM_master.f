@@ -74,7 +74,6 @@ do i=1,dim_N
    end do
    deallocate( tmp_El_xyz , tmp_Hl_xyz )
 
-
 deallocate( Force , tmp_El , tmp_Hl )
 
 include 'formats.h'

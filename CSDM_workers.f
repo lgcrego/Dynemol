@@ -197,6 +197,8 @@ do task = 1 , mytasks
     ! ready for next atom in system
 end do 
 
+CALL MPI_barrier( myAxisComm , err )
+
 if( myAxis_rank == 0 ) then
  
     call MPI_reduce( MPI_in_Place , F_mtx  , AllAtoms**2 , mpi_D_R , mpi_SUM , 0 , myAxisComm , err )
@@ -204,6 +206,7 @@ if( myAxis_rank == 0 ) then
     call MPI_reduce( MPI_in_Place , tmp_Hl , dim_N*dim_E , mpi_D_R , mpi_SUM , 0 , myAxisComm , err ) 
 
     do L = 1 , AllAtoms
+       If( system%QMMM(k) == "MM" .OR. system%flex(k) == F_ ) cycle
        Force(L) = two * sum( F_mtx(L,:) ) * eVAngs_2_Newton
        enddo
 else
@@ -214,7 +217,6 @@ else
 
 endif
 
-CALL MPI_barrier( myAxisComm , err )
 deallocate( F_mtx )
 
 end  subroutine EhrenfestForce
@@ -429,8 +431,7 @@ type(structure) , intent(in) :: sys
 type(STO_basis) , intent(in) :: basis(:)
 
 ! local variables ...
-integer :: NFold , remainder 
-integer :: i , j , k , j1 , j2 , step_j , aux , L
+integer :: i , j , k , j1 , j2 , step_j , aux , L , NFold
 
 allocate( grad_S  (dim_E,dim_E) )
 allocate( Kernel  (dim_E,dim_E) )
@@ -454,7 +455,6 @@ dim_N = count( sys%QMMM == "QM" .AND. sys%flex == T_ )
 ! define Load Balance for MPI HFP calculations in EhrenfestForce ...
 !-------------------------------------------------------------------
 NFold = int(dim_N/np_per_axis) + merge( 1 , 0 , mod(dim_N,np_per_axis)/=0 )
-remainder = mod(dim_N,np_per_axis)
 
 allocate( my_axis_todo_list(nFold,np_per_axis) , source = 0 )
 
