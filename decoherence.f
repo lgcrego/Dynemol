@@ -8,8 +8,6 @@ module decoherence_m
     use parameters_m      , only: n_part
     use Structure_Builder , only: Unit_Cell
 
-    use Overlap_Builder       , only : Overlap_Matrix
-
     public :: apply_decoherence , DecoherenceRate , DecoherenceForce , AdjustNuclearVeloc , Bcast_H_matrix , Bcast_EigenVecs
 
     private
@@ -108,7 +106,7 @@ real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
 integer              :: b , j , k , N , f , N_f
 real*8               :: Const , tmp
 character(len=1)     :: fragment
-real*8 , allocatable :: aux(:) , tau_mtx(:,:) , tau_inv(:,:) , tau_frag(:,:) , Qij_frag(:,:)
+real*8 , allocatable :: aux(:) , tau_mtx(:,:) , tau_frag(:,:) , Qij_frag(:,:)
 
 N = size(erg)
 
