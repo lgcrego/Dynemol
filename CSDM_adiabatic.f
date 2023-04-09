@@ -385,12 +385,12 @@ real*8  , intent(in) :: t_rate
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PST , t_rate )
 
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
-CALL apply_decoherence( MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
+CALL apply_decoherence( ExCell_basis , MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
 
 end subroutine U_nad
 !

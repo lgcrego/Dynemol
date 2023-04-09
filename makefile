@@ -149,6 +149,7 @@ SOURCE2 = constants_m.o \
           EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
+          decoherence.o \
 		  QCModel_Reciprocal.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
@@ -156,7 +157,6 @@ SOURCE2 = constants_m.o \
 		  FMO.o \
 		  CSDM.o \
 		  FSSH.o \
-          decoherence.o \
 		  CoulInt_QMMM.o \
 		  f_intra.o \
 		  f_inter.o \

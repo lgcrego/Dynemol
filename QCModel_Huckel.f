@@ -8,11 +8,12 @@
     use type_m
     use omp_lib
     use constants_m
-    use parameters_m            , only : EnvField_ , Induced_ , driver , verbose , restart , Band_structure
-    use Overlap_Builder         , only : Overlap_Matrix
-    use Hamiltonians            , only : X_ij , even_more_extended_Huckel
+    use parameters_m          , only : EnvField_ , Induced_ , driver , verbose , restart , Band_structure
+    use Overlap_Builder       , only : Overlap_Matrix
+    use Hamiltonians          , only : X_ij , even_more_extended_Huckel
     use Matrix_Math
-    use QCModel_Reciprocal_m    , only : EigenSystem_Reciprocal
+    use QCModel_Reciprocal_m  , only : EigenSystem_Reciprocal
+    use decoherence_m         , only : Bcast_H_matrix , Bcast_EigenVecs
 
     public :: EigenSystem , S_root_inv 
 
@@ -65,6 +66,7 @@ If( EnvField_ .OR. Induced_ ) then
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
+    if( driver == "slice_CSDM" ) CALL Bcast_H_matrix( h , S_matrix , N )
 end If
 
 if( Band_Structure ) CALL EigenSystem_Reciprocal( basis , h , S_matrix )
@@ -88,6 +90,7 @@ select case ( driver )
           Allocate( Rv(N,N) )
 
           Lv = h
+          if( driver == "slice_CSDM" ) CALL Bcast_EigenVecs( Lv , N )
           Deallocate( h , dumb_S )
           
           If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N))
