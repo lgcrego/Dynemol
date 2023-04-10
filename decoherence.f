@@ -8,7 +8,7 @@ module decoherence_m
     use parameters_m      , only: n_part
     use Structure_Builder , only: Unit_Cell
 
-    public :: apply_decoherence , DecoherenceRate , DecoherenceForce , AdjustNuclearVeloc
+    public :: apply_decoherence , DecoherenceRate , DecoherenceForce , AdjustNuclearVeloc , Bcast_H_matrix , Bcast_EigenVecs
 
     private
 
@@ -17,7 +17,7 @@ module decoherence_m
 
     !module variables ...
     integer                       :: dim_N
-    real*8          , allocatable :: tau_inv(:,:)
+    real*8          , allocatable :: tau_inv(:,:) , H_ij(:,:) , S_ij(:,:) , Q_ij(:,:)
     type(R3_vector) , allocatable :: nucleus(:)
 
     interface apply_decoherence
@@ -28,10 +28,11 @@ contains
 !
 !
 !
-!===============================================================================
- subroutine FirstOrderDecoherence( bra , ket , erg , PES , t_rate , atenuation )
-!===============================================================================
+!=======================================================================================
+ subroutine FirstOrderDecoherence( basis , bra , ket , erg , PES , t_rate , atenuation )
+!=======================================================================================
 implicit none
+type(STO_basis)      , intent(in)    :: basis(:)
 complex*16           , intent(inout) :: bra(:,:)
 complex*16           , intent(inout) :: ket(:,:)
 real*8               , intent(in)    :: erg(:)
@@ -44,7 +45,11 @@ integer :: n , i
 real*8  :: dt , coeff , gauge , summ(2)
 
 ! J. Chem. Phys. 126, 134114 (2007)
-CALL  DecoherenceRate( erg , PES )
+!CALL  DecoherenceRate( erg , PES )
+
+!default is local decoherence ...
+CALL  LocalDecoherenceRate( basis , erg , PES )
+
 ! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
 dt = t_rate * HALF
 
@@ -85,6 +90,76 @@ end subroutine FirstOrderDecoherence
 !
 !
 !
+!====================================================
+ subroutine LocalDecoherenceRate( basis , erg , PES )
+!====================================================
+use Structure_Builder , only: sys => Extended_Cell
+implicit none
+type(STO_basis) , intent(in) :: basis(:)
+real*8          , intent(in) :: erg(:)
+integer         , intent(in) :: PES(:)
+
+!local parameters ...
+real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
+
+!local variables ...   
+integer              :: b , j , k , N , f , N_f
+real*8               :: Const , tmp
+character(len=1)     :: fragment
+real*8 , allocatable :: aux(:) , tau_mtx(:,:) , tau_frag(:,:) , Qij_frag(:,:)
+
+N = size(erg)
+
+! using kinetic energy in eV units ...
+Const = d_one + C/Unit_Cell%MD_Kin  
+
+if( .not. allocated(tau_inv) ) then
+    allocate( tau_inv(N,2) , source = d_zero )
+    endif
+
+allocate( tau_mtx(N,N) )
+
+do k = 1 , n_part 
+
+     tau_mtx(:,:) = (H_ij(:,:) - erg(PES(k))*S_ij(:,:)) / (h_bar * Const) 
+
+     do f = 1 , size(sys%list_of_fragments)
+
+          fragment = sys%list_of_fragments(f)
+
+          N_f = count(basis(:)%fragment == fragment )
+          allocate( tau_frag(N_f,N_f) , Qij_frag(N_f,N) , aux(N_f) )
+
+          b=0
+          do j=1,N
+               if(basis(j)%fragment /= fragment ) cycle
+               b=b+1
+               tau_frag(:,b) = pack( tau_mtx(:,j) , basis(:)%fragment == fragment )
+               enddo
+
+          do concurrent(j=1:N)
+               Qij_frag(:,j) = pack( Q_ij(:,j) , basis(:)%fragment == fragment )
+               enddo
+
+          do concurrent(j=1:N) local( aux , tmp ) shared( tau_frag , Qij_frag , tau_inv)
+               do b=1,N_f 
+                    aux(b) = sum( tau_frag(:,b)*Qij_frag(:,j) )
+                    enddo ! <== b_loop
+               tmp = sum( aux(:)*Qij_frag(:,j) )
+               tau_inv(j,k) = tau_inv(j,k) + abs(tmp)
+               enddo !<== j_loop
+
+          deallocate( tau_frag , Qij_frag , aux )
+
+     enddo !<== f_loop
+enddo !<== k_loop
+
+deallocate( tau_mtx )
+
+end subroutine LocalDecoherenceRate
+!
+!
+!
 !=======================================
  subroutine DecoherenceRate( erg , PES )
 !=======================================
@@ -113,7 +188,7 @@ do i = 1 , size(erg)
         tau_inv(i,j) = dE / (h_bar * Const)
         end do
         end do
-
+ 
 end subroutine DecoherenceRate
 !
 !
@@ -359,6 +434,48 @@ do n = 1 , system%atoms
 Unit_Cell% MD_kin = sum(atom%kinetic)
 
 end subroutine AdjustNuclearVeloc
+!
+!
+!
+!====================================================
+ subroutine Bcast_H_matrix( H_matrix , S_matrix , N )
+!====================================================
+ implicit none
+ real*8  , intent(in) :: H_matrix(:,:)
+ real*8  , intent(in) :: S_matrix(:,:)
+ integer , intent(in) :: N
+
+! local variables ... 
+integer :: i , j
+
+if( .not. allocated(H_ij)) allocate( H_ij(N,N) , S_ij(N,N) )
+
+H_ij = H_matrix 
+do j = 1 , N
+  do i = j+1 , N
+        H_ij(j,i) = H_ij(i,j)
+    end do
+end do
+
+S_ij = S_matrix
+
+end subroutine Bcast_H_matrix
+!
+!
+!
+!==============================================
+ subroutine Bcast_EigenVecs( Eigen_matrix , N )
+!==============================================
+ implicit none
+ real*8  , intent(in) :: Eigen_matrix(:,:)
+ integer , intent(in) :: N
+
+! local variables ... 
+
+if( .not. allocated(Q_ij)) allocate( Q_ij(N,N) )
+Q_ij = Eigen_matrix
+
+end subroutine Bcast_EigenVecs
 !
 !
 !

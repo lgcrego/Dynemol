@@ -10,7 +10,7 @@ FREE = -free
 SAFE = #-g -traceback -check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
 FFLAGS1 = -O3 -align 
-FFLAGS2 = -O2 -align -qopenmp -parallel $(FREE) $(SAFE)
+FFLAGS2 = -O2 -align -qopenmp -parallel -no-wrap-margin $(FREE) $(SAFE)
 
 LDFLAGS = -static-intel
 
@@ -113,6 +113,7 @@ SOURCE2 = constants_m.o \
                   EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
+                  decoherence.o \
 		  QCModel_Huckel.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
@@ -121,7 +122,6 @@ SOURCE2 = constants_m.o \
                   CSDM_master.o \
                   CSDM_workers.o \
                   FSSH.o \
-                  decoherence.o \
 		  CoulInt_QMMM.o \
 		  f_intra.o \
 		  f_inter.o \
