@@ -44,7 +44,7 @@ contains
  real*8          , intent(in)    :: t_rate
 
 ! local variables ... 
-integer :: j , nn , xyz
+integer :: nn , xyz
 logical :: jump 
 
 mm = size(basis)

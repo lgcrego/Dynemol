@@ -382,16 +382,26 @@ real*8  , intent(in) :: t_rate
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate) ...
+
+!############################################################
+
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PST , t_rate )
+! local decoherence of propagating states...
 
-CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
-CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
+if( QMMM ) CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
 
-CALL apply_decoherence( ExCell_basis , MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
+!############################################################
 
+!CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
+!CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
+!
+!CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket )
+
+MO_TDSE_bra =  MO_bra
+MO_TDSE_ket =  MO_ket
+!############################################################
 end subroutine U_nad
 !
 !
