@@ -72,6 +72,8 @@ contains
  subroutine setup_MPI_labor_force
 !================================
 implicit none
+! local variables ...
+integer :: err
 
 select case ( driver )
 
@@ -83,7 +85,11 @@ select case ( driver )
 
        case ( "slice_CSDM" )
            CALL setup_CSDM_Crew
-
+           if( np < 4 ) then
+               if( master ) CALL warning("halting: # of MPI processes must be at least 4 for DRIVER=CSDM")
+               Call mpi_barrier( world , err )
+               stop
+               end if
        case default
 
 end select

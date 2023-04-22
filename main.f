@@ -65,7 +65,10 @@ CALL Read_Structure
 
 If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_Environment
 
-If( master ) CALL dump_driver_parameters_and_tuning
+If( master ) then
+    CALL dump_driver_parameters_and_tuning
+    CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+    end if
 
 select case ( driver )
 
@@ -111,10 +114,6 @@ select case ( driver )
         stop
 
 end select
-
-if( master ) then
-    CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
-    end if
 
 include 'formats.h'
 

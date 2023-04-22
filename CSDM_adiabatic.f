@@ -69,6 +69,9 @@ module CSDM_adiabatic_m
     real*8          :: t
     integer         :: it , mm , nn
 
+    ! local parameter ...
+    logical, parameter :: T_ = .true. , F_ = .false.
+
 contains
 !
 !
@@ -88,7 +91,7 @@ integer        :: req1 , req2
 real*8         :: t_rate 
 type(universe) :: Solvated_System
 logical        :: triggered
-logical        :: job_status = no
+logical        :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
 
 it = 1
 t  = t_i
@@ -177,9 +180,6 @@ do frame = frame_init , frame_final , frame_step
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
-            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (triggered == yes)
-
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -193,6 +193,7 @@ do frame = frame_init , frame_final , frame_step
     CALL Generate_Structure( frame )
    
     ! export new coordinates to ForceCrew, for advancing their tasks in Force calculations ...
+
     If( QMMM ) CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
  
     CALL Basis_Builder( Extended_Cell , ExCell_basis )
@@ -219,7 +220,8 @@ do frame = frame_init , frame_final , frame_step
     CALL Write_Erg_Log( frame , triggered )
 
     job_status = check( frame , frame_final , t_rate ) 
-    CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
+
+    CALL MPI_Bcast( job_status , 2 , mpi_logical , 0 , world , err )
 
 enddo
 
@@ -244,7 +246,7 @@ type(f_time) , intent(out) :: QDyn
 integer         :: hole_save , n  ,err
 integer         :: mpi_D_R = mpi_double_precision
 type(universe)  :: Solvated_System
-logical         :: job_status = no
+logical         :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
 
 ! preprocessing stuff .....................................................
 
@@ -369,7 +371,7 @@ CALL BcastQMArgs( mm , Extended_Cell%atoms )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-CALL MPI_BCAST( job_status , 1 , mpi_logical , 0 , world , err )
+CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
 
@@ -417,16 +419,26 @@ real*8  , intent(in) :: t_rate
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate) ...
+
+!############################################################
+
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PST , t_rate )
+! local decoherence of propagating states...
 
-CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
-CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
+if( QMMM ) CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
 
-CALL apply_decoherence( ExCell_basis , MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
+!############################################################
 
+!CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
+!CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
+!
+!CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket )
+
+MO_TDSE_bra =  MO_bra
+MO_TDSE_ket =  MO_ket
+!############################################################
 end subroutine U_nad
 !
 !
@@ -659,14 +671,12 @@ if( triggered == YES ) then
 endif
 
 if( triggered == NO ) then
-!    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-!        ! back to excited-state dynamics
-!        triggered = YES !!!
-!    else
-        ! carry on with trigger OFF
-        QM_erg = d_zero
-!    endif
+    ! carry on with trigger OFF
+    QM_erg = d_zero
 end if
+
+! triggered = NO, turn off QMMM ...
+QMMM = (triggered == yes)
 
 end function update_QM_erg
 !
@@ -742,14 +752,16 @@ integer , intent(in) :: frame_final
 real*8  , intent(in) :: t_rate
 
 ! local variables ...
-logical :: flag , flag1 , flag2 , flag3
+logical :: flag(2) !<== [MPI_done,QMMM_done]
+logical :: flag1 , flag2 , flag3
 
 flag1 = frame + frame_step > frame_final
 flag2 = it >= n_t
 flag3 = t  + t_rate >= t_f
 
-! if any of these hold, job done ...
-flag = flag1 .OR. flag2 .OR. flag3
+! if any of these hold, MPI job from workers is done ...
+flag(1) = flag1 .OR. flag2 .OR. flag3  ! <== job_done
+flag(2) = .not. QMMM                   ! <== QMMM_done
 
 end  function check
 !

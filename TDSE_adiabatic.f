@@ -420,7 +420,7 @@ select case (driver)
        case("slice_FSSH") ! <== Lowdin orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
            MO_bra = conjg(MO_ket)
-           CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PES , t_rate )
+!           CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PES , t_rate )
 
        case("slice_AO")   ! <== asymmetrical orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )

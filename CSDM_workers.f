@@ -43,7 +43,7 @@ real*8  , allocatable :: Force(:)
 real*8  :: real_dumb
 integer :: i , j , xyz , N , err , int_dumb
 integer :: mpi_D_R = mpi_double_precision
-logical :: job_done
+logical :: job_done , QMMM_done , job_status(2)
 
 dim_E = size(basis)
 N = dim_E 
@@ -54,10 +54,11 @@ N = dim_E
 ! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...                                                                                
 CALL Overlap_Matrix( system , basis )
 
-CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err ) 
-If( job_done ) then ! <== Force+Kernel Crew pack and stop here ...
-    call MPI_FINALIZE(err)
-    STOP
+CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err ) 
+job_done  = job_status(1)
+QMMM_done = job_status(2)
+If( QMMM_done ) then ! <== Force+Kernel Crew pack and wait ...
+    call FINALIZE
     end if
 
 CALL preprocess( system , basis )
@@ -509,6 +510,30 @@ do i = j , dim_E
          end do
 
 end subroutine Huckel_stuff
+!
+!
+!
+!
+!===================
+ subroutine FINALIZE
+!===================
+implicit none
+
+!local variables ...
+integer :: err
+logical :: job_status(2) , job_done
+
+98 CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err ) 
+job_done = job_status(1)
+
+If( job_done ) then 
+    call MPI_FINALIZE(err)
+    STOP
+else
+    goto 98
+end if
+
+end subroutine FINALIZE
 !
 !
 !

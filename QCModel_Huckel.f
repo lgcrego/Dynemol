@@ -14,7 +14,7 @@
     use parameters_m      , only : EnvField_ , Induced_ , driver , verbose , restart
     use Overlap_Builder   , only : Overlap_Matrix
     use Hamiltonians      , only : X_ij , even_more_extended_Huckel
-    use decoherence_m     , only : Bcast_H_matrix , Bcast_EigenVecs
+    use decoherence_m     , only : Bcast_Matrices
 
     public :: EigenSystem , S_root_inv 
 
@@ -70,7 +70,6 @@ If( EnvField_ .OR. Induced_ ) then
     h(:,:) = even_more_extended_Huckel( system , basis , S_matrix , it ) 
 else
     h(:,:) = Build_Huckel( basis , S_matrix ) 
-    if( driver == "slice_CSDM" ) CALL Bcast_H_matrix( h , S_matrix , N )
 end If
 
 CALL SYGVD( h , dumb_S , QM%erg , 1 , 'V' , 'L' , info )
@@ -92,7 +91,6 @@ select case ( driver )
           Allocate( Rv(N,N) )
 
           Lv = h
-          if( driver == "slice_CSDM" ) CALL Bcast_EigenVecs( Lv , N )
           Deallocate( h , dumb_S )
           
           If( .NOT. allocated(QM%L) ) ALLOCATE(QM%L(N,N))
@@ -101,6 +99,8 @@ select case ( driver )
 
           ! Rv = S * Lv ...
           CALL symm( S_matrix , Lv , Rv )
+
+          if( driver == "slice_CSDM" ) CALL Bcast_Matrices( Rv , QM%L , S_matrix , N )
           
           DEALLOCATE( S_matrix )
 
