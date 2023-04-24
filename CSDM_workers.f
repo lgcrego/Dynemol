@@ -59,7 +59,10 @@ job_done  = job_status(1)
 QMMM_done = job_status(2)
 If( QMMM_done ) then ! <== Force+Kernel Crew pack and wait ...
     call FINALIZE
-    end if
+elseif( job_done ) then
+    call MPI_FINALIZE(err)
+    STOP
+end if
 
 CALL preprocess( system , basis )
 
