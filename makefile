@@ -113,13 +113,13 @@ SOURCE2 = constants_m.o \
                   EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
+                  CSDM_master.o \
                   decoherence.o \
 		  QCModel_Huckel.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
 		  FMO.o \
-                  CSDM_master.o \
                   CSDM_workers.o \
                   FSSH.o \
 		  CoulInt_QMMM.o \
