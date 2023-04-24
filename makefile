@@ -149,13 +149,13 @@ SOURCE2 = constants_m.o \
           EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
+		  FMO.o \
+		  CSDM.o \
           decoherence.o \
 		  QCModel_Reciprocal.o \
 		  QCModel_Huckel.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
-		  FMO.o \
-		  CSDM.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  f_intra.o \

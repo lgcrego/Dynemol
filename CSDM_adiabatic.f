@@ -160,9 +160,6 @@ do frame = frame_init , frame_final , frame_step
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
-            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (triggered == yes)
-
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -634,14 +631,12 @@ if( triggered == YES ) then
 endif
 
 if( triggered == NO ) then
-!    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-!        ! back to excited-state dynamics
-!        triggered = YES !!!
-!    else
-        ! carry on with trigger OFF
-        QM_erg = d_zero
-!    endif
+    ! carry on with trigger OFF
+    QM_erg = d_zero
 end if
+
+! triggered = NO, turn off QMMM ...
+QMMM = (triggered == yes)
 
 end function update_QM_erg
 !

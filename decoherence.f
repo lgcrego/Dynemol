@@ -85,11 +85,11 @@ do L = 1 , size(list)
      do ia = 1 , ChemAtom( sys%AtNo(n) )% DOS
            a = sys% BasisPointer(n) + ia
 
-           AO_bra(a,:)  = AO_bra(a,:) * exp(-dt*decay(L,:)* HALF)
-           AO_ket(a,:)  = AO_ket(a,:) * exp(-dt*decay(L,:)* HALF)
+           AO_bra(a,:)  = AO_bra(a,:) * exp(-dt*decay(L,:))
+           AO_ket(a,:)  = AO_ket(a,:) * exp(-dt*decay(L,:))
      
-           d_AL_dt(a,:) =  - ( decay(L,:)*HALF ) * AO_bra(a,:)
-           d_AR_dt(a,:) =  - ( decay(L,:)*HALF ) * AO_ket(a,:)
+           d_AL_dt(a,:) =  - ( decay(L,:) ) * AO_bra(a,:)
+           d_AR_dt(a,:) =  - ( decay(L,:) ) * AO_ket(a,:)
      enddo
 enddo
 
@@ -272,7 +272,7 @@ do n = 1 , dim_N
           !===================================================================
           ! electron = 1
           If( i == PST(1) ) cycle     
-          f_ik = d_rho_ii_dt(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
+          f_ik = - d_rho_ii_dt(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
           Force(n,1)%vec(:) = Force(n,1)%vec(:) + f_ik * s_El_ik(n,i)%vec(:)
           !===================================================================
      end do
@@ -282,7 +282,7 @@ do n = 1 , dim_N
           !===================================================================
           ! hole = 2
           If( i == PST(2) ) cycle     
-          f_ik = d_rho_ii_dt(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
+          f_ik = - d_rho_ii_dt(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
           Force(n,2)%vec(:) = Force(n,2)%vec(:) + f_ik * s_Hl_ik(n,i)%vec(:)
           !===================================================================
      end do
