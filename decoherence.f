@@ -6,9 +6,10 @@ module decoherence_m
     use type_m
     use constants_m
     use parameters_m      , only: n_part
+    use MD_read_m         , only: atom
     use Structure_Builder , only: Unit_Cell
 
-    public :: apply_decoherence , DecoherenceRate , DecoherenceForce , AdjustNuclearVeloc , Bcast_H_matrix , Bcast_EigenVecs
+    public :: apply_decoherence , DecoherenceForce , AdjustNuclearVeloc , Bcast_Matrices
 
     private
 
@@ -17,11 +18,12 @@ module decoherence_m
 
     !module variables ...
     integer                       :: dim_N
-    real*8          , allocatable :: tau_inv(:,:) , H_ij(:,:) , S_ij(:,:) , Q_ij(:,:)
+    real*8          , allocatable :: d_rho_ii_dt(:,:) , S_ij(:,:) , QR_ij(:,:) , QL_ij(:,:)
     type(R3_vector) , allocatable :: nucleus(:)
 
     interface apply_decoherence
-        module procedure FirstOrderDecoherence
+        module procedure Local_CSDM
+        module procedure Global_CSDM
     end interface apply_decoherence
 
 contains
@@ -29,167 +31,199 @@ contains
 !
 !
 !=======================================================================================
- subroutine FirstOrderDecoherence( basis , bra , ket , erg , PES , t_rate , atenuation )
+ subroutine Local_CSDM( basis , dual_bra , PST , t_rate , MO_bra , MO_ket , slow_Decoh )
 !=======================================================================================
+use Structure_Builder    , only: sys => Extended_Cell
+use Semi_empirical_parms , only: ChemAtom => atom
 implicit none
-type(STO_basis)      , intent(in)    :: basis(:)
-complex*16           , intent(inout) :: bra(:,:)
-complex*16           , intent(inout) :: ket(:,:)
-real*8               , intent(in)    :: erg(:)
-integer              , intent(in)    :: PES(:)
-real*8               , intent(in)    :: t_rate
-real      , optional , intent(in)    :: atenuation
+type(STO_basis)        , intent(in)    :: basis(:)
+complex*16             , intent(inout) :: dual_bra(:,:)
+integer                , intent(in)    :: PST(:)
+real*8                 , intent(in)    :: t_rate
+complex*16             , intent(out)   :: MO_bra(:,:)
+complex*16             , intent(out)   :: MO_ket(:,:)
+logical     , optional , intent(in)    :: slow_Decoh
 
 ! local variables ...
-integer :: n , i 
-real*8  :: dt , coeff , gauge , summ(2)
+integer    :: n , i , ia , a , L , dim_E
+real*8     :: dt , coeff , summ(2)
+integer    , allocatable , save :: list(:)
+real*8     , allocatable :: decay(:,:)
+complex*16 , allocatable :: AO_bra(:,:) , AO_ket(:,:) , dual_ket(:,:) , aux(:,:)
+complex*16 , allocatable :: d_AL_dt(:,:) , d_AR_dt(:,:) , d_CL_dt(:,:) , d_CR_dt(:,:)
 
-! J. Chem. Phys. 126, 134114 (2007)
-!CALL  DecoherenceRate( erg , PES )
+dim_E = size(basis)
 
-!default is local decoherence ...
-CALL  LocalDecoherenceRate( basis , erg , PES )
+CALL  Local_CSDM_Rate( sys , PST , decay )
 
-! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
-dt = t_rate * HALF
+If( present(slow_Decoh) .AND. slow_Decoh == T_ ) then
+    decay = decay*HALF
+    endif
 
-if(.not. present(atenuation)) then
-    summ = d_zero
-    do n = 1 , n_part 
-    do i = 1 , size(erg) 
-         if( i == PES(n) ) cycle
-         bra(i,n) = bra(i,n) * exp(-dt*tau_inv(i,n))
-         ket(i,n) = ket(i,n) * exp(-dt*tau_inv(i,n))
-         summ(n) = summ(n) + bra(i,n)*ket(i,n)
-         end do
-         end do
-else
+! list of atoms subject to Ehrenfest force ...
+if( .not. allocated(list) ) then
+    allocate( list , &
+    source = pack( [( L , L=1,sys%atoms )] , sys%QMMM(:) == "QM" .AND. sys%flex(:) == T_ ) &
+    )
+end if
+ 
+!####################################################
+! get AO_brackets ...
+allocate( AO_bra(dim_E,2) , AO_ket(dim_E,2) )
+AO_bra = dual_bra
+do concurrent (a=1:dim_E)
+       AO_ket(a,1) = sum( QL_ij(:,a)*MO_ket(:,1) )
+       AO_ket(a,2) = sum( QL_ij(:,a)*MO_ket(:,2) )
+       enddo
 
-    gauge = 1.d0 / atenuation
+!####################################################
+! decoherence of AO_brackets ... 
 
-    summ = d_zero
-    do n = 1 , n_part 
-    do i = 1 , size(erg) 
-         if( i == PES(n) ) cycle
-         bra(i,n) = bra(i,n) * exp(-dt*tau_inv(i,n)*gauge)
-         ket(i,n) = ket(i,n) * exp(-dt*tau_inv(i,n)*gauge)
-         summ(n) = summ(n) + bra(i,n)*ket(i,n)
-         end do
-         end do
-endif
+dt = t_rate 
+! because wavefunction tau(wvpckt) = 2.0*tau) ...
 
-do n = 1 , n_part
-     coeff = bra(PES(n),n) * ket(PES(n),n)
-     coeff = (d_one - summ(n)) / coeff
-     coeff = sqrt(coeff)
-     bra(PES(n),n) = bra(PES(n),n) * coeff
-     ket(PES(n),n) = ket(PES(n),n) * coeff
+allocate( d_AL_dt(dim_E,2) , source = C_zero )
+allocate( d_AR_dt(dim_E,2) , source = C_zero )
+
+do L = 1 , size(list)
+     n = list(L)
+     do ia = 1 , ChemAtom( sys%AtNo(n) )% DOS
+           a = sys% BasisPointer(n) + ia
+
+           AO_bra(a,:)  = AO_bra(a,:) * exp(-dt*decay(L,:))
+           AO_ket(a,:)  = AO_ket(a,:) * exp(-dt*decay(L,:))
+     
+           d_AL_dt(a,:) =  - ( decay(L,:) ) * AO_bra(a,:)
+           d_AR_dt(a,:) =  - ( decay(L,:) ) * AO_ket(a,:)
+     enddo
+enddo
+
+!####################################################
+! recover dual_brackets after CSDM decoherence ...
+
+dual_bra = AO_bra
+
+allocate( dual_ket(dim_E,2) )
+do concurrent (a=1:dim_E)
+       dual_ket(a,1) = sum( S_ij(:,a)*AO_ket(:,1) )
+       dual_ket(a,2) = sum( S_ij(:,a)*AO_ket(:,2) )
+       enddo
+
+allocate( aux(dim_E,2) , source = d_AR_dt )
+do concurrent (a=1:dim_E)
+       d_AR_dt(a,1) = sum( S_ij(:,a)*aux(:,1) )
+       d_AR_dt(a,2) = sum( S_ij(:,a)*aux(:,2) )
+       enddo
+
+deallocate( aux , AO_bra , AO_ket )
+
+!####################################################
+! calculating MO_brackets with CSDM decoherence ...
+
+do concurrent (i=1:dim_E)
+       MO_bra(i,1) = sum( QR_ij(:,i)*dual_bra(:,1) )
+       MO_bra(i,2) = sum( QR_ij(:,i)*dual_bra(:,2) )
+
+       MO_ket(i,1) = sum( QL_ij(i,:)*dual_ket(:,1) )
+       MO_ket(i,2) = sum( QL_ij(i,:)*dual_ket(:,2) )
+enddo
+deallocate( dual_ket )
+
+summ = d_zero
+do n = 1 , n_part 
+do i = 1 , dim_E 
+     if( i == PST(n) ) cycle
+     summ(n) = summ(n) + MO_bra(i,n)*MO_ket(i,n)
+     end do
      end do
 
-end subroutine FirstOrderDecoherence
+do n = 1 , n_part
+     coeff = MO_bra(PST(n),n) * MO_ket(PST(n),n)
+     coeff = (d_one - summ(n)) / coeff
+     coeff = sqrt(coeff)
+     MO_bra(PST(n),n) = MO_bra(PST(n),n) * coeff
+     MO_ket(PST(n),n) = MO_ket(PST(n),n) * coeff
+     end do
+
+!####################################################
+! calculating d_rho_dt ...
+
+if( .not. present(slow_Decoh) ) then
+     allocate( d_CL_dt(dim_E,2) , d_CR_dt(dim_E,2) )
+     
+     do concurrent (i=1:dim_E)
+            d_CL_dt(i,1) = sum( QR_ij(:,i)*d_AL_dt(:,1) )
+            d_CL_dt(i,2) = sum( QR_ij(:,i)*d_AL_dt(:,2) )
+     
+            d_CR_dt(i,1) = sum( QL_ij(i,:)*d_AR_dt(:,1) )
+            d_CR_dt(i,2) = sum( QL_ij(i,:)*d_AR_dt(:,2) )
+            enddo
+            deallocate( d_AL_dt , d_AR_dt )
+     
+     allocate( d_rho_ii_dt(dim_E,2) )
+     do n = 1 , 2 
+          d_rho_ii_dt(:,n) = real( d_CL_dt(:,n)*MO_ket(:,n) + MO_bra(:,n)*d_CR_dt(:,n) )
+     enddo
+     d_rho_ii_dt( PST(1) , 1 ) = d_zero
+     d_rho_ii_dt( PST(2) , 2 ) = d_zero
+     
+     deallocate( d_CL_dt , d_CR_dt )
+endif
+
+end subroutine Local_CSDM
 !
 !
 !
-!====================================================
- subroutine LocalDecoherenceRate( basis , erg , PES )
-!====================================================
-use Structure_Builder , only: sys => Extended_Cell
+!===============================================
+ subroutine Local_CSDM_Rate( sys , PST , decay )
+!===============================================
+use Ehrenfest_CSDM    , only: dNA_El , dNA_Hl
 implicit none
-type(STO_basis) , intent(in) :: basis(:)
-real*8          , intent(in) :: erg(:)
-integer         , intent(in) :: PES(:)
+type(structure)       , intent(in)  :: sys
+integer               , intent(in)  :: PST(:)
+real*8  , allocatable , intent(out) :: decay(:,:)
 
 !local parameters ...
-real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
+real*8 , parameter :: V_factor = 1.d-2   ! <== converts nuclear velocity: m/s (MM) to Ang/ps (QM)
 
 !local variables ...   
-integer              :: b , j , k , N , f , N_f
-real*8               :: Const , tmp
-character(len=1)     :: fragment
-real*8 , allocatable :: aux(:) , tau_mtx(:,:) , tau_frag(:,:) , Qij_frag(:,:)
+integer :: dim_E , i , k , n , xyz
+real*8  :: aux
 
-N = size(erg)
+dim_N = size(dNA_El(:,1))
+dim_E = size(dNA_El(1,:))
 
-! using kinetic energy in eV units ...
-Const = d_one + C/Unit_Cell%MD_Kin  
+allocate( decay( dim_N , 2 ) , source = d_zero )
 
-if( .not. allocated(tau_inv) ) then
-    allocate( tau_inv(N,2) , source = d_zero )
-    endif
+CALL preprocess( sys )
 
-allocate( tau_mtx(N,N) )
+k = 0
+do n = 1 , sys%atoms 
+   If( sys%QMMM(n) == "MM" .OR. sys%flex(n) == F_ ) cycle
+   k = k + 1
+   do xyz = 1 , 3 
+      nucleus(k)% v(xyz) = atom(n)% vel(xyz) * V_factor
+      enddo
+enddo
 
-do k = 1 , n_part 
+do n = 1 , dim_N
 
-     tau_mtx(:,:) = (H_ij(:,:) - erg(PES(k))*S_ij(:,:)) / (h_bar * Const) 
+     aux = 0.d0
+     do i = 1 , dim_E
+        If( i == PST(1) ) cycle     
+        ! electron = 1 
+        decay(n,1) = aux + abs( dot_product(dNA_El(n,i)% vec(:) , nucleus(n)% v(:)) )
+        enddo
 
-     do f = 1 , size(sys%list_of_fragments)
+     aux = 0.d0
+     do i = 1 , dim_E
+        If( i == PST(2) ) cycle     
+        ! hole  = 2 
+        decay(n,2) = aux + abs( dot_product(dNA_Hl(n,i)% vec(:) , nucleus(n)% v(:)) )
+        enddo
+end do
 
-          fragment = sys%list_of_fragments(f)
-
-          N_f = count(basis(:)%fragment == fragment )
-          allocate( tau_frag(N_f,N_f) , Qij_frag(N_f,N) , aux(N_f) )
-
-          b=0
-          do j=1,N
-               if(basis(j)%fragment /= fragment ) cycle
-               b=b+1
-               tau_frag(:,b) = pack( tau_mtx(:,j) , basis(:)%fragment == fragment )
-               enddo
-
-          do concurrent(j=1:N)
-               Qij_frag(:,j) = pack( Q_ij(:,j) , basis(:)%fragment == fragment )
-               enddo
-
-          do concurrent(j=1:N) local( aux , tmp ) shared( tau_frag , Qij_frag , tau_inv)
-               do b=1,N_f 
-                    aux(b) = sum( tau_frag(:,b)*Qij_frag(:,j) )
-                    enddo ! <== b_loop
-               tmp = sum( aux(:)*Qij_frag(:,j) )
-               tau_inv(j,k) = tau_inv(j,k) + abs(tmp)
-               enddo !<== j_loop
-
-          deallocate( tau_frag , Qij_frag , aux )
-
-     enddo !<== f_loop
-enddo !<== k_loop
-
-deallocate( tau_mtx )
-
-end subroutine LocalDecoherenceRate
-!
-!
-!
-!=======================================
- subroutine DecoherenceRate( erg , PES )
-!=======================================
-implicit none
-real*8  , intent(in) :: erg(:)
-integer , intent(in) :: PES(:)
-
-!local parameters ...
-real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
-
-!local variables ...   
-integer :: i , j
-real*8  :: Const , dE
-
-! using kinetic energy in eV units ...
-Const = d_one + C/Unit_Cell%MD_Kin  
-
-if( .not. allocated(tau_inv) ) then
-    allocate( tau_inv(size(erg),2) , source = d_zero )
-    endif
-
-do j = 1 , n_part 
-do i = 1 , size(erg)
-     if( i == PES(j) ) cycle 
-        dE = abs(erg(i) - erg(PES(j)))
-        tau_inv(i,j) = dE / (h_bar * Const)
-        end do
-        end do
- 
-end subroutine DecoherenceRate
+end subroutine Local_CSDM_Rate
 !
 !
 !
@@ -197,7 +231,6 @@ end subroutine DecoherenceRate
 !===================================================================
  subroutine DecoherenceForce( system , MO_bra , MO_ket , erg , PST )
 !===================================================================
-use MD_read_m  , only: atom
 implicit none
 type(structure), intent(in):: system
 complex*16     , intent(in):: MO_bra(:,:)
@@ -211,21 +244,15 @@ real*8, parameter:: eVAngs_2_Newton = 1.602176565d-9
 ! local variables ...
 integer:: i, j, h, n, N_atoms, dim_E
 real*8 :: f_ik , aux
-real*8           , allocatable, dimension(:,:):: rho, v_x_s
+real*8           , allocatable, dimension(:,:):: v_x_s
 type(d_NA_vector), allocatable, dimension(:,:):: s_El_ik, s_Hl_ik, Force 
 
 CALL preprocess( system )
-if( .not. allocated(tau_inv) ) then
-    allocate( tau_inv(size(erg),2) , source = d_zero )
-    endif
 
 N_atoms = system%atoms
 dim_E   = size(erg)
 
 if( Unit_Cell% MD_Kin < mid_prec ) return
-     
-allocate( rho(dim_E,n_part) )
-forall(j=1:2) rho(:,j) = MO_ket(:,j)*MO_bra(:,j) 
 
 CALL get_S_versor( s_El_ik , s_Hl_ik , system , PST , dim_E )
 
@@ -252,7 +279,7 @@ do n = 1 , dim_N
           !===================================================================
           ! electron = 1
           If( i == PST(1) ) cycle     
-          f_ik = rho(i,1)*tau_inv(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
+          f_ik = - d_rho_ii_dt(i,1)*(erg(i)-erg(PST(1)))*v_x_s(i,1)
           Force(n,1)%vec(:) = Force(n,1)%vec(:) + f_ik * s_El_ik(n,i)%vec(:)
           !===================================================================
      end do
@@ -262,7 +289,7 @@ do n = 1 , dim_N
           !===================================================================
           ! hole = 2
           If( i == PST(2) ) cycle     
-          f_ik = rho(i,2)*tau_inv(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
+          f_ik = - d_rho_ii_dt(i,2)*(erg(i)-erg(PST(2)))*v_x_s(i,2)
           Force(n,2)%vec(:) = Force(n,2)%vec(:) + f_ik * s_Hl_ik(n,i)%vec(:)
           !===================================================================
      end do
@@ -280,7 +307,7 @@ do n = 1 , N_atoms
      atom(n)% f_CSDM(:) = ( Force(h,1)%vec(:) - Force(h,2)%vec(:) ) * eVAngs_2_Newton 
      enddo
 
-deallocate( rho , tau_inv , v_x_s , s_El_ik , s_Hl_ik , Force )  
+deallocate( d_rho_ii_dt , v_x_s , s_El_ik , s_Hl_ik , Force )  
 
 end subroutine DecoherenceForce
 !
@@ -367,7 +394,6 @@ end subroutine get_S_versor
 !=================================
  subroutine preprocess( system )
 !=================================
-use MD_read_m   , only: atom
 implicit none
 type(structure) , intent(in) :: system
 
@@ -399,7 +425,6 @@ end subroutine preprocess
 !===============================================
  subroutine AdjustNuclearVeloc( system , QM_erg)
 !===============================================
-use MD_read_m   , only: atom
 implicit none
 type(structure), intent(in):: system
 real*8         , intent(in):: QM_erg
@@ -437,45 +462,128 @@ end subroutine AdjustNuclearVeloc
 !
 !
 !
-!====================================================
- subroutine Bcast_H_matrix( H_matrix , S_matrix , N )
-!====================================================
+!==============================================
+ subroutine Bcast_Matrices( A , B , C , N )
+!==============================================
  implicit none
- real*8  , intent(in) :: H_matrix(:,:)
- real*8  , intent(in) :: S_matrix(:,:)
+ real*8  , intent(in) :: A(:,:)
+ real*8  , intent(in) :: B(:,:)
+ real*8  , intent(in) :: C(:,:)
  integer , intent(in) :: N
 
 ! local variables ... 
+
+if( .not. allocated(QR_ij)) allocate( QR_ij(N,N) )
+QR_ij = A
+if( .not. allocated(QL_ij)) allocate( QL_ij(N,N) )
+QL_ij = B
+if( .not. allocated(S_ij) ) allocate( S_ij(N,N)  )
+S_ij  = C
+
+end subroutine Bcast_Matrices
+!
+!
+!
+!
+!
+!
+!
+!=====================================================================
+ subroutine Global_CSDM( bra , ket , erg , PST , t_rate , atenuation )
+!=====================================================================
+implicit none
+complex*16           , intent(inout) :: bra(:,:)
+complex*16           , intent(inout) :: ket(:,:)
+real*8               , intent(in)    :: erg(:)
+integer              , intent(in)    :: PST(:)
+real*8               , intent(in)    :: t_rate
+real      , optional , intent(in)    :: atenuation
+
+! local variables ...
+integer :: n , i 
+real*8  :: dt , coeff , gauge , summ(2) 
+real*8, allocatable :: decay(:,:)
+
+! J. Chem. Phys. 126, 134114 (2007)
+CALL  Global_CSDM_Rate( erg , PST , decay )
+! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
+dt = t_rate * HALF
+
+if(.not. present(atenuation)) then
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PST(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n))
+         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n))
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+else
+    gauge = 1.d0 / atenuation
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PST(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n)*gauge)
+         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n)*gauge)
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+endif
+
+do n = 1 , n_part
+     coeff = bra(PST(n),n) * ket(PST(n),n)
+     coeff = (d_one - summ(n)) / coeff
+     coeff = sqrt(coeff)
+     bra(PST(n),n) = bra(PST(n),n) * coeff
+     ket(PST(n),n) = ket(PST(n),n) * coeff
+     end do
+
+!####################################################
+! calculating d_rho_dt ...
+
+allocate( d_rho_ii_dt(size(erg),2) )
+
+forall(n=1:2) d_rho_ii_dt(:,n) = -decay(:,n) * bra(:,n)*ket(:,n)
+
+d_rho_ii_dt( PST(1) , 1 ) = d_zero
+d_rho_ii_dt( PST(2) , 2 ) = d_zero
+
+end subroutine Global_CSDM
+!
+!
+!
+!================================================
+ subroutine Global_CSDM_Rate( erg , PST , decay )
+!================================================
+implicit none
+real*8  , intent(in)                :: erg(:)
+integer , intent(in)                :: PST(:)
+real*8  , allocatable , intent(out) :: decay(:,:)
+
+!local parameters ...
+real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
+
+!local variables ...   
 integer :: i , j
+real*8  :: Const , dE
 
-if( .not. allocated(H_ij)) allocate( H_ij(N,N) , S_ij(N,N) )
+! using kinetic energy in eV units ...
+Const = d_one + C/Unit_Cell%MD_Kin  
+if( .not. allocated(decay) ) then
+    allocate( decay(size(erg),2) , source = d_zero )
+    endif
 
-H_ij = H_matrix 
-do j = 1 , N
-  do i = j+1 , N
-        H_ij(j,i) = H_ij(i,j)
-    end do
-end do
+do j = 1 , n_part 
+do i = 1 , size(erg)
+     if( i == PST(j) ) cycle 
+        dE = abs(erg(i) - erg(PST(j)))
+        decay(i,j) = dE / (h_bar * Const)
+        end do
+        end do
 
-S_ij = S_matrix
-
-end subroutine Bcast_H_matrix
-!
-!
-!
-!==============================================
- subroutine Bcast_EigenVecs( Eigen_matrix , N )
-!==============================================
- implicit none
- real*8  , intent(in) :: Eigen_matrix(:,:)
- integer , intent(in) :: N
-
-! local variables ... 
-
-if( .not. allocated(Q_ij)) allocate( Q_ij(N,N) )
-Q_ij = Eigen_matrix
-
-end subroutine Bcast_EigenVecs
+end subroutine Global_CSDM_Rate
 !
 !
 !

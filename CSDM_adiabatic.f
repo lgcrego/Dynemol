@@ -160,9 +160,6 @@ do frame = frame_init , frame_final , frame_step
             ! MM preprocess ...
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
-            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (triggered == yes)
-
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
 
@@ -382,16 +379,29 @@ real*8  , intent(in) :: t_rate
 
 ! NON-adiabatic component of the propagation ...
 ! project back to MO_basis with UNI(t + t_rate) ...
+
+!############################################################
+
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_zero , MO_ket , mm )
 
-CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PST , t_rate )
+! local decoherence of propagating states...
+
+if( QMMM ) then
+    !LoDecoh
+    CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
+    !GlobalDecoh
+!    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+endif
+
+!############################################################
 
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
-CALL apply_decoherence( ExCell_basis , MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , atenuation=1.0 )
+CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
 
+!############################################################
 end subroutine U_nad
 !
 !
@@ -624,14 +634,12 @@ if( triggered == YES ) then
 endif
 
 if( triggered == NO ) then
-!    if( (QM_erg > d_zero) .AND. (PST(1) /= PST(2)) ) then
-!        ! back to excited-state dynamics
-!        triggered = YES !!!
-!    else
-        ! carry on with trigger OFF
-        QM_erg = d_zero
-!    endif
+    ! carry on with trigger OFF
+    QM_erg = d_zero
 end if
+
+! triggered = NO turns off QMMM ...
+QMMM = triggered
 
 end function update_QM_erg
 !

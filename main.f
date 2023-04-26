@@ -54,6 +54,8 @@ If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_E
 
 CALL dump_driver_parameters_and_tuning
 
+CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
+
 select case ( driver )
 
     case ( "q_dynamics" )
@@ -98,8 +100,6 @@ select case ( driver )
         stop
 
 end select
-
-CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
 
 include 'formats.h'
 
