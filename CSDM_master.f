@@ -332,6 +332,7 @@ integer :: seed(5)
 seed = [10051965,27092004,2092002,22021967,-76571]
 
 call random_seed(put=seed(1:5))
+!call random_seed()
     
 end subroutine init_random_seed
 !

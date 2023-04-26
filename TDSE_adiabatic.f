@@ -68,6 +68,9 @@ module TDSE_adiabatic_m
     real*8          :: t
     integer         :: it , mm , nn
 
+    ! local parameter ...
+    logical, parameter :: T_ = .true. , F_ = .false.
+
 contains
 !
 !
@@ -85,8 +88,8 @@ integer        :: mpi_D_R = mpi_double_precision
 integer        :: mpi_D_C = mpi_double_complex
 real*8         :: t_rate 
 type(universe) :: Solvated_System
-logical        :: triggered  = yes
-logical        :: job_status = no
+logical        :: triggered
+logical        :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
 
 it = 1
 t  = t_i
@@ -107,6 +110,7 @@ If( restart ) then
     CALL Restart_stuff( QDyn , frame_restart )
 else
     CALL Preprocess( QDyn )
+    triggered = yes
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -178,11 +182,7 @@ do frame = frame_init , frame_final , frame_step
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
-            if( driver == "slice_FSSH" ) then
-                QMMM = QMMM .OR. (triggered == yes)
-                end if
+            QMMM = QMMM .AND. (HFP_Forces == .true.)
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
@@ -221,7 +221,7 @@ do frame = frame_init , frame_final , frame_step
     CALL Write_Erg_Log( frame , t_rate , triggered )
 
     job_status = check( frame , frame_final , t_rate ) 
-    CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
+    CALL MPI_Bcast( job_status , 2 , mpi_logical , 0 , world , err )
     
 end do
 
@@ -245,7 +245,7 @@ type(f_time)    , intent(out)   :: QDyn
 integer         :: hole_save , n , err
 integer         :: mpi_D_R = mpi_double_precision
 type(universe)  :: Solvated_System
-logical         :: job_status = no
+logical         :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
 
 ! preprocessing stuff .....................................................
 
@@ -373,7 +373,7 @@ allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
-CALL MPI_Bcast( job_status , 1 , mpi_logical , 0 , world , err )
+CALL MPI_Bcast( job_status , 2 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
 !..........................................................................
@@ -420,7 +420,8 @@ select case (driver)
        case("slice_FSSH") ! <== Lowdin orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_ket , mm , C_zero , MO_ket , mm )
            MO_bra = conjg(MO_ket)
-!           CALL apply_decoherence( ExCell_basis , MO_bra , MO_ket , UNI%erg , PES , t_rate )
+      
+           CALL apply_decoherence( ExCell_basis , Dual_bra , PES , t_rate , MO_bra , MO_ket )
 
        case("slice_AO")   ! <== asymmetrical orthogonalization ...
            CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_bra , mm , C_zero , MO_bra , mm )
@@ -615,8 +616,6 @@ integer, intent(in)    :: frame
 real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
-triggered = NO
-
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
 Unit_Cell% QM_erg    =  update_QM_erg( t_rate , triggered )
 Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
@@ -664,30 +663,60 @@ select case ( driver )
 
   case("slice_FSSH") 
 
-       If( it == 1) then
-           QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-           return
-       else
-           QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-       end If
+        If( it == 1) then
+            QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+            return
+        else
+            QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+        end If
 
-       If( PES(1) == PES(2) ) then
-       
-          call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
-          
-          Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-          
-          if( (Unit_Cell% MD_Kin > Gap) .AND. (jump == .true.) ) triggered = yes
-       
-       end if
+        if( (QM_erg > d_zero) .AND. (PES(1) > PES(2)) ) then
+            ! carry on QMMM with trigger ON
+
+        else if( PES(1) == PES(2) ) then
+
+            call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
+            
+            Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+            
+            if( (Unit_Cell% MD_Kin > Gap) .AND. (jump == .true.) ) then
+                ! back to excited-state QMMM
+                triggered = yes
+            else
+                ! remains in GS dynamics
+                triggered = NO
+            endif
+        endif
+
+        QMMM = triggered 
 
   case("slice_AO")
 
-       do n = 1 , n_part
-           if( eh_tag(n) == "XX" ) cycle
-           wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-           end do
-           QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+        do n = 1 , n_part
+            if( eh_tag(n) == "XX" ) cycle
+            wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+        end do
+        QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+        If( it == 1) return
+        
+        If( triggered == YES ) then
+            if( QM_erg > d_zero ) then
+                ! carry on QMMM with trigger ON
+            else 
+                ! remains in GS dynamics
+                QM_erg    = d_zero
+                triggered = NO
+            endif
+        Endif
+        
+        If( triggered == NO ) then
+            ! carry on with trigger OFF
+            QM_erg = d_zero
+        End if
+        
+        ! triggered = NO, turn off QMMM ...
+        QMMM = triggered 
 
   end select
 
@@ -759,14 +788,16 @@ integer , intent(in) :: frame_final
 real*8  , intent(in) :: t_rate
 
 ! local variables ...
-logical :: flag , flag1 , flag2 , flag3
+logical :: flag(2) !<== [MPI_done,QMMM_done]
+logical :: flag1 , flag2 , flag3
 
 flag1 = frame + frame_step > frame_final
 flag2 = it >= n_t
 flag3 = t  + t_rate >= t_f
 
-! if any of these hold, job done ...
-flag = flag1 .OR. flag2 .OR. flag3
+! if any of these hold, MPI job from workers is done ...
+flag(1) = flag1 .OR. flag2 .OR. flag3  ! <== job_done
+flag(2) = .not. QMMM                   ! <== QMMM_done
 
 end  function check
 !

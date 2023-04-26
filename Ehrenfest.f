@@ -47,7 +47,7 @@ contains
 ! local variables ... 
  integer :: i , N , xyz , err , mytasks , myatom
  integer :: mpi_D_R = mpi_double_precision
- logical :: job_done
+ logical :: job_done , QMMM_done , job_status(2)
 
 ! local parameters ...
  real*8  , parameter :: eVAngs_2_Newton = 1.602176565d-9 
@@ -71,12 +71,17 @@ end If
 
        CALL MPI_BCAST( system%coord , system%atoms*3 , mpi_D_R , 0 , ForceComm, err )
 
-       CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err ) 
-       If( job_done ) then ! <== Force+Kernel Crew pack and stop here ...
+       CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err ) 
+       job_done  = job_status(1)
+       QMMM_done = job_status(2)
+       If( QMMM_done ) then ! <== Force+Kernel Crew pack and wait ...
+           call FINALIZE
+       elseif( job_done ) then
            call packing
            call MPI_FINALIZE(err)
            STOP
-           end if
+       end if
+
 end if
 
 ! preprocess overlap matrix for Pulay calculations, all Force+Kernel Crew must do it ...
@@ -410,6 +415,31 @@ if( KernelCrew ) then
 end if
 
 end subroutine packing
+!
+!
+!
+!
+!===================
+ subroutine FINALIZE
+!===================
+implicit none
+
+!local variables ...
+integer :: err
+logical :: job_status(2) , job_done
+
+98 CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err )
+job_done = job_status(1)
+
+If( job_done ) then
+    call packing
+    call MPI_FINALIZE(err)
+    STOP
+else
+    goto 98
+end if
+
+end subroutine FINALIZE
 !
 !
 !

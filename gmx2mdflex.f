@@ -465,7 +465,7 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
         i = i + 1
     end do read_loop
 
-    backspace(33)
+    rewind(33)
  
 !=====================================================================================
 !   reading the number of [ atomtypes ] ...
