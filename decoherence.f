@@ -23,6 +23,7 @@ module decoherence_m
 
     interface apply_decoherence
         module procedure Local_CSDM
+        module procedure Global_CSDM
     end interface apply_decoherence
 
 contains
@@ -30,18 +31,18 @@ contains
 !
 !
 !=======================================================================================
- subroutine Local_CSDM( basis , dual_bra , PST , t_rate , MO_bra , MO_ket , atenuation )
+ subroutine Local_CSDM( basis , dual_bra , PST , t_rate , MO_bra , MO_ket , slow_Decoh )
 !=======================================================================================
 use Structure_Builder    , only: sys => Extended_Cell
 use Semi_empirical_parms , only: ChemAtom => atom
 implicit none
-type(STO_basis)      , intent(in)    :: basis(:)
-complex*16           , intent(inout) :: dual_bra(:,:)
-integer              , intent(in)    :: PST(:)
-real*8               , intent(in)    :: t_rate
-complex*16           , intent(out)   :: MO_bra(:,:)
-complex*16           , intent(out)   :: MO_ket(:,:)
-real      , optional , intent(in)    :: atenuation
+type(STO_basis)        , intent(in)    :: basis(:)
+complex*16             , intent(inout) :: dual_bra(:,:)
+integer                , intent(in)    :: PST(:)
+real*8                 , intent(in)    :: t_rate
+complex*16             , intent(out)   :: MO_bra(:,:)
+complex*16             , intent(out)   :: MO_ket(:,:)
+logical     , optional , intent(in)    :: slow_Decoh
 
 ! local variables ...
 integer    :: n , i , ia , a , L , dim_E
@@ -54,6 +55,10 @@ complex*16 , allocatable :: d_AL_dt(:,:) , d_AR_dt(:,:) , d_CL_dt(:,:) , d_CR_dt
 dim_E = size(basis)
 
 CALL  Local_CSDM_Rate( sys , PST , decay )
+
+If( present(slow_Decoh) .AND. slow_Decoh == T_ ) then
+    decay = decay*HALF
+    endif
 
 ! list of atoms subject to Ehrenfest force ...
 if( .not. allocated(list) ) then
@@ -113,7 +118,7 @@ do concurrent (a=1:dim_E)
 deallocate( aux , AO_bra , AO_ket )
 
 !####################################################
-! calculate MO_brackets with CSDM decoherence ...
+! calculating MO_brackets with CSDM decoherence ...
 
 do concurrent (i=1:dim_E)
        MO_bra(i,1) = sum( QR_ij(:,i)*dual_bra(:,1) )
@@ -141,35 +146,37 @@ do n = 1 , n_part
      end do
 
 !####################################################
-! calculate d_rho_dt ...
+! calculating d_rho_dt ...
 
-allocate( d_CL_dt(dim_E,2) , d_CR_dt(dim_E,2) )
-
-do concurrent (i=1:dim_E)
-       d_CL_dt(i,1) = sum( QR_ij(:,i)*d_AL_dt(:,1) )
-       d_CL_dt(i,2) = sum( QR_ij(:,i)*d_AL_dt(:,2) )
-
-       d_CR_dt(i,1) = sum( QL_ij(i,:)*d_AR_dt(:,1) )
-       d_CR_dt(i,2) = sum( QL_ij(i,:)*d_AR_dt(:,2) )
-       enddo
-       deallocate( d_AL_dt , d_AR_dt )
-
-allocate( d_rho_ii_dt(dim_E,2) )
-do n = 1 , 2 
-     d_rho_ii_dt(:,n) = real( d_CL_dt(:,n)*MO_ket(:,n) + MO_bra(:,n)*d_CR_dt(:,n) )
-enddo
-d_rho_ii_dt( PST(1) , 1 ) = d_zero
-d_rho_ii_dt( PST(2) , 2 ) = d_zero
-
-deallocate( d_CL_dt , d_CR_dt )
+if( .not. present(slow_Decoh) ) then
+     allocate( d_CL_dt(dim_E,2) , d_CR_dt(dim_E,2) )
+     
+     do concurrent (i=1:dim_E)
+            d_CL_dt(i,1) = sum( QR_ij(:,i)*d_AL_dt(:,1) )
+            d_CL_dt(i,2) = sum( QR_ij(:,i)*d_AL_dt(:,2) )
+     
+            d_CR_dt(i,1) = sum( QL_ij(i,:)*d_AR_dt(:,1) )
+            d_CR_dt(i,2) = sum( QL_ij(i,:)*d_AR_dt(:,2) )
+            enddo
+            deallocate( d_AL_dt , d_AR_dt )
+     
+     allocate( d_rho_ii_dt(dim_E,2) )
+     do n = 1 , 2 
+          d_rho_ii_dt(:,n) = real( d_CL_dt(:,n)*MO_ket(:,n) + MO_bra(:,n)*d_CR_dt(:,n) )
+     enddo
+     d_rho_ii_dt( PST(1) , 1 ) = d_zero
+     d_rho_ii_dt( PST(2) , 2 ) = d_zero
+     
+     deallocate( d_CL_dt , d_CR_dt )
+endif
 
 end subroutine Local_CSDM
 !
 !
 !
-!====================================================
+!===============================================
  subroutine Local_CSDM_Rate( sys , PST , decay )
-!====================================================
+!===============================================
 use Ehrenfest_CSDM    , only: dNA_El , dNA_Hl
 implicit none
 type(structure)       , intent(in)  :: sys
@@ -474,6 +481,109 @@ if( .not. allocated(S_ij) ) allocate( S_ij(N,N)  )
 S_ij  = C
 
 end subroutine Bcast_Matrices
+!
+!
+!
+!
+!
+!
+!
+!=====================================================================
+ subroutine Global_CSDM( bra , ket , erg , PST , t_rate , atenuation )
+!=====================================================================
+implicit none
+complex*16           , intent(inout) :: bra(:,:)
+complex*16           , intent(inout) :: ket(:,:)
+real*8               , intent(in)    :: erg(:)
+integer              , intent(in)    :: PST(:)
+real*8               , intent(in)    :: t_rate
+real      , optional , intent(in)    :: atenuation
+
+! local variables ...
+integer :: n , i 
+real*8  :: dt , coeff , gauge , summ(2) 
+real*8, allocatable :: decay(:,:)
+
+! J. Chem. Phys. 126, 134114 (2007)
+CALL  Global_CSDM_Rate( erg , PST , decay )
+! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
+dt = t_rate * HALF
+
+if(.not. present(atenuation)) then
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PST(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n))
+         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n))
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+else
+    gauge = 1.d0 / atenuation
+    summ = d_zero
+    do n = 1 , n_part 
+    do i = 1 , size(erg) 
+         if( i == PST(n) ) cycle
+         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n)*gauge)
+         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n)*gauge)
+         summ(n) = summ(n) + bra(i,n)*ket(i,n)
+         end do
+         end do
+endif
+
+do n = 1 , n_part
+     coeff = bra(PST(n),n) * ket(PST(n),n)
+     coeff = (d_one - summ(n)) / coeff
+     coeff = sqrt(coeff)
+     bra(PST(n),n) = bra(PST(n),n) * coeff
+     ket(PST(n),n) = ket(PST(n),n) * coeff
+     end do
+
+!####################################################
+! calculating d_rho_dt ...
+
+allocate( d_rho_ii_dt(size(erg),2) )
+
+forall(n=1:2) d_rho_ii_dt(:,n) = -decay(:,n) * bra(:,n)*ket(:,n)
+
+d_rho_ii_dt( PST(1) , 1 ) = d_zero
+d_rho_ii_dt( PST(2) , 2 ) = d_zero
+
+end subroutine Global_CSDM
+!
+!
+!
+!================================================
+ subroutine Global_CSDM_Rate( erg , PST , decay )
+!================================================
+implicit none
+real*8  , intent(in)                :: erg(:)
+integer , intent(in)                :: PST(:)
+real*8  , allocatable , intent(out) :: decay(:,:)
+
+!local parameters ...
+real*8 , parameter :: C = 0.1 * Hartree_2_eV   ! <== eV units
+
+!local variables ...   
+integer :: i , j
+real*8  :: Const , dE
+
+! using kinetic energy in eV units ...
+Const = d_one + C/Unit_Cell%MD_Kin  
+if( .not. allocated(decay) ) then
+    allocate( decay(size(erg),2) , source = d_zero )
+    endif
+
+do j = 1 , n_part 
+do i = 1 , size(erg)
+     if( i == PST(j) ) cycle 
+        dE = abs(erg(i) - erg(PST(j)))
+        decay(i,j) = dE / (h_bar * Const)
+        end do
+        end do
+
+end subroutine Global_CSDM_Rate
 !
 !
 !

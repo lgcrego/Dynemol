@@ -387,17 +387,20 @@ CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_z
 
 ! local decoherence of propagating states...
 
-if( QMMM ) CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
+if( QMMM ) then
+    !LoDecoh
+    CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
+    !GlobalDecoh
+!    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+endif
 
 !############################################################
 
-!CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
-!CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
-!
-!CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket )
+CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
+CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
-MO_TDSE_bra =  MO_bra
-MO_TDSE_ket =  MO_ket
+CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
+
 !############################################################
 end subroutine U_nad
 !
@@ -635,8 +638,8 @@ if( triggered == NO ) then
     QM_erg = d_zero
 end if
 
-! triggered = NO, turn off QMMM ...
-QMMM = (triggered == yes)
+! triggered = NO turns off QMMM ...
+QMMM = triggered
 
 end function update_QM_erg
 !

@@ -55,11 +55,11 @@ module TDSE_adiabatic_m
     private
 
     ! module variables ...
+    type(R_eigen)                                  :: UNI , el_FMO , hl_FMO
     type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
     Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16      , allocatable , dimension(:)   :: phase
     real*8          , allocatable , dimension(:)   :: Net_Charge_MM
-    type(R_eigen)   :: UNI , el_FMO , hl_FMO
     real*8          :: t
     integer         :: it , mm , nn
 
@@ -78,7 +78,7 @@ integer         , intent(out)   :: final_it
 integer        :: frame , frame_init , frame_final , frame_restart
 real*8         :: t_rate 
 type(universe) :: Solvated_System
-logical        :: triggered = yes
+logical        :: triggered
 
 it = 1
 t  = t_i
@@ -99,6 +99,7 @@ If( restart ) then
     CALL Restart_stuff( QDyn , frame_restart )
 else
     CALL Preprocess( QDyn )
+    triggered = yes
 end If
 
 frame_init = merge( frame_restart+1 , frame_step+1 , restart )
@@ -163,10 +164,7 @@ do frame = frame_init , frame_final , frame_step
             if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
-            QMMM = (.NOT. (Unit_Cell% QM_erg <= d_zero)) .AND. (HFP_Forces == .true.)
-            if( driver == "slice_FSSH" ) then
-                QMMM = QMMM .OR. (triggered == yes)
-                end if
+            QMMM = QMMM .AND. (HFP_Forces == .true.)
 
             ! MM precedes QM ; notice calling with frame -1 ...
             CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
@@ -573,8 +571,6 @@ integer, intent(in)    :: frame
 real*8 , intent(in)    :: t_rate
 logical, intent(inout) :: triggered
 
-triggered = NO
-
 ! QM_erg = E_occ - E_empty ; TO BE USED IN "MM_dynamics" FOR ENERGY BALANCE ...
 Unit_Cell% QM_erg    =  update_QM_erg( t_rate , triggered )
 Unit_Cell% Total_erg =  Unit_Cell% MD_Kin + Unit_Cell% MD_Pot + Unit_Cell% QM_erg
@@ -622,30 +618,60 @@ select case ( driver )
 
   case("slice_FSSH") 
 
-       If( it == 1) then
-           QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
-           return
-       else
-           QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
-       end If
+        If( it == 1) then
+            QM_erg = UNI%erg(electron_state) - UNI%erg(hole_state)
+            return
+        else
+            QM_erg = UNI%erg(PES(1)) - UNI%erg(PES(2))
+        end If
 
-       If( PES(1) == PES(2) ) then
-       
-          call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
-          
-          Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
-          
-          if( (Unit_Cell% MD_Kin > Gap) .AND. (jump == .true.) ) triggered = yes
-       
-       end if
+        if( (QM_erg > d_zero) .AND. (PES(1) > PES(2)) ) then
+            ! carry on QMMM with trigger ON
+
+        else if( PES(1) == PES(2) ) then
+
+            call verify_FSSH_jump( UNI%R , MO_bra , MO_ket , t_rate , jump , method = "Dynemol" ) 
+            
+            Gap = UNI% erg( UNI%Fermi_state + 1 ) - UNI% erg( UNI%Fermi_state )
+            
+            if( (Unit_Cell% MD_Kin > Gap) .AND. (jump == .true.) ) then
+                ! back to excited-state QMMM
+                triggered = yes
+            else
+                ! remains in GS dynamics
+                triggered = NO
+            endif
+        endif
+
+        QMMM = triggered 
 
   case("slice_AO")
 
-       do n = 1 , n_part
-           if( eh_tag(n) == "XX" ) cycle
-           wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
-           end do
-           QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+        do n = 1 , n_part
+            if( eh_tag(n) == "XX" ) cycle
+            wp_energy(n) = sum(MO_bra(:,n)*UNI%erg(:)*MO_ket(:,n)) 
+        end do
+        QM_erg = real( wp_energy(1) ) - real( wp_energy(2) )
+
+        If( it == 1) return
+        
+        If( triggered == YES ) then
+            if( QM_erg > d_zero ) then
+                ! carry on QMMM with trigger ON
+            else 
+                ! remains in GS dynamics
+                QM_erg    = d_zero
+                triggered = NO
+            endif
+        Endif
+        
+        If( triggered == NO ) then
+            ! carry on with trigger OFF
+            QM_erg = d_zero
+        End if
+        
+        ! triggered = NO, turn off QMMM ...
+        QMMM = triggered 
 
   end select
 
