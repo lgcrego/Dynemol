@@ -429,9 +429,9 @@ CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_z
 
 if( QMMM ) then
     !LoDecoh
-    CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
+!    CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
     !GlobalDecoh
-!    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+    CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
 endif
 
 !############################################################
@@ -439,7 +439,12 @@ endif
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
-CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
+if( QMMM ) then
+    !LoDecoh
+!     CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
+    !GlobalDecoh
+     CALL apply_decoherence( MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , Slow_Decoh = .true. )
+endif
 
 !############################################################
 end subroutine U_nad

@@ -145,6 +145,8 @@ do n = 1 , n_part
      MO_ket(PST(n),n) = MO_ket(PST(n),n) * coeff
      end do
 
+deallocate( decay )
+
 !####################################################
 ! calculating d_rho_dt ...
 
@@ -489,7 +491,7 @@ end subroutine Bcast_Matrices
 !
 !
 !=====================================================================
- subroutine Global_CSDM( bra , ket , erg , PST , t_rate , atenuation )
+ subroutine Global_CSDM( bra , ket , erg , PST , t_rate , slow_Decoh )
 !=====================================================================
 implicit none
 complex*16           , intent(inout) :: bra(:,:)
@@ -497,7 +499,7 @@ complex*16           , intent(inout) :: ket(:,:)
 real*8               , intent(in)    :: erg(:)
 integer              , intent(in)    :: PST(:)
 real*8               , intent(in)    :: t_rate
-real      , optional , intent(in)    :: atenuation
+logical   , optional , intent(in)    :: slow_Decoh
 
 ! local variables ...
 integer :: n , i 
@@ -507,30 +509,21 @@ real*8, allocatable :: decay(:,:)
 ! J. Chem. Phys. 126, 134114 (2007)
 CALL  Global_CSDM_Rate( erg , PST , decay )
 ! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
-dt = t_rate * HALF
+dt = t_rate
 
-if(.not. present(atenuation)) then
-    summ = d_zero
-    do n = 1 , n_part 
-    do i = 1 , size(erg) 
-         if( i == PST(n) ) cycle
-         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n))
-         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n))
-         summ(n) = summ(n) + bra(i,n)*ket(i,n)
-         end do
-         end do
-else
-    gauge = 1.d0 / atenuation
-    summ = d_zero
-    do n = 1 , n_part 
-    do i = 1 , size(erg) 
-         if( i == PST(n) ) cycle
-         bra(i,n) = bra(i,n) * exp(-dt*decay(i,n)*gauge)
-         ket(i,n) = ket(i,n) * exp(-dt*decay(i,n)*gauge)
-         summ(n) = summ(n) + bra(i,n)*ket(i,n)
-         end do
-         end do
-endif
+If( present(slow_Decoh) .AND. slow_Decoh == T_ ) then
+     decay = decay*HALF
+     endif
+
+summ = d_zero
+do n = 1 , n_part 
+do i = 1 , size(erg) 
+     if( i == PST(n) ) cycle
+     bra(i,n) = bra(i,n) * exp(-dt*decay(i,n) * HALF)
+     ket(i,n) = ket(i,n) * exp(-dt*decay(i,n) * HALF)
+     summ(n) = summ(n) + bra(i,n)*ket(i,n)
+     end do
+     end do
 
 do n = 1 , n_part
      coeff = bra(PST(n),n) * ket(PST(n),n)
@@ -543,12 +536,18 @@ do n = 1 , n_part
 !####################################################
 ! calculating d_rho_dt ...
 
-allocate( d_rho_ii_dt(size(erg),2) )
+if( .not. present(slow_Decoh) ) then
 
-forall(n=1:2) d_rho_ii_dt(:,n) = -decay(:,n) * bra(:,n)*ket(:,n)
+     allocate( d_rho_ii_dt(size(erg),2) )
+     
+     forall(n=1:2) d_rho_ii_dt(:,n) = -decay(:,n) * bra(:,n)*ket(:,n)
+     
+     d_rho_ii_dt( PST(1) , 1 ) = d_zero
+     d_rho_ii_dt( PST(2) , 2 ) = d_zero
 
-d_rho_ii_dt( PST(1) , 1 ) = d_zero
-d_rho_ii_dt( PST(2) , 2 ) = d_zero
+endif
+
+deallocate( decay )
 
 end subroutine Global_CSDM
 !
@@ -571,9 +570,8 @@ real*8  :: Const , dE
 
 ! using kinetic energy in eV units ...
 Const = d_one + C/Unit_Cell%MD_Kin  
-if( .not. allocated(decay) ) then
-    allocate( decay(size(erg),2) , source = d_zero )
-    endif
+
+allocate( decay( size(erg) , 2 ) , source = d_zero )
 
 do j = 1 , n_part 
 do i = 1 , size(erg)
