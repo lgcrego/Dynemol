@@ -1,7 +1,7 @@
 #!/bin/bash
 
-DYNEMOLWORKDIR="$(pwd)"
-export DYNEMOLWORKDIR
+#DYNEMOLWORKDIR="$(pwd)"
+#export DYNEMOLWORKDIR
 
 if [ $# -eq 0 ]
 then 
