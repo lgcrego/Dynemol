@@ -198,4 +198,6 @@
 
 233 format(/,1x,'>>> Error detected in Toplogy file .....: Dihedral (',I4,',',I4,',',I4,',',I4,')' )
 
+240 format(/,1x,'>>> Saving Configuration (counter/frame/time): ', 2I8 , F11.6 )
+
 

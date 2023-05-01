@@ -300,7 +300,7 @@ If( .not. done ) then
 
 end If
 
-! if (exit(frames.pdb)) ==> erase it
+! if (exist(frames.pdb)) ==> erase it
 CALL cleanup
 
 ! instantiating MM ...

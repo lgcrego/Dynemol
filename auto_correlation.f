@@ -280,14 +280,14 @@ if (first_call) then
     write(*,*)
 
     if(.not. restart) then
-        open(out_Occ, file='Occupation.bin', status='unknown', form='unformatted')
+        open(out_Occ, file='dyn.trunk/Occupation.bin', status='unknown', form='unformatted')
         write(out_Occ) n_t, nE, n_part, n, iEmin
 
-        open(out_Coh, file='Coherences.dat', status='unknown')
+        open(out_Coh, file='dyn.trunk/Coherences.dat', status='unknown')
         write(out_Coh,'(a)') "# time (ps);  Sum |rho_ij|^2 for i,j:  all;  diag;  off-diag   for el      (hl)"
     else
-        open(out_Occ, file='Occupation.bin', status='old', access='append', form='unformatted')
-        open(out_Coh, file='Coherences.dat', status='old', access='append')
+        open(out_Occ, file='dyn.trunk/Occupation.bin', status='old', access='append', form='unformatted')
+        open(out_Coh, file='dyn.trunk/Coherences.dat', status='old', access='append')
     end if
 end if
 
