@@ -22,6 +22,7 @@ then
 
 	rm -r -f "$DYNEMOLWORKDIR"/ancillary.trunk 2> "$DYNEMOLDIR"/qdynamo.err
 	mkdir "$DYNEMOLWORKDIR"/ancillary.trunk
+	mkdir "$DYNEMOLWORKDIR"/ancillary.trunk/configs
 fi
 
 if [ "x$1" == 'xsave_cost_statement' ]

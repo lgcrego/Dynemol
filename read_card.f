@@ -671,7 +671,8 @@ END FUNCTION TO_UPPER_CASE
 implicit none
 
 ! local variables ...
-character (len=7) :: argument
+integer           :: N_of_Configs
+character (len=7) :: argument , aux
 logical           :: dynamic 
 
 ! local parameter ...
@@ -732,10 +733,29 @@ if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
     select case ( argument )
 
         case( "preview" )
-        preview = .true.
+            preview = .true.
 
         case( "resume" )
-        resume = .true.
+            resume = .true.
+
+            if( driver /= "MM_Dynamics" ) then
+                CALL warning("warning: resume argument only with DRIVER = MM_Dynamics")
+            endif
+
+        case( "spawn" )
+
+            if( driver /= "MM_Dynamics" ) then
+                CALL warning("warning: configuration spawning only with DRIVER = MM_Dynamics")
+            endif
+
+            spawn = .true.
+            if( COMMAND_ARGUMENT_COUNT() < 2 ) then
+                CALL warning("halting: must also specify <# of configurations> as dynemol argument, after <spawn>")
+            endif
+
+            CALL GET_COMMAND_ARGUMENT( 2 , aux ) 
+            read( aux , '(i)' ) N_of_Configs 
+            spawn_step = n_t / N_of_Configs
 
     end select
 end if
