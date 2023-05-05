@@ -91,7 +91,12 @@ if( .not. static ) then
 
     if( DRIVER /= "MM_Dynamics" ) then
    
-        write(10,'(" QMMM            :" , A10)') merge(".true. <==",".false.   ",QMMM)            
+        tag = merge("no ","yes", (DRIVER == "slice_CSDM") .OR. (DRIVER == "slice_FSSH") )       
+        write(10,'(" QMMM            :" , A10)' , advance=tag) merge(".true. <==",".false.   ",QMMM)            
+        If( tag == "no" ) then 
+            write(10,'(" rnd_seed =" , A11)') merge(" .true. <=="," .false.   ",rnd_seed)       
+            write(10,'(t29," DK_of_mixing = " , A6)') DK_of_mixing
+        end IF
         write(10,'(" OPT_parms       :" , A10)') merge(".true. <==",".false.   ",OPT_parms)       
         write(10,'(" SPECTRUM        :" , A10)') merge(".true. <==",".false.   ",SPECTRUM)        
         write(10,'(" Alpha_Tensor    :" , A10)') merge(".true. <==",".false.   ",Alpha_Tensor)    

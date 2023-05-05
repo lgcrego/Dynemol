@@ -8,7 +8,7 @@ module Ehrenfest_CSDM
     use constants_m
     use FMO_m            , only: PointerState
     use Structure_Builder, only: Unit_Cell
-    use parameters_m     , only: verbose, n_part,electron_state, hole_state
+    use parameters_m     , only: verbose, n_part,electron_state, hole_state, rnd_seed
     use Overlap_Builder  , only: Overlap_Matrix
 
     public :: Ehrenfest , PST , dNA_El , dNA_Hl , NewPointerState
@@ -619,8 +619,12 @@ integer :: seed(5)
 
 seed = [10051965,27092004,2092002,22021967,-76571]
 
-call random_seed(put=seed(1:5))
-!call random_seed()
+if( rnd_seed ) &
+  then
+      call random_seed()
+  else
+      call random_seed(put=seed(1:5))
+  endif
     
 end subroutine init_random_seed
 !
