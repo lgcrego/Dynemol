@@ -8,6 +8,8 @@
   QMMM           =           ! <== .TRUE. for Non-Adabatic simulations; couples electronic and nuclear dynamics
   OPT_parms      =           ! <== .TRUE. for reading OPT_basis parameters from "opt_eht_parms.input"
   ad_hoc         =           ! <== .TRUE. for using ad hoc tuning of parameters
+  rnd_seed       =           ! <== .TRUE. for undefined random_seed; .FALSE. (default) for pre-defined seed; relevant for FSSH and CSDM 
+  DK_of_mixing   =           ! <== "local" (default) or "global"; relevant for FSSH and CSDM 
   Band_structure =           ! <== .TRUE. for static band-structure calculations
 !--------------------------------------------------------------------
 ! 			STRUCTURE-FILE  input  FORMAT

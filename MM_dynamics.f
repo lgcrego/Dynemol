@@ -2,10 +2,10 @@ module MM_dynamics_m
 
     use constants_m
     use parameters_m        , only : driver , restart , step_security , QMMM , VDOS_ , n_t
-    use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat
+    use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat , spawn , spawn_step
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
-    use MD_dump_m           , only : output , cleanup , saving_MM_frame
+    use MD_dump_m           , only : output , cleanup , saving_MM_frame , GenerateConfigs
     use f_inter_m           , only : ForceINTER
     use f_intra_m           , only : ForceINTRA , ForceQMMM
     use QMMM_m              , only : QMMM_FORCE
@@ -119,8 +119,12 @@ CALL ForceIntra
 If( QMMM ) CALL ForceQMMM  ! <== new QM , new MM ...
 
 CALL this% VV2( dt )
-
-if( mod(frame,MM_frame_step) == 0 ) CALL Saving_MM_frame( frame , dt )
+ 
+if( mod(frame,MM_frame_step) == 0 ) then
+    CALL Saving_MM_frame( frame , dt )
+elseif( spawn .AND.  mod(frame,spawn_step) == 0 ) then
+    CALL GenerateConfigs( frame , dt )
+endif
 
 Unit_Cell% MD_Kin = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
 Unit_Cell% MD_Pot = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
@@ -231,6 +235,8 @@ else
 endif
 
 If( VDOS_ ) CALL VDOS_init
+
+if( spawn ) CALL system("echo ancillary.trunk/configs | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
 
 end subroutine preprocess_MM
 !
