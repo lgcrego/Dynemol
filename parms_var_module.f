@@ -9,6 +9,7 @@ real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate
 type (real_interval)    :: occupied , empty , DOS_range
 character (len=5)       :: Environ_type
+character (len=6)       :: DK_of_mixing
 character (len=4)       :: file_format
 character (len=11)      :: DRIVER , file_type        
 character (len=12)      :: nuclear_matter
@@ -16,7 +17,7 @@ character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces , Band_structure
-logical                 :: resume
+logical                 :: resume , rnd_seed
 
 end module EH_parms_module
 

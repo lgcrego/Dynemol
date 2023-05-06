@@ -7,6 +7,7 @@ module CSDM_Master
     use lapack95
     use type_m
     use constants_m
+    use parameters_m      , only: rnd_seed
     use MD_read_m         , only: atom
     use Structure_Builder , only: Unit_Cell
     use MPI_definitions_m , only: KernelComm
@@ -331,9 +332,13 @@ integer :: seed(5)
 
 seed = [10051965,27092004,2092002,22021967,-76571]
 
-call random_seed(put=seed(1:5))
-!call random_seed()
-    
+if( rnd_seed ) &
+  then
+      call random_seed()
+  else
+      call random_seed(put=seed(1:5))
+  endif
+ 
 end subroutine init_random_seed
 !
 !

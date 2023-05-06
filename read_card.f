@@ -6,7 +6,7 @@ use MM_parms_module
 
 private
 
-   public :: ReadInputCard ,ReadInputCard_ADHOC , electron_fragment , hole_fragment
+   public :: ReadInputCard , ReadInputCard_ADHOC , electron_fragment , hole_fragment
 
    ! module variables ...
    character(len=3) :: electron_fragment , hole_fragment
@@ -64,6 +64,22 @@ read_loop: do
 
         case( "QMMM" ) 
             QMMM = get_logical(line)
+
+        case( "RND_SEED" ) 
+            rnd_seed = get_logical(line)
+
+        case( "DK_OF_MIXING" )
+            read(line,*,iostat=ioerr) keyword , equal_sign , command
+            DK_of_mixing = command
+            select case ( DK_of_mixing ) 
+                case ("local" , "LOCAL" , "Local" )
+                   DK_of_mixing = "local"
+                case ("global" , "GLOBAL" , "Global" )
+                   DK_of_mixing = "global"
+                case default
+                   Print*, " >>> Check your card.inpt <<< : DK_of_mixing = " , DK_of_mixing 
+                   stop
+            end select
 
         case( "OPT_PARMS" ) 
             OPT_parms = get_logical(line)
@@ -779,6 +795,8 @@ nuclear_matter = "extended_sys"
 Survival = .true.
 DP_moment = .false.
 QMMM = .false.
+rnd_seed = .false.
+DK_of_mixing = "local"
 OPT_parms = .false.
 ad_hoc = .true.
 file_type = "structure"
