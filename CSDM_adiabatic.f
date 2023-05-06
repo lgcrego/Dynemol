@@ -387,28 +387,34 @@ CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_ket , mm , C_z
 
 ! local decoherence of propagating states...
 
-if( DK_of_mixing == "local" ) &
-    then
-        !LoDecoh
-        CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
-    else
-        !GlobalDecoh
-        CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
-    endif
+if( QMMM ) &
+then
+  if( DK_of_mixing == "local" ) &
+      then
+          !LoDecoh
+          CALL apply_decoherence( ExCell_basis , Dual_bra , PST , t_rate , MO_bra , MO_ket )
+      else
+          !GlobalDecoh
+          CALL apply_decoherence( MO_bra , MO_ket , UNI%erg , PST , t_rate )
+      endif
+endif
 
 !############################################################
 
 CALL dzgemm( 'T' , 'N' , mm , nn , mm , C_one , UNI%R , mm , Dual_TDSE_bra , mm , C_zero , MO_TDSE_bra , mm )
 CALL dzgemm( 'N' , 'N' , mm , nn , mm , C_one , UNI%L , mm , Dual_TDSE_ket , mm , C_zero , MO_TDSE_ket , mm )
 
-if( DK_of_mixing == "local" ) &
-    then
-        !LoDecoh
-        CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
-    else
-        !GlobalDecoh
-        CALL apply_decoherence( MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , Slow_Decoh = .true. )
-    endif
+if( QMMM ) &
+then
+  if( DK_of_mixing == "local" ) &
+      then
+          !LoDecoh
+          CALL apply_decoherence( ExCell_basis , Dual_TDSE_bra , PST , t_rate , MO_TDSE_bra  , MO_TDSE_ket , Slow_Decoh = .true. )
+      else
+          !GlobalDecoh
+          CALL apply_decoherence( MO_TDSE_bra , MO_TDSE_ket , UNI%erg , PST , t_rate , Slow_Decoh = .true. )
+      endif
+endif
 
 !############################################################
 end subroutine U_nad
