@@ -3,7 +3,7 @@
 SUFFIX=.f
 
 FC=ifort
-SAFE = -g -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+SAFE = #-g -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
 
 LIB    =  -liomp5

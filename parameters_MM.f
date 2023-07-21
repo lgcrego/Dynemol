@@ -123,7 +123,7 @@ do i = 1 , N
     species(i) % Ndiheds        = 0
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
-    species(i) % NIntraLJ       = 0
+    species(i) % NintraIJ       = 0
 end do
 
 end subroutine allocate_species

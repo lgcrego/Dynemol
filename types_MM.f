@@ -41,7 +41,12 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: eps14
         real*8                              :: sig
         real*8                              :: sig14
+        real*8                              :: BuckA
+        real*8                              :: BuckB
+        real*8                              :: BuckC
         logical                             :: flex
+        logical                             :: LJ
+        logical                             :: Buck
     end type MM_atomic
 
     type MM_molecular
@@ -74,8 +79,12 @@ public :: MMOPT_Control, Logicalkey
         integer                             :: Nharm
         integer                             :: Nbonds14
         integer             , allocatable   :: bonds14(:,:)
-        integer                             :: NintraLJ
-        integer             , allocatable   :: IntraLJ(:,:)
+        integer                             :: NintraIJ
+        integer             , allocatable   :: IntraIJ(:,:)
+        integer                             :: NBuck
+        integer             , allocatable   :: IntraBuck(:,:)
+        logical                             :: LJ
+        logical                             :: Buck
     end type MM_molecular
 
     type MM_system
@@ -104,7 +113,8 @@ public :: MMOPT_Control, Logicalkey
 
     type DefinePairs
         character(4)                        :: MMSymbols(2)
-        real*8                              :: Parms(2)
+        real*8                              :: Parms(3)
+        character(4)                        :: model
     end type DefinePairs
 
     type DefineMorse

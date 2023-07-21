@@ -13,8 +13,10 @@ module F_inter_m
     public :: FORCEINTER
     
     ! module variables ...
-    real*8  , public  , save :: stressr(3,3), stresre(3,3)
-    logical                  :: there_are_NB_SpecialPairs = .false.
+    real*8  , public  , save :: stresSR(3,3), stresRE(3,3)
+
+    real*8  :: rkl2 , dkl , atk , atl
+    logical :: there_are_NB_SpecialPairs = .false.
 
 contains
 !
@@ -30,23 +32,26 @@ real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
 real*8  , allocatable   :: erfkr(:,:)
 integer , allocatable   :: species_offset(:)
 real*8                  :: rij(3) , rjk(3) , rkl(3)
-real*8                  :: rjkq , rklq , rjksq , rklsq , tmp , pikap , erfkrq , chrgk , chrgl , eps 
-real*8                  :: vreal , freal , sr2 , sr6 , sr12 , fs , KRIJ , expar , vsr , vself , pot
-real*8                  :: stressr11 , stressr22 , stressr33 , stressr12 , stressr13 , stressr23
-real*8                  :: stresre11 , stresre22 , stresre33 , stresre12 , stresre13 , stresre23 
-integer                 :: i , j , k , l , n , atk , atl , j1 , j2
+real*8                  :: rjkq , rjksq , tmp , pikap , erfkrq , chrgk , chrgl , eps 
+real*8                  :: vreal , freal , sr2 , fs , KRIJ , expar , vsr , vself , pot
+real*8                  :: stresSR11 , stresSR22 , stresSR33 , stresSR12 , stresSR13 , stresSR23
+real*8                  :: stresRE11 , stresRE22 , stresRE33 , stresRE12 , stresRE13 , stresRE23 
+integer                 :: i , j , k , l , j1 , j2
 integer                 :: OMP_get_thread_num , ithr , numthr , nresid , nresidl , nresidk
 logical                 :: flag1 , flag2 
 
 CALL offset( species_offset )
 
-stressr(:,:) = D_zero
-stresre(:,:) = D_zero
+stresSR(:,:) = D_zero
+stresRE(:,:) = D_zero
 
-stressr11 = D_zero; stressr22 = D_zero; stressr33 = D_zero
-stressr12 = D_zero; stressr13 = D_zero; stressr23 = D_zero
-stresre11 = D_zero; stresre22 = D_zero; stresre33 = D_zero
-stresre12 = D_zero; stresre13 = D_zero; stresre23 = D_zero
+!upper triangle
+stresSR11 = D_zero; stresSR12 = D_zero; stresSR13 = D_zero
+stresSR22 = D_zero; stresSR23 = D_zero; stresSR33 = D_zero
+
+!upper triangle
+stresRE11 = D_zero; stresRE12 = D_zero; stresRE13 = D_zero
+stresRE22 = D_zero; stresRE23 = D_zero; stresRE33 = D_zero
 
 numthr = OMP_get_max_threads()
 
@@ -70,6 +75,7 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
+
 !$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
 do i = 1 , MM % N_of_atoms 
 
@@ -87,9 +93,9 @@ do i = 1 , MM % N_of_atoms
                 rjk(:)     = rjk(:) - MM % box(:) * DNINT( rjk(:) * MM % ibox(:) ) * PBC(:)
                 rjkq       = sum( rjk(:) * rjk(:) )
                 rjksq      = sqrt(rjkq)
+                ! KAPPA = damping_Wolf, for card.inpt
                 tmp        = KAPPA * rjksq
-                erfkr(i,j) = ( D_one - ERFC(tmp) ) / rjksq
-                erfkr(i,j) = erfkr(i,j) * coulomb * factor3
+                erfkr(i,j) = Coulomb*(D_one - ERFC(tmp))/rjksq
 
             end if
         end do
@@ -97,12 +103,12 @@ do i = 1 , MM % N_of_atoms
 end do
 !$OMP end parallel do
 
-pikap = HALF * vrecut + rsqpi * KAPPA * coulomb * factor3
+pikap = (HALF*vrecut) + (rsqPI*KAPPA*coulomb)
 
 !$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
-    vself  = vself + pikap * atom(i) % charge * atom(i) % charge
+    vself  = vself + (pikap * atom(i)%charge * atom(i)%charge)
     nresid = atom(i) % nr
 
     if ( molecule(nresid) % N_of_atoms > 1 ) then
@@ -114,7 +120,7 @@ do i = 1 , MM % N_of_atoms
           if ( i /= j ) then
 
              erfkrq = HALF * ( erfkr(i,j) + vrecut )
-             vself  = vself + atom(i) % charge * atom(j) % charge * erfkrq
+             vself  = vself + atom(i)%charge * atom(j)%charge * erfkrq
 
           endif
        end do
@@ -122,14 +128,15 @@ do i = 1 , MM % N_of_atoms
 end do
 !$OMP end parallel do
 
+vself  = vself*factor3
 eintra = eintra + vself
 
 !##############################################################################
-!$OMP parallel DO &
-!$OMP private (k, l, atk, atl, rklq, rklsq, chrgk, chrgl, sr2, sr6, sr12, KRIJ, rij, rkl, fs, vsr, vreal, &
-!$OMP          expar, freal, nresidk, nresidl , ithr , eps , n , flag1 , flag2 )                          &
-!$OMP reduction (+ : pot, ecoul, evdw, stressr11, stressr22, stressr33, stressr12, stressr13, stressr23,  &
-!$OMP                                  stresre11, stresre22, stresre33, stresre12, stresre13, stresre23)
+!!$OMP parallel DO &
+!!$OMP private (k, l, atk, atl, rkl2, dkl, chrgk, chrgl, sr2, KRIJ, rij, rkl, fs, vsr, vreal, &
+!!$OMP          expar, freal, nresidk, nresidl , ithr )                                         &
+!!$OMP reduction (+ : pot, ecoul, evdw, stresSR11, stresSR22, stresSR33, stresSR12, stresSR13, stresSR23,  &
+!!$OMP                                  stresRE11, stresRE22, stresRE33, stresRE12, stresRE13, stresRE23)
                    
 ! LJ and Coulomb calculation
 
@@ -147,141 +154,112 @@ do k = 1 , MM % N_of_atoms - 1
             rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
             rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
 
-            chrgk   = atom(k) % charge
-            chrgl   = atom(l) % charge
-
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
             rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
 
-            rklq    = sum( rkl(:) * rkl(:) )
+            rkl2    = sum( rkl(:) * rkl(:) )
 
-            if( rklq < rcutsq ) then
+            if( rkl2 < rcutsq ) then
 
-                select case(forcefield)
+                    atk = atom(k) % my_intra_id + species_offset(atom(k) % my_species)
+                    atl = atom(l) % my_intra_id + species_offset(atom(l) % my_species)
 
-                    case( 1 )
-                    ! Born-Mayer ; short range ...
+                    dkl = SQRT(rkl2)
 
-                    case( 2 )
-                        ! Lennard Jones ; short range ...
+                    if( atom(k)%LJ .AND. atom(l)%LJ ) then
+                        call Lennard_Jones( k , l , fs , vsr )
 
-                        atk = atom(k) % my_intra_id + species_offset(atom(k) % my_species)
-                        atl = atom(l) % my_intra_id + species_offset(atom(l) % my_species)
-                       
-                    select case ( MM % CombinationRule )
+                    elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
+                        call Buckingham( k , l , fs , vsr )
 
-                        case (2) 
-                            ! AMBER FF :: GMX COMB-RULE 2
-
-                            sr2   = ( ( atom(k) % sig + atom(l) % sig ) * ( atom(k) % sig + atom(l) % sig ) ) / rklq
-
-                        case (3)
-                            ! OPLS  FF :: GMX COMB-RULE 3
-
-                            sr2   = ( ( atom(k) % sig * atom(l) % sig ) * ( atom(k) % sig * atom(l) % sig ) ) / rklq
-
-                    end select
-                    eps = atom(k) % eps * atom(l) % eps
-
-                    If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
-
-                       read_loop: do  n = 1, size(SpecialPairs)
-
-                          flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                                  ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-                          flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                                  ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
-
-                          if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                             sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq
-                             eps = SpecialPairs(n) % Parms(2) 
-                             exit read_loop
-                          end if
-
-                       end do read_loop
-
-                    end if
-                   
-                    sr6  = sr2 * sr2 * sr2
-                    sr12 = sr6 * sr6
-                    
-                    rklsq   = SQRT(rklq)
-
-                    ! factor3 is used here in the force calculation because fscut was multiplied by it in md_setup ...
-                    fs   = 24.d0 * ( eps * factor3 ) * ( 2.d0 * sr12 - sr6 )
-                    fs   = fs / rklq - fscut(atk,atl) / rklsq
-
-                    vsr  = 4.d0 * ( eps * factor3 ) * ( sr12 - sr6 )
-                    vsr  = vsr - vscut(atk,atl) + fscut(atk,atl) * ( rklsq - rcut )
-
-                    pot  = pot + vsr
-                    evdw = evdw + vsr
-
-                    stressr11 = stressr11 + rij(1) * fs * rkl(1)
-                    stressr22 = stressr22 + rij(2) * fs * rkl(2)
-                    stressr33 = stressr33 + rij(3) * fs * rkl(3)
-                    stressr12 = stressr12 + rij(1) * fs * rkl(2)
-                    stressr13 = stressr13 + rij(1) * fs * rkl(3)
-                    stressr23 = stressr23 + rij(2) * fs * rkl(3)
-                   
-                    ! compensating the factor3 with 1.0d20 ... 
-                    fs = fs * 1.0d20
+                    endif
                     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
                     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
+                    
+                    stresSR11 = stresSR11 + rij(1) * fs * rkl(1) 
+                    stresSR22 = stresSR22 + rij(2) * fs * rkl(2)
+                    stresSR33 = stresSR33 + rij(3) * fs * rkl(3)
+                    stresSR12 = stresSR12 + rij(1) * fs * rkl(2)
+                    stresSR13 = stresSR13 + rij(1) * fs * rkl(3)
+                    stresSR23 = stresSR23 + rij(2) * fs * rkl(3)
+                    
+                    vsr  = vsr - vscut(atk,atl) + fscut(atk,atl)*( dkl - rcut )
+                    pot  = pot  + vsr*factor3
+                    evdw = evdw + vsr*factor3
 
-                    ! Coulomb Part
-                    sr2   = 1.d0 / rklq
-                    KRIJ  = KAPPA * rklsq
+                    ! Coulomb Interaction
+                    chrgk = atom(k) % charge
+                    chrgl = atom(l) % charge
+
+                    sr2   = 1.d0 / rkl2
+                    KRIJ  = KAPPA * dkl
                     expar = EXP( -(KRIJ*KRIJ) )
 
-                    freal = coulomb * chrgk * chrgl * (sr2 / rklsq)
-                    freal = freal * ( ERFC(KRIJ) + 2.d0 * rsqpi * KAPPA * rklsq * expar )
-                    freal = freal - frecut / rklsq * chrgk * chrgl
-
-                    vreal = coulomb * factor3 * chrgk * chrgl * ERFC(KRIJ)/rklsq
-                    vreal = vreal - vrecut * chrgk * chrgl + frecut * chrgk * chrgl * ( rklsq-rcut ) * factor3
-
-                    pot   = pot + vreal
-                    ecoul = ecoul + vreal
-         
-                    stresre11 = stresre11 + rij(1) * freal * rkl(1)
-                    stresre22 = stresre22 + rij(2) * freal * rkl(2)
-                    stresre33 = stresre33 + rij(3) * freal * rkl(3)
-                    stresre12 = stresre12 + rij(1) * freal * rkl(2)
-                    stresre13 = stresre13 + rij(1) * freal * rkl(3)
-                    stresre23 = stresre23 + rij(2) * freal * rkl(3)
-
+                    !Force
+                    freal = coulomb * chrgk * chrgl * (sr2 / dkl)
+                    freal = freal * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dkl*expar )
+                    ! force with cut-off ...  
+                    freal = freal - (frecut * chrgk * chrgl / dkl)
                     tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + freal * rkl(1:3)
                     tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - freal * rkl(1:3)
 
-                end select
+                    stresRE11 = stresRE11 + rij(1) * freal * rkl(1)
+                    stresRE22 = stresRE22 + rij(2) * freal * rkl(2)
+                    stresRE33 = stresRE33 + rij(3) * freal * rkl(3)
+                    stresRE12 = stresRE12 + rij(1) * freal * rkl(2)
+                    stresRE13 = stresRE13 + rij(1) * freal * rkl(3)
+                    stresRE23 = stresRE23 + rij(2) * freal * rkl(3)
+
+                    !Energy
+                    vreal = coulomb * chrgk * chrgl * ERFC(KRIJ)/dkl
+                    ! including cutoff ...
+                    vreal = vreal - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( dkl-rcut ))
+
+                    pot   = pot   + vreal*factor3
+                    ecoul = ecoul + vreal*factor3
+         
             end if
         end if
     end do
 end do
-!$OMP end parallel do
+!!$OMP end parallel do
 
 ! ################################################################################3
 
 pot = pot - vself
 pot_INTER = pot
 
-stresre11 = stresre11 * factor3
-stresre22 = stresre22 * factor3
-stresre33 = stresre33 * factor3
-stresre12 = stresre12 * factor3
-stresre13 = stresre13 * factor3
-stresre23 = stresre23 * factor3
+!--------------------------------------------------------
+stresSR11 = stresSR11 * factor3
+stresSR22 = stresSR22 * factor3
+stresSR33 = stresSR33 * factor3
+stresSR12 = stresSR12 * factor3
+stresSR13 = stresSR13 * factor3
+stresSR23 = stresSR23 * factor3
 
-stressr(1,1) = stressr11; stressr(2,2) = stressr22
-stressr(3,3) = stressr33; stressr(1,2) = stressr12
-stressr(1,3) = stressr13; stressr(2,3) = stressr23
-stresre(1,1) = stresre11; stresre(2,2) = stresre22
-stresre(3,3) = stresre33; stresre(1,2) = stresre12
-stresre(1,3) = stresre13; stresre(2,3) = stresre23
-stressr(2,1) = stressr(1,2); stressr(3,1) = stressr(1,3)
-stressr(3,2) = stressr(2,3); stresre(2,1) = stresre(1,2)
-stresre(3,1) = stresre(1,3); stresre(3,2) = stresre(2,3)
+stresSR(1,1) = stresSR11; stresSR(2,2) = stresSR22
+stresSR(3,3) = stresSR33; stresSR(1,2) = stresSR12
+stresSR(1,3) = stresSR13; stresSR(2,3) = stresSR23
+
+stresSR(2,1) = stresSR(1,2); stresSR(3,1) = stresSR(1,3)
+stresSR(3,2) = stresSR(2,3) 
+!--------------------------------------------------------
+
+!--------------------------------------------------------
+stresRE11 = stresRE11 * factor3
+stresRE22 = stresRE22 * factor3
+stresRE33 = stresRE33 * factor3
+stresRE12 = stresRE12 * factor3
+stresRE13 = stresRE13 * factor3
+stresRE23 = stresRE23 * factor3
+
+stresRE(1,1) = stresRE11; stresRE(2,2) = stresRE22
+stresRE(3,3) = stresRE33; stresRE(1,2) = stresRE12
+stresRE(1,3) = stresRE13; stresRE(2,3) = stresRE23
+
+stresRE(2,1) = stresRE(1,2); stresRE(3,1) = stresRE(1,3)
+stresRE(3,2) = stresRE(2,3)
+!--------------------------------------------------------
 
 ! force units = J/mts = Newtons ...
 do i = 1, MM % N_of_atoms
@@ -295,6 +273,132 @@ end do
 deallocate ( tmp_fsr , tmp_fch , erfkr )
 
 end subroutine FORCEINTER
+!
+!
+!
+!
+!============================================
+ subroutine Lennard_Jones( k , l , fs , vsr )
+!============================================
+implicit none
+integer , intent(in)  :: k 
+integer , intent(in)  :: l 
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: vsr
+
+! local variables ...
+integer :: n 
+real*8  :: sr2 , sr6 , sr12 , eps
+logical :: flag1 , flag2 
+
+! Lennard Jones ...
+
+select case ( MM % CombinationRule )
+
+    case (2) 
+        ! AMBER FF :: GMX COMB-RULE 2
+        sr2 = (atom(k)%sig + atom(l)%sig)**2 / rkl2
+
+    case (3)
+        ! OPLS  FF :: GMX COMB-RULE 3
+        sr2 = (atom(k)%sig * atom(l)%sig )**2 / rkl2
+
+end select
+eps = atom(k)%eps * atom(l)%eps
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         sr2 = SpecialPairs(n)%Parms(1)**2 / rkl2
+         eps = SpecialPairs(n)%Parms(2) 
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+sr6  = sr2 * sr2 * sr2
+sr12 = sr6 * sr6
+
+! Forces
+fs = 24.d0 * eps * ( 2.d0 * sr12 - sr6 )
+fs = fs/rkl2 - fscut(atk,atl)/dkl
+
+! LJ energy
+vsr = 4.d0 * eps * ( sr12 - sr6 )
+
+end subroutine Lennard_Jones
+!
+!
+!
+!
+!=========================================
+ subroutine Buckingham( k , l , fs , vsr )
+!=========================================
+implicit none
+integer , intent(in)  :: k 
+integer , intent(in)  :: l 
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: vsr
+
+! local variables ...
+integer :: n 
+real*8  :: sr2 , sr6 , sr12 , eps
+real*8  :: A , B , C , sr8
+logical :: flag1 , flag2 
+
+! Bukingham Potential and Forces ...
+
+! Combination Rules
+
+A = atom(k)% BuckA * atom(l)% BuckA
+
+B = atom(k)% BuckB + atom(l)% BuckB
+
+C = atom(k)% BuckC * atom(l)% BuckC
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         A = SpecialPairs(n)% Parms(1) 
+         B = SpecialPairs(n)% Parms(2)
+         C = SpecialPairs(n)% Parms(3)
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+sr2 = 1.d0 / rkl2
+sr6 = sr2 * sr2 * sr2
+sr8 = sr2 * sr2 * sr2 * sr2
+
+!Force
+fs = A*B*exp(-B*dkl)/dkl - SIX*C*sr8
+fs = fs - fscut(atk,atl)/dkl
+
+!Buckingham Energy
+vsr = A*exp(-B*dkl) - C*sr6
+
+end subroutine Buckingham
+!
+!
 !
 !
 !

@@ -223,13 +223,14 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
  end do
  
  MM = count(vector_of_pairs(:,2) /= 0 ) 
- allocate( species(a) % IntraLJ( MM , 2 ) )
- species(a)%NintraLJ = MM
+ allocate( species(a) % IntraIJ( MM , 3 ) , source=I_zero )
+ species(a)%NintraIJ = MM
 
  ! Finally associating the nonbonded interactions to species ...
  do i = 1 , MM
-     species(a) % IntraLJ(i,1) = vector_of_pairs(i,1)
-     species(a) % IntraLJ(i,2) = vector_of_pairs(i,2)
+     species(a) % IntraIJ(i,1) = vector_of_pairs(i,1)
+     species(a) % IntraIJ(i,2) = vector_of_pairs(i,2)
+     species(a) % IntraIJ(i,3) = 1   ! <== LJ interaction
  end do
 
 ! 1--4 Interactions: only if [ pairs ] is not read in the .itp file ...

@@ -26,9 +26,9 @@ contains
 !
 !
 !
-!================================================
+!========================================================
  subroutine itp2mdflex( MM , atom , species , FF)
-!================================================
+!========================================================
 implicit none
 type(MM_system)     , intent(in)    :: MM
 type(MM_atomic)     , intent(inout) :: atom(:)
@@ -92,7 +92,8 @@ do a = 1 , MM % N_of_species
                                       species(a) % atom(i) % MM_charge ,  &
                                       species(a) % atom(i) % mass
 
-            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
+            species(a) % atom(i) % nr         = 1
+            species(a) % atom(i) % MMSymbol   = TO_UPPER_CASE( adjustr(species(a) % atom(i) % MMSymbol) )
             species(a) % atom(i) % my_species = a
             species(a) % my_species           = a
             species(a) % atom(i) % flex       = species(a) % flex
@@ -103,6 +104,7 @@ do a = 1 , MM % N_of_species
             counter = counter + 1
             FF(counter) % my_species = a
             FF(counter) % my_id      = species(a) % atom(i) % my_id
+            FF(counter) % nr         = species(a) % atom(i) % nr 
             FF(counter) % residue    = species(a) % atom(i) % residue
             FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
             FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
@@ -112,9 +114,13 @@ do a = 1 , MM % N_of_species
  
         end do read_loop1
         backspace(33)
- 
 
         N_of_atoms = species(a) % N_of_atoms
+
+        If( N_of_atoms*(n_of_atoms+1) /= 2*sum(species(a)%atom%my_id) ) then
+            CALL warning("halting: check index column of "//string//"file")
+            stop 
+            end If
 
         ! convert MMSymbol to upper case ...
         forall( i=1:N_of_atoms ) species(a)% atom(i)% MMSymbol = TO_UPPER_CASE( species(a)% atom(i)% MMSymbol )
@@ -321,19 +327,19 @@ do a = 1 , MM % N_of_species
         else 
 
             ! Intermediate variable ... 
-            allocate( species(a) % IntraLJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
+            allocate( species(a) % IntraIJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
 
             k = 1
             do i = 1 , species(a) % N_of_Atoms - 1
 
                 do j = i + 1, species(a) % N_of_Atoms
-                    species(a) % IntraLJ(k,1) = i
-                    species(a) % IntraLJ(k,2) = j
+                    species(a) % IntraIJ(k,1) = i
+                    species(a) % IntraIJ(k,2) = j
                     k = k + 1
                 end do
 
             end do
-            species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
+            species(a) % NintraIJ = size( species(a) % IntraIJ(:,2) )
              
         end if
 

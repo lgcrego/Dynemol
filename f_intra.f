@@ -29,7 +29,7 @@ module F_intra_m
                               sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
                               term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
-                              term4 , dphi1 , dphi2
+                              term4 , dphi1 , dphi2 , dij , rij2
     real*8                 :: pot_INTRA
     integer                :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
     logical                :: flag1, flag2, flag3, flag4, flag5
@@ -298,86 +298,53 @@ do i = 1 , MM % N_of_molecules
 end do
 
 !====================================================================
+! Nonbonding Interactions
+! parameters:
+! rcut = cutoff radius for vdW and Coulomb interactions (defined in card.intp)
+! rcutsq = rcut*rcut
+! FScut(i,j) = LJ/Bck Force at a spherical Surface of radius rcut for each MM atom pair
+! VScut(i,j) = LJ/Bck energy at a spherical Surface of radius rcut for each MM atom pair
+! rij(:)/dij is the direction versor of the atomic pair ij
+!====================================================================
 ! Non-bonded 1,4 intramolecular interactions ...
 
 If( allocated(SpecialPairs14) ) there_are_NB_SpecialPairs14 = .true.
 
 do i = 1 , MM % N_of_molecules
-    do j   = 1 , molecule(i) % Nbonds14
-        ati    = molecule(i) % bonds14(j,1)
-        atj    = molecule(i) % bonds14(j,2)
+    do j = 1 , molecule(i) % Nbonds14
+
+        ati = molecule(i) % bonds14(j,1)
+        atj = molecule(i) % bonds14(j,2)
 
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
-            chrgi  = atom(ati) % charge
-            chrgj  = atom(atj) % charge
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-            rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
 
-            ! Lennard Jones ...
-            select case ( MM % CombinationRule )
+            rij2   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
 
-                case (2)
-                    ! AMBER FF :: GMX COMB-RULE 2
-                    sr2 = ( ( atom(ati) % sig14 + atom(atj) % sig14  ) * ( atom(ati) % sig14 + atom(atj) % sig14 ) ) / rklq
+            call Lennard_Jones_14
 
-                case (3)
-                    ! OPLS  FF :: GMX COMB-RULE 3
-                    sr2 = ( ( atom(ati) % sig14 * atom(atj) % sig14 ) * ( atom(ati) % sig14 * atom(atj) % sig14 ) ) / rklq
-
-            end select
-            eps   =  atom(ati) % eps14 * atom(atj) % eps14 
-
-
-            If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (I,J) is a SpecialPair ... 
-
-               read_loop1: do  n = 1, size(SpecialPairs14)
-
-                   flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                           ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                   flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                           ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
- 
-                   if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
-                       sr2 = ( SpecialPairs14(n)%Parms(1) * SpecialPairs14(n)%Parms(1) ) / rklq
-                       eps = SpecialPairs14(n) % Parms(2) 
-                       exit read_loop1
-                   end if
-                
-               end do read_loop1
-
-            end if
-
-            rklsq = sqrt(rklq)
-            sr6   = sr2 * sr2 * sr2
-            sr12  = sr6 * sr6
-            fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            fs    = (fs / rklq) * MM % fudgeLJ
-            atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
-            atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
-            ! factor used to compensate the factor1 and factor2 factors ...
-            ! factor3 = 1.0d-20
-            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 ) 
-!           alternative cutoff formula ...
-!           sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
-            sterm  = sterm * MM % fudgeLJ
+            ! Coulomb Interaction for 1-4 pairs
+            chrgi  = atom(ati) % charge
+            chrgj  = atom(atj) % charge
 
             !  Real part (Numero de cargas igual ao numero de sitios)
-            sr2   = 1.d0 / rklq
-            KRIJ  = KAPPA * rklsq
+            dij = sqrt(rij2)
+            sr2   = 1.d0 / rij2
+            KRIJ  = KAPPA * dij
             expar = EXP( -(KRIJ*KRIJ) )
-            freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * MM % fudgeQQ
+            freal = coulomb * chrgi * chrgj * ( sr2/dij )
+            freal = freal * ( ERFC(KRIJ) + TWO * rsqPI * KAPPA * dij * expar ) * MM % fudgeQQ
+
+            !Forces
             atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + freal * rij(1:3)
             atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
-            ! factor used to compensate the factor1 and factor2 factors ...
-            ! factor3 = 1.0d-20
-            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * MM % fudgeQQ
-!           alternative cutoff formula ...
-!           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
-            LJ_14   = LJ_14   + sterm
-            Coul_14 = Coul_14 + tterm
+
+            !Energy 
+            tterm = coulomb * chrgi * chrgj * ERFC(KRIJ)/dij * MM % fudgeQQ
+
+            Coul_14 = Coul_14 + tterm*factor3 
 
         end if
     end do
@@ -389,89 +356,60 @@ end do
 If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 do i = 1 , MM % N_of_molecules
-    do j   = 1 , molecule(i) % NintraLJ
-        ati  = molecule(i) % IntraLJ(j,1) 
-        ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
-        atj  = molecule(i) % IntraLJ(j,2) 
-        atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+
+    do j = 1 , molecule(i) % NintraIJ
+
+        ati  = molecule(i) % IntraIJ(j,1) 
+        atj  = molecule(i) % IntraIJ(j,2) 
 
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
-            chrgi  = atom(ati) % charge
-            chrgj  = atom(atj) % charge
+
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-            rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
-            if ( rklq < rcutsq ) then
 
-            ! Lennard Jones ...
-            select case ( MM % CombinationRule )
+            rij2   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
 
-                case (2)
-                    ! AMBER FF :: GMX COMB-RULE 2
-                    sr2 = ( ( atom(ati) % sig + atom(atj) % sig ) * ( atom(ati) % sig + atom(atj) % sig ) ) / rklq
+            if ( rij2 < rcutsq ) then
 
-                case (3)
-                    ! OPLS  FF :: GMX COMB-RULE 3
-                    sr2 = ( ( atom(ati) % sig * atom(atj) % sig ) * ( atom(ati) % sig * atom(atj) % sig ) ) / rklq
+            select case( molecule(i)% intraIJ(j,3) )
+
+                   case(1)
+                   call Lennard_Jones
+
+                   case(2) 
+                   call Buckingham
 
             end select
-            eps   =  atom(ati) % eps * atom(atj) % eps
 
-            If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
-
-               read_loop: do  n = 1, size(SpecialPairs)
-
-                  flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                          ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                  flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                          ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
-
-                  if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                     sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq 
-                     eps = SpecialPairs(n) % Parms(2) 
-                     exit read_loop
-                  end if
-
-               end do read_loop
-
-            end if
-
-            rklsq = SQRT(rklq)
-            sr6   = sr2 * sr2 * sr2
-            sr12  = sr6 * sr6
-            fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            ! with force cut-off ...
-            fs    = (fs / rklq) - fscut(ati1,atj1) / rklsq     
-            atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
-            atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
-            ! factor used to compensate factor1 ...
-            ! factor3 = 1.0d-20
-            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 )
-            ! alternative formula with cutoff ...
-            sterm  = sterm - vscut(ati1,atj1) + fscut(ati1,atj1) * ( rklsq - rcut ) 
+            ! Coulomb Interaction
+            chrgi = atom(ati) % charge
+            chrgj = atom(atj) % charge
 
             !  Real part (Number of charges equal to the number of sites)
-            sr2   = 1.d0 / rklq
-            KRIJ  = KAPPA * rklsq
+            sr2   = 1.d0 / rij2
+            KRIJ  = KAPPA * dij
             expar = EXP( -(KRIJ*KRIJ) )
-            freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar )
-            ! with force cut-off ...
-            freal = freal - frecut / rklsq * chrgi * chrgj   
+
+            !Force
+            freal = coulomb * chrgi * chrgj * (sr2/dij)
+            freal = freal * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar )
+            ! force with cut-off ...
+            freal = freal - (frecut * chrgi * chrgj / dij)   
             atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
             atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
-            ! factor used to compensate factor1 ...
-            ! factor3 = 1.0d-20
-            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq
-            ! alternative formula with cutoff ...
-            tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
-            LJ_intra   = LJ_intra   + sterm
-            Coul_intra = Coul_intra + tterm
+
+            !Energy
+            tterm = coulomb * chrgi * chrgj * ERFC(KRIJ)/dij
+            ! including cutoff ...
+            tterm = tterm - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
+
+            Coul_intra = Coul_intra + tterm*factor3 ! <== Coulomb energy
 
             end if
         end if
     end do
 end do
+
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
 
@@ -547,6 +485,197 @@ do i = 1 , MM % N_of_atoms
     enddo
 
 end subroutine ForceINTRA
+!
+!
+!
+!========================
+ subroutine Lennard_Jones
+!========================
+implicit none
+
+! local variables ...
+
+! Lennard Jones ...
+select case ( MM % CombinationRule )
+
+    case (2)
+        ! AMBER FF :: GMX COMB-RULE 2
+        sr2 = (atom(ati)%sig + atom(atj)%sig)**2 / rij2
+
+    case (3)
+        ! OPLS  FF :: GMX COMB-RULE 3
+        sr2 = (atom(ati)%sig * atom(atj)%sig)**2 / rij2
+
+end select
+eps = atom(ati)%eps * atom(atj)%eps
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         sr2 = SpecialPairs(n)%Parms(1)**2 / rij2 
+         eps = SpecialPairs(n)%Parms(2) 
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+dij = SQRT(rij2)
+sr6   = sr2 * sr2 * sr2
+sr12  = sr6 * sr6
+
+!Forces
+fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
+! including cut-off ...
+ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+fs = fs/rij2 - fscut(ati1,atj1)/dij     
+
+atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
+atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
+
+!Energy
+sterm = 4.d0 * eps * ( sr12 - sr6 )
+sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
+
+LJ_intra = LJ_intra + sterm*factor3 ! <== LJ energy
+
+end subroutine Lennard_Jones
+!
+!
+!
+!
+!===========================
+ subroutine Lennard_Jones_14
+!===========================
+implicit none
+
+! local variables ...
+
+! Lennard Jones for 1-4 pairs ...
+select case ( MM % CombinationRule )
+
+    case (2)
+        ! AMBER FF :: GMX COMB-RULE 2
+        sr2 = (atom(ati)%sig14 + atom(atj)%sig14)**2 / rij2
+
+    case (3)
+        ! OPLS  FF :: GMX COMB-RULE 3
+        sr2 = (atom(ati)%sig14 * atom(atj)%sig14)**2 / rij2
+
+end select
+eps = atom(ati)%eps14 * atom(atj)%eps14 
+
+If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop1: do  n = 1, size(SpecialPairs14)
+
+       flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+               ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+       flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+               ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+       if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
+           sr2 = SpecialPairs14(n)%Parms(1)**2 / rij2
+           eps = SpecialPairs14(n)%Parms(2) 
+           exit read_loop1
+       end if
+    
+   end do read_loop1
+
+end if
+
+sr6  = sr2 * sr2 * sr2
+sr12 = sr6 * sr6
+
+!Forces
+fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
+fs = (fs / rij2) * MM % fudgeLJ
+
+atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
+atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
+
+!Energy
+sterm = 4.d0 * eps * ( sr12 - sr6 ) * MM % fudgeLJ
+
+LJ_14 = LJ_14 + sterm*factor3  ! <== LJ energy
+
+end subroutine Lennard_Jones_14
+!
+!
+!
+!
+!=====================
+ subroutine Buckingham
+!=====================
+implicit none
+
+! local variables ...
+real*8 :: Aij , Bij , Cij , sr8
+
+! Bukingham Potential and Forces ...
+
+! Combination Rules
+
+Aij = atom(ati)% BuckA * atom(atj)% BuckA
+
+Bij = atom(ati)% BuckB + atom(atj)% BuckB  
+
+Cij = atom(ati)% BuckC * atom(atj)% BuckC
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         Aij = SpecialPairs(n)% Parms(1) 
+         Bij = SpecialPairs(n)% Parms(2)
+         Cij = SpecialPairs(n)% Parms(3)
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+dij = SQRT(rij2)
+sr2   = 1.d0 / rij2
+sr6   = sr2 * sr2 * sr2 
+sr8   = sr2 * sr2 * sr2 * sr2
+
+!Force
+fs = Aij*Bij*exp(-Bij*dij) / dij - SIX*Cij*sr8
+
+ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+
+! force with cut-off ...
+fs = fs - fscut(ati1,atj1)/dij     
+
+atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
+atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
+
+!Energy
+sterm = Aij*exp(-Bij*dij) - Cij*sr6
+! formula with cutoff ...
+sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
+
+LJ_intra = LJ_intra + sterm*factor3  ! <== LJ energy
+
+end subroutine Buckingham
 !
 !
 !

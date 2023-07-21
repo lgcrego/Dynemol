@@ -34,7 +34,6 @@ implicit none
 ! local variables ...
 integer         :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr 
 
-
 !=======================  setting up system  ============================= 
 
 bath_T        = temperature                     !  Temperature (K)
@@ -44,7 +43,6 @@ talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
-atmax = sum( species(:) % N_of_atoms )
 
 If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
@@ -106,6 +104,8 @@ initial_density = sum( molecule % mass ) * MM % ibox(1) * MM % ibox(2) * MM % ib
 115 FORMAT(t8,i4,t14,a3,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)
 
 !=======================  reading  potential.inpt  ============================= 
+atmax = sum( species(:) % N_of_atoms )
+
 CALL allocate_FF( atmax )
 
 select case ( MM_input_format )
@@ -128,9 +128,7 @@ select case ( MM_input_format )
          do i = 1 , MM % N_of_species
              do j = 1 , species(i) % N_of_atoms
                  where( FF % residue == species(i) % atom(j) % residue )
-                     FF % nr         = species(i) % atom(j) % nr
-                     FF % flex       = species(i) % atom(j) % flex
-                     FF % my_species = species(i) % my_species
+                     FF % flex = species(i) % atom(j) % flex
                  end where
              end do
          end do
@@ -150,15 +148,13 @@ select case ( MM_input_format )
         CALL MMSymbol_2_Symbol ( FF )
         CALL Symbol_2_AtNo     ( FF )
 
-         do i = 1 , MM % N_of_species
-             do j = 1 , species(i) % N_of_atoms
-                 where( FF % residue == species(i) % atom(j) % residue )
-                     FF % nr         = species(i) % atom(j) % nr
-                     FF % flex       = species(i) % atom(j) % flex
-                     FF % my_species = species(i) % my_species
-                 end where
-             end do
-         end do
+        do i = 1 , MM % N_of_species
+            do j = 1 , species(i) % N_of_atoms
+                where( FF % residue == species(i) % atom(j) % residue )
+                    FF % flex = species(i) % atom(j) % flex
+                end where
+            end do
+        end do
 
     case default
          Print*, " >>> Check your MM_input_format option in parameters_MM.f <<< :" , MM_input_format
@@ -168,7 +164,9 @@ end select
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+! feedback from ad_hoc up to Unit_Cell ...
 Unit_Cell% flex(:) = atom(:)% flex
+
 !=======================  finished  reading  potential.inpt  ============================= 
 
 !=======================         set-up molecule(:)          ============================= 
@@ -178,14 +176,14 @@ do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % Nangs      = species(i) % Nangs
     where( molecule % my_species == i ) molecule % Ndiheds    = species(i) % Ndiheds
     where( molecule % my_species == i ) molecule % Nbonds14   = species(i) % Nbonds14
-    where( molecule % my_species == i ) molecule % NintraLJ   = species(i) % NintraLJ
+    where( molecule % my_species == i ) molecule % NintraIJ   = species(i) % NintraIJ
 end do
-
 !=======================         set-up atom(:) <=> FF(:)    ============================= 
 
-! defining atom % my_intra_id ...
+! defining atom % my_intra_id = index within the residue nr ...
 do i = 1 , size(atom)
-    atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
+!    atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
+    atom(i) % my_intra_id = i - sum( molecule( 1:atom(i)%nr-1 ) % N_of_atoms )
 end do
 
 ! defining molecule % nr from atom % nr ...
@@ -194,7 +192,7 @@ do i = 1 , MM % N_of_atoms
     molecule(nresid) % nr = nresid
 end do
 
-! passing MMSymbol from FF to atom ...
+! MMSymbol:  FF --> atom ...
 i1 = 1
 do nr = 1 , atom(MM%N_of_atoms) % nr
     sp = atom(i1) % my_species
@@ -208,10 +206,15 @@ atom % MMSymbol = adjustl(atom % MMSymbol)
 
 do i = 1 , size(FF)
     where( atom % MMSymbol == FF(i) % MMSymbol )
+        atom % LJ    = FF(i) % LJ
         atom % eps   = FF(i) % eps
-        atom % eps14 = FF(i) % eps14
         atom % sig   = FF(i) % sig
+        atom % eps14 = FF(i) % eps14
         atom % sig14 = FF(i) % sig14
+        atom % Buck  = FF(i) % Buck
+        atom % buckA = FF(i) % buckA
+        atom % buckB = FF(i) % buckB
+        atom % buckC = FF(i) % buckC
     end where
 end do
 
@@ -244,13 +247,15 @@ do i = 1 , MM % N_of_molecules
     allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
     End If
 
-    If( molecule(i)%NintraLJ > 0 ) & 
-    allocate( molecule(i) % IntraLJ       ( molecule(i) % NintraLJ , 2 ) )
+    If( molecule(i)%NintraIJ > 0 ) & 
+    allocate( molecule(i) % IntraIJ       ( molecule(i) % NintraIJ , 3 ) )
 
 end do
 
 k = 0
 do i = 1 , MM % N_of_molecules
+
+!   offset the pair indices by k to match the atom array ...
 
     If( molecule(i)%Nbonds14 > 0 ) & 
     molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
@@ -276,8 +281,9 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
     End If
 
-    If( molecule(i)%NintraLJ > 0 ) & 
-    molecule(i) % IntraLJ       = species(molecule(i) % my_species) % IntraLJ + k
+    If( molecule(i)%NintraIJ > 0 ) & 
+    molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
+    molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
 
     k = k + molecule(i) % N_of_atoms
 
@@ -292,7 +298,8 @@ do i = 1 , MM % N_of_species
     end where
 end do
 
-!call debug_MM( atom )
+! use this to debug: { atom , molecule , species , FF , species } ...
+!call debug_MM( FF )
 !========================================================================================= 
 
 CALL MM_diagnosis( )
@@ -319,6 +326,8 @@ do i = 1 , N
     molecule(i) % cm(3)          = 0.0d0
     molecule(i) % mass           = 0.0d0
     molecule(i) % flex           = .false.
+    molecule(i) % LJ             = .false.
+    molecule(i) % Buck           = .false.
     molecule(i) % residue        = "XXX"
     molecule(i) % nr             = 0
     molecule(i) % Nbonds         = 0
@@ -370,10 +379,15 @@ do i = 1 , N
     FF(i) % charge       = 0.0d0
     FF(i) % MM_charge    = 0.0d0
     FF(i) % eps          = 0.0d0
-    FF(i) % eps14        = 0.0d0
     FF(i) % sig          = 0.0d0
+    FF(i) % eps14        = 0.0d0
     FF(i) % sig14        = 0.0d0
+    FF(i) % BuckA        = 0.0d0
+    FF(i) % BuckB        = 0.0d0
+    FF(i) % BuckC        = 0.0d0
     FF(i) % flex         = .false.
+    FF(i) % LJ           = .false.
+    FF(i) % Buck         = .false.
 end do
 
 end subroutine allocate_FF
@@ -481,9 +495,14 @@ do j = 1 , MM % N_of_atoms
     atom(i) % charge       = 0.d0
     atom(i) % MM_charge    = 0.d0
     atom(i) % eps          = 0.d0
-    atom(i) % eps14        = 0.d0
     atom(i) % sig          = 0.d0
+    atom(i) % eps14        = 0.d0
     atom(i) % sig14        = 0.d0
+    atom(i) % BuckA        = 0.0d0
+    atom(i) % BuckB        = 0.0d0
+    atom(i) % BuckC        = 0.0d0
+    atom(i) % LJ           = .false.
+    atom(i) % Buck         = .false.
     atom(i) % flex         = Unit_Cell % flex(i)
 end do
 
@@ -627,7 +646,7 @@ implicit none
 
 ! local variabbles ...
 integer                         :: i , j , m , at1 , at2 , at3 , at4 , funct_dih , multiples , prototype
-real*8                          :: factor , factor_1 , factor_2 
+real*8                          :: factor , factor_1 , factor_2 , eps , sig, BuckA, BuckB, BuckC
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
 
@@ -676,44 +695,131 @@ character(len=:) , allocatable  :: string(:)
  write(51,"(A)") "[ atomtypes ]"               
 
  ! General NonBonded parms ...
+
+ ! Lennard-Jones ...
+ write(51,'(t5,A2,t15,A11,t36,A8,t67,A35)') "LJ",  "eps(kJ/mol)", "sigma(A)", "V_LJ = 4*eps*( (s/r)^12 - (s/r)^6 )"
  do i = 1 , size(FF)
 
-    if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
+    If( FF(i)%LJ ) then
 
-        ! warns if NB paramater was not assigned to this atom  ...
-        flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
+           if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
+                     
+                     ! warns if NB paramater was not assigned to this atom  ...
+                     flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
 
-        write(51,'(I5,A5,2F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
-                                      FF(i)% MMSymbol                        , & 
-                                      FF(i)% sig                             , &
-                                      FF(i)% eps                             , &
-                                      flag
+                     select case (MM_input_format)
+                         case("NAMD","GAFF")
+                               eps = FF(i)% eps**2 / (factor1*imol) ! <== kJ/mol
+                               select case( MM % CombinationRule )
+                                   case (2)
+                                       sig = FF(i)%sig*two
+                                   case (3)
+                                       sig = FF(i)%sig**2
+                               end select
 
-    end if
+                         case("GMX")
+                     end select
 
+                     write(51,'(I5,A5,F12.5,t31,F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
+                                                            FF(i)% MMSymbol                        , & 
+                                                            eps                                    , &
+                                                            sig                                    , &
+                                                            flag                 
+           endif
+    endif
  end do
 
+ ! Buckingham ...
+ write(51,'(t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
+ do i = 1 , size(FF)
+
+    if ( FF(i)%Buck) then
+
+            if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
+
+                      ! warns if NB paramater was not assigned to this atom  ...
+                      flag = merge( "<==" , "   " , FF(i)% BuckA * FF(i)%BuckB == 0 )
+
+                     select case (MM_input_format)
+                         case("NAMD","GAFF")
+                               BuckA = FF(i)% BuckA**2 / (factor1*imol) ! <== kJ/mol
+                               BuckB = FF(i)%BuckB*two
+                               BuckC = FF(i)% BuckC**2 / (factor1*imol) ! <== kJ/mol
+
+                         case("GMX")
+                     end select
+
+                          write(51,'(I5,A5,3F16.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
+                                                        FF(i)% MMSymbol                        , & 
+                                                        BuckA                                  , &
+                                                        BuckB                                  , &
+                                                        BuckC                                  , &
+                                                        flag
+            endif
+    end if
+ end do
+
+ !========================================================================================================
+ ! NonBonded SpecialPairs parms ...
  write(51, *) " "
  write(51,"(A)") "[ SpecialPairs ]"               
 
- ! NonBonded SpecialPairs parms ...
+ ! Lennard-Jones ...
+ write(51,'(t5,A2,t15,A11,t36,A8,t67,A35)') "LJ",  "eps(kJ/mol)", "sigma(A)", "V_LJ = 4*eps*( (s/r)^12 - (s/r)^6 )"
  do i = 1 , size(SpecialPairs)
-
     ! warns if NB paramater was not assigned to this atom  ...
     flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
 
-    write(51,'(2A5,2F12.5,A4)')   SpecialPairs(i)% MMSymbols(1)          , & 
-                                  SpecialPairs(i)% MMSymbols(2)          , & 
-                                  SpecialPairs(i)% Parms(1)              , &
-                                  SpecialPairs(i)% Parms(2)              , &
-                                  flag
+    if( SpecialPairs(i)% model == "LJ") then
 
- end do
+             select case (MM_input_format)
+                 case("NAMD","GAFF")
+                       eps = SpecialPairs(i)% Parms(2) / (factor1*imol) ! <== kJ/mol
+                       sig = SpecialPairs(i)% Parms(1)                  ! <== Angs
+
+                 case("GMX")
+             end select
+
+             write(51,'(2A5,F12.5,t31,F12.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
+                                                  SpecialPairs(i)% MMSymbols(2) , & 
+                                                  eps                           , &
+                                                  sig                           , &
+                                                  flag
+    endif
+ enddo
+
+ ! Buckingham ...
+ write(51,'(t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
+ do i = 1 , size(SpecialPairs)
+    ! warns if NB paramater was not assigned to this atom  ...
+    flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+
+    if( SpecialPairs(i)% model == "BUCK" ) then
+
+             select case (MM_input_format)
+                 case("NAMD","GAFF")
+                       BuckA = SpecialPairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
+                       BuckB = SpecialPairs(i)% Parms(2)                  ! <== Angs
+                       BuckC = SpecialPairs(i)% Parms(3) / (factor1*imol) ! <== kJ/mol
+
+                 case("GMX")
+             end select
+
+             write(51,'(2A5,3F16.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
+                                         SpecialPairs(i)% MMSymbols(2) , & 
+                                         BuckA                         , &
+                                         BuckB                         , &
+                                         BuckC                         , &
+                                         flag
+    endif
+ enddo
 
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
  write(51,"(A)") "[ bondtypes ]"               
+
+ write(51,'(t12,A4,t25,A5,t36,A13,t67,A15)') "type" , "r0(A)" , "k(kJ/mol/A^2)" , "V = k/2(r-r0)^2"
 
  prototype = 1
  do m = 1 , MM % N_of_Molecules
@@ -735,17 +841,14 @@ character(len=:) , allocatable  :: string(:)
            flag = merge( "<==" , "   " , sum(molecule(m)%kbond0(i,:)) == 0 )
  
            funct_type = molecule(m) % funct_bond(i) 
-    
-           factor = factor2 * imol  
-           if( funct_type == "3" ) factor = factor1 * imol
  
-           write(51,'(3A4,F15.5,2F15.3,A3)')  atom(at1)%MMSymbol                      , &
-                                              atom(at2)%MMSymbol                      , &
-                                              funct_type                              , &
-                                              molecule(m)%kbond0(i,2) / nano_2_angs   , &
-                                              molecule(m)%kbond0(i,1) / factor        , &
-                                              molecule(m)%kbond0(i,3) * nano_2_angs   , &
-                                              flag
+           write(51,'(2A4,t12,A4,F15.5,2F15.3,A3)')  atom(at1)%MMSymbol                       , &
+                                                     atom(at2)%MMSymbol                       , &
+                                                     molecule(m)% bond_type(i)                , &
+                                                     molecule(m)%kbond0(i,2)                  , &
+                                                     molecule(m)%kbond0(i,1) / (factor1*imol) , &
+                                                     molecule(m)%kbond0(i,3) * nano_2_angs    , &
+                                                     flag
        end if
     end do
     deallocate(string)
@@ -758,6 +861,8 @@ character(len=:) , allocatable  :: string(:)
  ! angle parms saving ...
  write(51,*) " "
  write(51,"(A)") "[ angletypes ]"
+
+ write(51,'(t17,A4,t28,A9,t43,A9,t67,A15)') "type" , "X(degree)" , "k(kJ/mol)" , "V = k/2(X-X0)^2"
 
  prototype = 1
  do m = 1 , MM % N_of_Molecules
@@ -781,13 +886,13 @@ character(len=:) , allocatable  :: string(:)
 
            funct_type = molecule(m) % funct_angle(i)
 
-           factor_1 = factor1 * imol
-           factor_2 = factor2 * imol
+           factor_1 = factor1*imol
+           factor_2 = factor2*imol
 
-           write(51,'(4A4,2F15.3)',advance="no") atom(at1)%MMSymbol  , &
+           write(51,'(3A4,t17,A4)',advance="no") atom(at1)%MMSymbol  , &
                                                  atom(at2)%MMSymbol  , &
                                                  atom(at3)%MMSymbol  , &
-                                                 funct_type       
+                                                 molecule(m)%angle_type(i)       
 
            select case( adjustl(molecule(m) % Angle_Type(i)) )
 
@@ -846,7 +951,7 @@ character(len=:) , allocatable  :: string(:)
 
            funct_dih = molecule(m) % funct_dihed(i)
 
-           factor = factor1 * imol
+           factor = factor1*imol
 
            write(51,'(4A4,I5)',advance="no") atom(at1)%MMSymbol                  , &
                                              atom(at2)%MMSymbol                  , &

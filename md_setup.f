@@ -52,69 +52,113 @@ contains
  implicit none
  
 ! local variables
- integer :: i, j, k, atmax
+ integer :: i, j, k, n, atmax
+ real*8  :: Aij , Bij , Cij
  real*8  :: sr2, sr6, sr12, expar, ERFC, KRIJ, eps
  logical :: flag1 , flag2 
 
- rcutsq  = rcut * rcut
+ rcutsq = rcut * rcut
 
 If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 !################################################
  atmax = sum( species(:) % N_of_atoms )                 
+
  If(.not. allocated(fscut)) allocate ( fscut(atmax,atmax) , source = D_zero )
  If(.not. allocated(vscut)) allocate ( vscut(atmax,atmax) , source = D_zero )
 
- if (forcefield == 1) then
-  ! Born-Mayer
- else
-  ! Lennard-Jones
  do i = 1, atmax
-    do j = 1, atmax
-       select case ( MM % CombinationRule )
-            case (2)
-            ! AMBER FF :: GMX COMB-RULE 2 
-            sr2 = ( (FF(i) % sig + FF(j) % sig) * (FF(i) % sig + FF(j) % sig) ) / rcutsq
-            case (3)
-            ! OPLS  FF :: GMX COMB-RULE 3  
-            sr2 = ( (FF(i) % sig * FF(j) % sig) * (FF(j) % sig * FF(i) % sig) ) / rcutsq
-       end select
-       eps = FF(i) % eps * FF(j) % eps
+ do j = 1, atmax
 
-       If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
+      If( FF(i)%LJ .AND. FF(j)%LJ ) then
 
-          read_loop: do  k = 1, size(SpecialPairs)
+          ! Lennard-Jones
+          select case ( MM % CombinationRule )
+               case (2)
+               ! AMBER FF :: GMX COMB-RULE 2 
+               sr2 = ( (FF(i) % sig + FF(j) % sig) * (FF(i) % sig + FF(j) % sig) ) / rcutsq
+               case (3)
+               ! OPLS  FF :: GMX COMB-RULE 3  
+               sr2 = ( (FF(i) % sig * FF(j) % sig) * (FF(j) % sig * FF(i) % sig) ) / rcutsq
+          end select
+          eps = FF(i) % eps * FF(j) % eps
 
-               flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
-                       ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
-               flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
-                       ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
+          If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
 
-               if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                   sr2 = ( SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1) ) / rcutsq
-                   eps = SpecialPairs(k) % Parms(2)  
-                   exit read_loop
-               end if
+             k_loop: do  k = 1, size(SpecialPairs)
 
-          end do read_loop
+                  flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
+                  flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                          ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
 
-       end if
+                  if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+                      sr2 = ( SpecialPairs(k)%Parms(1) * SpecialPairs(k)%Parms(1) ) / rcutsq
+                      eps = SpecialPairs(k) % Parms(2)  
+                      exit k_loop
+                  end if
 
-       sr6  = sr2 * sr2 * sr2
-       sr12 = sr6 * sr6
-       vscut(i,j) = 4.d0  * ( eps * factor3 ) * (sr12 - sr6)
-       fscut(i,j) = 24.d0 * ( eps * factor3 ) * (2.d0 * sr12 - sr6)
-       fscut(i,j) = fscut(i,j) / rcut       
-     end do
-   end do 
- endif
+             end do k_loop
+
+             sr6  = sr2 * sr2 * sr2
+             sr12 = sr6 * sr6
+             !Energy at spherical surface of radius rcut
+             vscut(i,j) = 4.d0 * eps * (sr12 - sr6)
+             !Force
+             fscut(i,j) = 24.d0 * eps * (2.d0*sr12 - sr6)
+             fscut(i,j) = fscut(i,j) / rcut       
+
+      elseif( FF(i)%Buck .AND. FF(j)%Buck ) then
+
+             ! Buckingham
+
+             ! Combination Rules
+             Aij = FF(i)% BuckA * FF(j)% BuckA
+             Bij = FF(i)% BuckB + FF(j)% BuckB  
+             Cij = FF(i)% BuckC * FF(j)% BuckC
+             
+                n_loop: do  n = 1, size(SpecialPairs)
+             
+                   flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                           ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
+                   flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                           ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
+             
+                   if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+                      Aij = SpecialPairs(n)% Parms(1) 
+                      Bij = SpecialPairs(n)% Parms(2)
+                      Cij = SpecialPairs(n)% Parms(3)  
+                      exit n_loop
+                   end if
+             
+                end do n_loop
+             
+             end if
+             
+             sr2   = 1.d0 / rcutsq
+             sr6   = sr2 * sr2 * sr2 
+             
+             !Energy at spherical surface of radius rcut
+             vscut(i,j) = Aij*exp(-Bij*rcut) - Cij*sr6 
+             !Force
+             fscut(i,j) = Aij*Bij*exp(-Bij*rcut) - SIX*Cij*sr6/rcut
+
+      else
+
+             vscut(i,j) = d_zero
+             fscut(i,j) = d_zero
+
+      endif
+
+ end do
+ end do 
 
 !###########################################################
  sr2    = 1.d0/rcutsq
  KRIJ   = KAPPA * rcut
- vrecut = coulomb * factor3 * ERFC(KRIJ) / rcut
+ vrecut = coulomb * ERFC(KRIJ) / rcut
  expar  = exp( - (KRIJ * KRIJ) )
- frecut = coulomb * sr2 * ( ERFC(KRIJ) + 2. * rsqpi * KAPPA * rcut * expar )
+ frecut = coulomb * sr2 * ( ERFC(KRIJ) + TWO * rsqPI * KAPPA * rcut * expar )
 
 end subroutine SETUP
 !
