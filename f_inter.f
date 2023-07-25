@@ -2,10 +2,11 @@ module F_inter_m
 
     use constants_m
     use omp_lib
+    use type_m       , only : warning
     use parameters_m , only : PBC
     use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot_INTER , ecoul , &
                               eintra , evdw , vscut , fscut , KAPPA
-    use MD_read_m    , only : atom , MM , molecule
+    use md_read_m    , only : atom , MM , molecule , special_pair_mtx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
     use gmx2mdflex   , only : SpecialPairs
@@ -166,13 +167,24 @@ do k = 1 , MM % N_of_atoms - 1
 
                     dkl = SQRT(rkl2)
 
-                    if( atom(k)%LJ .AND. atom(l)%LJ ) then
-                        call Lennard_Jones( k , l , fs , vsr )
+                    select case ( special_pair_mtx(k,l) )
 
-                    elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
-                        call Buckingham( k , l , fs , vsr )
+                           case(0) ! <== not a SP
+                                   if( atom(k)%LJ .AND. atom(l)%LJ ) then
+                                       call Lennard_Jones( k , l , fs , vsr )
+                                   elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
+                                       call Buckingham( k , l , fs , vsr )
+                                   endif
+                           case(1) 
+                                   call Lennard_Jones( k , l , fs , vsr )
+                           case(2)
+                                   call Buckingham( k , l , fs , vsr )
+                           case default
 
-                    endif
+                                   CALL warning("unknown non-bonding special pair code in special_pair_mtx")
+                                   STOP
+                    end select
+
                     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
                     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
                     
@@ -293,37 +305,37 @@ logical :: flag1 , flag2
 
 ! Lennard Jones ...
 
-select case ( MM % CombinationRule )
+if( special_pair_mtx(k,l) == 0 ) then 
+      select case ( MM % CombinationRule )
+      
+          case (2) 
+              ! AMBER FF :: GMX COMB-RULE 2
+              sr2 = (atom(k)%sig + atom(l)%sig)**2 / rkl2
+      
+          case (3)
+              ! OPLS  FF :: GMX COMB-RULE 3
+              sr2 = (atom(k)%sig * atom(l)%sig )**2 / rkl2
+      
+      end select
+      eps = atom(k)%eps * atom(l)%eps
 
-    case (2) 
-        ! AMBER FF :: GMX COMB-RULE 2
-        sr2 = (atom(k)%sig + atom(l)%sig)**2 / rkl2
-
-    case (3)
-        ! OPLS  FF :: GMX COMB-RULE 3
-        sr2 = (atom(k)%sig * atom(l)%sig )**2 / rkl2
-
-end select
-eps = atom(k)%eps * atom(l)%eps
-
-If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
-
-   read_loop: do  n = 1, size(SpecialPairs)
-
-      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
-
-      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-         sr2 = SpecialPairs(n)%Parms(1)**2 / rkl2
-         eps = SpecialPairs(n)%Parms(2) 
-         exit read_loop
-      end if
-
-   end do read_loop
-
-end if
+else
+      
+      read_loop: do  n = 1, size(SpecialPairs)
+      
+         flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                 ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+         flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                 ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+      
+         if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+            sr2 = SpecialPairs(n)%Parms(1)**2 / rkl2
+            eps = SpecialPairs(n)%Parms(2) 
+            exit read_loop
+         end if
+      
+      end do read_loop
+endif
 
 sr6  = sr2 * sr2 * sr2
 sr12 = sr6 * sr6
@@ -357,32 +369,30 @@ logical :: flag1 , flag2
 
 ! Bukingham Potential and Forces ...
 
-! Combination Rules
+if( special_pair_mtx(k,l) == 0 ) then 
 
-A = atom(k)% BuckA * atom(l)% BuckA
-
-B = atom(k)% BuckB + atom(l)% BuckB
-
-C = atom(k)% BuckC * atom(l)% BuckC
-
-If( there_are_NB_SpecialPairs ) then    ! <== check whether (K,L) is a SpecialPair ... 
-
-   read_loop: do  n = 1, size(SpecialPairs)
-
-      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
-
-      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-         A = SpecialPairs(n)% Parms(1) 
-         B = SpecialPairs(n)% Parms(2)
-         C = SpecialPairs(n)% Parms(3)
-         exit read_loop
-      end if
-
-   end do read_loop
-
+      ! Combination Rules
+      A = atom(k)% BuckA * atom(l)% BuckA
+      B = atom(k)% BuckB + atom(l)% BuckB
+      C = atom(k)% BuckC * atom(l)% BuckC
+      
+else
+      
+      read_loop: do  n = 1, size(SpecialPairs)
+      
+         flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                 ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
+         flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
+                 ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) )
+      
+         if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+            A = SpecialPairs(n)% Parms(1) 
+            B = SpecialPairs(n)% Parms(2)
+            C = SpecialPairs(n)% Parms(3)
+            exit read_loop
+         end if
+      
+      end do read_loop
 end if
 
 sr2 = 1.d0 / rkl2

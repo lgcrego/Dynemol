@@ -14,11 +14,12 @@ module MD_read_m
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
 
-    type(MM_molecular) , allocatable   :: molecule(:)
-    type(MM_atomic)    , allocatable   :: atom(:) , FF(:)
+    type(MM_molecular) , allocatable :: molecule(:)
+    type(MM_atomic)    , allocatable :: atom(:) , FF(:)
+    integer            , allocatable :: special_pair_mtx(:,:) 
 
     ! module variables ...
-    public :: Build_MM_Environment , MM , atom , molecule , species , FF 
+    public :: Build_MM_Environment , MM , atom , molecule , species , FF , special_pair_mtx
 
     private
 
@@ -32,7 +33,8 @@ subroutine Build_MM_Environment
 implicit none
 
 ! local variables ...
-integer         :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr 
+integer :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr 
+logical :: flag1 , flag2
 
 !=======================  setting up system  ============================= 
 
@@ -298,9 +300,49 @@ do i = 1 , MM % N_of_species
     end where
 end do
 
+!========================================================================================= 
+! create special_pair_matrix
+
+allocate( special_pair_mtx(MM%N_of_atoms,MM%N_of_atoms), source = 0 )
+
+If( allocated(SpecialPairs) ) then
+    
+    do j = 1 , MM%N_of_atoms
+    do i = j , MM%N_of_atoms
+    
+             SP_loop: do  k = 1, size(SpecialPairs)
+
+                      flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( atom(i) % MMSymbol ) ) .AND. &
+                              ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( atom(j) % MMSymbol ) )
+                      flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( atom(i) % MMSymbol ) ) .AND. &
+                              ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( atom(j) % MMSymbol ) )
+              
+                      if ( flag1 .OR. flag2 ) then      ! <== (I,J) is a Special Pair ... 
+                           select case(SpecialPairs(k)% model)
+
+                                  case("LJ") 
+                                  special_pair_mtx(i,j) = 1
+
+                                  case("BUCK")
+                                  special_pair_mtx(i,j) = 2
+
+                           end select
+                           exit SP_loop
+                      end if                            ! <== (I,J) is NOT a Special Pair ...  
+
+             end do SP_loop
+
+             special_pair_mtx(j,i) = special_pair_mtx(i,j)
+    
+    enddo
+    enddo
+
+endif
+
+!========================================================================================= 
+
 ! use this to debug: { atom , molecule , species , FF , species } ...
 !call debug_MM( FF )
-!========================================================================================= 
 
 CALL MM_diagnosis( )
 
