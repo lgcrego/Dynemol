@@ -22,7 +22,7 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot_INTER, ecoul, eintra, evdw, bdpot, angpot, dihpot,    &
+use for_force   , only: rcut, pot_INTER, Ecoul_ShortRange, eintra, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harm_dih, imp_dih, harm_bond, morse_bond, Morspot
 implicit none
@@ -92,25 +92,25 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,*)
     write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
     write(10,*)'                                (kJ/mol)'
-    write(10,'(''Bond Potential              :'',F12.4)') bdpot     *mol*factor3*1.d-6    
-    write(10,'(''Harmonic Bond Potential     :'',F12.4)') harm_bond *mol*factor3*1.d-6    
-    write(10,'(''Morse Bond Potential        :'',F12.4)') morse_bond*mol*factor3*1.d-6    
-    write(10,'(''Morse (Inter) Potential     :'',F12.4)') Morspot   *mol*factor3*1.d-6    
-    write(10,'(''Angle Potential             :'',F12.4)') angpot    *mol*factor3*1.d-6   
-    write(10,'(''Dihedral Potential          :'',F12.4)') dihpot    *mol*factor3*1.d-6   
-    write(10,'(''Proper Dihedral             :'',F12.4)') proper_dih*mol*factor3*1.d-6   
-    write(10,'(''Ryckaert-Bell. Dihedral     :'',F12.4)') ryck_dih  *mol*factor3*1.d-6   
-    write(10,'(''Harmonic Dihedral           :'',F12.4)') harm_dih  *mol*factor3*1.d-6
-    write(10,'(''Improper Dihedral (cos)     :'',F12.4)') imp_dih   *mol*factor3*1.d-6
-    write(10,'(''Lennard-Jones 1-4           :'',F12.4)') LJ_14     *mol*1.d-6  
-    write(10,'(''Lennard-Jones Intra         :'',F12.4)') LJ_Intra  *mol*1.d-6  
-    write(10,'(''Lennard-Jones               :'',F12.4)') evdw      *mol*1.d-6      
-    write(10,'(''Coulomb 1-4                 :'',F12.4)') Coul_14   *mol*1.d-6  
-    write(10,'(''Coulomb Intra               :'',F12.4)') Coul_Intra*mol*1.d-6  
-    write(10,'(''Coulomb self-interaction    :'',F12.4)') eintra    *mol*1.d-6    
-    write(10,'(''Coulomb short-range         :'',F12.4)') ecoul     *mol*1.d-6      
-    write(10,'(''Total Coulomb               :'',F12.4)') (-(ecoul + eintra)*mol*1.d-6 ) 
-    write(10,'(''Potential (INTER) Energy    :'',F12.4)') pot_INTER
+    write(10,'(''Bond Potential              :'',F14.4)') bdpot     *mol*factor3*1.d-6    
+    write(10,'(''Harmonic Bond Potential     :'',F14.4)') harm_bond *mol*factor3*1.d-6    
+    write(10,'(''Morse Bond Potential        :'',F14.4)') morse_bond*mol*factor3*1.d-6    
+    write(10,'(''Morse (Inter) Potential     :'',F14.4)') Morspot   *mol*factor3*1.d-6    
+    write(10,'(''Angle Potential             :'',F14.4)') angpot    *mol*factor3*1.d-6   
+    write(10,'(''Dihedral Potential          :'',F14.4)') dihpot    *mol*factor3*1.d-6   
+    write(10,'(''Proper Dihedral             :'',F14.4)') proper_dih*mol*factor3*1.d-6   
+    write(10,'(''Ryckaert-Bell. Dihedral     :'',F14.4)') ryck_dih  *mol*factor3*1.d-6   
+    write(10,'(''Harmonic Dihedral           :'',F14.4)') harm_dih  *mol*factor3*1.d-6
+    write(10,'(''Improper Dihedral (cos)     :'',F14.4)') imp_dih   *mol*factor3*1.d-6
+    write(10,'(''Lennard-Jones 1-4           :'',F14.4)') LJ_14     *mol*1.d-6  
+    write(10,'(''Lennard-Jones Intra         :'',F14.4)') LJ_Intra  *mol*1.d-6  
+    write(10,'(''Lennard-Jones               :'',F14.4)') evdw      *mol*1.d-6      
+    write(10,'(''Coulomb 1-4                 :'',F14.4)') Coul_14   *mol*1.d-6  
+    write(10,'(''Coulomb Intra               :'',F14.4)') Coul_Intra*mol*1.d-6  
+    write(10,'(''Coulomb self-interaction    :'',F14.4)') eintra    *mol*1.d-6    
+    write(10,'(''Coulomb short-range         :'',F14.4)') Ecoul_ShortRange*mol*1.d-6      
+    write(10,'(''Total Coulomb               :'',F14.4)') (-(Ecoul_ShortRange + eintra)*mol*1.d-6 ) 
+    write(10,'(''Potential (INTER) Energy    :'',F14.4)') pot_INTER
     write(10,'(''Potential Energy (gmx-like) :'',ES16.7E3)') pot_total
     write(10,*)
 

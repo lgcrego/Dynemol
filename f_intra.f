@@ -27,7 +27,7 @@ module F_intra_m
     real*8                 :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
                               rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
                               sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
-                              term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
+                              term , chrgi , chrgj , Fcoul , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
                               sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
                               term4 , dphi1 , dphi2 , dij , rij2
     real*8                 :: pot_INTRA
@@ -321,35 +321,15 @@ do i = 1 , MM % N_of_molecules
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
 
-            rij2   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
+            rij2 = sum( rij(:)**2 )
 
             call Lennard_Jones_14
 
-            ! Coulomb Interaction for 1-4 pairs
-            chrgi  = atom(ati) % charge
-            chrgj  = atom(atj) % charge
-
-            !  Real part (Numero de cargas igual ao numero de sitios)
-            dij = sqrt(rij2)
-            sr2   = 1.d0 / rij2
-            KRIJ  = KAPPA * dij
-            expar = EXP( -(KRIJ*KRIJ) )
-            freal = coulomb * chrgi * chrgj * ( sr2/dij )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqPI * KAPPA * dij * expar ) * MM % fudgeQQ
-
-            !Forces
-            atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + freal * rij(1:3)
-            atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
-
-            !Energy 
-            tterm = coulomb * chrgi * chrgj * ERFC(KRIJ)/dij * MM % fudgeQQ
-
-            Coul_14 = Coul_14 + tterm*factor3 
+            call Coulomb14
 
         end if
     end do
 end do
-
 !====================================================================
 ! Lennard-Jones intramolecular interactions ...
 
@@ -367,43 +347,23 @@ do i = 1 , MM % N_of_molecules
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
 
-            rij2   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
+            rij2 = sum( rij(:)**2 )
+            dij  = SQRT(rij2)
 
             if ( rij2 < rcutsq ) then
 
-            select case( molecule(i)% intraIJ(j,3) )
+                 select case( molecule(i)% intraIJ(j,3) )
 
-                   case(1)
-                   call Lennard_Jones
+                        case(1)
+                        call Lennard_Jones
 
-                   case(2) 
-                   call Buckingham
+                        case(2) 
+                        call Buckingham
 
-            end select
+                 end select
 
-            ! Coulomb Interaction
-            chrgi = atom(ati) % charge
-            chrgj = atom(atj) % charge
-
-            !  Real part (Number of charges equal to the number of sites)
-            sr2   = 1.d0 / rij2
-            KRIJ  = KAPPA * dij
-            expar = EXP( -(KRIJ*KRIJ) )
-
-            !Force
-            freal = coulomb * chrgi * chrgj * (sr2/dij)
-            freal = freal * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar )
-            ! force with cut-off ...
-            freal = freal - (frecut * chrgi * chrgj / dij)   
-            atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + freal * rij(1:3)
-            atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - freal * rij(1:3)
-
-            !Energy
-            tterm = coulomb * chrgi * chrgj * ERFC(KRIJ)/dij
-            ! including cutoff ...
-            tterm = tterm - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
-
-            Coul_intra = Coul_intra + tterm*factor3 ! <== Coulomb energy
+                 ! Coulomb Interaction
+                 call Coulomb_DSF
 
             end if
         end if
@@ -489,6 +449,82 @@ end subroutine ForceINTRA
 !
 !
 !========================
+ subroutine Coulomb_DSF
+!========================
+implicit none
+
+! local variables ...
+
+! Coulomb damped shifted field, V_dsf ...
+! this corresponds to the damped (short-range, real-space) part of the potential ...
+
+chrgi = atom(ati)% charge
+chrgj = atom(atj)% charge
+
+sr2   = 1.d0 / rij2
+KRIJ  = KAPPA * dij
+expar = EXP(-KRIJ**2)
+
+!Force
+Fcoul = coulomb * chrgi * chrgj * (sr2/dij)
+! damped Fcoul
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar )
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
+Fcoul = Fcoul - (frecut * chrgi * chrgj / dij)   
+atom(ati) % fnonch(1:3) = atom(ati) % fnonch(1:3) + Fcoul * rij(1:3)
+atom(atj) % fnonch(1:3) = atom(atj) % fnonch(1:3) - Fcoul * rij(1:3)
+
+!Energy
+tterm = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ)
+! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+tterm = tterm - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
+
+Coul_intra = Coul_intra + tterm*factor3 ! <== Coulomb energy
+
+end subroutine Coulomb_DSF
+!
+!
+!
+!
+!====================
+ subroutine Coulomb14
+!====================
+implicit none
+
+! local variables ...
+
+! Coulomb damped field ...
+
+! Coulomb Interaction for 1-4 pairs
+chrgi = atom(ati)% charge
+chrgj = atom(atj)% charge
+
+dij = sqrt(rij2)
+sr2   = 1.d0 / rij2
+KRIJ  = KAPPA * dij
+expar = EXP(-KRIJ**2)
+
+! for preserving 1-4 Coulomb interactions mind the parameters below
+!erfc(kappa*dij) ~ 0.98 for kappa = 0.005 and dij = 2.5
+
+!Force
+Fcoul = coulomb * chrgi * chrgj * ( sr2/dij )
+! damped Fcoul
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar ) * MM%fudgeQQ
+atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + Fcoul * rij(1:3)
+atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - Fcoul * rij(1:3)
+
+!Energy 
+tterm = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ) * MM%fudgeQQ
+
+Coul_14 = Coul_14 + tterm*factor3 
+
+end subroutine Coulomb14
+!
+!
+!
+!
+!========================
  subroutine Lennard_Jones
 !========================
 implicit none
@@ -528,7 +564,6 @@ If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPa
 
 end if
 
-dij = SQRT(rij2)
 sr6   = sr2 * sr2 * sr2
 sr12  = sr6 * sr6
 
@@ -537,6 +572,7 @@ fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
 ! including cut-off ...
 ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
 atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
 fs = fs/rij2 - fscut(ati1,atj1)/dij     
 
 atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
@@ -544,6 +580,7 @@ atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
 
 !Energy
 sterm = 4.d0 * eps * ( sr12 - sr6 )
+! LJ shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
 sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
 
 LJ_intra = LJ_intra + sterm*factor3 ! <== LJ energy
@@ -651,7 +688,6 @@ If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPa
 
 end if
 
-dij = SQRT(rij2)
 sr2   = 1.d0 / rij2
 sr6   = sr2 * sr2 * sr2 
 sr8   = sr2 * sr2 * sr2 * sr2
@@ -662,7 +698,7 @@ fs = Aij*Bij*exp(-Bij*dij) / dij - SIX*Cij*sr8
 ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
 atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
 
-! force with cut-off ...
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
 fs = fs - fscut(ati1,atj1)/dij     
 
 atom(ati) % fnonbd(1:3) = atom(ati) % fnonbd(1:3) + fs * rij(1:3)
@@ -670,7 +706,7 @@ atom(atj) % fnonbd(1:3) = atom(atj) % fnonbd(1:3) - fs * rij(1:3)
 
 !Energy
 sterm = Aij*exp(-Bij*dij) - Cij*sr6
-! formula with cutoff ...
+! Buckingham shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
 sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
 
 LJ_intra = LJ_intra + sterm*factor3  ! <== LJ energy
@@ -861,6 +897,8 @@ end subroutine not_gmx
 !===================
  function ERFC ( X )
 !===================
+! ERFC = (1 - ERF), complementary error function ...
+ implicit none
  real*8 :: ERFC
  real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
  parameter ( A1 = 0.254829592, A2 = -0.284496736 ) 

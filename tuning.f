@@ -282,7 +282,7 @@ module for_force
  integer                               :: forcefield
  real*8, dimension(:,:)  , allocatable :: vscut, fscut
  real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
- real*8                                :: ecoul, eintra, evdw
+ real*8                                :: Ecoul_ShortRange, eintra, evdw
  real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
  real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, imp_dih
  real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra

@@ -16,10 +16,10 @@ module MD_read_m
 
     type(MM_molecular) , allocatable :: molecule(:)
     type(MM_atomic)    , allocatable :: atom(:) , FF(:)
-    integer            , allocatable :: special_pair_mtx(:,:) 
+    integer            , allocatable :: special_pair_mtx(:,:) , FF_SP_mtx(:,:)
 
     ! module variables ...
-    public :: Build_MM_Environment , MM , atom , molecule , species , FF , special_pair_mtx
+    public :: Build_MM_Environment , MM , atom , molecule , species , FF , special_pair_mtx , FF_SP_mtx
 
     private
 
@@ -304,12 +304,13 @@ end do
 ! create special_pair_matrix
 
 allocate( special_pair_mtx(MM%N_of_atoms,MM%N_of_atoms), source = 0 )
+allocate( FF_SP_mtx(MM%N_of_atoms,MM%N_of_atoms), source = 0 )
 
 If( allocated(SpecialPairs) ) then
-    
+   
+    ! special_pair_mtx for atom(:) ... 
     do j = 1 , MM%N_of_atoms
     do i = j , MM%N_of_atoms
-    
              SP_loop: do  k = 1, size(SpecialPairs)
 
                       flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( atom(i) % MMSymbol ) ) .AND. &
@@ -331,9 +332,37 @@ If( allocated(SpecialPairs) ) then
                       end if                            ! <== (I,J) is NOT a Special Pair ...  
 
              end do SP_loop
-
              special_pair_mtx(j,i) = special_pair_mtx(i,j)
-    
+    enddo
+    enddo
+
+! ##########################
+
+    ! special_pair_mtx for FF(:) ... 
+    do j = 1 , atmax
+    do i = j , atmax
+             FFSP_loop: do  k = 1, size(SpecialPairs)
+
+                      flag1 = ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                              ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(j) % MMSymbol ) )
+                      flag2 = ( adjustl( SpecialPairs(k) % MMSymbols(2) ) == adjustl( FF(i) % MMSymbol ) ) .AND. &
+                              ( adjustl( SpecialPairs(k) % MMSymbols(1) ) == adjustl( FF(j) % MMSymbol ) )
+              
+                      if ( flag1 .OR. flag2 ) then      ! <== (I,J) is a Special Pair ... 
+                           select case(SpecialPairs(k)% model)
+
+                                  case("LJ") 
+                                  FF_SP_mtx(i,j) = 1
+
+                                  case("BUCK")
+                                  FF_SP_mtx(i,j) = 2
+
+                           end select
+                           exit FFSP_loop
+                      end if                            ! <== (I,J) is NOT a Special Pair ...  
+
+             end do FFSP_loop
+             FF_SP_mtx(j,i) = FF_SP_mtx(i,j)
     enddo
     enddo
 

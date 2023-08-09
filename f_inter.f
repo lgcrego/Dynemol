@@ -4,7 +4,7 @@ module F_inter_m
     use omp_lib
     use type_m       , only : warning
     use parameters_m , only : PBC
-    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot_INTER , ecoul , &
+    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot_INTER , Ecoul_ShortRange , &
                               eintra , evdw , vscut , fscut , KAPPA
     use md_read_m    , only : atom , MM , molecule , special_pair_mtx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
@@ -30,11 +30,11 @@ implicit none
 
 !local variables ...
 real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
-real*8  , allocatable   :: erfkr(:,:)
+real*8  , allocatable   :: erfunc(:,:)
 integer , allocatable   :: species_offset(:)
-real*8                  :: rij(3) , rjk(3) , rkl(3)
-real*8                  :: rjkq , rjksq , tmp , pikap , erfkrq , chrgk , chrgl , eps 
-real*8                  :: vreal , freal , sr2 , fs , KRIJ , expar , vsr , vself , pot
+real*8                  :: rij(3) , rjk(3) , rkl(3) , cm_kl(3)
+real*8                  :: rij2 , dij , tmp , pikap , erfkrq , chrgk , chrgl , eps 
+real*8                  :: Ecoul_damped , Fcoul , sr2 , fs , KRIJ , expar , vsr , vself , pot
 real*8                  :: stresSR11 , stresSR22 , stresSR33 , stresSR12 , stresSR13 , stresSR23
 real*8                  :: stresRE11 , stresRE22 , stresRE33 , stresRE12 , stresRE13 , stresRE23 
 integer                 :: i , j , k , l , j1 , j2
@@ -59,7 +59,7 @@ numthr = OMP_get_max_threads()
 allocate( tmp_fsr ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
 allocate( tmp_fch ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
 
-allocate( erfkr ( MM % N_of_atoms , MM % N_of_atoms ) , source = D_zero )
+allocate( erfunc ( MM % N_of_atoms , MM % N_of_atoms ) , source = D_zero )
 
 do i = 1, MM % N_of_atoms 
     atom(i) % fsr(:) = D_zero
@@ -68,35 +68,34 @@ end do
 
 pot    = D_zero
 vself  = D_zero 
-ecoul  = D_zero
 evdw   = D_zero
 eintra = D_zero
+Ecoul_ShortRange = D_zero
 
 If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true. 
 
 ! ##################################################################
 ! vself part of the Coulomb calculation
 
-!$OMP parallel do private(i,nresid,j1,j2,j,rjk,rjkq,rjksq,tmp) default(shared)
+!$OMP parallel do private(i,nresid,j1,j2,j,rij,rij2,dij,tmp) default(shared)
 do i = 1 , MM % N_of_atoms 
 
     nresid = atom(i) % nr
     
     if ( molecule(nresid) % N_of_atoms > 1 ) then
 
-        j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-        j2 = sum(molecule(1:nresid) % N_of_atoms)
+        j1 = sum(molecule(1:nresid-1)% N_of_atoms) + 1
+        j2 = sum(molecule(1:nresid)% N_of_atoms)
 
         do j =  j1 , j2
             if ( i /= j ) then
 
-                rjk(:)     = atom(i) % xyz(:) - atom(j) % xyz(:)
-                rjk(:)     = rjk(:) - MM % box(:) * DNINT( rjk(:) * MM % ibox(:) ) * PBC(:)
-                rjkq       = sum( rjk(:) * rjk(:) )
-                rjksq      = sqrt(rjkq)
-                ! KAPPA = damping_Wolf, for card.inpt
-                tmp        = KAPPA * rjksq
-                erfkr(i,j) = Coulomb*(D_one - ERFC(tmp))/rjksq
+                rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
+                rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+                rij2 = sum( rij(:)**2 )
+                dij = sqrt(rij2)
+                tmp = KAPPA * dij
+                erfunc(i,j) = Coulomb*(D_one - ERFC(tmp))/dij
 
             end if
         end do
@@ -109,18 +108,18 @@ pikap = (HALF*vrecut) + (rsqPI*KAPPA*coulomb)
 !$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
 do i = 1 , MM % N_of_atoms
 
-    vself  = vself + (pikap * atom(i)%charge * atom(i)%charge)
+    vself  = vself + pikap*atom(i)%charge**2
     nresid = atom(i) % nr
 
     if ( molecule(nresid) % N_of_atoms > 1 ) then
 
-        j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-        j2 = sum(molecule(1:nresid) % N_of_atoms)       
+        j1 = sum(molecule(1:nresid-1)% N_of_atoms) + 1
+        j2 = sum(molecule(1:nresid)% N_of_atoms)       
 
        do j =  j1 , j2
           if ( i /= j ) then
 
-             erfkrq = HALF * ( erfkr(i,j) + vrecut )
+             erfkrq = HALF * ( erfunc(i,j) + vrecut )
              vself  = vself + atom(i)%charge * atom(j)%charge * erfkrq
 
           endif
@@ -134,17 +133,17 @@ eintra = eintra + vself
 
 !##############################################################################
 !!$OMP parallel DO &
-!!$OMP private (k, l, atk, atl, rkl2, dkl, chrgk, chrgl, sr2, KRIJ, rij, rkl, fs, vsr, vreal, &
-!!$OMP          expar, freal, nresidk, nresidl , ithr )                                         &
-!!$OMP reduction (+ : pot, ecoul, evdw, stresSR11, stresSR22, stresSR33, stresSR12, stresSR13, stresSR23,  &
+!!$OMP private (k, l, atk, atl, rkl2, dkl, chrgk, chrgl, sr2, KRIJ, cm_kl, rkl, fs, vsr, Ecoul_damped, &
+!!$OMP          expar, Fcoul, nresidk, nresidl , ithr )                                         &
+!!$OMP reduction (+ : pot, Ecoul_ShortRange, evdw, stresSR11, stresSR22, stresSR33, stresSR12, stresSR13, stresSR23,  &
 !!$OMP                                  stresRE11, stresRE22, stresRE33, stresRE12, stresRE13, stresRE23)
                    
-! LJ and Coulomb calculation
+! vdW and Coulomb calculations ...
 
 do k = 1 , MM % N_of_atoms - 1
-    do l = k , MM % N_of_atoms
+    do l = k+1 , MM % N_of_atoms
 
-       ! do it for different molecules ...
+       ! for different molecules ...
         if ( atom(k) % nr /= atom(l) % nr ) then
         
             ithr    = OMP_get_thread_num() + 1
@@ -152,13 +151,13 @@ do k = 1 , MM % N_of_atoms - 1
             nresidk = atom(k) % nr
             nresidl = atom(l) % nr
 
-            rij(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-            rij(:)  = rij(:) - MM % box * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+            cm_kl(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+            cm_kl(:)  = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
 
             rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
             rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
 
-            rkl2    = sum( rkl(:) * rkl(:) )
+            rkl2    = sum( rkl(:)**2 )
 
             if( rkl2 < rcutsq ) then
 
@@ -169,7 +168,7 @@ do k = 1 , MM % N_of_atoms - 1
 
                     select case ( special_pair_mtx(k,l) )
 
-                           case(0) ! <== not a SP
+                           case(0) ! <== not a SpecialPair
                                    if( atom(k)%LJ .AND. atom(l)%LJ ) then
                                        call Lennard_Jones( k , l , fs , vsr )
                                    elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
@@ -180,7 +179,6 @@ do k = 1 , MM % N_of_atoms - 1
                            case(2)
                                    call Buckingham( k , l , fs , vsr )
                            case default
-
                                    CALL warning("unknown non-bonding special pair code in special_pair_mtx")
                                    STOP
                     end select
@@ -188,12 +186,12 @@ do k = 1 , MM % N_of_atoms - 1
                     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
                     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
                     
-                    stresSR11 = stresSR11 + rij(1) * fs * rkl(1) 
-                    stresSR22 = stresSR22 + rij(2) * fs * rkl(2)
-                    stresSR33 = stresSR33 + rij(3) * fs * rkl(3)
-                    stresSR12 = stresSR12 + rij(1) * fs * rkl(2)
-                    stresSR13 = stresSR13 + rij(1) * fs * rkl(3)
-                    stresSR23 = stresSR23 + rij(2) * fs * rkl(3)
+                    stresSR11 = stresSR11 + cm_kl(1) * fs * rkl(1) 
+                    stresSR22 = stresSR22 + cm_kl(2) * fs * rkl(2)
+                    stresSR33 = stresSR33 + cm_kl(3) * fs * rkl(3)
+                    stresSR12 = stresSR12 + cm_kl(1) * fs * rkl(2)
+                    stresSR13 = stresSR13 + cm_kl(1) * fs * rkl(3)
+                    stresSR23 = stresSR23 + cm_kl(2) * fs * rkl(3)
                     
                     vsr  = vsr - vscut(atk,atl) + fscut(atk,atl)*( dkl - rcut )
                     pot  = pot  + vsr*factor3
@@ -205,37 +203,37 @@ do k = 1 , MM % N_of_atoms - 1
 
                     sr2   = 1.d0 / rkl2
                     KRIJ  = KAPPA * dkl
-                    expar = EXP( -(KRIJ*KRIJ) )
+                    expar = EXP(-KRIJ**2)
 
                     !Force
-                    freal = coulomb * chrgk * chrgl * (sr2 / dkl)
-                    freal = freal * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dkl*expar )
-                    ! force with cut-off ...  
-                    freal = freal - (frecut * chrgk * chrgl / dkl)
-                    tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + freal * rkl(1:3)
-                    tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - freal * rkl(1:3)
+                    Fcoul = coulomb * chrgk * chrgl * (sr2/dkl)
+                    ! damped Fcoul
+                    Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dkl*expar )
+                    ! shifted force: F_sf(R) = F(R) - F(Rc) ...
+                    Fcoul = Fcoul - (frecut * chrgk * chrgl / dkl)
+                    tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
+                    tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
 
-                    stresRE11 = stresRE11 + rij(1) * freal * rkl(1)
-                    stresRE22 = stresRE22 + rij(2) * freal * rkl(2)
-                    stresRE33 = stresRE33 + rij(3) * freal * rkl(3)
-                    stresRE12 = stresRE12 + rij(1) * freal * rkl(2)
-                    stresRE13 = stresRE13 + rij(1) * freal * rkl(3)
-                    stresRE23 = stresRE23 + rij(2) * freal * rkl(3)
+                    stresRE11 = stresRE11 + cm_kl(1) * Fcoul * rkl(1)
+                    stresRE22 = stresRE22 + cm_kl(2) * Fcoul * rkl(2)
+                    stresRE33 = stresRE33 + cm_kl(3) * Fcoul * rkl(3)
+                    stresRE12 = stresRE12 + cm_kl(1) * Fcoul * rkl(2)
+                    stresRE13 = stresRE13 + cm_kl(1) * Fcoul * rkl(3)
+                    stresRE23 = stresRE23 + cm_kl(2) * Fcoul * rkl(3)
 
                     !Energy
-                    vreal = coulomb * chrgk * chrgl * ERFC(KRIJ)/dkl
-                    ! including cutoff ...
-                    vreal = vreal - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( dkl-rcut ))
+                    Ecoul_damped = (coulomb*chrgk*chrgl/dkl) * ERFC(KRIJ)
+                    ! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+                    Ecoul_damped = Ecoul_damped - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( dkl-rcut ))
 
-                    pot   = pot   + vreal*factor3
-                    ecoul = ecoul + vreal*factor3
+                    pot = pot + Ecoul_damped*factor3
+                    Ecoul_ShortRange = Ecoul_ShortRange + Ecoul_damped*factor3
          
             end if
         end if
     end do
 end do
 !!$OMP end parallel do
-
 ! ################################################################################3
 
 pot = pot - vself
@@ -282,7 +280,7 @@ do i = 1, MM % N_of_atoms
     atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
-deallocate ( tmp_fsr , tmp_fch , erfkr )
+deallocate ( tmp_fsr , tmp_fch , erfunc )
 
 end subroutine FORCEINTER
 !
@@ -415,6 +413,8 @@ end subroutine Buckingham
 !===================
  function ERFC ( X )
 !===================
+! ERFC = (1 - ERF), complementary error function ...
+ implicit none
  real*8 :: ERFC
  real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
  parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 

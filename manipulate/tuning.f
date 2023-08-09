@@ -52,12 +52,14 @@ real*8       :: delta_t = 0.d0
 !----------------------------------
 !      define fragment's
 !----------------------------------
+where( system% atom% resid == "MA+" ) system% atom% fragment = "S"
+where( system% atom% resid == "PBI" ) system% atom% fragment = "C"
 
 !----------------------------------
 !      define operations: 
 ! copy, delete, translate, rotate, group
 !----------------------------------
-system % atom % group = .true.
+system % atom % copy = .true.
 !----------------------------------
 !      define resid's
 !----------------------------------
