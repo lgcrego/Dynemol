@@ -9,7 +9,7 @@ module F_intra_m
     use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                                   vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
                                   Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                                  harm_dih, imp_dih, harm_bond, morse_bond
+                                  harm_dih, imp_dih, harm_bond, morse_bond, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
@@ -330,6 +330,7 @@ do i = 1 , MM % N_of_molecules
         end if
     end do
 end do
+ 
 !====================================================================
 ! Lennard-Jones intramolecular interactions ...
 
@@ -409,8 +410,8 @@ end If
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
 pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
-pot_total = pot_INTER + pot_INTRA
-pot_total = pot_total * mol * micro / MM % N_of_molecules
+pot_total = pot_INTER + pot_INTRA - Vself
+pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 
 if( QMMM ) then
     select case (driver)
@@ -448,15 +449,17 @@ end subroutine ForceINTRA
 !
 !
 !
-!========================
+!======================
  subroutine Coulomb_DSF
-!========================
+!======================
 implicit none
 
 ! local variables ...
 
 ! Coulomb damped shifted field, V_dsf ...
-! this corresponds to the damped (short-range, real-space) part of the potential ...
+! the damped and cutoff-neutralized Coulomb potential ...
+! incorporates both image charges at Rc surface and damping of electrostatic interaction ...
+! for details: JPC 124, 234104 (2006)
 
 chrgi = atom(ati)% charge
 chrgj = atom(atj)% charge
@@ -901,11 +904,11 @@ end subroutine not_gmx
  implicit none
  real*8 :: ERFC
  real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
- parameter ( A1 = 0.254829592, A2 = -0.284496736 ) 
- parameter ( A3 = 1.421413741, A4 = -1.453122027 ) 
- parameter ( A5 = 1.061405429, P  =  0.3275911   ) 
+ parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 
+ parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
+ parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
 
- T    = 1.0 / ( 1.0 + P * X )
+ T    = d_one / ( d_one + P * X )
  XSQ  = X * X
  TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
  ERFC = TP * EXP ( -XSQ )

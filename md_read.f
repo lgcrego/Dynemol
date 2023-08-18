@@ -303,8 +303,9 @@ end do
 !========================================================================================= 
 ! create special_pair_matrix
 
+! default is no special pairs; mtx = 0 ...
 allocate( special_pair_mtx(MM%N_of_atoms,MM%N_of_atoms), source = 0 )
-allocate( FF_SP_mtx(MM%N_of_atoms,MM%N_of_atoms), source = 0 )
+allocate( FF_SP_mtx       (atmax        ,atmax        ), source = 0 )
 
 If( allocated(SpecialPairs) ) then
    

@@ -1100,6 +1100,7 @@ do a = 1 , MM % N_of_species
         allocate( dummy_array_I ( n_pairs , 3 ) , source = I_zero )
 
         k = 0
+ 
         do i = 1   , species(a)% N_of_Atoms - 1
         do j = i+1 , species(a)% N_of_Atoms
 
@@ -1121,23 +1122,6 @@ do a = 1 , MM % N_of_species
         end do
         species(a) % NintraIJ = k
         if( k > 0 ) allocate( species(a)% IntraIJ , source = dummy_array_I(1:k,:) )
-
-!        ! reset dummy ...
-!        dummy_array_I = I_zero
-!
-!        k = 0
-!        do i = 1   , species(a)% N_of_Atoms - 1
-!        do j = i+1 , species(a)% N_of_Atoms
-!
-!           if( species(a)%atom(i)%BUCK .AND. species(a)%atom(j)%BUCK ) then
-!                k = k + 1
-!                dummy_array_I(k,1) = i
-!                dummy_array_I(k,2) = j
-!                end if
-!        end do
-!        end do
-!        species(a) % NBuck = k
-!        if( k > 0 ) allocate( species(a)% IntraBuck , source = dummy_array_I )
 
         deallocate( dummy_array_I)
         

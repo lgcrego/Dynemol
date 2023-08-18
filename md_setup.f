@@ -324,7 +324,7 @@ end subroutine move_to_box_CM
  parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
  parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
 
- T    = 1.0d0 / ( 1.0d0 + P * X )
+ T    = d_one / ( d_one + P * X )
  XSQ  = X * X
  TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
  ERFC = TP * EXP ( -XSQ )

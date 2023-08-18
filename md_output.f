@@ -22,7 +22,7 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, pot_INTER, Ecoul_ShortRange, eintra, evdw, bdpot, angpot, dihpot,    &
+use for_force   , only: rcut, KAPPA, pot_INTER, Coul_inter, Vself, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harm_dih, imp_dih, harm_bond, morse_bond, Morspot
 implicit none
@@ -50,6 +50,7 @@ IF( .NOT. done ) then
     write(10,'(''Initial Bath Temperature  :'',F10.2,'' Kelvin'')'    ) bath_T
     write(10,'(''Box dimensions            :'',3F10.2,'' Angstroms'')') MM % box(1:3)
     write(10,'(''Cut-off radius            :'',F10.2,'' Angstroms'')' ) rcut
+    write(10,'(''ERFC damping (Wolf)       :'',F10.2,'' Angs^-1'')'   ) KAPPA
     write(10,'(''Density                   :'',F10.4,'' g/cm³'')'     ) Initial_density
     write(10,*)
     write(10,'(''System Temperature        :'',F10.2,'' Kelvin'')'    ) Ttrans
@@ -106,11 +107,10 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,'(''Lennard-Jones Intra         :'',F14.4)') LJ_Intra  *mol*1.d-6  
     write(10,'(''Lennard-Jones               :'',F14.4)') evdw      *mol*1.d-6      
     write(10,'(''Coulomb 1-4                 :'',F14.4)') Coul_14   *mol*1.d-6  
-    write(10,'(''Coulomb Intra               :'',F14.4)') Coul_Intra*mol*1.d-6  
-    write(10,'(''Coulomb self-interaction    :'',F14.4)') eintra    *mol*1.d-6    
-    write(10,'(''Coulomb short-range         :'',F14.4)') Ecoul_ShortRange*mol*1.d-6      
-    write(10,'(''Total Coulomb               :'',F14.4)') (-(Ecoul_ShortRange + eintra)*mol*1.d-6 ) 
-    write(10,'(''Potential (INTER) Energy    :'',F14.4)') pot_INTER
+    write(10,'(''Coulomb Intra-molecular     :'',F14.4)') Coul_Intra*mol*1.d-6  
+    write(10,'(''Coulomb self-interaction    :'',F14.4)') Vself    *mol*1.d-6    
+    write(10,'(''Coulomb Inter-molecular     :'',F14.4)') Coul_Inter*mol*1.d-6      
+    write(10,'(''Total Coulomb               :'',F14.4)') (Coul_14 + Coul_Intra + Coul_Inter - Vself)*mol*1.d-6  
     write(10,'(''Potential Energy (gmx-like) :'',ES16.7E3)') pot_total
     write(10,*)
 
