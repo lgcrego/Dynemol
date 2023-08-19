@@ -4,7 +4,7 @@ module F_inter_m
     use omp_lib
     use type_m       , only : warning
     use parameters_m , only : PBC
-    use for_force    , only : forcefield , rcut , vrecut , frecut , rcutsq , pot_INTER , Coul_inter , &
+    use for_force    , only : rcut , vrecut , frecut , rcutsq , pot_INTER , Coul_inter , &
                               Vself , evdw , vscut , fscut , KAPPA
     use md_read_m    , only : atom , MM , molecule , special_pair_mtx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
@@ -14,10 +14,7 @@ module F_inter_m
     public :: FORCEINTER
     
     ! module variables ...
-    real*8  , public  , save :: stresSR(3,3), stresRE(3,3)
-
-    real*8  :: rkl2 , dkl , atk , atl
-    logical :: there_are_NB_SpecialPairs = .false.
+    real*8, public, save :: stresSR(3,3), stresRE(3,3)
 
 contains
 !
@@ -29,17 +26,14 @@ contains
 implicit none
 
 !local variables ...
-real*8  , allocatable   :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
-real*8  , allocatable   :: erfunc(:,:)
-integer , allocatable   :: species_offset(:)
-real*8                  :: rij(3) , rjk(3) , rkl(3) , cm_kl(3)
-real*8                  :: rij2 , dij , tmp , pikap , erfkrq , chrgk , chrgl , eps , total_chrg
-real*8                  :: Ecoul_damped , Fcoul , sr2 , fs , KRIJ , expar , vsr , pot
-real*8                  :: stresSR11 , stresSR22 , stresSR33 , stresSR12 , stresSR13 , stresSR23
-real*8                  :: stresRE11 , stresRE22 , stresRE33 , stresRE12 , stresRE13 , stresRE23 
-integer                 :: i , j , k , l , j1 , j2
-integer                 :: OMP_get_thread_num , ithr , numthr , nresid , nresidl , nresidk
-logical                 :: flag1 , flag2 
+real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
+integer , allocatable :: species_offset(:)
+real*8                :: rkl(3) , cm_kl(3)
+real*8                :: total_chrg , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
+real*8                :: stresSR11 , stresSR22 , stresSR33 , stresSR12 , stresSR13 , stresSR23
+real*8                :: stresRE11 , stresRE22 , stresRE33 , stresRE12 , stresRE13 , stresRE23 
+integer               :: i , k , l , atk , atl
+integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
 CALL offset( species_offset )
 
@@ -59,133 +53,68 @@ numthr = OMP_get_max_threads()
 allocate( tmp_fsr ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
 allocate( tmp_fch ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
 
-allocate( erfunc ( MM % N_of_atoms , MM % N_of_atoms ) , source = D_zero )
-
 do i = 1, MM % N_of_atoms 
     atom(i) % fsr(:) = D_zero
     atom(i) % fch(:) = D_zero
 end do
 
-pot  = D_zero
 evdw = D_zero
 Coul_inter = D_zero
 
-If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true. 
-
-! ##################################################################
 ! vself part of the Coulomb calculation
-
-!!$OMP parallel do private(i,nresid,j1,j2,j,rij,rij2,dij,tmp) default(shared)
-!do i = 1 , MM % N_of_atoms 
-!
-!    nresid = atom(i) % nr
-!    
-!    if ( molecule(nresid) % N_of_atoms > 1 ) then
-!
-!        j1 = sum(molecule(1:nresid-1)% N_of_atoms) + 1
-!        j2 = sum(molecule(1:nresid)% N_of_atoms)
-!
-!        do j =  j1 , j2
-!            if ( i /= j ) then
-!
-!                rij(:) = atom(i) % xyz(:) - atom(j) % xyz(:)
-!                rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-!                rij2 = sum( rij(:)**2 )
-!                dij = sqrt(rij2)
-!                tmp = KAPPA * dij
-!                erfunc(i,j) = Coulomb*(D_one - ERFC(tmp))/dij
-!
-!            end if
-!        end do
-!    end if
-!end do
-!!$OMP end parallel do
-!
-!pikap = (HALF*vrecut) + (rsqPI*KAPPA*coulomb)
-!
-!!$OMP parallel do private(i,nresid,j1,j2,j,erfkrq) default(shared) reduction( + : vself )
-!do i = 1 , MM % N_of_atoms
-!
-!    vself  = vself + pikap*atom(i)%charge**2
-!    nresid = atom(i) % nr
-!
-!    if ( molecule(nresid) % N_of_atoms > 1 ) then
-!
-!        j1 = sum(molecule(1:nresid-1)% N_of_atoms) + 1
-!        j2 = sum(molecule(1:nresid)% N_of_atoms)       
-!
-!       do j =  j1 , j2
-!          if ( i /= j ) then
-!
-!             erfkrq = HALF * ( erfunc(i,j) + vrecut )
-!             vself  = vself + atom(i)%charge * atom(j)%charge * erfkrq
-!
-!          endif
-!       end do
-!    endif
-!end do
-!!$OMP end parallel do
-
-
-
-
-
-
-
 total_chrg = sum(atom(:)% charge)
 vself = (HALF*vrecut + rsqPI*KAPPA*coulomb) * total_chrg**2
 vself = vself*factor3
 
 !##############################################################################
-!!$OMP parallel DO &
-!!$OMP private (k, l, atk, atl, rkl2, dkl, chrgk, chrgl, sr2, KRIJ, cm_kl, rkl, fs, vsr, Ecoul_damped, &
-!!$OMP          expar, Fcoul, nresidk, nresidl , ithr )                                         &
-!!$OMP reduction (+ : pot, Coul_inter, evdw, stresSR11, stresSR22, stresSR33, stresSR12, stresSR13, stresSR23,  &
-!!$OMP                                  stresRE11, stresRE22, stresRE33, stresRE12, stresRE13, stresRE23)
-                   
 ! vdW and Coulomb calculations ...
 
+!$OMP parallel DO &
+!$OMP default (shared) &
+!$OMP private (k, l, atk, atl, rkl2, cm_kl, rkl, fs, vsr, Ecoul_damped, Fcoul, nresidk, nresidl , ithr)  &
+!$OMP reduction (+: Coul_inter, evdw, stresSR11, stresSR22, stresSR33, stresSR12, stresSR13, stresSR23,  &
+!$OMP                                 stresRE11, stresRE22, stresRE33, stresRE12, stresRE13, stresRE23)
+                   
 do k = 1 , MM % N_of_atoms - 1
     do l = k+1 , MM % N_of_atoms
 
        ! for different molecules ...
-        if ( atom(k) % nr /= atom(l) % nr ) then
+        if ( atom(k)% nr /= atom(l)% nr ) then
         
-            ithr    = OMP_get_thread_num() + 1
+            ithr = OMP_get_thread_num() + 1
 
-            nresidk = atom(k) % nr
-            nresidl = atom(l) % nr
+            nresidk = atom(k)% nr
+            nresidl = atom(l)% nr
 
-            cm_kl(:)  = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-            cm_kl(:)  = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+            cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+            cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
 
-            rkl(:)  = atom(k) % xyz(:) - atom(l) % xyz(:)
-            rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+            rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
+            rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
 
-            rkl2    = sum( rkl(:)**2 )
+            rkl2 = sum( rkl(:)**2 )
 
             if( rkl2 < rcutsq ) then
 
-                    atk = atom(k) % my_intra_id + species_offset(atom(k) % my_species)
-                    atl = atom(l) % my_intra_id + species_offset(atom(l) % my_species)
-
-                    dkl = SQRT(rkl2)
+                    atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
+                    atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
 
                     select case ( special_pair_mtx(k,l) )
 
                            case(0) ! <== not a SpecialPair
                                    if( atom(k)%LJ .AND. atom(l)%LJ ) then
-                                       call Lennard_Jones( k , l , fs , vsr )
+
+                                       call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+
                                    elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
-                                       call Buckingham( k , l , fs , vsr )
+
+                                       call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+
                                    endif
                            case(1) 
-                                   call Lennard_Jones( k , l , fs , vsr )
+                                   call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
                            case(2)
-                                   call Buckingham( k , l , fs , vsr )
-                           case default
-                                   CALL warning("unknown non-bonding special pair code in special_pair_mtx")
-                                   STOP
+                                   call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
                     end select
 
                     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
@@ -198,23 +127,9 @@ do k = 1 , MM % N_of_atoms - 1
                     stresSR13 = stresSR13 + cm_kl(1) * fs * rkl(3)
                     stresSR23 = stresSR23 + cm_kl(2) * fs * rkl(3)
                     
-                    vsr  = vsr - vscut(atk,atl) + fscut(atk,atl)*( dkl - rcut )
-                    evdw = evdw + vsr*factor3
-
                     ! Coulomb Interaction
-                    chrgk = atom(k) % charge
-                    chrgl = atom(l) % charge
+                    call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
 
-                    sr2   = 1.d0 / rkl2
-                    KRIJ  = KAPPA * dkl
-                    expar = EXP(-KRIJ**2)
-
-                    !Force
-                    Fcoul = coulomb * chrgk * chrgl * (sr2/dkl)
-                    ! damped Fcoul
-                    Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dkl*expar )
-                    ! shifted force: F_sf(R) = F(R) - F(Rc) ...
-                    Fcoul = Fcoul - (frecut * chrgk * chrgl / dkl)
                     tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
                     tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
 
@@ -226,20 +141,18 @@ do k = 1 , MM % N_of_atoms - 1
                     stresRE23 = stresRE23 + cm_kl(2) * Fcoul * rkl(3)
 
                     !Energy
-                    Ecoul_damped = (coulomb*chrgk*chrgl/dkl) * ERFC(KRIJ)
-                    ! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
-                    Ecoul_damped = Ecoul_damped - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( dkl-rcut ))
-                    Coul_inter   = Coul_inter + Ecoul_damped*factor3
+                    evdw       = evdw + vsr
+                    Coul_inter = Coul_inter + Ecoul_damped
          
-                    pot = pot + (vsr + Ecoul_damped) *factor3
-                    
             end if
         end if
     end do
 end do
-!!$OMP end parallel do
+!$OMP end parallel do
 
-pot_INTER = pot
+evdw       = evdw * factor3
+Coul_inter = Coul_inter * factor3
+pot_INTER  = evdw + Coul_inter
 
 ! ################################################################################3
 !--------------------------------------------------------
@@ -283,25 +196,28 @@ do i = 1, MM % N_of_atoms
     atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
-deallocate ( tmp_fsr , tmp_fch , erfunc )
+deallocate ( tmp_fsr , tmp_fch )
 
 end subroutine FORCEINTER
 !
 !
 !
 !
-!============================================
- subroutine Lennard_Jones( k , l , fs , vsr )
-!============================================
+!===============================================================
+ subroutine Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+!===============================================================
 implicit none
 integer , intent(in)  :: k 
 integer , intent(in)  :: l 
+integer , intent(in)  :: atk 
+integer , intent(in)  :: atl 
+real*8  , intent(in)  :: rkl2 
 real*8  , intent(out) :: fs
 real*8  , intent(out) :: vsr
 
 ! local variables ...
 integer :: n 
-real*8  :: sr2 , sr6 , sr12 , eps
+real*8  :: sr2 , sr6 , sr12 , eps , r_kl
 logical :: flag1 , flag2 
 
 ! Lennard Jones ...
@@ -338,34 +254,39 @@ else
       end do read_loop
 endif
 
+r_kl = SQRT(rkl2)
 sr6  = sr2 * sr2 * sr2
 sr12 = sr6 * sr6
 
 ! Forces
-fs = 24.d0 * eps * ( 2.d0 * sr12 - sr6 )
-fs = fs/rkl2 - fscut(atk,atl)/dkl
+fs = 24.d0 * eps * ( two*sr12 - sr6 )
+fs = fs/rkl2 - fscut(atk,atl)/r_kl
 
 ! LJ energy
 vsr = 4.d0 * eps * ( sr12 - sr6 )
+vsr = vsr - vscut(atk,atl) + fscut(atk,atl)*( r_kl - rcut )
 
 end subroutine Lennard_Jones
 !
 !
 !
 !
-!=========================================
- subroutine Buckingham( k , l , fs , vsr )
-!=========================================
+!============================================================
+ subroutine Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+!============================================================
 implicit none
 integer , intent(in)  :: k 
 integer , intent(in)  :: l 
+integer , intent(in)  :: atk 
+integer , intent(in)  :: atl 
+real*8  , intent(in)  :: rkl2 
 real*8  , intent(out) :: fs
 real*8  , intent(out) :: vsr
 
 ! local variables ...
 integer :: n 
-real*8  :: sr2 , sr6 , sr12 , eps
-real*8  :: A , B , C , sr8
+real*8  :: ir2 , ir6 , ir8 , r_kl
+real*8  :: A , B , C 
 logical :: flag1 , flag2 
 
 ! Bukingham Potential and Forces ...
@@ -396,19 +317,62 @@ else
       end do read_loop
 end if
 
-sr2 = 1.d0 / rkl2
-sr6 = sr2 * sr2 * sr2
-sr8 = sr2 * sr2 * sr2 * sr2
+r_kl = SQRT(rkl2)
+
+ir2 = 1.d0 / rkl2
+ir6 = ir2 * ir2 * ir2
+ir8 = ir2 * ir2 * ir2 * ir2
 
 !Force
-fs = A*B*exp(-B*dkl)/dkl - SIX*C*sr8
-fs = fs - fscut(atk,atl)/dkl
+fs = A*B*exp(-B*r_kl)/r_kl - SIX*C*ir8
+fs = fs - fscut(atk,atl)/r_kl
 
 !Buckingham Energy
-vsr = A*exp(-B*dkl) - C*sr6
+vsr = A*exp(-B*r_kl) - C*ir6
+vsr = vsr - vscut(atk,atl) + fscut(atk,atl)*( r_kl - rcut )
 
 end subroutine Buckingham
 !
+!
+!
+!
+!===============================================================
+ subroutine Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
+!===============================================================
+implicit none
+integer , intent(in)  :: k 
+integer , intent(in)  :: l 
+real*8  , intent(in)  :: rkl2 
+real*8  , intent(out) :: Fcoul
+real*8  , intent(out) :: Ecoul_damped
+
+! local variables ...
+real*8 :: chrgk , chrgl , ir2 , KRIJ , expar , r_kl
+
+! Electrostatic Coulomb Interaction ...
+
+chrgk = atom(k)% charge
+chrgl = atom(l)% charge
+
+r_kl  = SQRT(rkl2)
+
+ir2   = 1.d0 / rkl2
+KRIJ  = KAPPA * r_kl
+expar = EXP(-KRIJ**2)
+
+!Force
+Fcoul = coulomb * chrgk * chrgl * (ir2/r_kl)
+! damped Fcoul
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*r_kl*expar )
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
+Fcoul = Fcoul - (frecut * chrgk * chrgl / r_kl)
+
+!Energy
+Ecoul_damped = (coulomb*chrgk*chrgl/r_kl) * ERFC(KRIJ)
+! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+Ecoul_damped = Ecoul_damped - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( r_kl-rcut ))
+
+end subroutine Electrostatic
 !
 !
 !
