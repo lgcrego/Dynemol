@@ -52,7 +52,7 @@ contains
  implicit none
  
 ! local variables
- integer :: i, j, k, n, atmax
+ integer :: i, j, atmax
  real*8  :: expar, ERFC, KRIJ
 
  rcutsq = rcut**2

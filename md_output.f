@@ -22,7 +22,7 @@ contains
 !========================================
  subroutine OUTPUT( Ttrans , frame , dt ) 
 !========================================
-use for_force   , only: rcut, KAPPA, pot_INTER, Coul_inter, Vself, evdw, bdpot, angpot, dihpot,    &
+use for_force   , only: rcut, KAPPA, Coul_inter, Vself, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harm_dih, imp_dih, harm_bond, morse_bond, Morspot
 implicit none
