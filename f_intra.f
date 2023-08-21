@@ -24,14 +24,11 @@ module F_intra_m
     public :: ForceINTRA, pot_INTRA, BcastQMArgs, ForceQMMM
 
     ! module variables ...
-    real*8  , dimension (3):: rij
-    real*8                 :: rijkj , rjkkl , gamma , pterm , rtwopi , rij2 , rsinphi , phi
-    real*8                 :: pot_INTRA
-    integer                :: i , j , n , ati , atj 
-    logical                :: flag1 , flag2
+    real*8                 :: rijkj , rjkkl , gamma , pterm , rtwopi , rsinphi , phi , pot_INTRA
+    integer                :: i , j , n  
+    integer , allocatable  :: species_offset(:)
     logical                :: there_are_NB_SpecialPairs   = .false.
     logical                :: there_are_NB_SpecialPairs14 = .false.
-    integer , allocatable  :: species_offset(:)
 
     ! imported module variables ...
     integer         :: PST(2)
@@ -59,11 +56,12 @@ implicit none
 
 ! local_variables ...
 real*8 , allocatable  :: tmp_force(:,:,:), tmp_vdw(:,:,:), tmp_ele(:,:,:)
-real*8 , dimension (3):: rjk, rkl, rik, rijk, rjkl, rijkl
-real*8  :: rijq, rjkq, rklq, rijsq, rjksq, rklsq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
+real*8 , dimension (3):: rij, rjk, rkl, rik, rijk, rjkl, rijkl
+real*8  :: rij2, rijq, rjkq, rklq, rijsq, rjksq, rklsq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
 real*8  :: f1x, f1y, f1z, f2x, f2y, f2z, f3x, f3y, f3z, f4x, f4y, f4z
-real*8  :: fs, Fcoul, cosphi, sinphi, coephi, coephi0,  qterm, qterm0, rterm, rterm0
-integer :: k, l, ithr, numthr, atk, atl, loop  
+real*8  :: fs, Fcoul, E_vdw, E_coul, cosphi, sinphi, coephi, coephi0,  qterm, qterm0, rterm, rterm0
+integer :: k, l, ithr, numthr, ati, atj, atk, atl, loop  
+logical :: flag1 , flag2
 
 rtwopi = 1.d0/twopi
 
@@ -353,12 +351,12 @@ do i = 1 , MM % N_of_molecules
 
             rij2 = sum( rij(:)**2 )
 
-            call Lennard_Jones_14 (fs)
+            call Lennard_Jones_14 (rij2 , ati , atj , fs)
             atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
 
 
-            call Coulomb14 (Fcoul)
+            call Coulomb14 (rij2 , ati , atj , Fcoul)
             atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + Fcoul * rij(1:3)
             atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - Fcoul * rij(1:3)
 
@@ -375,6 +373,10 @@ allocate( tmp_ele (MM%N_of_atoms,3,numthr) , source = D_zero )
 
 If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
+!$OMP parallel DO &
+!$OMP default (shared) &
+!$OMP private (i , j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
+!$OMP reduction (+: LJ_intra , Coul_intra)
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % NintraIJ
 
@@ -395,26 +397,31 @@ do i = 1 , MM % N_of_molecules
                  select case( molecule(i)% intraIJ(j,3) )
 
                         case(1)
-                        call Lennard_Jones( fs )
+                        call Lennard_Jones( rij2 , ati , atj , fs , E_vdw )
 
                         case(2) 
-                        call Buckingham( fs )
+                        call Buckingham( rij2 , ati , atj , fs , E_vdw )
 
                  end select
 
                  tmp_vdw(ati,1:3,ithr) = tmp_vdw(ati,1:3,ithr) + fs * rij(:)
                  tmp_vdw(atj,1:3,ithr) = tmp_vdw(atj,1:3,ithr) - fs * rij(:)
 
+                 LJ_intra = LJ_intra + E_vdw*factor3 ! <== LJ and/or Buck energy
+
                  ! Coulomb Interaction
-                 call Coulomb_DSF( Fcoul )
+                 call Coulomb_DSF( rij2 , ati , atj , Fcoul , E_coul )
 
                  tmp_ele(ati,1:3,ithr) = tmp_ele(ati,1:3,ithr) + Fcoul * rij(:)
                  tmp_ele(atj,1:3,ithr) = tmp_ele(atj,1:3,ithr) - Fcoul * rij(:)
+
+                 Coul_intra = Coul_intra + E_coul*factor3 ! <== Coulomb energy
 
             end if
         end if
     end do
 end do
+!$OMP end parallel do
 
 ! force units = J/mts = Newtons ...    
 do i = 1, MM % N_of_atoms
@@ -463,7 +470,7 @@ end If
 !====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
+pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
 pot_total = pot_INTER + pot_INTRA - Vself
 pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 
@@ -503,14 +510,18 @@ end subroutine ForceINTRA
 !
 !
 !
-!==============================
- subroutine Coulomb_DSF (fcoul)
-!==============================
+!==========================================================
+ subroutine Coulomb_DSF (rij2 , ati , atj , fcoul , E_coul)
+!==========================================================
 implicit none
-real*8 , intent(out) :: fcoul
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fcoul
+real*8  , intent(out) :: E_coul
 
 ! local variables ...
-real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij , tterm
+real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij
 
 ! Coulomb damped shifted field, V_dsf ...
 ! the damped and cutoff-neutralized Coulomb potential ...
@@ -533,25 +544,26 @@ Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar )
 Fcoul = Fcoul - (frecut * chrgi * chrgj / dij)   
 
 !Energy
-tterm = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ)
+E_coul = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ)
 ! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
-tterm = tterm - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
-
-Coul_intra = Coul_intra + tterm*factor3 ! <== Coulomb energy
+E_coul = E_coul - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
 
 end subroutine Coulomb_DSF
 !
 !
 !
 !
-!============================
- subroutine Coulomb14 (Fcoul)
-!============================
+!===============================================
+ subroutine Coulomb14 (rij2 , ati , atj , Fcoul)
+!===============================================
 implicit none
-real*8 , intent(out) :: Fcoul
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: Fcoul
 
 ! local variables ...
-real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij , tterm
+real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij , E_coul
 
 ! Coulomb damped field for 1-4 pairs ...
 
@@ -572,24 +584,28 @@ Fcoul = coulomb * chrgi * chrgj * ( ir2/dij )
 Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar ) * MM%fudgeQQ
 
 !Energy 
-tterm = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ) * MM%fudgeQQ
+E_coul = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ) * MM%fudgeQQ
 
-Coul_14 = Coul_14 + tterm*factor3 
+Coul_14 = Coul_14 + E_coul*factor3
 
 end subroutine Coulomb14
 !
 !
 !
 !
-!=============================
- subroutine Lennard_Jones (fs) 
-!=============================
+!========================================================
+ subroutine Lennard_Jones (rij2 , ati , atj , fs , E_vdw) 
+!========================================================
 implicit none
-real*8 , intent(out) :: fs
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: E_vdw
 
 ! local variables ...  
 integer :: n , ati1 , atj1
-real*8  :: sr2 , sr6 , sr12 , dij , eps , sterm
+real*8  :: sr2 , sr6 , sr12 , dij , eps
 logical :: flag1 , flag2
 
 ! Lennard Jones ...
@@ -638,26 +654,27 @@ atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
 fs = fs/rij2 - fscut(ati1,atj1)/dij     
 
 !Energy
-sterm = 4.d0 * eps * ( sr12 - sr6 )
+E_vdw = 4.d0 * eps * ( sr12 - sr6 )
 ! LJ shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
-sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
-
-LJ_intra = LJ_intra + sterm*factor3 ! <== LJ energy
+E_vdw = E_vdw - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
 
 end subroutine Lennard_Jones
 !
 !
 !
 !
-!================================
- subroutine Lennard_Jones_14 (fs)
-!================================
+!===================================================
+ subroutine Lennard_Jones_14 (rij2 , ati , atj , fs)
+!===================================================
 implicit none
-real*8 , intent(out) :: fs
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
 
 ! local variables ...
 integer :: n 
-real*8  :: sr2 , sr6 , sr12 , eps , sterm
+real*8  :: sr2 , sr6 , sr12 , eps , E_vdw
 logical :: flag1 , flag2
 
 ! Lennard Jones for 1-4 pairs ...
@@ -701,23 +718,27 @@ fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
 fs = (fs / rij2) * MM % fudgeLJ
 
 !Energy
-sterm = 4.d0 * eps * ( sr12 - sr6 ) * MM % fudgeLJ
+E_vdw = 4.d0 * eps * ( sr12 - sr6 ) * MM % fudgeLJ
 
-LJ_14 = LJ_14 + sterm*factor3  ! <== LJ energy
+LJ_14 = LJ_14 + E_vdw*factor3  ! <== LJ energy
 
 end subroutine Lennard_Jones_14
 !
 !
 !
 !
-!==========================
- subroutine Buckingham (fs)
-!==========================
+!=====================================================
+ subroutine Buckingham (rij2 , ati , atj , fs , E_vdw)
+!=====================================================
 implicit none
-real*8 , intent(out) :: fs
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: E_vdw
 
 ! local variables ...
-real*8  :: Aij , Bij , Cij , sterm
+real*8  :: Aij , Bij , Cij
 integer :: n , ati1 , atj1
 real*8  :: ir2 , ir6 , ir8 , dij
 logical :: flag1 , flag2
@@ -767,11 +788,9 @@ atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
 fs = fs - fscut(ati1,atj1)/dij     
 
 !Energy
-sterm = Aij*exp(-Bij*dij) - Cij*ir6
+E_vdw = Aij*exp(-Bij*dij) - Cij*ir6
 ! Buckingham shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
-sterm = sterm - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
-
-LJ_intra = LJ_intra + sterm*factor3  ! <== LJ energy
+E_vdw = E_vdw - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
 
 end subroutine Buckingham
 !
