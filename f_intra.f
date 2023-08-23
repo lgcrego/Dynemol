@@ -373,55 +373,59 @@ allocate( tmp_ele (MM%N_of_atoms,3,numthr) , source = D_zero )
 
 If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
-!$OMP parallel DO &
-!$OMP default (shared) &
-!$OMP private (i , j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
-!$OMP reduction (+: LJ_intra , Coul_intra)
 do i = 1 , MM % N_of_molecules
-    do j = 1 , molecule(i) % NintraIJ
 
-        ithr = OMP_get_thread_num() + 1
+     if ( molecule(i) % NintraIJ == 0 ) cycle
 
-        ati  = molecule(i) % IntraIJ(j,1) 
-        atj  = molecule(i) % IntraIJ(j,2) 
+     !$OMP parallel DO &
+     !$OMP default (shared) &
+     !$OMP private (j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
+     !$OMP reduction (+: LJ_intra , Coul_intra)
+     do j = 1 , molecule(i) % NintraIJ
 
-        if ( atom(atj) % flex .OR. atom(ati) % flex ) then
+         ithr = OMP_get_thread_num() + 1
 
-            rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
-            rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+         ati  = molecule(i) % IntraIJ(j,1) 
+         atj  = molecule(i) % IntraIJ(j,2) 
 
-            rij2 = sum( rij(:)**2 )
+         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
-            if ( rij2 < rcutsq ) then
+             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
+             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
 
-                 select case( molecule(i)% intraIJ(j,3) )
+             rij2 = sum( rij(:)**2 )
 
-                        case(1)
-                        call Lennard_Jones( rij2 , ati , atj , fs , E_vdw )
+             if ( rij2 < rcutsq ) then
 
-                        case(2) 
-                        call Buckingham( rij2 , ati , atj , fs , E_vdw )
+                  select case( molecule(i)% intraIJ(j,3) )
 
-                 end select
+                         case(1)
+                         call Lennard_Jones( rij2 , ati , atj , fs , E_vdw )
 
-                 tmp_vdw(ati,1:3,ithr) = tmp_vdw(ati,1:3,ithr) + fs * rij(:)
-                 tmp_vdw(atj,1:3,ithr) = tmp_vdw(atj,1:3,ithr) - fs * rij(:)
+                         case(2) 
+                         call Buckingham( rij2 , ati , atj , fs , E_vdw )
 
-                 LJ_intra = LJ_intra + E_vdw*factor3 ! <== LJ and/or Buck energy
+                  end select
 
-                 ! Coulomb Interaction
-                 call Coulomb_DSF( rij2 , ati , atj , Fcoul , E_coul )
+                  tmp_vdw(ati,1:3,ithr) = tmp_vdw(ati,1:3,ithr) + fs * rij(:)
+                  tmp_vdw(atj,1:3,ithr) = tmp_vdw(atj,1:3,ithr) - fs * rij(:)
 
-                 tmp_ele(ati,1:3,ithr) = tmp_ele(ati,1:3,ithr) + Fcoul * rij(:)
-                 tmp_ele(atj,1:3,ithr) = tmp_ele(atj,1:3,ithr) - Fcoul * rij(:)
+                  LJ_intra = LJ_intra + E_vdw*factor3 ! <== LJ and/or Buck energy
 
-                 Coul_intra = Coul_intra + E_coul*factor3 ! <== Coulomb energy
+                  ! Coulomb Interaction
+                  call Coulomb_DSF( rij2 , ati , atj , Fcoul , E_coul )
 
-            end if
-        end if
-    end do
+                  tmp_ele(ati,1:3,ithr) = tmp_ele(ati,1:3,ithr) + Fcoul * rij(:)
+                  tmp_ele(atj,1:3,ithr) = tmp_ele(atj,1:3,ithr) - Fcoul * rij(:)
+
+                  Coul_intra = Coul_intra + E_coul*factor3 ! <== Coulomb energy
+
+             end if
+         end if
+     end do
+     !$OMP end parallel do
+
 end do
-!$OMP end parallel do
 
 ! force units = J/mts = Newtons ...    
 do i = 1, MM % N_of_atoms
