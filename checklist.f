@@ -81,7 +81,7 @@ write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_tim
 write(10,'(a/)') " Powered   by   SingleNode"
 
 write(10,'(''<======  ###############  ==>'')')
-write(10,'(''<====    PARAMETERS.F   ====>'')')
+write(10,'(''<====    PARAMETERS     ====>'')')
 write(10,'(''<==  ###############  ======>'')')
 write(10,*)
 
@@ -175,10 +175,12 @@ end if
 
 if( nuclear_matter == "MDynamics" ) then
 
+   write(10,'('' '')')
    write(10,'(''<======  ###############  ==>'')')
-   write(10,'(''<====    parameters_MM.f   ====>'')')
+   write(10,'(''<====    parameters_MM  ====>'')')
    write(10,'(''<==  ###############  ======>'')')
    write(10,*)
+   write(10,  '(" VDOS_           :" , A10)') merge(".true. <==",".false.   ",VDOS_)           
    tag = merge("no ","yes",driver_MM == "MM_Dynamics")       
    write(10 , '(" driver_MM       : " , A11)' , advance=tag) driver_MM
    If( driver_MM == "MM_Dynamics" ) then 
@@ -208,7 +210,7 @@ if( ad_hoc ) then
 
    open (10, file='log.trunk/driver_parms_and_tuning.log', status='old', access='append')
    write(10,'(''<======  ###############  ==>'')')
-   write(10,'(''<====       TUNING.F       ====>'')')
+   write(10,'(''<====       TUNING      ====>'')')
    write(10,'(''<==  ###############  ======>'')')
    write(10,*)
    close (10)

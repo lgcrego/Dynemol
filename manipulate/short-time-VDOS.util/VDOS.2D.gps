@@ -1,0 +1,72 @@
+set term pngcairo enhanced truecolor font "Helvetica,36" size 1300,800
+
+set border lw 3
+
+# AFM hot
+set palette rgb 34,35,36
+# set palette defined ( -0.5 'white', 0 '#fef0d9', 1 '#fdcc8a', 2 '#fc8d59', 3 '#d7301f' )
+
+
+set xrange [0:0.150]
+set yrange [0:2100]
+
+set bmargin at screen 0.16
+set tmargin at screen 0.96
+set lmargin at screen 0.17
+set rmargin at screen 0.88
+
+max(x,y) = (x > y) ? x : y
+min(x,y) = (x < y) ? x : y
+
+eV_cm1 = 8065.54429
+# eV_cm1 = 1
+
+set xlabel "time (fs)"           offset  0.2,  1.8
+set ylabel "frequency (cm^{-1})" offset  0.0,  0.1
+set cblabel "VDOS"               offset -0.4,  0.0
+
+set xtics 0.050  offset -0.2, 0.8 font "Helvetica,36" out scale 0.4, 0.2 nomirror
+set ytics 500 offset  0.9, 0.2 font "Helvetica,36" out scale 0.4, 0.2 mirror
+unset cbtics
+
+set mxtics 5
+set mytics 5
+
+set pm3d map corners2color c1
+
+
+# set cbrange [0:150000]
+# set output "VDOS.2d.png"
+# splot 'vdos.dat' notitle
+# 
+# set cbrange [*:*]
+# set output "VDOS.2d.rest.png"
+# splot 'vdos.rest.dat' notitle
+# 
+# set output "VDOS.2d.bridge.png"
+# splot 'vdos.bridge.dat' notitle
+
+min_log_cb = 1e-6
+max = 7.84320e-05
+max = 1e-4
+set cbrange [min_log_cb:max]
+set logscale cb
+Natoms = 4
+set output "VDOS.2d.dye.png"
+splot 'vdos.dye.dat' using 1:($2*eV_cm1):(max($3/Natoms,min_log_cb)) notitle
+show cbrange
+
+# set output "VDOS.2d.N.png"
+# splot 'vdos.N.dat' notitle
+# 
+# set output "VDOS.2d.C.ring1.png"
+# splot 'vdos.C.ring1.dat' notitle
+# 
+# set output "VDOS.2d.C.ring2.png"
+# splot 'vdos.C.ring2.dat' notitle
+# 
+# set output "VDOS.2d.H.ring1.png"
+# splot 'vdos.H.ring1.dat' notitle
+# 
+# set output "VDOS.2d.H.ring2.png"
+# splot 'vdos.H.ring2.dat' notitle

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+BRIDGE="7 13"
+LONG_BRIDGE="6 7 13 14"
+RINGS="1 2 3 4 5 6 8 9 10 11 12 14 15 16 17 18 19 20 21 22 23 24"
+
+# total
+../Calc_vacf.py --mass-weighted > vacf_mw.dat
+
+# bridge
+../Calc_vacf.py --mass-weighted --select $BRIDGE > vacf_mw.bridge.dat
+
+# long bridge
+../Calc_vacf.py --mass-weighted --select $LONG_BRIDGE > vacf_mw.long_bridge.dat
+
+# rings
+../Calc_vacf.py --mass-weighted --select $RINGS  > vacf_mw.rings.dat
+

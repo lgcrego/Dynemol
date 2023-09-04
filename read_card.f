@@ -142,7 +142,7 @@ read_loop: do
         case( "AUTOCORRELATION" ) 
                 AutoCorrelation = get_logical(line)
 
-        case( "VDOS_" ) 
+        case( "VDOS_" , "VDOS" , "vdos_" , "vdos") 
                 VDOS_ = get_logical(line)
 
 !------------------------------------------------------------------------

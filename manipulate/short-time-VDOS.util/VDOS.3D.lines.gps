@@ -1,0 +1,56 @@
+set term pngcairo enhanced truecolor font "Helvetica,36" size 1300,750
+
+set border 1+4+8 +64+32+16+512+256 lw 3
+
+set xrange [0:0.3]
+set yrange [0:3400]
+set zrange [0:*]
+
+set bmargin at screen 0.29
+set tmargin at screen 0.88
+set lmargin at screen 0.17
+set rmargin at screen 0.95
+
+
+set xlabel "time (ps)"           offset -0.7,  0.0   rotate parallel
+set ylabel "frequency (cm^{-1})" offset -0.6, -0.6   rotate parallel
+set zlabel "VDOS"                offset  4.2,  0.3   rotate parallel
+
+set xtics 0.1  offset  1.5, 0.1 font "Helvetica,36" out nomirror scale 0.4, 0.2
+set ytics 500  offset -0.3, 0.1 font "Helvetica,36" out nomirror scale 0.8, 0.4
+set ztics out scale 0.4, 0.2
+set format z ""
+
+set mxtics 5
+set mytics 5
+
+set ticslevel 0.0
+
+set hidden3d offset 0
+set view 46,249
+set view 20,86
+
+eV_cm1 = 8065.54429
+# eV_cm1 = 1
+
+ts=1
+fs=1
+
+set style line 1 lt 1 lw 2 lc rgb "grey30"
+# set style data impulses
+# set style fill solid rgb "white"
+
+Natoms = 419
+stats 'vdos.dat.2'
+set output "VDOS.3d.png"
+splot for [i=0:int(STATS_blocks-1)] 'vdos.dat.2' \
+    index i using 1:($2*eV_cm1):($3/Natoms) every fs:ts with lines ls 1 notitle
+show zrange
+
+Natoms = 34
+stats 'vdos.Pe_COO.dat.2'
+set output "VDOS.3d.Pe_COO.png"
+splot for [i=0:int(STATS_blocks-1)] 'vdos.Pe_COO.dat.2' \
+    index i using 1:($2*eV_cm1):($3/Natoms) every fs:ts with lines ls 1 notitle
+show zrange
+
