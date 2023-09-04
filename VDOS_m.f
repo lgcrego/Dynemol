@@ -315,14 +315,14 @@ deallocate( VACF ) ! not needed anymore
 T = 2*(t_f - t_i)*pico_2_sec/Nsamples  ! in seconds (factor 2 is to account for the real-even symmetry used above)
 
 !------------------
-! write to VDOS-*.dat
+! write to VelPS-*.dat
 do j = 0, Nspc
     if (j==0) then
         open(out, file='dos.trunk/VelPS-total.dat', status='unknown')
     else
         open(out, file='dos.trunk/VelPS-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
-    write(out,'(a)') "# E (eV)   VelPS (spectral density of velcities)   "
+    write(out,'(a)') "# E (eV)   VelPS (spectral density of velocities)   "
     do i = 1, Lsample
         write(out, '(2es)') ((i-1)/T)*Hz_to_eV, VDOS(i,j)
     end do
@@ -350,14 +350,14 @@ do i = 0, Nspc
 end do
 
 !------------------
-! write to VDOSmw-*.dat
+! write to VDOS-*.dat
 do j = 0, Nspc
     if (j==0) then
         open(out, file='dos.trunk/VDOS-total.dat', status='unknown')
     else
         open(out, file='dos.trunk/VDOS-'//trim(species(j)%residue)//'.dat', status='unknown')
     end if
-    write(out,'(a)') "# E (eV)   VDOS_(density of vibrational states)"
+    write(out,'(a)') "# E (eV)   VDOS (density of vibrational states)"
     do i = 1, Lsample
         write(out, '(2es)') ((i-1)/T)*Hz_to_eV, VDOS(i,j)
     end do
