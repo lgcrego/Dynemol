@@ -43,7 +43,7 @@ character(18)                   :: keyword
 character(10)                   :: string , word(3)
 character(200)                  :: line 
 logical                         :: TorF
-integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , Nbonds14 , N_of_atoms
+integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , N_of_atoms
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -280,70 +280,6 @@ do a = 1 , MM % N_of_species
             CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
             stop
         End If
-!----------------------------------------------------------------------------------------------
-
-!==============================================================================================
-            ! Pairs 1-4 parameters :: reading ...
-        do
-            read(33,100,iostat=ioerr) keyword
-            if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit      ! <== looking for [ pairs ] in *.itp
-        end do
-
-        if( trim(keyword) == "[ pairs ]" ) then
-
-            InputIntegers = I_zero
-            i = 1
-            read_loop5: do
-                read(33, '(A)', iostat=ioerr) line
-                if ( ioerr /= 0 ) exit read_loop5
-                read(line,*,iostat=ioerr) InputChars(i,1)
-                if( index(InputChars(i,1),";") /= 0 ) cycle read_loop5
-                if( trim(InputChars(i,1)) == "[  "  ) exit
-                if( ioerr > 0  ) exit
-                if( ioerr /= 0 ) cycle read_loop5
-                read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
-
-                i = i + 1
-            end do read_loop5
-            backspace(33)
-
-            Nbonds14 = i - 1
-            species(a) % Nbonds14 = Nbonds14
-
-            allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
-
-            forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
-
-        else
-
-            Nbonds14 = 0    
-
-        end if
-
-        If( species(a) % Nbonds /= 0 ) then 
-
-            CALL Identify_NonBondPairs( species , a )
-
-        else 
-
-            ! Intermediate variable ... 
-            allocate( species(a) % IntraIJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
-
-            k = 1
-            do i = 1 , species(a) % N_of_Atoms - 1
-
-                do j = i + 1, species(a) % N_of_Atoms
-                    species(a) % IntraIJ(k,1) = i
-                    species(a) % IntraIJ(k,2) = j
-                    k = k + 1
-                end do
-
-            end do
-            species(a) % NintraIJ = size( species(a) % IntraIJ(:,2) )
-             
-        end if
-
-        rewind(33)
 
 !==============================================================================================
                          ! AD_HOC parameters :: reading ...
@@ -429,7 +365,7 @@ character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
-integer                         :: a , n , i , j , j1, k , ioerr , dummy_int , N_of_AtomTypes 
+integer                         :: a , n , i , j , j1, k , ioerr , dummy_int , N_of_AtomTypes , n_pairs
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NPairsParms , NMorseParms
 character(3)                    :: dummy_char
 character(18)                   :: keyword
@@ -442,7 +378,8 @@ allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
 allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
-forcefield = 2           ! 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
+! FF definitions ... 
+forcefield = 1   ! <== 1 = Lennard-Jones ; 2 = Buckingham
   
 ! cloning the topol.top file into log.trunk ...
 call systemQQ("cp topol.top log.trunk/.") 
@@ -500,6 +437,7 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 
     do i = 1 , N_of_AtomTypes
         where( FF % MMSymbol == InputChars(i,1) )
+            FF % LJ  = .true.
             FF % sig = InputReals(i,3)
             FF % eps = InputReals(i,4)
         end where   
@@ -527,6 +465,13 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
     end select
     FF % sig14 = FF % sig
     FF % eps14 = FF % eps 
+
+   do k = 1 , size(FF)
+       i = FF(k)% my_id
+       j = FF(k)% my_species
+       species(j)%atom(i)%lj   = FF(k)%lj
+       species(j)%atom(i)%buck = FF(k)%buck
+    end do
 
 !=====================================================================================
 !  NonBonding parameters :: reading ...
@@ -1276,7 +1221,49 @@ do a = 1 , MM % N_of_species
     end do read_loop0
     !=============================================================================
 
-end do
+    If( species(a) % Nbonds /= 0 ) then 
+        ! identify 14-pairs and long-range pairs; Nbonds14 and NintraIJ ...
+        ! for LJ only ...
+        CALL Identify_NonBondPairs( species , a )
+    else 
+        ! only NonBonding interactions for species(a) ...
+        ! for LJ, and Buckingham potentials if necessary ...
+
+        ! npairs = all pairs ... 
+        n_pairs = species(a)%N_of_Atoms * (species(a)%N_of_Atoms - 1) / 2
+
+        allocate( dummy_array_I ( n_pairs , 3 ) , source = I_zero )
+
+        k = 0
+ 
+        do i = 1   , species(a)% N_of_Atoms - 1
+        do j = i+1 , species(a)% N_of_Atoms
+
+           if( species(a)%atom(i)%LJ .AND. species(a)%atom(j)%LJ ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 1
+                end if
+
+           if( species(a)%atom(i)%BUCK .AND. species(a)%atom(j)%BUCK ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 2
+                end if
+
+        end do
+        end do
+        species(a) % NintraIJ = k
+        if( k > 0 ) allocate( species(a)% IntraIJ , source = dummy_array_I(1:k,:) )
+
+        deallocate( dummy_array_I)
+        
+    end if
+
+!==============================================================================================
+end do ! <== loop(a=1:MM % N_of_species)
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )

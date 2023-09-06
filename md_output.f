@@ -62,10 +62,10 @@ IF( .NOT. done ) then
 
     select case( forcefield )
 
-        case( 1 )
-        write(10,'(''Born Meyer Potential'')')
+        case( 2 )
+        write(10,'(''Buckingham Potential'')')
 
-        case( 2) 
+        case( 1) 
         write(10,'(''Lennard-Jones Potential'')')
 
     end select

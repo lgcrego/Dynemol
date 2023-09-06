@@ -790,6 +790,14 @@ character(len=:) , allocatable  :: string(:)
                                end select
 
                          case("GMX")
+                               eps = FF(i)% eps**2 / (factor1*imol) 
+                               eps = eps * J_2_cal                  ! <== kJ/mol
+                               select case( MM % CombinationRule )
+                                   case (2)
+                                       sig = FF(i)%sig*two
+                                   case (3)
+                                       sig = FF(i)%sig**2
+                               end select
                      end select
 
                      write(51,'(I5,A5,F12.5,t31,F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &

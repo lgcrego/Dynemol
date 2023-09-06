@@ -9,7 +9,7 @@ module F_intra_m
     use setup_m           , only: offset
     use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                                   vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
-                                  Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
+                                  Dihedral_Potential_Type, rcutsq, ryck_dih, proper_dih,                &
                                   harm_dih, imp_dih, harm_bond, morse_bond, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM

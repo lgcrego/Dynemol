@@ -364,7 +364,7 @@ allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! NAMD FF definitions ... 
-forcefield = 2   ! <== 1 = Buckingham ; 2 = Lennard-Jones 
+forcefield = 1   ! <== 1 = Lennard-Jones ; 2 = Buckingham 
   
 ! cloning the input.prm file into log.trunk ...
 call systemQQ("cp input.prm log.trunk/.") 
@@ -1129,7 +1129,6 @@ do a = 1 , MM % N_of_species
 
 !==============================================================================================
 end do ! <== loop(a=1:MM % N_of_species)
-
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )

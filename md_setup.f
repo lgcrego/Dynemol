@@ -35,7 +35,7 @@ module setup_m
     use type_m       , only : warning
     use MD_read_m    , only : MM , atom , molecule , species , FF , FF_SP_mtx 
     use gmx2mdflex   , only : SpecialPairs
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, forcefield
+    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
 

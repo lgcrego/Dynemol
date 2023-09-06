@@ -60,6 +60,7 @@ MODULE constants_m
     real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
     real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
+    real*8  , parameter :: J_2_cal     = 0.239d0                    ! converts J to cal units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
     real*8  , parameter :: micro       = 1.0d-6                     ! micro unit
     real*8  , parameter :: pico_2_sec  = 1.0d-12                    ! converts picosecond units to second units

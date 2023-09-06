@@ -236,40 +236,39 @@ logical         , allocatable   :: InputRef(:,:) , Input14(:,:)
 ! 1--4 Interactions: only if [ pairs ] is not read in the .itp file ...
 if ( .NOT. allocated (species(a) % bonds14) ) then 
 
-! Intermediate variable for 1-4... 
-allocate( vector_of_pairs14( 20000, 2 ) , source = I_zero )
-!allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,2 ) , source = I_zero )
-
- k = 1
- do i = 1 , species(a) % N_of_Atoms - 1
-     do j = i , species(a) % N_of_Atoms
-         if ( Input14(i,j) == .true. ) then
-             vector_of_pairs14(k,1) = i
-             vector_of_pairs14(k,2) = j
-             k = k + 1
-         end if
-     end do
- end do
-
- species(a) % Nbonds14 = ( size( pack( vector_of_pairs14(:,2), vector_of_pairs14(:,2) /= 0 ) ) ) 
- ! Preparing 1--4 interactions ...
-
- allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
- ! Associating 1--4 interactions to species ...
- k = 1
- do i = 1 , species(a) % N_of_atoms
-   do j = i , species(a) % N_of_atoms 
-     if( Input14(i,j) .eqv. .true. ) then
-        species(a) % bonds14(k,1) = i
-        species(a) % bonds14(k,2) = j
-        k = k + 1
-     end if
-   end do
- end do
-
+         ! Intermediate variable for 1-4... 
+         allocate( vector_of_pairs14( 20000, 2 ) , source = I_zero )
+         !allocate( vector_of_pairs14( species(a) % N_of_Atoms * species(a) % N_of_Atoms ,2 ) , source = I_zero )
+        
+         k = 1
+         do i = 1 , species(a) % N_of_Atoms - 1
+             do j = i , species(a) % N_of_Atoms
+                 if ( Input14(i,j) == .true. ) then
+                     vector_of_pairs14(k,1) = i
+                     vector_of_pairs14(k,2) = j
+                     k = k + 1
+                 end if
+             end do
+         end do
+        
+         species(a) % Nbonds14 = ( size( pack( vector_of_pairs14(:,2), vector_of_pairs14(:,2) /= 0 ) ) ) 
+         ! Preparing 1--4 interactions ...
+        
+         allocate( species(a) % bonds14(species(a) % Nbonds14,2 ) )
+         ! Associating 1--4 interactions to species ...
+         k = 1
+         do i = 1 , species(a) % N_of_atoms
+           do j = i , species(a) % N_of_atoms 
+             if( Input14(i,j) .eqv. .true. ) then
+                species(a) % bonds14(k,1) = i
+                species(a) % bonds14(k,2) = j
+                k = k + 1
+             end if
+           end do
+         end do
 end if
 
- deallocate( InputRef , Input14 , vector_of_pairs )
+deallocate( InputRef , Input14 , vector_of_pairs )
 
 !==============================================================================================
 end subroutine Identify_NonBondPairs
