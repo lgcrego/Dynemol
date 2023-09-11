@@ -2,7 +2,7 @@ module MPI_definitions_m
 
     use MPI
     use type_m       , only : warning
-    use parameters_m , only : driver , EnvField_
+    use parameters_m , only : driver , QMMM , EnvField_
 
     public :: world , myid , master , slave , np 
     public :: ChebyComm  , ChebyCrew  , myCheby 
@@ -58,11 +58,13 @@ contains
  if( myid == 0 ) master = .true.
  if( myid == 0 ) slave  = .false.
 
- if( np < 3 ) then
-     if( master ) CALL warning("halting: # of MPI processes < 3; # of MPI processes must be at least 3")
-     Call mpi_barrier( world , err )
-     stop
-     end if
+ if( QMMM ) then
+     if( np < 3 ) then
+         if( master ) CALL warning("halting: # of MPI processes < 3; # of MPI processes must be at least 3")
+         Call mpi_barrier( world , err )
+         stop
+         end if
+ end if
 
  end subroutine launch_MPI
 !
