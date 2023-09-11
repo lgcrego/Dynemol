@@ -142,7 +142,7 @@ read_loop: do
         case( "AUTOCORRELATION" ) 
                 AutoCorrelation = get_logical(line)
 
-        case( "VDOS_" ) 
+        case( "VDOS_" , "VDOS" , "vdos_" , "vdos") 
                 VDOS_ = get_logical(line)
 
 !------------------------------------------------------------------------
@@ -539,7 +539,7 @@ do i = 1 , N
     species(i) % Ndiheds        = 0
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
-    species(i) % NIntraLJ       = 0
+    species(i) % NintraIJ       = 0
 end do
 
 end subroutine allocate_species

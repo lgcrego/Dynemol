@@ -1,6 +1,7 @@
 module F_intra_m
 
     use type_m   
+    use omp_lib
     use constants_m
     use MM_input          , only: MM_input_format
     use parameters_m      , only: PBC , QMMM , driver , n_part
@@ -8,8 +9,8 @@ module F_intra_m
     use setup_m           , only: offset
     use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                                   vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
-                                  Dihedral_Potential_Type, forcefield, rcutsq, ryck_dih, proper_dih,    &
-                                  harm_dih, imp_dih, harm_bond, morse_bond
+                                  Dihedral_Potential_Type, rcutsq, ryck_dih, proper_dih,                &
+                                  harm_dih, imp_dih, harm_bond, morse_bond, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
@@ -23,19 +24,11 @@ module F_intra_m
     public :: ForceINTRA, pot_INTRA, BcastQMArgs, ForceQMMM
 
     ! module variables ...
-    real*8  , dimension (3):: rij , rjk , rkl , rik , rijk , rjkl , rijkl , f1 , f2 , f3 , f4
-    real*8                 :: rijq , rjkq , rklq , rijsq , rjksq , rklsq , fxyz , riju , riku , rijkj , rijkj2 , rjkkl , rjkkl2 ,     &
-                              rijkl2 , rjksq2 , rijkll , f1x , f1y , f1z , f2x , f2y , f2z , f3x , f3y , f3z , f4x , f4y , f4z ,      &
-                              sr2 , sr6 , sr12 , fs , phi , cosphi , sinphi , rsinphi , coephi , gamma , KRIJ , expar , eme , dphi ,  &
-                              term , chrgi , chrgj , freal , sig , eps , pterm , A0 , A1 , A2 , A3 , rtwopi , qterm , qterm0 , rterm, &
-                              sterm , tterm , C0 , C1 , C2 , C3 , C4 , C5 , coephi0 , rterm0 , rikq , riksq , term1 , term2 , term3 , &
-                              term4 , dphi1 , dphi2
-    real*8                 :: pot_INTRA
-    integer                :: i , j , k , l , m , n , ati , atj , atk , atl , loop , ati1 , atj1 
-    logical                :: flag1, flag2, flag3, flag4, flag5
+    real*8                 :: rijkj , rjkkl , gamma , pterm , rtwopi , rsinphi , phi , pot_INTRA
+    integer                :: i , j , n  
+    integer , allocatable  :: species_offset(:)
     logical                :: there_are_NB_SpecialPairs   = .false.
     logical                :: there_are_NB_SpecialPairs14 = .false.
-    integer , allocatable  :: species_offset(:)
 
     ! imported module variables ...
     integer         :: PST(2)
@@ -62,6 +55,13 @@ subroutine ForceINTRA
 implicit none
 
 ! local_variables ...
+real*8 , allocatable  :: tmp_force(:,:,:), tmp_vdw(:,:,:), tmp_ele(:,:,:)
+real*8 , dimension (3):: rij, rjk, rkl, rik, rijk, rjkl, rijkl
+real*8  :: rij2, rijq, rjkq, rklq, rijsq, rjksq, rklsq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
+real*8  :: f1x, f1y, f1z, f2x, f2y, f2z, f3x, f3y, f3z, f4x, f4y, f4z
+real*8  :: fs, Fcoul, E_vdw, E_coul, cosphi, sinphi, coephi, coephi0,  qterm, qterm0, rterm, rterm0
+integer :: k, l, ithr, numthr, ati, atj, atk, atl, loop  
+logical :: flag1 , flag2
 
 rtwopi = 1.d0/twopi
 
@@ -75,6 +75,9 @@ do j = 1 , MM % N_of_atoms
     atom(j) % fnonch(:)   = D_zero         ! Non-bonded coulomb Intramolecular
     atom(j) % fMorse(:)   = D_zero         ! Non-bonded Morse
 end do
+
+numthr = OMP_get_max_threads()
+allocate( tmp_force (MM%N_of_atoms,3,numthr) , source = D_zero )
 
 bdpot      = D_zero
 angpot     = D_zero
@@ -92,13 +95,22 @@ Coul_14    = D_zero
 Coul_intra = D_zero
 
 CALL offset( species_offset )
-
+ 
 ! Bonding - stretching potential ...
+
+!$OMP parallel DO &
+!$OMP default (shared) &
+!$OMP private (i , j , ati , atj , rij , rijq , rijsq , qterm , coephi , qterm0 , ithr)  &
+!$OMP reduction (+: harm_bond , morse_bond , bdpot)
 do i = 1 , MM % N_of_molecules
     do j = 1 ,  molecule(i) % Nbonds
+
+        ithr = OMP_get_thread_num() + 1
+
         ati = molecule(i) % bonds(j,1)
         atj = molecule(i) % bonds(j,2)
-        if( atom(atj) % flex .OR. atom(ati) % flex ) then 
+
+        if( atom(atj)% flex .OR. atom(ati)% flex ) then 
 
             rij(:)  = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:)  = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
@@ -109,35 +121,48 @@ do i = 1 , MM % N_of_molecules
 
                 case ( "harm" )
                 ! harmonic potential ...
-                qterm   = HALF * molecule(i) % kbond0(j,1) * ( rijsq - molecule(i) % kbond0(j,2) ) * ( rijsq - molecule(i) % kbond0(j,2) ) 
-                coephi  = molecule(i) % kbond0(j,1)*( rijsq - molecule(i) % kbond0(j,2) )/rijsq
-                harm_bond = qterm + harm_bond
+                qterm   = HALF*molecule(i)%kbond0(j,1) * (rijsq - molecule(i)%kbond0(j,2))**2
+                coephi  = molecule(i)%kbond0(j,1)*( rijsq - molecule(i)%kbond0(j,2) ) / rijsq
+                harm_bond = harm_bond + qterm
 
                 case ( "Mors" )
                 ! Morse potential ...
                 qterm0 = exp( -molecule(i) % kbond0(j,3) * ( rijsq - molecule(i) % kbond0(j,2) ) ) 
                 qterm  = molecule(i) % kbond0(j,1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
                 coephi = TWO * molecule(i) % kbond0(j,1) * molecule(i) % kbond0(j,3) * qterm0 * ( D_ONE - qterm0 ) / rijsq 
-                morse_bond = qterm + morse_bond               
+                morse_bond = morse_bond + qterm
  
             end select
 
-            atom(atj) % fbond(:) = atom(atj) % fbond(:) - coephi*rij(:)
-            atom(ati) % fbond(:) = atom(ati) % fbond(:) + coephi*rij(:)  
-            bdpot = qterm + bdpot
+            tmp_force(atj,1:3,ithr) = tmp_force(atj,1:3,ithr) - coephi*rij(:)
+            tmp_force(ati,1:3,ithr) = tmp_force(ati,1:3,ithr) + coephi*rij(:)
+
+            bdpot = bdpot + qterm
 
         end if 
     end do
 end do 
+!$OMP end parallel do
+
+! force units = J/mts = Newtons ...    
+do i = 1, MM % N_of_atoms
+    do k=1,numthr              
+        atom(i)% fbond(1:3) = atom(i)% fbond(1:3) + tmp_force(i,1:3,k)                                                                                                                              
+    enddo
+end do    
+deallocate( tmp_force )
 
 !====================================================================
 ! Angle - bending potential ...
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Nangs
+
         atj = molecule(i) % angs(j,1)
         ati = molecule(i) % angs(j,2)
         atk = molecule(i) % angs(j,3)
+
         if( atom(atj) % flex .OR. atom(ati) % flex .OR. atom(atk) % flex ) then
+
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
             rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
@@ -162,14 +187,13 @@ do i = 1 , MM % N_of_molecules
                     coephi = ( phi - molecule(i) % kang0(j,2) ) / SIN(phi)
                     rterm  = HALF * molecule(i) % kang0(j,1) * ( phi - molecule(i) % kang0(j,2) )**2
                 end if
-                angpot = rterm + angpot
+                angpot = angpot + rterm
          
                 do l = 1, 3
                     if (l == 1) atl = atj
                     if (l == 2) atl = ati
                     if (l == 3) atl = atk
                     do loop = 1, 3                    ! X,Y,Z axis (n = 1, 2 or 3)
-                       fxyz = 0.d0
                        riju = rij(loop)
                        riku = rjk(loop)
                        fxyz = ( molecule(i) % kang0(j,1) * coephi ) *                     &
@@ -177,11 +201,13 @@ do i = 1 , MM % N_of_molecules
                               (DEL(atl,atk)-DEL(atl,ati))*riju/(rijsq*rjksq) -            &
                               COS(phi)*( (DEL(atl,atj)-DEL(atl,ati))*riju/(rijsq*rijsq) + &
                               (DEL(atl,atk)-DEL(atl,ati))*riku/(rjksq*rjksq)) )
+
                        atom(atl) % fang(loop) = atom(atl) % fang(loop) + fxyz
+
                     end do
                 end do
 
-                ! Urey-Bradley bonding term ...
+                ! Urey-Bradley bonding ...
                 if( molecule(i) % angle_type(j) == "urba" ) then
                     rik(:) = atom(atk) % xyz(:) - atom(atj) % xyz(:)
                     rik(:) = rik(:) - MM % box(:) * DNINT( rik(:) * MM % ibox(:) ) * PBC(:)
@@ -189,11 +215,13 @@ do i = 1 , MM % N_of_molecules
                     riksq  = SQRT(rikq)
 
                     coephi0 = molecule(i) % kang0(j,3) * ( riksq - molecule(i) % kang0(j,4) )/riksq
-                    rterm0  = HALF * molecule(i) % kang0(j,3) * & 
-                       ( riksq - molecule(i) % kang0(j,4) ) * ( riksq - molecule(i) % kang0(j,4) ) 
+                    rterm0  = HALF*molecule(i)%kang0(j,3) * ( riksq - molecule(i)%kang0(j,4) )**2
+
                     atom(atk) % fang(:) = atom(atk) % fang(:) - coephi0*rik(:)
                     atom(atj) % fang(:) = atom(atj) % fang(:) + coephi0*rik(:)  
-                    angpot = rterm0 + angpot 
+
+                    angpot = angpot + rterm0
+
                 end if
               
             end select 
@@ -298,96 +326,115 @@ do i = 1 , MM % N_of_molecules
 end do
 
 !====================================================================
+! Nonbonding Interactions
+! parameters:
+! rcut = cutoff radius for vdW and Coulomb interactions (defined in card.intp)
+! rcutsq = rcut*rcut
+! FScut(i,j) = LJ/Bck Force at a spherical Surface of radius rcut for each MM atom pair
+! VScut(i,j) = LJ/Bck energy at a spherical Surface of radius rcut for each MM atom pair
+! rij(:)/dij is the direction versor of the atomic pair ij
+!====================================================================
 ! Non-bonded 1,4 intramolecular interactions ...
 
 If( allocated(SpecialPairs14) ) there_are_NB_SpecialPairs14 = .true.
 
 do i = 1 , MM % N_of_molecules
-    do j   = 1 , molecule(i) % Nbonds14
-        ati    = molecule(i) % bonds14(j,1)
-        atj    = molecule(i) % bonds14(j,2)
+    do j = 1 , molecule(i) % Nbonds14
+
+        ati = molecule(i) % bonds14(j,1)
+        atj = molecule(i) % bonds14(j,2)
 
         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
 
-            chrgi  = atom(ati) % charge
-            chrgj  = atom(atj) % charge
             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-            rklq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
 
-            ! Lennard Jones ...
-            select case ( MM % CombinationRule )
+            rij2 = sum( rij(:)**2 )
 
-                case (2)
-                    ! AMBER FF :: GMX COMB-RULE 2
-                    sr2 = ( ( atom(ati) % sig14 + atom(atj) % sig14  ) * ( atom(ati) % sig14 + atom(atj) % sig14 ) ) / rklq
-
-                case (3)
-                    ! OPLS  FF :: GMX COMB-RULE 3
-                    sr2 = ( ( atom(ati) % sig14 * atom(atj) % sig14 ) * ( atom(ati) % sig14 * atom(atj) % sig14 ) ) / rklq
-
-            end select
-            eps   =  atom(ati) % eps14 * atom(atj) % eps14 
-
-
-            If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (I,J) is a SpecialPair ... 
-
-               read_loop1: do  n = 1, size(SpecialPairs14)
-
-                   flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                           ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
-                   flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
-                           ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
- 
-                   if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
-                       sr2 = ( SpecialPairs14(n)%Parms(1) * SpecialPairs14(n)%Parms(1) ) / rklq
-                       eps = SpecialPairs14(n) % Parms(2) 
-                       exit read_loop1
-                   end if
-                
-               end do read_loop1
-
-            end if
-
-            rklsq = sqrt(rklq)
-            sr6   = sr2 * sr2 * sr2
-            sr12  = sr6 * sr6
-            fs    = 24.d0 * eps * ( TWO * sr12 - sr6 )
-            fs    = (fs / rklq) * MM % fudgeLJ
+            call Lennard_Jones_14 (rij2 , ati , atj , fs)
             atom(ati) % fnonbd14(1:3) = atom(ati) % fnonbd14(1:3) + fs * rij(1:3)
             atom(atj) % fnonbd14(1:3) = atom(atj) % fnonbd14(1:3) - fs * rij(1:3)
-            ! factor used to compensate the factor1 and factor2 factors ...
-            ! factor3 = 1.0d-20
-            sterm  = 4.d0 * eps * factor3 * ( sr12 - sr6 ) 
-!           alternative cutoff formula ...
-!           sterm  = sterm - vscut(ati,atj) + fscut(ati,atj) * ( rklsq - rcut ) 
-            sterm  = sterm * MM % fudgeLJ
 
-            !  Real part (Numero de cargas igual ao numero de sitios)
-            sr2   = 1.d0 / rklq
-            KRIJ  = KAPPA * rklsq
-            expar = EXP( -(KRIJ*KRIJ) )
-            freal = coulomb * chrgi * chrgj * ( sr2/rklsq )
-            freal = freal * ( ERFC(KRIJ) + TWO * rsqpi * KAPPA * rklsq * expar ) * MM % fudgeQQ
-            atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + freal * rij(1:3)
-            atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - freal * rij(1:3)
-            ! factor used to compensate the factor1 and factor2 factors ...
-            ! factor3 = 1.0d-20
-            tterm = coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)/rklsq * MM % fudgeQQ
-!           alternative cutoff formula ...
-!           tterm = tterm - vrecut * chrgi * chrgj + frecut * chrgi * chrgj * ( rklsq-rcut ) * factor3
-            LJ_14   = LJ_14   + sterm
-            Coul_14 = Coul_14 + tterm
+
+            call Coulomb14 (rij2 , ati , atj , Fcoul)
+            atom(ati) % fnonch14(1:3) = atom(ati) % fnonch14(1:3) + Fcoul * rij(1:3)
+            atom(atj) % fnonch14(1:3) = atom(atj) % fnonch14(1:3) - Fcoul * rij(1:3)
 
         end if
     end do
 end do
-
+ 
 !====================================================================
+! Non-bonding intramolecular interactions ...
+! Van der Walls , Buckingham , Electrostatic
 
+allocate( tmp_vdw (MM%N_of_atoms,3,numthr) , source = D_zero )
+allocate( tmp_ele (MM%N_of_atoms,3,numthr) , source = D_zero )
 
-call LENNARD_JONES()
+If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
+do i = 1 , MM % N_of_molecules
+
+     if ( molecule(i) % NintraIJ == 0 ) cycle
+
+     !$OMP parallel DO &
+     !$OMP default (shared) &
+     !$OMP private (j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
+     !$OMP reduction (+: LJ_intra , Coul_intra)
+     do j = 1 , molecule(i) % NintraIJ
+
+         ithr = OMP_get_thread_num() + 1
+
+         ati  = molecule(i) % IntraIJ(j,1) 
+         atj  = molecule(i) % IntraIJ(j,2) 
+
+         if ( atom(atj) % flex .OR. atom(ati) % flex ) then
+
+             rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
+             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+
+             rij2 = sum( rij(:)**2 )
+
+             if ( rij2 < rcutsq ) then
+
+                  select case( molecule(i)% intraIJ(j,3) )
+
+                         case(1)
+                         call Lennard_Jones( rij2 , ati , atj , fs , E_vdw )
+
+                         case(2) 
+                         call Buckingham( rij2 , ati , atj , fs , E_vdw )
+
+                  end select
+
+                  tmp_vdw(ati,1:3,ithr) = tmp_vdw(ati,1:3,ithr) + fs * rij(:)
+                  tmp_vdw(atj,1:3,ithr) = tmp_vdw(atj,1:3,ithr) - fs * rij(:)
+
+                  LJ_intra = LJ_intra + E_vdw*factor3 ! <== LJ and/or Buck energy
+
+                  ! Coulomb Interaction
+                  call Coulomb_DSF( rij2 , ati , atj , Fcoul , E_coul )
+
+                  tmp_ele(ati,1:3,ithr) = tmp_ele(ati,1:3,ithr) + Fcoul * rij(:)
+                  tmp_ele(atj,1:3,ithr) = tmp_ele(atj,1:3,ithr) - Fcoul * rij(:)
+
+                  Coul_intra = Coul_intra + E_coul*factor3 ! <== Coulomb energy
+
+             end if
+         end if
+     end do
+     !$OMP end parallel do
+
+end do
+
+! force units = J/mts = Newtons ...    
+do i = 1, MM % N_of_atoms
+    do k=1,numthr              
+        atom(i)% fnonbd(1:3) = atom(i)% fnonbd(1:3) + tmp_vdw(i,1:3,k)                                                                                                                              
+        atom(i)% fnonch(1:3) = atom(i)% fnonch(1:3) + tmp_ele(i,1:3,k)                                                                                                                              
+    enddo
+end do    
+deallocate( tmp_vdw , tmp_ele )
 
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
@@ -427,9 +474,9 @@ end If
 !====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot_INTRA = ( bdpot + angpot + dihpot )*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
-pot_total = pot_INTER + pot_INTRA
-pot_total = pot_total * mol * micro / MM % N_of_molecules
+pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
+pot_total = pot_INTER + pot_INTRA - Vself
+pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 
 if( QMMM ) then
     select case (driver)
@@ -467,13 +514,300 @@ end subroutine ForceINTRA
 !
 !
 !
+!==========================================================
+ subroutine Coulomb_DSF (rij2 , ati , atj , fcoul , E_coul)
+!==========================================================
+implicit none
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fcoul
+real*8  , intent(out) :: E_coul
+
+! local variables ...
+real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij
+
+! Coulomb damped shifted field, V_dsf ...
+! the damped and cutoff-neutralized Coulomb potential ...
+! incorporates both image charges at Rc surface and damping of electrostatic interaction ...
+! for details: JPC 124, 234104 (2006)
+
+chrgi = atom(ati)% charge
+chrgj = atom(atj)% charge
+
+dij   = sqrt(rij2)
+ir2   = 1.d0 / rij2
+KRIJ  = KAPPA * dij
+expar = EXP(-KRIJ**2)
+
+!Force
+Fcoul = coulomb * chrgi * chrgj * (ir2/dij)
+! damped Fcoul
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar )
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
+Fcoul = Fcoul - (frecut * chrgi * chrgj / dij)   
+
+!Energy
+E_coul = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ)
+! Coulomb shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+E_coul = E_coul - (vrecut*chrgi*chrgj) + (frecut*chrgi*chrgj*( dij-rcut ))
+
+end subroutine Coulomb_DSF
+!
+!
+!
+!
+!===============================================
+ subroutine Coulomb14 (rij2 , ati , atj , Fcoul)
+!===============================================
+implicit none
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: Fcoul
+
+! local variables ...
+real*8 :: chrgi , chrgj , ir2 , KRIJ , expar , dij , E_coul
+
+! Coulomb damped field for 1-4 pairs ...
+
+chrgi = atom(ati)% charge
+chrgj = atom(atj)% charge
+
+dij = sqrt(rij2)
+ir2   = 1.d0 / rij2
+KRIJ  = KAPPA * dij
+expar = EXP(-KRIJ**2)
+
+! for preserving 1-4 Coulomb interactions mind the parameters below
+!erfc(kappa*dij) ~ 0.98 for kappa = 0.005 and dij = 2.5
+
+!Force
+Fcoul = coulomb * chrgi * chrgj * ( ir2/dij )
+! damped Fcoul
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*dij*expar ) * MM%fudgeQQ
+
+!Energy 
+E_coul = (coulomb*chrgi*chrgj/dij) * ERFC(KRIJ) * MM%fudgeQQ
+
+Coul_14 = Coul_14 + E_coul*factor3
+
+end subroutine Coulomb14
+!
+!
+!
+!
+!========================================================
+ subroutine Lennard_Jones (rij2 , ati , atj , fs , E_vdw) 
+!========================================================
+implicit none
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: E_vdw
+
+! local variables ...  
+integer :: n , ati1 , atj1
+real*8  :: sr2 , sr6 , sr12 , dij , eps
+logical :: flag1 , flag2
+
+! Lennard Jones ...
+select case ( MM % CombinationRule )
+
+    case (2)
+        ! AMBER FF :: GMX COMB-RULE 2
+        sr2 = (atom(ati)%sig + atom(atj)%sig)**2 / rij2
+
+    case (3)
+        ! OPLS  FF :: GMX COMB-RULE 3
+        sr2 = (atom(ati)%sig * atom(atj)%sig)**2 / rij2
+
+end select
+eps = atom(ati)%eps * atom(atj)%eps
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         sr2 = SpecialPairs(n)%Parms(1)**2 / rij2 
+         eps = SpecialPairs(n)%Parms(2) 
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+dij  = sqrt(rij2)
+sr6  = sr2 * sr2 * sr2
+sr12 = sr6 * sr6
+
+!Forces
+fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
+! including cut-off ...
+ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
+fs = fs/rij2 - fscut(ati1,atj1)/dij     
+
+!Energy
+E_vdw = 4.d0 * eps * ( sr12 - sr6 )
+! LJ shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+E_vdw = E_vdw - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
+
+end subroutine Lennard_Jones
+!
+!
+!
+!
+!===================================================
+ subroutine Lennard_Jones_14 (rij2 , ati , atj , fs)
+!===================================================
+implicit none
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
+
+! local variables ...
+integer :: n 
+real*8  :: sr2 , sr6 , sr12 , eps , E_vdw
+logical :: flag1 , flag2
+
+! Lennard Jones for 1-4 pairs ...
+select case ( MM % CombinationRule )
+
+    case (2)
+        ! AMBER FF :: GMX COMB-RULE 2
+        sr2 = (atom(ati)%sig14 + atom(atj)%sig14)**2 / rij2
+
+    case (3)
+        ! OPLS  FF :: GMX COMB-RULE 3
+        sr2 = (atom(ati)%sig14 * atom(atj)%sig14)**2 / rij2
+
+end select
+eps = atom(ati)%eps14 * atom(atj)%eps14 
+
+If( there_are_NB_SpecialPairs14 ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop1: do  n = 1, size(SpecialPairs14)
+
+       flag1 = ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+               ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+       flag2 = ( adjustl( SpecialPairs14(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+               ( adjustl( SpecialPairs14(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+       if ( flag1 .OR. flag2 ) then       ! <== apply SpecialPair parms ... 
+           sr2 = SpecialPairs14(n)%Parms(1)**2 / rij2
+           eps = SpecialPairs14(n)%Parms(2) 
+           exit read_loop1
+       end if
+    
+   end do read_loop1
+
+end if
+
+sr6  = sr2 * sr2 * sr2
+sr12 = sr6 * sr6
+
+!Forces
+fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
+fs = (fs / rij2) * MM % fudgeLJ
+
+!Energy
+E_vdw = 4.d0 * eps * ( sr12 - sr6 ) * MM % fudgeLJ
+
+LJ_14 = LJ_14 + E_vdw*factor3  ! <== LJ energy
+
+end subroutine Lennard_Jones_14
+!
+!
+!
+!
+!=====================================================
+ subroutine Buckingham (rij2 , ati , atj , fs , E_vdw)
+!=====================================================
+implicit none
+real*8  , intent(in)  :: rij2
+integer , intent(in)  :: ati
+integer , intent(in)  :: atj
+real*8  , intent(out) :: fs
+real*8  , intent(out) :: E_vdw
+
+! local variables ...
+real*8  :: Aij , Bij , Cij
+integer :: n , ati1 , atj1
+real*8  :: ir2 , ir6 , ir8 , dij
+logical :: flag1 , flag2
+                                
+! Bukingham Potential and Forces ...
+
+! Combination Rules
+
+Aij = atom(ati)% BuckA * atom(atj)% BuckA
+
+Bij = atom(ati)% BuckB + atom(atj)% BuckB  
+
+Cij = atom(ati)% BuckC * atom(atj)% BuckC
+
+If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ... 
+
+   read_loop: do  n = 1, size(SpecialPairs)
+
+      flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(atj) % MMSymbol ) )
+      flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(ati) % MMSymbol ) ) .AND. &
+              ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(atj) % MMSymbol ) )
+
+      if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
+         Aij = SpecialPairs(n)% Parms(1) 
+         Bij = SpecialPairs(n)% Parms(2)
+         Cij = SpecialPairs(n)% Parms(3)
+         exit read_loop
+      end if
+
+   end do read_loop
+
+end if
+
+dij = sqrt(rij2)
+ir2 = 1.d0 / rij2
+ir6 = ir2 * ir2 * ir2 
+ir8 = ir2 * ir2 * ir2 * ir2
+
+!Force
+fs = Aij*Bij*exp(-Bij*dij) / dij - SIX*Cij*ir8
+
+ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
+atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+
+! shifted force: F_sf(R) = F(R) - F(Rc) ...
+fs = fs - fscut(ati1,atj1)/dij     
+
+!Energy
+E_vdw = Aij*exp(-Bij*dij) - Cij*ir6
+! Buckingham shifted potential: V_sf(R) = V(R) - V(Rc) - (dV/dR)[Rc]x(R-Rc) ...
+E_vdw = E_vdw - vscut(ati1,atj1) + fscut(ati1,atj1)*( dij - rcut ) 
+
+end subroutine Buckingham
+!
+!
+!
 !==============
  subroutine gmx
 !==============
 implicit none
 
 ! local variables ...
-real*8  :: psi , cos_Psi , dtheta
+real*8  :: psi, cos_Psi, dtheta
+real*8  :: term, term1, term2, term3, term4 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] 
@@ -559,6 +893,9 @@ end subroutine gmx
 implicit none
 
 ! local variables ...
+real*8 :: eme, dphi
+real*8 :: A0, A1, A2, A3, C0, C1, C2, C3, C4, C5 
+real*8 :: term, term1, term2, term3, term4 !, dphi1, dphi2 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
     case ('cos') ! V = k[1 + cos(n.phi - theta)]
@@ -568,20 +905,21 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
         gamma = - molecule(i) % kdihed0(j,2) * int(molecule(i) % kdihed0(j,3)) * sin(term) * rsinphi * rijkj * rjkkl
          
     case('harm') ! V = 1/2.k(phi - phi0)²
-        dphi  = phi - molecule(i) % kdihed0(j,1)
-        dphi  = dphi - DNINT(dphi * rtwopi) * twopi
-        dphi1 = phi - molecule(i) % kdihed0(j,3)
-        dphi1 = dphi1 - DNINT(dphi1 * rtwopi) * twopi
-        dphi2 = phi - molecule(i) % kdihed0(j,5)
-        dphi2 = dphi2 - DNINT(dphi2 * rtwopi) * twopi
-        term  = molecule(i) % kdihed0(j,2) * dphi
-        term  = term + molecule(i) % kdihed0(j,4) * dphi1
-        term  = term + molecule(i) % kdihed0(j,6) * dphi2
-        pterm = HALF * term * dphi
-        pterm = pterm + HALF * term1 * dphi1
-        pterm = pterm + HALF * term2 * dphi2
-        harm_dih = harm_dih + pterm
-        gamma = term * rsinphi * rijkj * rjkkl          
+         stop "dead end"
+!        dphi  = phi - molecule(i) % kdihed0(j,1)
+!        dphi  = dphi - DNINT(dphi * rtwopi) * twopi
+!        dphi1 = phi - molecule(i) % kdihed0(j,3)
+!        dphi1 = dphi1 - DNINT(dphi1 * rtwopi) * twopi
+!        dphi2 = phi - molecule(i) % kdihed0(j,5)
+!        dphi2 = dphi2 - DNINT(dphi2 * rtwopi) * twopi
+!        term  = molecule(i) % kdihed0(j,2) * dphi
+!        term  = term + molecule(i) % kdihed0(j,4) * dphi1
+!        term  = term + molecule(i) % kdihed0(j,6) * dphi2
+!        pterm = HALF * term * dphi
+!        pterm = pterm + HALF * term1 * dphi1
+!        pterm = pterm + HALF * term2 * dphi2
+!        harm_dih = harm_dih + pterm
+!        gamma = term * rsinphi * rijkj * rjkkl          
 
     case('hcos') ! V = 1/2.k[cos(phi) - cos(phi0)]²
         dphi  = cos(phi) - cos( molecule(i) % kdihed0(j,2) )
@@ -649,13 +987,15 @@ end subroutine not_gmx
 !===================
  function ERFC ( X )
 !===================
+! ERFC = (1 - ERF), complementary error function ...
+ implicit none
  real*8 :: ERFC
  real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
- parameter ( A1 = 0.254829592, A2 = -0.284496736 ) 
- parameter ( A3 = 1.421413741, A4 = -1.453122027 ) 
- parameter ( A5 = 1.061405429, P  =  0.3275911   ) 
+ parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 
+ parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
+ parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
 
- T    = 1.0 / ( 1.0 + P * X )
+ T    = d_one / ( d_one + P * X )
  XSQ  = X * X
  TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
  ERFC = TP * EXP ( -XSQ )
@@ -677,155 +1017,6 @@ end function ERFC
  end if
 
 end function DEL
-!
-!
-!
-! Get the flags status based on the current pair number and analysed atoms
-!
-! @param[in] pair_number
-! @param[in] ati
-! @param[in] atj
-! @param[out] flag1
-! @param[out] flag2
-subroutine GET_FLAGS(flag1, flag2, pair_number, ati, atj)
-    implicit none
-    logical, intent(out) :: flag1, flag2
-    integer, intent(in) :: pair_number, ati, atj
-    character(4) :: mm_symbols1, mm_symbols2, symbol_i, symbol_j
-
-    symbol_i = atom(ati) % MMSymbol
-    symbol_j = atom(atj) % MMSymbol
-    mm_symbols1 = SpecialPairs(pair_number)%MMSymbols(1)
-    mm_symbols2 = SpecialPairs(pair_number)%MMSymbols(2)
-
-    flag1 = adjustl(mm_symbols1) == adjustl(symbol_i)
-    flag1 = flag1 .AND. (adjustl(mm_symbols2) == adjustl(symbol_j))
-    flag2 = adjustl(mm_symbols2) == adjustl(symbol_i)
-    flag2 = flag2 .AND. (adjustl(mm_symbols1) == adjustl(symbol_j))
-end subroutine GET_FLAGS
-!
-!
-!
-!
-!==========================
- subroutine LENNARD_JONES()
-!==========================
-    implicit none
-    real*8 :: local_fnonbd(size(atom), 3)
-    real*8 :: local_fnonch(size(atom), 3)
-
-    If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
-
-    local_fnonbd = 0
-    local_fnonch = 0
-    !$OMP parallel &
-    !$OMP   default(shared) &
-    !$OMP   private(i) &
-    !$OMP   reduction(+ : LJ_intra, Coul_intra, local_fnonbd, local_fnonch)
-    do i = 1 , MM % N_of_molecules
-        !$OMP do &
-        !$OMP   schedule(static) &
-        !$OMP   private(j, n, ati, ati1, atj, atj1, chrgi, chrgj, rij, rklq, rklsq, sr2, sr6, sr12, &
-        !$OMP           eps, flag1, flag2, fs, sterm, tterm, expar, freal, KRIJ)
-        do j   = 1 , molecule(i) % NintraLJ
-            ati  = molecule(i) % IntraLJ(j,1)
-            ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
-            atj  = molecule(i) % IntraLJ(j,2)
-            atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species )
-
-            if (.NOT. (atom(atj)%flex .OR. atom(ati)%flex)) then
-                cycle
-            end if
-
-            chrgi = atom(ati)%charge
-            chrgj = atom(atj)%charge
-            rij(:) = atom(ati)%xyz(:) - atom(atj)%xyz(:)
-            rij(:) = rij(:) - MM%box(:) * DNINT(rij(:)*MM % ibox(:)) * PBC(:)
-            rklq = SUM(rij(:) ** 2)
-
-            if (.NOT. (rklq < rcutsq)) then
-                cycle
-            end if
-
-            ! Lennard Jones ...
-            ! AMBER FF :: GMX COMB-RULE 2
-            if (MM%CombinationRule == 2) then
-                sr2 = (atom(ati)%sig + atom(atj)%sig) ** 2 / rklq
-            ! OPLS  FF :: GMX COMB-RULE 3
-            else if (MM%CombinationRule == 3) then
-                sr2 = (atom(ati)%sig ** 2) * (atom(atj)%sig ** 2) / rklq
-            end if
-
-            eps = atom(ati)%eps * atom(atj)%eps
-
-            If( there_are_NB_SpecialPairs ) then    ! <== check whether (I,J) is a SpecialPair ...
-
-                do  n = 1, SIZE(SpecialPairs)
-                    call GET_FLAGS(flag1, flag2, n, ati, atj)
-
-                    if (.NOT. (flag1 .OR. flag2)) cycle 
-
-                    sr2 = ( SpecialPairs(n)%Parms(1) * SpecialPairs(n)%Parms(1) ) / rklq
-                    eps = SpecialPairs(n) % Parms(2) 
-                    exit
-
-                end do
-
-            end if
-             
-            rklsq = SQRT(rklq)
-            fs = 24.0 * eps * (2.0 * sr2 ** 6.0 - sr2 ** 3.0)
-            ! with force cut-off ...
-            fs = (fs / rklq) - fscut(ati1, atj1) / rklsq
-
-            ! factor3 used to compensate factor1 ...
-            sterm = 4.0 * eps * factor3 * (sr2 ** 6.0 - sr2 ** 3.0)
-            ! alternative formula with cutoff ...
-            sterm = sterm - vscut(ati1, atj1) + fscut(ati1, atj1) * (rklsq - rcut)
-
-
-            !  Real part (Number of charges equal to the number of sites)
-            sr2 = 1.0 / rklq
-            KRIJ  = KAPPA * rklsq
-            expar = EXP(-(KRIJ ** 2.0))
-            freal = coulomb * chrgi * chrgj * (sr2 / rklsq)
-            freal = freal * (ERFC(KRIJ) + 2.0 * rsqpi * KAPPA * rklsq * expar)
-            ! with force cut-off ...
-            freal = freal - frecut / rklsq * chrgi * chrgj
-
-            ! factor used to compensate factor1 ...
-            ! factor3 = 1.0d-20
-            tterm = (coulomb * factor3 * chrgi * chrgj * ERFC(KRIJ)) / rklsq
-            ! alternative formula with cutoff ...
-            tterm = tterm - vrecut * chrgi * chrgj
-            tterm = tterm + frecut * chrgi * chrgj * (rklsq - rcut) * factor3
-
-            ! atom(ati)%fnonbd(:) = atom(ati)%fnonbd(:) + fs * rij(:)
-            ! atom(atj)%fnonbd(:) = atom(atj)%fnonbd(:) - fs * rij(:)
-            ! atom(ati)%fnonch(:) = atom(ati)%fnonch(:) + freal * rij(:)
-            ! atom(atj)%fnonch(:) = atom(atj)%fnonch(:) - freal * rij(:)
-
-            local_fnonbd(ati,:) = local_fnonbd(ati,:) + fs * rij(:)
-            local_fnonbd(atj,:) = local_fnonbd(atj,:) - fs * rij(:)
-            local_fnonch(ati,:) = local_fnonch(ati,:) + freal * rij(:)
-            local_fnonch(atj,:) = local_fnonch(atj,:) - freal * rij(:)
-
-            LJ_intra   = LJ_intra   + sterm
-            Coul_intra = Coul_intra + tterm
-        end do
-        !$OMP end do
-
-    end do
-    !$OMP end parallel
-
-    !$OMP parallel do schedule(static) default(shared)
-    do n = 1, size(atom)
-        atom(n)%fnonbd(:) = atom(n)%fnonbd(:) + local_fnonbd(n,:)
-        atom(n)%fnonch(:) = atom(n)%fnonch(:) + local_fnonch(n,:)
-    end do
-    !$OMP end parallel do
-
-end subroutine LENNARD_JONES
 !
 !
 !
