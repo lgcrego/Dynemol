@@ -703,10 +703,17 @@ select case( DRIVER )
         
         dynamic = T_ 
 
-    case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
-
+    case( "avrg_confgs" )
+ 
         dynamic = ( F_ .OR. Survival )
+ 
+        If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
+    case( "Genetic_Alg" , "diagnostic" )
+ 
+        dynamic  = F_
+        survival = F_
+ 
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
     case( "MM_Dynamics" )
