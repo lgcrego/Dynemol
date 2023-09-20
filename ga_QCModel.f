@@ -461,9 +461,9 @@ end function
 !
 !
 !
-!================================================================================
- function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue , weight )
-!================================================================================
+!=========================================================================================
+ function R_Mulliken( GA , basis , MO , atom , AO , EHSymbol , residue , weight , Symbol )
+!=========================================================================================
 implicit none
 type(R_eigen)               , intent(in) :: GA
 type(STO_basis)             , intent(in) :: basis(:)
@@ -473,17 +473,19 @@ character(len=*), optional  , intent(in) :: AO
 character(len=*), optional  , intent(in) :: EHSymbol
 character(len=*), optional  , intent(in) :: residue
 real            , optional  , intent(in) :: weight
+character(len=*), optional  , intent(in) :: Symbol
 
 ! local variables ...
 integer               :: i , l , m
 real*8                :: R_Mulliken
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)  , mask_4(:)  
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:) , mask_5(:) 
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
 allocate( mask_3(size(basis)) , source=.false. )
 allocate( mask_4(size(basis)) , source=.false. )
+allocate( mask_5(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -557,9 +559,15 @@ else
     where( basis%residue == residue ) mask_4 = .true.
 end IF
 !====================================================
+IF( .NOT. present(Symbol) ) then
+    mask_5 = .true.
+else
+    where( basis%Symbol == Symbol ) mask_5 = .true.
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 .AND. mask_5 )
 
 ! perform the population analysis ...
 R_Mulliken = real( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
@@ -578,7 +586,7 @@ else If( weight > 0 ) then
 
 end If                              ! <= otherwise, dont update me and dont apply weight
 
-deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 )
+deallocate( mask , mask_1 , mask_2 , mask_3 , mask_4 , mask_5)
 
 end function R_Mulliken
 !

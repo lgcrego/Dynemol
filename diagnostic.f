@@ -8,7 +8,8 @@ module diagnostic_m
                                          survival , EnvField_ , &
                                          Alpha_Tensor ,         &
                                          GaussianCube ,         &
-                                         HFP_Forces
+                                         HFP_Forces ,           &
+                                         DOS_range , sigma
  use Solvated_M                 , only : DeAllocate_TDOS ,      &
                                          DeAllocate_PDOS ,      &
                                          DeAllocate_SPEC 
@@ -42,13 +43,12 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues
  integer         , allocatable  :: MOnum(:)
- real*8                         :: DP(3)
+ real*8                         :: DP(3) 
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: ExCell_basis(:)
 
- 
 ! preprocessing stuff ...................................
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
@@ -76,6 +76,8 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
+ CALL atomic_PDOS( Extended_Cell, ExCell_basis, UNI )
+ 
  CALL Total_DOS( UNI%erg , TDOS )
 
  do nr = 1 , N_of_residues
@@ -115,6 +117,103 @@ CALL Read_Command_Lines_Arguments( MOnum )
  include 'formats.h'
 
 end subroutine diagnostic
+!
+!
+!
+!==========================================
+subroutine atomic_PDOS( sys , basis , UNI )
+!==========================================
+implicit none
+type(structure) , intent(in) :: sys
+type(STO_basis) , intent(in) :: basis(:)
+ type(R_eigen)  , intent(in) :: UNI
+
+! local variables ...
+integer :: i , j , k
+real*8           , allocatable :: test(:,:)
+character(len=21) :: string
+character(len=2) , allocatable :: list(:)
+character(len=5) :: AO_orbs(9)=["s" , "py" , "pz" , "px" , "dxy" , "dyz" , "dz2" , "dxz" , "dx2y2"]
+
+real*8  , allocatable :: erg_MO(:) , projection(:,:)
+real*8                :: gauss_norm , two_sigma2 , step , delta_E
+integer               :: i1 , i2 , n_of_DOS_states
+integer , parameter :: grid_size = 1500
+type(f_grid)     :: PDOS_atomic
+
+!----------------------------------------------------------------------------------------------
+! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {Symbol} )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!----------------------------------------------------------------------------------------------
+
+allocate( list , source = fetch_names(sys , basis , instance="EHSymbol") )
+allocate( test (size(UNI%erg),size(list)) , source = 0.d0 )
+
+write(*,"(t1,i3,t12,a6,t22,a5,t35,a2,t45,a2,t55,a2,t65,a2)") i , "MO erg" , "total" , list(:)
+do i = 1 , size(UNI%erg)
+     do j = 1 , 9     
+          do k = 1 , size(list)
+               test(i,k) = test(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , EHSymbol=list(k) )
+          end do
+     end do
+     write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(test(i,:)) , test(i,:)
+end do
+
+!----------------------------------------------------------------------------------------------
+!                             Guassian broadden of PDOS peaks
+
+gauss_norm = 1.d0  ! 1.d0 / (sigma*sqrt2PI) ! <== for gauss_norm = 1 the gaussians are not normalized ...
+two_sigma2 = 2.d0 * sigma*sigma
+step = (DOS_range%fim-DOS_range%inicio) / float(grid_size-1)
+
+! states in the range [DOS_range% inicio , DOS_range% fim]
+i1 = maxloc(UNI%erg , 1 , UNI%erg <  DOS_range%inicio)
+i2 = maxloc(UNI%erg , 1 , UNI%erg <= DOS_range%fim   ) 
+
+n_of_DOS_states = i2 - i1 + 1
+
+call allocate_stuff( n_of_DOS_states , size(list) , grid_size , PDOS_atomic , erg_MO , projection )
+
+erg_MO = UNI%erg  (i1:i2)
+projection = test (i1:i2 , :)
+
+forall(k=1:grid_size) PDOS_atomic%grid(k) = (k-1)*step + DOS_range%inicio
+
+do i = 1 , size(list)
+
+     PDOS_atomic% peaks = 0.d0
+     PDOS_atomic% func  = 0.d0
+
+     do j = 1 , n_of_DOS_states
+          do k = 1 , grid_size
+     
+              delta_E = PDOS_atomic% grid(k)-erg_MO(j)
+
+              if(dabs(delta_E) < (step/two) )&
+              then
+                    PDOS_atomic% peaks(k) = PDOS_atomic% peaks(k) + projection(j,i)                                                              
+              end if
+     
+              if( delta_E**2/two_sigma2 < 25.d0 )&
+              then
+                    PDOS_atomic% func(k) = PDOS_atomic% func(k) + projection(j,i)*gauss_norm*exp( -delta_E**2/two_sigma2 )
+              end if
+          end do
+     end do
+
+     string = "dos.trunk/PDOS-"//trim(list(i))//".dat"
+
+     OPEN( unit=31 , file=string , status='unknown' )
+     do k = 1 , grid_size
+          write(31,"(3F12.5)") PDOS_atomic%grid(k) , PDOS_atomic%func(k) , PDOS_atomic%peaks(k) 
+     end do
+     CLOSE(31)
+
+end do
+
+end subroutine atomic_PDOS
 !
 !
 !
@@ -170,6 +269,70 @@ ELSE
 end IF
 
 end subroutine Read_Command_Lines_Arguments
+!
+!
+!
+!==============================================
+ function fetch_names (sys,basis,instance)  result(list)
+!==============================================
+type(structure) , intent(in) :: sys
+type(STO_basis) , intent(in) :: basis(:)
+character(*)    , intent(in) :: instance
+
+!local variables ...
+integer :: i
+integer , allocatable :: temp(:)
+character(len=2) , allocatable :: list(:), string(:)
+
+allocate( string( size(basis) ) )
+allocate( temp  ( size(basis) ) , source = 0 )
+
+select case (instance)
+
+       case( "Symbol" ) 
+       string(:) = basis(:)% Symbol
+
+       case( "EHSymbol" )
+       string(:) = basis(:)% EHSymbol
+
+end select
+
+do i = 1 , size(basis)
+
+    ! find different Symbols ... 
+    if( .NOT. any( string(1:i-1) == string(i) ) ) then
+        temp(i) = i
+    end if
+
+end do
+
+allocate( list( count(temp/=0) ) )
+list = pack(string , temp/=0) 
+
+deallocate( string , temp )
+
+end function fetch_names
+!
+!
+!
+!=========================================================================================================
+ subroutine allocate_stuff( n_of_DOS_states , list_size , grid_size , PDOS_atomic , erg_MO , projection )
+!=========================================================================================================
+implicit none
+integer               , intent(in)  :: n_of_DOS_states
+integer               , intent(in)  :: list_size
+integer               , intent(in)  :: grid_size
+type(f_grid)          , intent(out) :: PDOS_atomic
+real*8  , allocatable , intent(out) :: erg_MO(:)
+real*8  , allocatable , intent(out) :: projection(:,:)
+
+allocate( erg_MO           (n_of_DOS_states)          )
+allocate( projection       (n_of_DOS_states,list_size))
+allocate(PDOS_atomic% grid (grid_size))
+allocate(PDOS_atomic% peaks(grid_size) , source = 0.d0)
+allocate(PDOS_atomic% func (grid_size) , source = 0.d0)
+
+end  subroutine allocate_stuff
 !
 !
 !
