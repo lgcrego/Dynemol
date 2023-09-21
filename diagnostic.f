@@ -4,32 +4,37 @@ module diagnostic_m
  use omp_lib
  use constants_m
  use DOS_m
- use parameters_m               , only : spectrum , DP_Moment , &
-                                         survival , EnvField_ , &
-                                         Alpha_Tensor ,         &
-                                         GaussianCube ,         &
-                                         HFP_Forces ,           &
-                                         DOS_range , sigma
- use Solvated_M                 , only : DeAllocate_TDOS ,      &
-                                         DeAllocate_PDOS ,      &
-                                         DeAllocate_SPEC 
- use QCModel_Huckel             , only : EigenSystem
- use Structure_Builder          , only : Unit_Cell ,            &
-                                         Extended_Cell ,        &
-                                         Generate_Structure ,   &
-                                         Basis_Builder 
- use GA_QCModel_m               , only : Mulliken
- use DP_main_m                  , only : Dipole_Matrix
- use Dielectric_Potential       , only : Environment_SetUp
- use Oscillator_m               , only : Optical_Transitions
- use Psi_squared_cube_format    , only : Gaussian_Cube_Format
- use Data_Output                , only : Dump_stuff
- use Embedded_FF_Alpha          , only : AlphaPolar
- use HuckelForces_m             , only : HuckelForces
+ use parameters_m            , only : spectrum , DP_Moment , &
+                                      survival , EnvField_ , &
+                                      Alpha_Tensor ,         &
+                                      GaussianCube ,         &
+                                      HFP_Forces ,           &
+                                      DOS_range , sigma
+ use Solvated_M              , only : DeAllocate_TDOS ,      &
+                                      DeAllocate_PDOS ,      &
+                                      DeAllocate_SPEC 
+ use QCModel_Huckel          , only : EigenSystem
+ use Babel_routines_m        , only : TO_UPPER_CASE
+ use Structure_Builder       , only : Unit_Cell ,            &
+                                      Extended_Cell ,        &
+                                      Generate_Structure ,   &
+                                      Basis_Builder 
+ use GA_QCModel_m            , only : Mulliken
+ use DP_main_m               , only : Dipole_Matrix
+ use Dielectric_Potential    , only : Environment_SetUp
+ use Oscillator_m            , only : Optical_Transitions
+ use Psi_squared_cube_format , only : Gaussian_Cube_Format
+ use Data_Output             , only : Dump_stuff
+ use Embedded_FF_Alpha       , only : AlphaPolar
+ use HuckelForces_m          , only : HuckelForces
 
  public :: diagnostic
 
  private
+
+ !module variables ...
+ character(8) :: token
+ logical      :: atomicPDOS_called = .false.
 
  contains
 !
@@ -76,10 +81,10 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL EigenSystem( Extended_Cell, ExCell_basis, UNI )
 
- CALL atomic_PDOS( Extended_Cell, ExCell_basis, UNI )
- 
  CALL Total_DOS( UNI%erg , TDOS )
 
+ if( atomicPDOS_called ) CALL atomicPDOS( Extended_Cell, ExCell_basis, UNI )   
+ 
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
@@ -120,46 +125,28 @@ end subroutine diagnostic
 !
 !
 !
-!==========================================
-subroutine atomic_PDOS( sys , basis , UNI )
-!==========================================
+!=========================================
+subroutine atomicPDOS( sys , basis , UNI )
+!=========================================
 implicit none
 type(structure) , intent(in) :: sys
 type(STO_basis) , intent(in) :: basis(:)
- type(R_eigen)  , intent(in) :: UNI
+type(R_eigen)   , intent(in) :: UNI
 
 ! local variables ...
-integer :: i , j , k
-real*8           , allocatable :: test(:,:)
-character(len=21) :: string
+type(f_grid)         :: PDOS_atomic
+integer              :: i , j , k , i1 , i2 , n_of_DOS_states
+real*8               :: gauss_norm , two_sigma2 , step , delta_E
+real*8 , allocatable :: PDOS(:,:) , erg_MO(:) , projection(:,:)
+character(len=21)    :: string
 character(len=2) , allocatable :: list(:)
-character(len=5) :: AO_orbs(9)=["s" , "py" , "pz" , "px" , "dxy" , "dyz" , "dz2" , "dxz" , "dx2y2"]
+! local parameters ...
+integer , parameter  :: grid_size = 1500
 
-real*8  , allocatable :: erg_MO(:) , projection(:,:)
-real*8                :: gauss_norm , two_sigma2 , step , delta_E
-integer               :: i1 , i2 , n_of_DOS_states
-integer , parameter :: grid_size = 1500
-type(f_grid)     :: PDOS_atomic
 
-!----------------------------------------------------------------------------------------------
-! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {Symbol} )
-! Population analysis ...
-! {...} terms are optional  
-! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
-!----------------------------------------------------------------------------------------------
+allocate( list , source = fetch_names(sys , basis , instance=token) )
 
-allocate( list , source = fetch_names(sys , basis , instance="EHSymbol") )
-allocate( test (size(UNI%erg),size(list)) , source = 0.d0 )
-
-write(*,"(t1,i3,t12,a6,t22,a5,t35,a2,t45,a2,t55,a2,t65,a2)") i , "MO erg" , "total" , list(:)
-do i = 1 , size(UNI%erg)
-     do j = 1 , 9     
-          do k = 1 , size(list)
-               test(i,k) = test(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , EHSymbol=list(k) )
-          end do
-     end do
-     write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(test(i,:)) , test(i,:)
-end do
+PDOS = evaluate_PDOS(UNI,basis,list)
 
 !----------------------------------------------------------------------------------------------
 !                             Guassian broadden of PDOS peaks
@@ -177,7 +164,7 @@ n_of_DOS_states = i2 - i1 + 1
 call allocate_stuff( n_of_DOS_states , size(list) , grid_size , PDOS_atomic , erg_MO , projection )
 
 erg_MO = UNI%erg  (i1:i2)
-projection = test (i1:i2 , :)
+projection = PDOS (i1:i2 , :)
 
 forall(k=1:grid_size) PDOS_atomic%grid(k) = (k-1)*step + DOS_range%inicio
 
@@ -200,6 +187,7 @@ do i = 1 , size(list)
               then
                     PDOS_atomic% func(k) = PDOS_atomic% func(k) + projection(j,i)*gauss_norm*exp( -delta_E**2/two_sigma2 )
               end if
+
           end do
      end do
 
@@ -213,7 +201,7 @@ do i = 1 , size(list)
 
 end do
 
-end subroutine atomic_PDOS
+end subroutine atomicPDOS
 !
 !
 !
@@ -224,57 +212,130 @@ implicit none
 integer , allocatable  , intent(out) :: MOnum(:)
 
 ! local variables ...
-integer      :: i , MO_total , MO_first , MO_last
+integer      :: i , total , MO_first , MO_last
+character(4) :: str
 character(6) :: MOstr
 
-MO_total  = COMMAND_ARGUMENT_COUNT()
+total = COMMAND_ARGUMENT_COUNT()
 
-IF( MO_total == 3) then
-    call get_command_argument(2,MOstr)
+select case (total)
 
-    select case (MOstr)
+       case (2)
+            call get_command_argument(1,str)
+            str = TO_UPPER_CASE(str)           
+            if( str == "PDOS")& 
+            then 
+                 call get_command_argument(2,token)
+                 token = TO_UPPER_CASE(token)           
+                 select case (token)
+                     case( "EHSYMBOL", "SYMBOL" )
+                         if(token=="EHSYMBOL") token = "EHSymbol"
+                         if(token=="SYMBOL")   token = "Symbol"
+                         !fine, carry on
+                         atomicPDOS_called = .true.
+                     case default
+                         print*, "usage: dynemol PDOS {EHSymbol,Symbol}"
+                         stop
+                 end select
+           end if  
 
-      case( ":" )  ! <== orbitals within a range ...
+       case (3) 
+            call get_command_argument(2,MOstr)
 
-          CALL GET_COMMAND_ARGUMENT(1, MOstr)
-          read( MOstr,*) MO_first
-          CALL GET_COMMAND_ARGUMENT(3, MOstr)
-          read( MOstr,*) MO_last
+            select case (MOstr)
+              case( ":" )  ! <== orbitals within a range ...
 
-          MO_total  = MO_last - MO_first + 1
-          allocate( MOnum(MO_total) )
+                  CALL GET_COMMAND_ARGUMENT(1, MOstr)
+                  read( MOstr,*) MO_first
+                  CALL GET_COMMAND_ARGUMENT(3, MOstr)
+                  read( MOstr,*) MO_last
 
-          do i = 1 , MO_total
-             MOnum(i) = MO_first + (i-1)
-          end do
+                  total  = MO_last - MO_first + 1
+                  allocate( MOnum(total) )
 
-      case default  ! <== list of  3 orbitals ...     
+                  do i = 1 , total
+                     MOnum(i) = MO_first + (i-1)
+                  end do
 
-          allocate( MOnum(MO_total) )
-          do i = 1 , MO_total
-              CALL GET_COMMAND_ARGUMENT(i, MOstr)
-              read( MOstr,*) MOnum(i)
-          end do
+              case default  ! <== list of  3 orbitals ...     
 
-   end select
+                  allocate( MOnum(total) )
+                  do i = 1 , total
+                      CALL GET_COMMAND_ARGUMENT(i, MOstr)
+                      read( MOstr,*) MOnum(i)
+                  end do
+            end select
 
-ELSE
-   ! arbitrary (/= 3) list of orbitals ...     
-   allocate( MOnum(MO_total) )
-   do i = 1 , MO_total
-       CALL GET_COMMAND_ARGUMENT(i, MOstr)
-       read( MOstr,*) MOnum(i)
-   end do
+       case default
+            ! arbitrary (/= 3) list of orbitals ...     
+            allocate( MOnum(total) )
+            do i = 1 , total
+                CALL GET_COMMAND_ARGUMENT(i, MOstr)
+                read( MOstr,*) MOnum(i)
+            end do
 
-end IF
+end select
 
 end subroutine Read_Command_Lines_Arguments
 !
 !
 !
-!==============================================
+!=====================================================
+ function evaluate_PDOS (UNI,basis,list)  result(PDOS)
+!=====================================================
+implicit none
+type(R_eigen)   , intent(in) :: UNI
+type(STO_basis) , intent(in) :: basis(:)
+character(*)    , intent(in) :: list(:)
+
+! local variables ...
+integer              :: i , j , k
+real*8 , allocatable :: PDOS(:,:)
+character(len=5)     :: AO_orbs(9)=["s" , "py" , "pz" , "px" , "dxy" , "dyz" , "dz2" , "dxz" , "dx2y2"]
+
+!----------------------------------------------------------------------------------------------
+! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {Symbol} )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!----------------------------------------------------------------------------------------------
+
+allocate( PDOS (size(UNI%erg),size(list)) , source = 0.d0 )
+
+! uncomment for debugging
+!write(*,"(t1,i3,t12,a6,t22,a5,t35,a2,t45,a2,t55,a2,t65,a2)") i , "MO erg" , "total" , list(:)
+
+select case (token)
+
+       case("EHSymbol")
+           do i = 1 , size(UNI%erg)
+                do j = 1 , 9     
+                     do k = 1 , size(list)
+                          PDOS(i,k) = PDOS(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , EHSymbol=list(k) )
+                     end do
+                end do
+                !write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(PDOS(i,:)) , PDOS(i,:)
+           end do
+
+       case("Symbol")
+           do i = 1 , size(UNI%erg)
+                do j = 1 , 9     
+                     do k = 1 , size(list)
+                          PDOS(i,k) = PDOS(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , Symbol=list(k) )
+                     end do
+                end do
+                !write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(PDOS(i,:)) , PDOS(i,:)
+           end do
+
+end select
+
+end function evaluate_PDOS
+!
+!
+!
+!=======================================================
  function fetch_names (sys,basis,instance)  result(list)
-!==============================================
+!=======================================================
 type(structure) , intent(in) :: sys
 type(STO_basis) , intent(in) :: basis(:)
 character(*)    , intent(in) :: instance
