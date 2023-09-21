@@ -36,30 +36,32 @@ usage() {
 }
 
 # Parse command line arguments
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    resume)
-      arguments="resume" 
-      ;;
-    preview)
-      arguments="preview" 
-      ;;
-    spawn)
-      arguments="spawn $2" 
-      ;;
-    PDOS|pdos|Pdos)
-      arguments="PDOS $2" 
-      ;;
-    -h|--help|help)
-      usage
-      ;;
-    *)
-      echo "Error: Unknown option: $1"
-      usage
-      ;;
-  esac
-  shift
-done
+case "$1" in
+  resume)
+    arguments="resume" 
+    ;;
+  preview)
+    arguments="preview" 
+    ;;
+  spawn)
+    arguments="spawn $2" 
+    ;;
+  PDOS|pdos|Pdos)
+    if [ "$#" -lt 2 ]; then
+         usage; exit
+    fi
+    arguments="PDOS $2" 
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    echo "Error: Unknown option: $1"
+    usage
+    ;;
+esac
+
+
 
 export DYNEMOLWORKDIR=$(pwd)
 export DYNEMOLDIR=<path to dynemol dir>
