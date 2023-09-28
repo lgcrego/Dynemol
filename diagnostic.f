@@ -239,15 +239,15 @@ select case (total)
                  end select
            end if  
 
-       case (3) 
-            call get_command_argument(2,MOstr)
+       case (4) 
+            call get_command_argument(3,MOstr)
 
             select case (MOstr)
-              case( ":" )  ! <== orbitals within a range ...
+              case( "-" )  ! <== orbitals within a range ...
 
-                  CALL GET_COMMAND_ARGUMENT(1, MOstr)
+                  CALL GET_COMMAND_ARGUMENT(2, MOstr)
                   read( MOstr,*) MO_first
-                  CALL GET_COMMAND_ARGUMENT(3, MOstr)
+                  CALL GET_COMMAND_ARGUMENT(4, MOstr)
                   read( MOstr,*) MO_last
 
                   total  = MO_last - MO_first + 1

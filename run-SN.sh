@@ -28,7 +28,6 @@ usage() {
   echo " "
   echo "  MO        generates MO cube files for visualization , implemented in driver = {diagnostic,Genetic_Alg} ; usage below"
   echo "  MO        {MO_i}-{MO_f}             ,  range of MO's from MO_1 to MO_f"
-  echo "  MO        {MO_1} {MO_2} ... {MO_n}  ,  list of MO's separated by spaces"
   echo " "
   echo "  for (driver = MM_Dynamics) and (driver_MM = Parametrize) choose among the arguments below"
   echo "  newOPT , repeat , resume"
@@ -36,30 +35,41 @@ usage() {
 }
 
 # Parse command line arguments
-case "$1" in
-  resume)
-    arguments="resume" 
-    ;;
-  preview)
-    arguments="preview" 
-    ;;
-  spawn)
-    arguments="spawn $2" 
-    ;;
-  PDOS|pdos|Pdos)
-    if [ "$#" -lt 2 ]; then
-         usage; exit
-    fi
-    arguments="PDOS $2" 
-    ;;
-  -h|--help|help)
-    usage
-    ;;
-  *)
-    echo "Error: Unknown option: $1"
-    usage
-    ;;
-esac
+if [[ "$#" -ne 0 ]]; then
+    case "$1" in
+      resume)
+        arguments="resume" 
+        ;;
+      preview)
+        arguments="preview" 
+        ;;
+      spawn)
+        arguments="spawn $2" 
+        ;;
+      PDOS|pdos|Pdos)
+        if [ "$#" -lt 2 ]; then
+             usage; exit
+        fi
+        arguments="PDOS $2" 
+        ;;
+      MO|mo)
+        if [ "$#" -lt 2 ]; then
+             usage; exit
+        elif [ "$#" -eq 3 ]; then 
+             arguments="MO $2 $3" 
+        elif [ "$#" -eq 4 ]; then 
+             arguments="MO $2"\ -\ "$4" 
+        fi
+        ;;
+      -h|--help|help)
+        usage
+        ;;
+      *)
+        echo "Error: Unknown option: $1"
+        usage
+        ;;
+    esac
+fi
 
 
 
