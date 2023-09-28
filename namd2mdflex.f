@@ -75,8 +75,9 @@ do a = 1 , MM % N_of_species
 
         ! start reading the molecular structure of species(a) ...
         do
-            read(33,100) keyword
-            if( verify( "!NATOM" , keyword ) == 0 ) exit
+            read(33,'(A)',iostat=ioerr) line
+            line = to_upper_case(line)
+            if( verify( "!NATOM" , line ) == 0 ) exit
         end do
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
@@ -137,8 +138,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
-          read(33,100) keyword
-          if( verify( "!NBOND" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NBOND" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nbonds
@@ -165,8 +167,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
-          read(33,100) keyword
-          if( verify( "!NTHETA" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NTHETA" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nangs
@@ -197,8 +200,9 @@ do a = 1 , MM % N_of_species
         !=========================================================================
         !reading normal dihedrals ...
         do
-          read(33,100,iostat=ioerr) keyword
-          if( verify( "!NPHI" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NPHI" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Ndiheds
@@ -213,13 +217,14 @@ do a = 1 , MM % N_of_species
         rewind 33
         !=========================================================================
         !reading improper dihedrals ...
-        do
-          read(33,100,iostat=ioerr) keyword
-          if( verify( "!NIMPHI" , keyword ) == 0 ) exit
+        do 
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NIMPHI" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nimpropers
-  
+
         ! reading full lines ...
         do k = 1 , ceiling(Nimpropers/two)-1
             select case ( MM_input_format )
@@ -282,9 +287,9 @@ do a = 1 , MM % N_of_species
         ! AD-HOC parameters :: reading ...
 
         do
-          read(33,100) keyword
-          keyword = to_upper_case(keyword)
-          if( verify( "!AD-HOC" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!AD-HOC" , line ) == 0 ) exit
         end do
         backspace(33)
 
@@ -332,8 +337,6 @@ FF % Symbol   = adjustl(FF % Symbol)
 FF % MMSymbol = adjustl(FF % MMSymbol)
 
 deallocate( InputChars , InputIntegers )
-
-100 format(a18)
 
 end subroutine psf2mdflex
 !
