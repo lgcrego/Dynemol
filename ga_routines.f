@@ -63,11 +63,12 @@ CALL Read_GA_key( basis )
 !-----------------------------------------------
 !        SETTING-UP initial populations
 !-----------------------------------------------
+open( unit=23, file='opt.trunk/GA_cost.dat', status='unknown' ) 
 
 GeneSize = GA%GeneSize
 
 ! Initial Populations ...
-allocate( Pop     (Pop_Size , GeneSize) )
+allocate( Pop(Pop_Size , GeneSize) )
 
 CALL random_seed
 

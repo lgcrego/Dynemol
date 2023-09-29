@@ -96,15 +96,15 @@ Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , fi
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(50) - UNI%erg(49) , "  vs " , 3.8327d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(49)) - 3.8327d0
-Print 10, "dE2 = ",UNI%erg(51) - UNI%erg(49) , "  vs " , 5.1816d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(49)) - 5.1816d0
-Print 10, "dE3 = ",UNI%erg(50) - UNI%erg(48) , "  vs " , 5.3971d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(48)) - 5.3971d0
-Print 10, "dE4 = ",UNI%erg(49) - UNI%erg(48) , "  vs " , 1.5644d0 , "  => error = ", ( UNI%erg(49) - UNI%erg(48)) - 1.5644d0
-Print 10, "dE5 = ",UNI%erg(51) - UNI%erg(50) , "  vs " , 1.3500d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(50)) - 1.3500d0
-Print 10, "dE6 = ",UNI%erg(48) - UNI%erg(47) , "  vs " , 0.2046d0 , "  => error = ", ( UNI%erg(48) - UNI%erg(47)) - 0.2046d0
-Print 10, "dE7 = ",UNI%erg(47) - UNI%erg(46) , "  vs " , 0.1116d0 , "  => error = ", ( UNI%erg(47) - UNI%erg(46)) - 0.1116d0
-Print 10, "dE8 = ",UNI%erg(52) - UNI%erg(51) , "  vs " , 0.1929d0 , "  => error = ", ( UNI%erg(52) - UNI%erg(51)) - 0.1929d0
-Print 10, "dE9 = ",UNI%erg(53) - UNI%erg(51) , "  vs " , 0.3880d0 , "  => error = ", ( UNI%erg(53) - UNI%erg(51)) - 0.3880d0
+Print 10, "dE1 = ",UNI%erg(32) - UNI%erg(31) , "  vs " , 2.70d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(31)) - 2.70d0
+Print 10, "dE2 = ",UNI%erg(32) - UNI%erg(30) , "  vs " , 3.78d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(30)) - 3.78d0
+!Print 10, "dE3 = ",UNI%erg(50) - UNI%erg(48) , "  vs " , 5.3971d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(48)) - 5.3971d0
+!Print 10, "dE4 = ",UNI%erg(49) - UNI%erg(48) , "  vs " , 1.5644d0 , "  => error = ", ( UNI%erg(49) - UNI%erg(48)) - 1.5644d0
+!Print 10, "dE5 = ",UNI%erg(51) - UNI%erg(50) , "  vs " , 1.3500d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(50)) - 1.3500d0
+!Print 10, "dE6 = ",UNI%erg(48) - UNI%erg(47) , "  vs " , 0.2046d0 , "  => error = ", ( UNI%erg(48) - UNI%erg(47)) - 0.2046d0
+!Print 10, "dE7 = ",UNI%erg(47) - UNI%erg(46) , "  vs " , 0.1116d0 , "  => error = ", ( UNI%erg(47) - UNI%erg(46)) - 0.1116d0
+!Print 10, "dE8 = ",UNI%erg(52) - UNI%erg(51) , "  vs " , 0.1929d0 , "  => error = ", ( UNI%erg(52) - UNI%erg(51)) - 0.1929d0
+!Print 10, "dE9 = ",UNI%erg(53) - UNI%erg(51) , "  vs " , 0.3880d0 , "  => error = ", ( UNI%erg(53) - UNI%erg(51)) - 0.3880d0
 
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
@@ -151,17 +151,17 @@ character(6) :: MOstr
 
 MO_total  = COMMAND_ARGUMENT_COUNT()
 
-IF( MO_total == 3) then
+IF( MO_total == 4) then
 
-    call get_command_argument(2,MOstr)
+    call get_command_argument(3,MOstr)
 
     select case (MOstr)
       
-      case( ":" )  ! <== orbitals within a range ...
+      case( "-" )  ! <== orbitals within a range ...
          
-          CALL GET_COMMAND_ARGUMENT(1, MOstr)
+          CALL GET_COMMAND_ARGUMENT(2, MOstr)
           read( MOstr,*) MO_first
-          CALL GET_COMMAND_ARGUMENT(3, MOstr)
+          CALL GET_COMMAND_ARGUMENT(4, MOstr)
           read( MOstr,*) MO_last
 
           MO_total  = MO_last - MO_first + 1
