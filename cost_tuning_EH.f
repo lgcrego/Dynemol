@@ -50,9 +50,9 @@ real*8                                   :: evaluate_cost
 integer  :: i , dumb
 real*8   :: eval(200) = D_zero
 real*8   :: REF_DP(3) , REF_Alpha(3)
-logical  :: mode
+logical  :: input_mode
 
-mode = Adaptive_GA% mode
+input_mode = Adaptive_GA% mode
 
 !-------------------------------------------------------------------------
 ! Energy gaps ...     
@@ -74,23 +74,23 @@ eval(me) = MO_erg_diff( OPT_UNI, 32, 30, 3.78d0 )
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !
-! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {slide} , {adaptive} )
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {from_to} , {adaptive} )
 ! {...} terms are optional
 ! default criterium (threshold=0.85): localized > 85% of total population
-! slide = real_interval( begin , end ) : no need to use {threshold} if {slide} is used
-! adaptive = {mode,lock} : logical flag to enable adpative GA method , lock sets up threshold = end
+! from_to = real_interval( begin , end ) : no need to use {threshold} if {from_to} is used
+! adaptive = {input_mode,lock} : logical flag to enable adpative GA method , lock sets threshold = end
 !
 ! ==> Bond_Type( sys , OPT_UNI , MO , atom1 , AO1 , atom2 , AO2 , "+" or "-" )
 ! Bond Topolgy analysis ...
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
 !  + = Bonding               &         - = Anti_Bonding
 !
-! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {slide} , {adaptive} )
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {EHSymbol} , {residue} , {threshold} , {from_to} , {adaptive} )
 ! NO charge on these atoms ...
 ! {...} terms are optional  
 ! default threshold < 0.001 
-! slide = real_interval( begin , end ) : no need to use {threshold} if {slide} is used
-! adaptive = {mode,lock} : logical flag to enable adpative GA method, lock sets up threshold = end
+! from_to = real_interval( begin , end ) : no need to use {threshold} if {from_to} is used
+! adaptive = {input_mode,lock} : logical flag to enable adpative GA method, lock sets threshold = end
 !
 ! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {weight} )
 ! Population analysis ...
@@ -101,17 +101,17 @@ eval(me) = MO_erg_diff( OPT_UNI, 32, 30, 3.78d0 )
 
 !30 ===================
 
-eval(me) =  Exclude (OPT_UNI, basis, MO=30, EHSymbol = "N*", slide = real_interval( 0.9 , 0.01), adaptive = mode)    
-eval(me) =  Localize (OPT_UNI, basis, MO=30, EHSymbol = "NC", slide = real_interval( 0.9 , 0.01), adaptive = mode)    
+eval(me) =  Exclude (OPT_UNI, basis, MO=30, EHSymbol = "N*", from_to = real_interval( 0.9 , 0.01), adaptive = input_mode)    
+eval(me) =  Localize (OPT_UNI, basis, MO=30, EHSymbol = "NC", from_to = real_interval( 0.9 , 0.01), adaptive = input_mode)    
 
 !31 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=31 , AO='Pz')
-eval(me) =  Exclude (OPT_UNI, basis, MO=31, EHSymbol = "N*", slide = real_interval( 0.90, 0.01 ), adaptive  = mode) 
-eval(me) =  Exclude (OPT_UNI, basis, MO=31, EHSymbol = "CQ", slide = real_interval( 0.90, 0.01 ), adaptive  = mode) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=31, EHSymbol = "N*", from_to = real_interval( 0.90, 0.01 ), adaptive  = input_mode) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=31, EHSymbol = "CQ", from_to = real_interval( 0.90, 0.01 ), adaptive  = input_mode) 
 
 !32 ===================
 eval(me) =  MO_character( OPT_UNI , basis , MO=32 , AO='Pz')
-eval(me) =  Exclude (OPT_UNI, basis, MO=32, EHSymbol = "NC", slide = real_interval( 0.9, 0.01), adaptive = lock) 
+eval(me) =  Exclude (OPT_UNI, basis, MO=32, EHSymbol = "NC", from_to = real_interval( 0.9, 0.01), adaptive = lock) 
 
 
 !-------------------------                                                         

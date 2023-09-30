@@ -67,7 +67,7 @@ end function MO_erg_diff
 !
 !
 !==============================================================================================
- function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , slide , adaptive )
+ function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , from_to , adaptive )
 !==============================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
@@ -77,7 +77,7 @@ integer            , optional  , intent(in) :: atom(:)
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
 real               , optional  , intent(in) :: threshold
-type(real_interval), optional  , intent(in) :: slide
+type(real_interval), optional  , intent(in) :: from_to
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
@@ -118,7 +118,7 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
 !population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 population = sum( GA%L(MO,:) * GA%R(:,MO) , mask ) 
 
-If( .NOT. present(slide) ) then
+If( .NOT. present(from_to) ) then
 
        If( present(threshold) ) then
           x = population  - threshold
@@ -129,12 +129,12 @@ If( .NOT. present(slide) ) then
 
 ElseIf( adaptive == .true. ) then
 
-       LinearFill = (slide%fim - slide%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + slide%inicio
+       LinearFill = (from_to%fim - from_to%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + from_to%inicio
        x = population - LinearFill
 
 ElseIf( adaptive == .false. ) then
 
-       x = population - slide%fim
+       x = population - from_to%fim
 
 EndIf
 
@@ -155,7 +155,7 @@ end function exclude
 !
 !
 !==============================================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , slide , adaptive )
+ function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , from_to , adaptive )
 !==============================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
@@ -165,7 +165,7 @@ integer            , optional  , intent(in) :: atom(:)
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
 real               , optional  , intent(in) :: threshold
-type(real_interval), optional  , intent(in) :: slide
+type(real_interval), optional  , intent(in) :: from_to
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
@@ -206,7 +206,7 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3)
 !population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 population = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
-If( .NOT. present(slide) ) then
+If( .NOT. present(from_to) ) then
 
        If( present(threshold) ) then
           x = threshold - population 
@@ -217,12 +217,12 @@ If( .NOT. present(slide) ) then
 
 ElseIf( adaptive == .true. ) then
 
-       LinearFill = (slide%fim - slide%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + slide%inicio
+       LinearFill = (from_to%fim - from_to%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + from_to%inicio
        x = LinearFill - population
 
 ElseIf( adaptive == .false. ) then
 
-       x = slide%fim - population  
+       x = from_to%fim - population  
 
 EndIf
 

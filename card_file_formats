@@ -188,7 +188,7 @@
   Pop_range       =  Real              ! <== range of variation of parameters [0:1] (Real)
   selection_by    =                    ! <== option = {roullete,ranking,sorting}; fitness selection method
   Mutation_rate   =  Real              ! <== range of variation of parameters [0:1] (Real)
-  Adaptive_       =  Logical           ! <== true -> Adaptive GA method; gradually tights cost function on-the-fly (Logical)
+  Adaptive_       =  Logical           ! <== true -> Adaptive GA method; gradually tightens cost function on-the-fly (Logical)
   Mutate_Cross    =  Logical           ! <== false -> pure Genetic Algorithm ; prefer false for fine tunning! (Logical)
   CG_             =  Logical           ! <== for using CONJUGATE GRADIENT method on Top_Selection after genetic algorithm (Logical)
   Top_Selection   =  Integer           ! <== top selection to undergo CG_

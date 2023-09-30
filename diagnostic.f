@@ -34,7 +34,8 @@ module diagnostic_m
 
  !module variables ...
  character(8) :: token
- logical      :: atomicPDOS_called = .false.
+ logical      :: atomicPDOS_called  = .false.
+ logical      :: orbitalPDOS_called = .false.
 
  contains
 !
@@ -83,7 +84,8 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL Total_DOS( UNI%erg , TDOS )
 
- if( atomicPDOS_called ) CALL atomicPDOS( Extended_Cell, ExCell_basis, UNI )   
+ if( atomicPDOS_called  ) CALL atomicPDOS ( Extended_Cell, ExCell_basis, UNI )   
+ if( orbitalPDOS_called ) CALL orbitalPDOS( Extended_Cell, ExCell_basis, UNI , MOnum)   
  
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
@@ -205,6 +207,50 @@ end subroutine atomicPDOS
 !
 !
 !
+!==========================================
+subroutine orbitalPDOS( sys , basis , UNI , MOnum )
+!==========================================
+implicit none
+type(structure)       , intent(in) :: sys
+type(STO_basis)       , intent(in) :: basis(:)
+type(R_eigen)         , intent(in) :: UNI
+integer , allocatable , intent(in) :: MOnum(:)
+
+! local variables  ...
+integer              :: i , j , k
+real*8               :: pop(9)
+character(len=2) , allocatable :: list(:)
+character(len=5)     :: AO_orbs(9)=["s" , "py" , "pz" , "px" , "dxy" , "dyz" , "dz2" , "dxz" , "dx2y2"]
+
+!----------------------------------------------------------------------------------------------
+! ==> Mulliken( OPT_UNI , basis , MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {residue} , {Symbol} )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!----------------------------------------------------------------------------------------------
+
+allocate( list , source = fetch_names(sys , basis , instance=token) )
+
+open( unit = 18 , file = "dos.trunk/orbitalPDOS.dat" , status = "unknown", action = "write" )
+
+do i = 1 , size(MOnum)
+     write(18,"(/a5,i4)") "MO = ",MOnum(i)
+     write(18,"(t13,a83)") "S        Py        Pz        Px        Dxy       Dyz       Dz2       Dxz      Dx2y2"
+     do k = 1 , size(list)
+          write(18,"(a5)",advance='no') list(k) 
+          do j = 1 , 9     
+               pop(j) = Mulliken( UNI , basis , MO=MOnum(i) , AO = AO_orbs(j) , EHSymbol=list(k) )
+          end do
+     write(18,"(9F10.4)") (pop(j) , j=1,9)
+     end do
+end do
+
+close(18)
+
+end subroutine orbitalPDOS
+!
+!
+!
 !===============================================
 subroutine Read_Command_Lines_Arguments( MOnum )
 !===============================================
@@ -212,7 +258,7 @@ implicit none
 integer , allocatable  , intent(out) :: MOnum(:)
 
 ! local variables ...
-integer      :: i , total , MO_first , MO_last
+integer      :: i , total , MO_first , MO_last , arg_i , arg_f
 character(4) :: str
 character(6) :: MOstr
 
@@ -239,15 +285,27 @@ select case (total)
                  end select
            end if  
 
-       case (4) 
-            call get_command_argument(3,MOstr)
+       case (4:5) 
+
+            call get_command_argument(1,str)
+            str = TO_UPPER_CASE(str)           
+            if( str == "PDOS")& 
+            then 
+                 token = "EHSymbol"
+                 orbitalPDOS_called = .true.
+            end if
+
+            arg_i = total - 2
+            arg_f = total
+
+            call get_command_argument(arg_i+1,MOstr)
 
             select case (MOstr)
               case( "-" )  ! <== orbitals within a range ...
 
-                  CALL GET_COMMAND_ARGUMENT(2, MOstr)
+                  CALL GET_COMMAND_ARGUMENT(arg_i, MOstr)
                   read( MOstr,*) MO_first
-                  CALL GET_COMMAND_ARGUMENT(4, MOstr)
+                  CALL GET_COMMAND_ARGUMENT(arg_f, MOstr)
                   read( MOstr,*) MO_last
 
                   total  = MO_last - MO_first + 1
@@ -267,12 +325,8 @@ select case (total)
             end select
 
        case default
-            ! arbitrary (/= 3) list of orbitals ...     
-            allocate( MOnum(total) )
-            do i = 1 , total
-                CALL GET_COMMAND_ARGUMENT(i, MOstr)
-                read( MOstr,*) MOnum(i)
-            end do
+            print*, "please check dynemol -h for usage"
+            stop
 
 end select
 
