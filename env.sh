@@ -15,7 +15,7 @@ then
 	mkdir "$DYNEMOLWORKDIR"/MO.trunk
 
 	mkdir "$DYNEMOLWORKDIR"/opt.trunk 2> "$DYNEMOLDIR"/qdynamo.err
-	mv "$DYNEMOLWORKDIR"/opt.trunk/view_cost.dat opt.trunk/old_view_cost.dat 2> "$DYNEMOLDIR"/qdynamo.err
+	mv "$DYNEMOLWORKDIR"/opt.trunk/ga_cost.statement opt.trunk/old_ga_cost.statement 2> "$DYNEMOLDIR"/qdynamo.err
 
 	rm -r -f "$DYNEMOLWORKDIR"/log.trunk 2> "$DYNEMOLDIR"/qdynamo.err
 	mkdir "$DYNEMOLWORKDIR"/log.trunk
@@ -28,4 +28,5 @@ fi
 if [ "x$1" == 'xsave_cost_statement' ]
 then
 	paste "$DYNEMOLWORKDIR"/opt.trunk/view_cost.dat <(grep "eval(me)" "$DYNEMOLDIR"/cost_tuning_EH.f | grep -v \!) > "$DYNEMOLWORKDIR"/opt.trunk/ga_cost.statement
+    rm "$DYNEMOLWORKDIR"/opt.trunk/view_cost.dat
 fi
