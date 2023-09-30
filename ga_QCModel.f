@@ -66,29 +66,31 @@ end function MO_erg_diff
 !
 !
 !
-!==============================================================================================
- function Exclude( GA , basis , MO , atom , EHSymbol , residue , threshold , from_to , adaptive )
-!==============================================================================================
+!=====================================================================================================
+ function Exclude( GA , basis , MO , atom , AO , EHSymbol , residue , reference , from_to , adaptive )
+!=====================================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
 type(STO_basis)                , intent(in) :: basis(:)
 integer                        , intent(in) :: MO
 integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: AO
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
-real               , optional  , intent(in) :: threshold
+real               , optional  , intent(in) :: reference
 type(real_interval), optional  , intent(in) :: from_to
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
-integer               :: i
+integer               :: i , l , m
 real*8                :: x , Exclude , population , LinearFill
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:)
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
 allocate( mask_3(size(basis)) , source=.false. )
+allocate( mask_4(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -111,17 +113,68 @@ else
     where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
 end IF
 !====================================================
+IF( .NOT. present(AO) ) then
+    mask_4 = .true.
+else
+    select case( AO ) 
+     
+       case( 's', 'S' )
+     
+           l = 0 ; m = 0
+     
+       case( 'py', 'Py' , 'PY' )
+     
+           l = 1 ; m = -1
+
+       case( 'pz', 'Pz' , 'PZ' )
+     
+           l = 1 ; m = 0
+           
+       case( 'px', 'Px' , 'PX' )
+     
+           l = 1 ; m = +1
+           
+       case( 'dxy', 'Dxy' , 'DXY' )
+     
+           l = 2 ; m = -2
+           
+       case( 'dyz', 'Dyz' , 'DYZ' )
+     
+           l = 2 ; m = -1
+           
+       case( 'dz2', 'Dz2' , 'DZ2' )
+     
+           l = 2 ; m = 0 
+           
+       case( 'dxz', 'Dxz' , 'DXZ' )
+     
+           l = 2 ; m = +1
+     
+       case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+     
+           l = 2 ; m = +2 
+     
+       case default
+     
+           stop " >> error in [Exclude] subroutine check input arguments <<"
+
+    end select
+
+    where( (basis%l == l) .AND. (basis%m == m) ) mask_4 = .true.
+
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 .AND. mask_3 )
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 
 !population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 population = sum( GA%L(MO,:) * GA%R(:,MO) , mask ) 
 
 If( .NOT. present(from_to) ) then
 
-       If( present(threshold) ) then
-          x = population  - threshold
+       If( present(reference) ) then
+          x = population - reference
        else
           ! default value is assumed, 0.001 of localization ...
           x = population - 1.d-3
@@ -140,7 +193,7 @@ EndIf
 
 ! (population < reference) ==> no penalty for Exclude function ...
 If( eval_CG_cost ) then
-    Exclude = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
+    Exclude = big * max( D_zero , x)                   ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
 else
     Exclude = merge( D_zero , penalty , x < D_zero )   ! <== Genetic Algorithm uses step function
 EndIf
@@ -154,29 +207,31 @@ end function exclude
 !
 !
 !
-!==============================================================================================
- function Localize( GA , basis , MO , atom , EHSymbol , residue , threshold , from_to , adaptive )
-!==============================================================================================
+!======================================================================================================
+ function Localize( GA , basis , MO , atom , AO , EHSymbol , residue , reference , from_to , adaptive )
+!======================================================================================================
 implicit none
 type(R_eigen)                  , intent(in) :: GA
 type(STO_basis)                , intent(in) :: basis(:)
 integer                        , intent(in) :: MO
 integer            , optional  , intent(in) :: atom(:)
+character(len=*)   , optional  , intent(in) :: AO
 character(len=*)   , optional  , intent(in) :: EHSymbol
 character(len=*)   , optional  , intent(in) :: residue
-real               , optional  , intent(in) :: threshold
+real               , optional  , intent(in) :: reference
 type(real_interval), optional  , intent(in) :: from_to
 logical            , optional  , intent(in) :: adaptive
 
 ! local variables ...
-integer               :: i
+integer               :: i , l , m
 real*8                :: x , Localize , population , LinearFill
-logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:)
+logical , allocatable :: mask(:) , mask_1(:) , mask_2(:) , mask_3(:) , mask_4(:)
 
 allocate( mask  (size(basis)) , source=.false. )
 allocate( mask_1(size(basis)) , source=.false. )
 allocate( mask_2(size(basis)) , source=.false. )
 allocate( mask_3(size(basis)) , source=.false. )
+allocate( mask_4(size(basis)) , source=.false. )
 
 !====================================================
 IF( .NOT. present(atom) ) then
@@ -199,17 +254,68 @@ else
     where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
 end IF
 !====================================================
+IF( .NOT. present(AO) ) then
+    mask_4 = .true.
+else
+    select case( AO ) 
+     
+       case( 's', 'S' )
+     
+           l = 0 ; m = 0
+     
+       case( 'py', 'Py' , 'PY' )
+     
+           l = 1 ; m = -1
+
+       case( 'pz', 'Pz' , 'PZ' )
+     
+           l = 1 ; m = 0
+           
+       case( 'px', 'Px' , 'PX' )
+     
+           l = 1 ; m = +1
+           
+       case( 'dxy', 'Dxy' , 'DXY' )
+     
+           l = 2 ; m = -2
+           
+       case( 'dyz', 'Dyz' , 'DYZ' )
+     
+           l = 2 ; m = -1
+           
+       case( 'dz2', 'Dz2' , 'DZ2' )
+     
+           l = 2 ; m = 0 
+           
+       case( 'dxz', 'Dxz' , 'DXZ' )
+     
+           l = 2 ; m = +1
+     
+       case( 'dx2y2', 'Dx2y2' , 'DX2Y2' )
+     
+           l = 2 ; m = +2 
+     
+       case default
+     
+           stop " >> error in [Exclude] subroutine check input arguments <<"
+
+    end select
+
+    where( (basis%l == l) .AND. (basis%m == m) ) mask_4 = .true.
+
+end IF
+!====================================================
 
 ! the total mask ...
-mask = ( mask_1 .AND. mask_2 .AND. mask_3)
+mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 
 !population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 population = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
 If( .NOT. present(from_to) ) then
 
-       If( present(threshold) ) then
-          x = threshold - population 
+       If( present(reference) ) then
+          x = reference - population 
        else
           ! default value is assumed, 85% of localization ...
           x = 0.85 - population
@@ -227,8 +333,8 @@ ElseIf( adaptive == .false. ) then
 EndIf
 
 ! (population > reference) ==> no penalty for localize function ...
-If( eval_CG_cost ) then
-    Localize = big * max( D_zero , x)                 ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
+If( eval_CG_cost ) then  
+    Localize = big * max( D_zero , x)                   ! <== Conjugate Gradient uses continuous RectifiedLinearUnit (ReLU) 
 else
     Localize = merge( D_zero , penalty , x < D_zero )   ! <== Genetic Algorithm uses step function
 EndIf
