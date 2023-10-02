@@ -5,10 +5,8 @@
 #Description	: execute Dynemol from pwd using local dynemol src files                                                                               
 #Args           : see usage                                                                                          
 #Author       	: Luis G C Rego
-#date           : 21/Sept/2023
+#date           : 30/Sept/2023
 ###################################################################
-#!/bin/bash
-
 
 # Function to display usage instructions
 usage() {
@@ -25,9 +23,10 @@ usage() {
   echo " "
   echo "  PDOS      generates PDOS of atomic features , implemented in driver = diagnostic ; usage below"
   echo "  PDOS      {EHSymbol or Symbol}"
+  echo "  PDOS      {AO} {MO_i} - {MO_f}              ,  range of MO's from MO_i to MO_f"
   echo " "
   echo "  MO        generates MO cube files for visualization , implemented in driver = {diagnostic,Genetic_Alg} ; usage below"
-  echo "  MO        {MO_i}-{MO_f}             ,  range of MO's from MO_1 to MO_f"
+  echo "  MO        {MO_i} - {MO_f}             ,  range of MO's from MO_i to MO_f"
   echo " "
   echo "  for (driver = MM_Dynamics) and (driver_MM = Parametrize) choose among the arguments below"
   echo "  newOPT , repeat , resume"
@@ -49,11 +48,14 @@ if [[ "$#" -ne 0 ]]; then
       PDOS|pdos|Pdos)
         if [ "$#" -lt 2 ]; then
              usage; exit
+        elif [ "$#" -eq 2 ]; then 
+             arguments="PDOS $2" 
+        elif [ "$#" -eq 5 ]; then 
+             arguments="PDOS AO $3"\ -\ "$5" 
         fi
-        arguments="PDOS $2" 
         ;;
       MO|mo)
-        if [ "$#" -lt 2 ]; then
+        if [ "$#" -le 2 ]; then
              usage; exit
         elif [ "$#" -eq 3 ]; then 
              arguments="MO $2 $3" 
@@ -71,10 +73,4 @@ if [[ "$#" -ne 0 ]]; then
     esac
 fi
 
-
-
-export DYNEMOLWORKDIR=$(pwd)
-export DYNEMOLDIR=<path to dynemol dir>
-
-$DYNEMOLDIR/dynemol $arguments
-
+echo "$arguments"

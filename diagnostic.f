@@ -55,6 +55,7 @@ implicit none
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: ExCell_basis(:)
 
+ 
 ! preprocessing stuff ...................................
 
 IF ( survival ) pause " >>> quit: diagnostic driver does not carry q_dynamics calculations <<< "
@@ -71,7 +72,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 !.........................................................
 
  CALL Generate_Structure(1)
-     
+
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
  If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
@@ -97,11 +98,11 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  Print*, " " 
  Print*, "dE1 = ", UNI%erg(32) - UNI%erg(31) ,   2.7
- Print*, "dE2 = ", UNI%erg(33) - UNI%erg(31) ,   3.78
- Print*, "dE3 = ", UNI%erg(34) - UNI%erg(31) ,   3.87
- Print*, "dE4 = ", UNI%erg(35) - UNI%erg(31) ,   3.87
- Print*, "dE5 = ", UNI%erg(36) - UNI%erg(31) ,   4.6848
- Print*, "dE6 = ", UNI%erg(37) - UNI%erg(31) ,   4.6848
+ Print*, "dE2 = ", UNI%erg(32) - UNI%erg(30) ,   3.78
+ Print*, "dE3 = ", UNI%erg(32) - UNI%erg(29) ,   3.87
+ Print*, "dE4 = ", UNI%erg(32) - UNI%erg(28) ,   3.87
+ Print*, "dE5 = ", UNI%erg(33) - UNI%erg(31) ,   4.6848
+ Print*, "dE6 = ", UNI%erg(34) - UNI%erg(31) ,   4.6848
  
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 
@@ -265,6 +266,9 @@ character(6) :: MOstr
 total = COMMAND_ARGUMENT_COUNT()
 
 select case (total)
+
+       case (0) 
+            !fine, carry on
 
        case (2)
             call get_command_argument(1,str)
