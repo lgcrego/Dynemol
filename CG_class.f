@@ -58,7 +58,6 @@ me % accuracy    = mid_prec
 me % DP          = GA % DP
 
 allocate( me % basis    (size(GA_basis)                     ) , source=GA_basis    )
-allocate( me % erg      (size(GA%erg)                       ) , source=GA%erg      )
 allocate( me % EHSymbol (size(GA%EHSymbol)                  ) , source=GA%EHSymbol )
 allocate( me % key      (size(GA%key(:,1)),size(GA%key(1,:))) , source=GA%key      )
 
@@ -87,6 +86,12 @@ call modify_EHT_parameters( me )
 
 info = 0
 CALL GA_eigen( Extended_Cell , me%basis , CG_UNI , info )
+
+If( info /= 0 ) &
+then  
+    cost = real_large 
+    return  
+end If 
 
 If( DP_Moment ) CALL GA_DP_Analysis( Extended_Cell , me%basis , CG_UNI%L ,CG_UNI%R , CG_DP )
 

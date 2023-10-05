@@ -251,15 +251,17 @@ real*8                              :: f1dim
 INTEGER     :: j
 real*8      :: xt(NMAX)
 
-        do j = 1 , f1%ncom
-           xt(j) = f1%pcom(j)+x*f1%xicom(j)
-        end do 
+do j = 1 , f1%ncom
+   xt(j) = f1%pcom(j)+x*f1%xicom(j)
+end do 
 
-        this%p(:) = xt(:)
-
-        f1dim = this % cost()
-
-        If( f1dim == real_large ) return
+if( any(abs(xt) > large) ) &
+then
+    f1dim = real_large
+else
+    this%p(:) = xt(:)
+    f1dim = this % cost()
+end if
 
 end function f1dim
 !
