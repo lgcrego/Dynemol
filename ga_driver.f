@@ -151,17 +151,17 @@ character(6) :: MOstr
 
 MO_total  = COMMAND_ARGUMENT_COUNT()
 
-IF( MO_total == 3) then
+IF( MO_total == 4) then
 
-    call get_command_argument(2,MOstr)
+    call get_command_argument(3,MOstr)
 
     select case (MOstr)
       
-      case( ":" )  ! <== orbitals within a range ...
+      case( "-" )  ! <== orbitals within a range ...
          
-          CALL GET_COMMAND_ARGUMENT(1, MOstr)
+          CALL GET_COMMAND_ARGUMENT(2, MOstr)
           read( MOstr,*) MO_first
-          CALL GET_COMMAND_ARGUMENT(3, MOstr)
+          CALL GET_COMMAND_ARGUMENT(4, MOstr)
           read( MOstr,*) MO_last
 
           MO_total  = MO_last - MO_first + 1

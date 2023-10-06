@@ -46,16 +46,16 @@ two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
 ! states in the range [DOS_range%inicio,DOS_range%fim]
-i1 = maxloc(erg , 1 , erg <  DOS_range%inicio) + 1
+i1 = maxloc(erg , 1 , erg <  DOS_range%inicio)
 i2 = maxloc(erg , 1 , erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1
-
+ 
 allocate( erg_MO(n_of_DOS_states) )
 
 ! find the energies in the range [DOS_range%inicio,DOS_range%fim]
 erg_MO = erg( i1 : i2 )
-
+ 
 allocate( peaks      (npoints) )
 allocate( DOS_partial(npoints) )
 
@@ -126,7 +126,7 @@ two_sigma2 = 2.d0 * sgm*sgm
 step = (DOS_range%fim-DOS_range%inicio) / float(npoints-1)
 
 ! number of states in the range [DOS_range%inicio,DOS_range%fim] ...
-i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) + 1
+i1 = maxloc(QM%erg , 1 , QM%erg <  DOS_range%inicio) 
 i2 = maxloc(QM%erg , 1 , QM%erg <= DOS_range%fim   ) 
 
 n_of_DOS_states = i2 - i1 + 1

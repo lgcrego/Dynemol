@@ -142,7 +142,7 @@ read_loop: do
         case( "AUTOCORRELATION" ) 
                 AutoCorrelation = get_logical(line)
 
-        case( "VDOS_" ) 
+        case( "VDOS_" , "VDOS" , "vdos_" , "vdos") 
                 VDOS_ = get_logical(line)
 
 !------------------------------------------------------------------------
@@ -539,7 +539,7 @@ do i = 1 , N
     species(i) % Ndiheds        = 0
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
-    species(i) % NIntraLJ       = 0
+    species(i) % NintraIJ       = 0
 end do
 
 end subroutine allocate_species
@@ -703,10 +703,17 @@ select case( DRIVER )
         
         dynamic = T_ 
 
-    case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
-
+    case( "avrg_confgs" )
+ 
         dynamic = ( F_ .OR. Survival )
+ 
+        If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
+    case( "Genetic_Alg" , "diagnostic" )
+ 
+        dynamic  = F_
+        survival = F_
+ 
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
     case( "MM_Dynamics" )
@@ -824,7 +831,7 @@ n_part = 2
 nnx = 0
 nny = 0 
 PBC = [0 , 0 , 0]
-sigma = 0.04d0
+sigma = 0.05d0
 DOS_range = real_interval( -15.d0 , 0.d0 )
 Selective_Dynamics = .false.
 MM % N_of_species = 1

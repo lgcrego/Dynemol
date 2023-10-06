@@ -73,7 +73,8 @@ do its=1,this % ITMAX                                           ! Loop over iter
 
    If( this% cost() - fp > THIRD ) then
       local_minimum = real_large
-      If(this% driver == "MM_Optimize") this% message = " >>> FF-Manifold is too steep here; try pre-process by Annealing <<<"
+      If(this% driver == "MM_Optimize") &
+         this% message = " >>> FF-Manifold is too steep; try: 1) pre-process by Annealing or 2) decrease BracketSize in MM_ERG_class.f <<<"
       goto 100     ! ==> convergence not likely; Exit ...
    ElseIf( NaN ) then
       local_minimum = real_large
@@ -250,15 +251,17 @@ real*8                              :: f1dim
 INTEGER     :: j
 real*8      :: xt(NMAX)
 
-        do j = 1 , f1%ncom
-           xt(j) = f1%pcom(j)+x*f1%xicom(j)
-        end do 
+do j = 1 , f1%ncom
+   xt(j) = f1%pcom(j)+x*f1%xicom(j)
+end do 
 
-        this%p(:) = xt(:)
-
-        f1dim = this % cost()
-
-        If( f1dim == real_large ) return
+if( any(abs(xt) > large) ) &
+then
+    f1dim = real_large
+else
+    this%p(:) = xt(:)
+    f1dim = this % cost()
+end if
 
 end function f1dim
 !

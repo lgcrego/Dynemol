@@ -50,7 +50,7 @@ MODULE constants_m
 
 !   Molecular dynamics constants ...
     real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
-    real*8  , parameter :: rsqpi       = 0.56418958354d0            ! sqrt(pi)
+    real*8  , parameter :: rsqPI       = 0.56418958354d0            ! sqrt(pi)
     real*8  , parameter :: mol         = 6.02214129d26              ! mol X 1000
     real*8  , parameter :: imol        = 0.166057788d-26            ! 1/(mol x 1000)
     real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
@@ -60,6 +60,7 @@ MODULE constants_m
     real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
     real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
+    real*8  , parameter :: J_2_cal     = 0.239d0                    ! converts J to cal units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
     real*8  , parameter :: micro       = 1.0d-6                     ! micro unit
     real*8  , parameter :: pico_2_sec  = 1.0d-12                    ! converts picosecond units to second units
@@ -72,5 +73,14 @@ MODULE constants_m
     real*8  , parameter :: factor1     = 1.0d26                     ! factor used to not work with small numbers
     real*8  , parameter :: factor2     = 1.0d24                     ! factor used to not work with small numbers
     real*8  , parameter :: factor3     = 1.0d-20                    ! factor used to compensate the factor1 and factor2 factors
+
+!   dummy arrays
+
+    integer    , allocatable :: dummy_vec_I(:)
+    real*8     , allocatable :: dummy_vec_R(:)
+    complex*16 , allocatable :: dummy_vec_C(:)
+    integer    , allocatable :: dummy_array_I(:,:)
+    real*8     , allocatable :: dummy_array_R(:,:)
+    complex*16 , allocatable :: dummy_array_C(:,:)
 
 END MODULE constants_m

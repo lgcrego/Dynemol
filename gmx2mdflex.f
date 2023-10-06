@@ -44,7 +44,7 @@ character(18)                   :: keyword
 character(10)                   :: string , word(3)
 character(200)                  :: line 
 logical                         :: TorF
-integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , Nbonds14 , N_of_atoms
+integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , N_of_atoms
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -71,8 +71,9 @@ do a = 1 , MM % N_of_species
 
         ! start reading the molecular structure of species(a) ...
         do
-            read(33,100) keyword
-            if( trim(keyword) == "[ atoms ]" ) exit   ! <== looking for [ atoms ] in *.itp
+            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            line = to_upper_case(line)
+            if( verify( "[ ATOMS ]" , line ) == 0 ) exit   ! <== looking for [ atoms ] in *.itp
         end do
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
@@ -95,7 +96,8 @@ do a = 1 , MM % N_of_species
                                       species(a) % atom(i) % MM_charge ,  &
                                       species(a) % atom(i) % mass
 
-            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
+            species(a) % atom(i) % nr         = 1
+            species(a) % atom(i) % MMSymbol   = TO_UPPER_CASE( adjustr(species(a) % atom(i) % MMSymbol) )
             species(a) % atom(i) % my_species = a
             species(a) % my_species           = a
             species(a) % atom(i) % flex       = species(a) % flex
@@ -106,6 +108,7 @@ do a = 1 , MM % N_of_species
             counter = counter + 1
             FF(counter) % my_species = a
             FF(counter) % my_id      = species(a) % atom(i) % my_id
+            FF(counter) % nr         = species(a) % atom(i) % nr 
             FF(counter) % residue    = species(a) % atom(i) % residue
             FF(counter) % EHSymbol   = species(a) % atom(i) % EHSymbol
             FF(counter) % MMSymbol   = species(a) % atom(i) % MMSymbol
@@ -115,9 +118,13 @@ do a = 1 , MM % N_of_species
  
         end do read_loop1
         backspace(33)
- 
 
         N_of_atoms = species(a) % N_of_atoms
+
+        If( N_of_atoms*(n_of_atoms+1) /= 2*sum(species(a)%atom%my_id) ) then
+            CALL warning("halting: check index column of "//string//"file")
+            stop 
+            end If
 
         ! convert MMSymbol to upper case ...
         forall( i=1:N_of_atoms ) species(a)% atom(i)% MMSymbol = TO_UPPER_CASE( species(a)% atom(i)% MMSymbol )
@@ -141,8 +148,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
-            read(33,100) keyword
-            if( trim(keyword) == "[ bonds ]" ) exit   ! <== looking for [ bonds ] in *.itp
+            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            line = to_upper_case(line)
+            if( verify( "[ BONDS ]" , line ) == 0 ) exit   ! <== looking for [ bonds ] in *.itp
         end do
 
         i = 1
@@ -183,8 +191,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
-            read(33,100) keyword
-            if ( trim(keyword) == "[ angles ]" ) exit   ! <== looking for [ angles ] in *.itp
+            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            line = to_upper_case(line)
+            if( verify( "[ ANGLES ]" , line ) == 0 ) exit   ! <== looking for [ angles ] in *.itp
         end do
 
         InputIntegers = I_zero 
@@ -227,11 +236,12 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Dihedral parameters :: reading ...
         do
-            read(33,100,iostat=ioerr) keyword
-            if ( trim(keyword) == "[ dihedrals ]" .OR. ioerr /= 0 ) exit   ! <== looking for [ dihedrals ] in *.itp
+            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            line = to_upper_case(line)
+            if( verify( "[ DIHEDRALS ]" , line ) == 0  .OR.  ioerr /= 0 ) exit   ! <== looking for [ dihedrals ] in *.itp
         end do
 
-        if( trim(keyword) == "[ dihedrals ]" ) then
+        if( verify( "[ DIHEDRALS ]" , line ) == 0 ) then
 
             InputIntegers = I_zero
             i = 1
@@ -279,78 +289,16 @@ do a = 1 , MM % N_of_species
                 stop
             End If
         End If
-!----------------------------------------------------------------------------------------------
-
-            ! Pairs 1-4 parameters :: reading ...
-        do
-            read(33,100,iostat=ioerr) keyword
-            if( trim(keyword) == "[ pairs ]" .OR. ioerr /= 0 ) exit      ! <== looking for [ pairs ] in *.itp
-        end do
-
-        if( trim(keyword) == "[ pairs ]" ) then
-
-            InputIntegers = I_zero
-            i = 1
-            read_loop5: do
-                read(33, '(A)', iostat=ioerr) line
-                if ( ioerr /= 0 ) exit read_loop5
-                read(line,*,iostat=ioerr) InputChars(i,1)
-                if( index(InputChars(i,1),";") /= 0 ) cycle read_loop5
-                if( trim(InputChars(i,1)) == "[  "  ) exit
-                if( ioerr > 0  ) exit
-                if( ioerr /= 0 ) cycle read_loop5
-                read(line,*, iostat=ioerr) ( InputIntegers(i,j) , j=1,2 ) , InputReals(i,1)
-
-                i = i + 1
-            end do read_loop5
-            backspace(33)
-
-            Nbonds14 = i - 1
-            species(a) % Nbonds14 = Nbonds14
-
-            allocate( species(a) % bonds14 ( Nbonds14 , 2 ) )
-
-            forall(i=1:2) species(a) % bonds14(:Nbonds14,i) = InputIntegers(:Nbonds14,i)
-
-        else
-
-            Nbonds14 = 0    
-
-        end if
-
-        If( species(a) % Nbonds /= 0 ) then 
-
-            CALL Identify_NonBondPairs( species , a )
-
-        else 
-
-            ! Intermediate variable ... 
-            allocate( species(a) % IntraLJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
-
-            k = 1
-            do i = 1 , species(a) % N_of_Atoms - 1
-
-                do j = i + 1, species(a) % N_of_Atoms
-                    species(a) % IntraLJ(k,1) = i
-                    species(a) % IntraLJ(k,2) = j
-                    k = k + 1
-                end do
-
-            end do
-            species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
-             
-        end if
-
-        rewind(33)
 
 !==============================================================================================
                          ! AD_HOC parameters :: reading ...
         do
-            read(33,100,iostat=ioerr) keyword
-            if ( trim(keyword) == "[ ad-hoc ]" .OR. ioerr /= 0 ) exit  ! <== looking for [ ad-hoc ] in *.itp
+            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            line = to_upper_case(line)
+            if( verify( "[ AD-HOC ]" , line ) == 0  .OR.  ioerr /= 0 ) exit   ! <== looking for [ ad-hoc ] in *.itp
         end do
 
-        if( trim(keyword) == "[ ad-hoc ]" ) then
+        if( verify( "[ AD-HOC ]" , line ) == 0 ) then
 
            read(33,'(A)',iostat=ioerr) line
            read(line,*,iostat=ioerr) keyword
@@ -407,8 +355,6 @@ forall( i=1:size(FF) ) FF(i)% MMSymbol = TO_UPPER_CASE( FF(i)% MMSymbol )
 
 deallocate( InputChars , InputIntegers )
 
-100 format(a18)
-
 end subroutine itp2mdflex
 !
 !
@@ -427,10 +373,9 @@ character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
-integer                         :: a , n , i , j , j1, k , ioerr , dummy_int , N_of_AtomTypes 
+integer                         :: a , n , i , j , j1, k , ioerr , dummy_int , N_of_AtomTypes , n_pairs
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NBondParms, NPairsParms , NMorseParms
 character(3)                    :: dummy_char
-character(18)                   :: keyword
 character(200)                  :: line
 logical                         :: flag1, flag2, flag3, flag4, flag5, flag6, flag7, flag8
 
@@ -440,21 +385,23 @@ allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
 allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
-forcefield = 2           ! 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
- 
+! FF definitions ... 
+forcefield = 1   ! <== 1 = Lennard-Jones ; 2 = Buckingham
+  
 If( master ) then
   ! cloning the topol.top file into log.trunk ...
   call systemQQ("cp topol.top log.trunk/.") 
 End If
- 
+
 open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"topol.top" file not found; terminating execution'
 
     do
-      read(33,100) keyword
-      if( trim(keyword) == "[ defaults ]" ) exit
+      read(33,'(A)',iostat=ioerr) line                                                                                                                            
+      line = to_upper_case(line)
+      if( verify( "[ DEFAULTS ]" , line ) == 0 ) exit
     end do
 
     i=1
@@ -470,8 +417,9 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 !=====================================================================================
 !   reading the number of [ atomtypes ] ...
     do
-        read(33,100) keyword
-        if( trim(keyword) == "[ atomtypes ]" ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ ATOMTYPES ]" , line ) == 0 ) exit
     end do
 
     i=1
@@ -500,6 +448,7 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 
     do i = 1 , N_of_AtomTypes
         where( FF % MMSymbol == InputChars(i,1) )
+            FF % LJ  = .true.
             FF % sig = InputReals(i,3)
             FF % eps = InputReals(i,4)
         end where   
@@ -528,11 +477,19 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
     FF % sig14 = FF % sig
     FF % eps14 = FF % eps 
 
+   do k = 1 , size(FF)
+       i = FF(k)% my_id
+       j = FF(k)% my_species
+       species(j)%atom(i)%lj   = FF(k)%lj
+       species(j)%atom(i)%buck = FF(k)%buck
+    end do
+
 !=====================================================================================
 !  NonBonding parameters :: reading ...
     do
-        read(33,100) keyword
-        if( trim(keyword) == "[ nonbond_params ]" ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ NONBOND_PARAMS ]" , line ) == 0 ) exit
     end do
 
     i = 1
@@ -598,8 +555,9 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 !=====================================================================================
 !  reads [ bondtypes ] ...
     do
-        read(33,100) keyword
-        if( trim(keyword) == "[ bondtypes ]" ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ BONDTYPES ]" , line ) == 0 ) exit
     end do
         
     i = 1
@@ -662,8 +620,9 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 !=====================================================================================
 !  reads [ angletypes ] ...
     do
-        read(33,100) keyword
-        if( trim(keyword) == "[ angletypes ]" ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ ANGLETYPES ]" , line ) == 0 ) exit
     end do
 
     i = 1
@@ -727,8 +686,9 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
     InputReals    = D_zero
     InputIntegers = I_zero
     do
-        read(33,100) keyword
-        if( trim(keyword) == "[ dihedraltypes ]" ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ DIHEDRALTYPES ]" , line ) == 0 ) exit
     end do
 
     i = 1
@@ -841,11 +801,12 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 !=====================================================================================
 !  [ pairtypes ] parameters :: reading ...
     do
-        read(33,100,iostat=ioerr) keyword
-        if( trim(keyword) == "[ pairtypes ]" .OR. ioerr /= 0 ) exit
+        read(33,'(A)',iostat=ioerr) line                                                                                                                            
+        line = to_upper_case(line)
+        if( verify( "[ PAIRTYPES ]" , line  ) == 0  .OR.  ioerr /= 0 ) exit
     end do
 
-    if( trim(keyword) == "[ pairtypes ]" ) then
+    if( verify( "[ PAIRTYPES ]" , line ) == 0 ) then
     i = 1
     k = 1
     read_loop6: do
@@ -1276,7 +1237,49 @@ do a = 1 , MM % N_of_species
     end do read_loop0
     !=============================================================================
 
-end do
+    If( species(a) % Nbonds /= 0 ) then 
+        ! identify 14-pairs and long-range pairs; Nbonds14 and NintraIJ ...
+        ! for LJ only ...
+        CALL Identify_NonBondPairs( species , a )
+    else 
+        ! only NonBonding interactions for species(a) ...
+        ! for LJ, and Buckingham potentials if necessary ...
+
+        ! npairs = all pairs ... 
+        n_pairs = species(a)%N_of_Atoms * (species(a)%N_of_Atoms - 1) / 2
+
+        allocate( dummy_array_I ( n_pairs , 3 ) , source = I_zero )
+
+        k = 0
+ 
+        do i = 1   , species(a)% N_of_Atoms - 1
+        do j = i+1 , species(a)% N_of_Atoms
+
+           if( species(a)%atom(i)%LJ .AND. species(a)%atom(j)%LJ ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 1
+                end if
+
+           if( species(a)%atom(i)%BUCK .AND. species(a)%atom(j)%BUCK ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 2
+                end if
+
+        end do
+        end do
+        species(a) % NintraIJ = k
+        if( k > 0 ) allocate( species(a)% IntraIJ , source = dummy_array_I(1:k,:) )
+
+        deallocate( dummy_array_I)
+        
+    end if
+
+!==============================================================================================
+end do ! <== loop(a=1:MM % N_of_species)
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )
@@ -1290,7 +1293,6 @@ if( allocated(DihedParameters)     ) deallocate( DihedParameters     )
 if( allocated(DihedSymbols)        ) deallocate( DihedSymbols        )
 if( allocated(Dihed_Type)          ) deallocate( Dihed_Type          )
 
-100 format(a18)
 120  format(4a5,t22,I2,t26,6f14.4)
  
 end subroutine top2mdflex

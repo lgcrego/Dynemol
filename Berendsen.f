@@ -4,7 +4,6 @@ module Berendsen_m
     use syst                  ! using all syst
     use parameters_m          , only: PBC 
     use MD_read_m             , only: MM , atom , molecule, species
-    use for_force             , only: forcefield
     use f_inter_m             , only: stressr , stresre
     use VV_Parent             , only: VV
 
@@ -276,19 +275,12 @@ volume  = product( MM % box(:) * Angs_2_mts )
 me % density = (massa / volume) * milli
 
 
-if (forcefield == 1) then
-else
-    stresvv = stresvv / (cm_2_Angs * volume)
-    stressr = stressr / (cm_2_Angs * volume)
-    stresre = stresre / (cm_2_Angs * volume)
-    Astres  = stresvv + stressr + stresre
-endif
+stresvv = stresvv / (cm_2_Angs * volume)
+stressr = stressr / (cm_2_Angs * volume)
+stresre = stresre / (cm_2_Angs * volume)
+Astres  = stresvv + stressr + stresre
 
-! pressure = instantaneous pressure ;  press = external pressure ... 
-if (forcefield == 1) then
-else
-    me % pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) * third
-endif
+me % pressure = ( Astres(1,1) + Astres(2,2) + Astres(3,3) ) * third
 
 ! Pressurestat ; turned off for talp == infty ...
 If( talp == infty ) then

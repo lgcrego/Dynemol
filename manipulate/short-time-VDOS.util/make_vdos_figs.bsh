@@ -1,0 +1,10 @@
+#!/bin/bash
+
+for i in vdos*.dat
+do
+	awk '{if(NR==1) s=$1; if(NF==3) print 1*$1-s,$2,$3; else printf("\n")}' $i | \
+	awk -v n=3 -v n_every=5 '{if(n<3 && NF==3) printf("\n"); if(NF==3 && (1000*$1)%n_every==0) print $0; n=NF}' |
+	awk -v n=3 '{if(n<3 && NF==3) printf("\n\n"); if(NF==3) print $0; n=NF}' > ${i}.2
+done
+
+gnuplot VDOS.3D.lines.gps 

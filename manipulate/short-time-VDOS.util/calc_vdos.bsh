@@ -1,0 +1,16 @@
+#!/bin/bash
+
+JUMP="10"
+THRES="0.4"
+SIGMA="65.d-3"
+SIGMA_MULTI="4 40.d-3 60.d-3 80.d-3 100.d-3"
+PAD="-padding"
+
+for file in vacf.dat
+do
+	ofile=${file/vacf/vdos}
+
+	echo "Calculating SFFT for input $file, saving in $ofile"
+
+	./short-time-FFT -in $file -out $ofile -threshold $THRES -jump $JUMP -sigma $SIGMA $PAD
+done

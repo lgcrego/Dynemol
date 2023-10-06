@@ -45,15 +45,15 @@ character(1)                    :: dummy_char
 character(18)                   :: keyword 
 character(10)                   :: string  , word(10)
 character(200)                  :: line 
-integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms , N_adhoc
-integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers 
+integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms , N_adhoc , dummy_int
+integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers
 logical                         :: TorF
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 30000 , 10 ) , source = I_zero )
 
-! Reading different '.itp' species files ...
+! Reading different '.psf' species files ...
 counter = 0
 
 do a = 1 , MM % N_of_species
@@ -75,24 +75,28 @@ do a = 1 , MM % N_of_species
 
         ! start reading the molecular structure of species(a) ...
         do
-            read(33,100) keyword
-            if( verify( "!NATOM" , keyword ) == 0 ) exit
+            read(33,'(A)',iostat=ioerr) line
+            line = to_upper_case(line)
+            if( verify( "!NATOM" , line ) == 0 ) exit
         end do
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
 
         do i = 1 , species(a)%  N_of_atoms
             read(33, '(A)', iostat=ioerr) line
-            read(line,*,iostat=ioerr) species(a) % atom(i) % my_id ,      &
+            read(line,*,iostat=ioerr) dummy_int ,                         &
                                       dummy_char ,                        &
-                                      species(a) % atom(i) % nr ,         &
+                                      dummy_int ,                         &
                                       species(a) % atom(i) % residue ,    &
                                       species(a) % atom(i) % EHSymbol ,   &
                                       species(a) % atom(i) % MMSymbol ,   &
                                       species(a) % atom(i) % MM_charge ,  &
                                       species(a) % atom(i) % mass
 
-            species(a) % atom(i) % MMSymbol   = adjustr(species(a) % atom(i) % MMSymbol)
+
+            species(a) % atom(i) % my_id      = i
+            species(a) % atom(i) % nr         = 1
+            species(a) % atom(i) % MMSymbol   = TO_UPPER_CASE( adjustr(species(a) % atom(i) % MMSymbol) )
             species(a) % atom(i) % my_species = a
             species(a) % my_species           = a
             species(a) % atom(i) % flex       = species(a) % flex
@@ -134,8 +138,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
-          read(33,100) keyword
-          if( verify( "!NBOND" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NBOND" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nbonds
@@ -162,8 +167,9 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
-          read(33,100) keyword
-          if( verify( "!NTHETA" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NTHETA" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nangs
@@ -194,8 +200,9 @@ do a = 1 , MM % N_of_species
         !=========================================================================
         !reading normal dihedrals ...
         do
-          read(33,100,iostat=ioerr) keyword
-          if( verify( "!NPHI" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NPHI" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Ndiheds
@@ -210,13 +217,14 @@ do a = 1 , MM % N_of_species
         rewind 33
         !=========================================================================
         !reading improper dihedrals ...
-        do
-          read(33,100,iostat=ioerr) keyword
-          if( verify( "!NIMPHI" , keyword ) == 0 ) exit
+        do 
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!NIMPHI" , line ) == 0 ) exit
         end do
         backspace(33)
         read(33,*) Nimpropers
-  
+
         ! reading full lines ...
         do k = 1 , ceiling(Nimpropers/two)-1
             select case ( MM_input_format )
@@ -264,7 +272,6 @@ do a = 1 , MM % N_of_species
         ! define species(a) % dihedral_type ...
         CALL define_DihedralType( species(a) , species(a)% Ndiheds )
 
-        rewind 33
 !----------------------------------------------------------------------------------------------
         If( master ) then
             TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
@@ -274,37 +281,15 @@ do a = 1 , MM % N_of_species
             End If
         End If
 !----------------------------------------------------------------------------------------------
-
-        If( species(a) % Nbonds /= 0 ) then 
-
-            CALL Identify_NonBondPairs( species , a )
-
-        else 
-
-            ! Intermediate variable ... 
-            allocate( species(a) % IntraLJ ( (species(a) % N_of_Atoms * (species(a) % N_of_Atoms-1))/2, 2 ) , source = I_zero )
-
-            k = 1
-            do i = 1 , species(a) % N_of_Atoms - 1
-
-                do j = i + 1, species(a) % N_of_Atoms
-                    species(a) % IntraLJ(k,1) = i
-                    species(a) % IntraLJ(k,2) = j
-                    k = k + 1
-                end do
-
-            end do
-            species(a) % NintraLJ = size( species(a) % IntraLJ(:,2) )
-             
-        end if
+        rewind 33
 
 !==============================================================================================
         ! AD-HOC parameters :: reading ...
 
         do
-          read(33,100) keyword
-          keyword = to_upper_case(keyword)
-          if( verify( "!AD-HOC" , keyword ) == 0 ) exit
+          read(33,'(A)',iostat=ioerr) line
+          line = to_upper_case(line)
+          if( verify( "!AD-HOC" , line ) == 0 ) exit
         end do
         backspace(33)
 
@@ -341,19 +326,17 @@ do a = 1 , MM % N_of_species
 
 !==============================================================================================
 
-11  close(33)
+11      close(33)
 
     If( master ) write(*,'(a9)') " << done "
 
-end do
+end do  ! <== loop(a=1:MM%N_of_species)
 
 FF % residue  = adjustl(FF % residue)
 FF % Symbol   = adjustl(FF % Symbol)
 FF % MMSymbol = adjustl(FF % MMSymbol)
 
 deallocate( InputChars , InputIntegers )
-
-100 format(a18)
 
 end subroutine psf2mdflex
 !
@@ -373,10 +356,11 @@ character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
 real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
-integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes 
+integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes , n_pairs
 integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms, SpecialNBParms
 real*8                          :: SCEE , SCNB
 character(3)                    :: dummy_char
+character(4)                    :: dummy
 character(18)                   :: keyword
 character(200)                  :: line
 logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 
@@ -388,14 +372,15 @@ allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! NAMD FF definitions ... 
-forcefield = 2   ! <== 1 = Born-Mayer (not implemented); 2 = Lennard-Jones (OK)
-
+forcefield = 1   ! <== 1 = Lennard-Jones ; 2 = Buckingham 
+  
 If( master ) then
   ! cloning the input.prm file into log.trunk ...
   call systemQQ("cp input.prm log.trunk/.") 
 End If  
 
 open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
+
 !   file error msg ...
     10 if( ioerr > 0 ) stop '"input.prm" file not found; terminating execution'
 
@@ -411,9 +396,6 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
     MM % fudgeQQ = 1.d0 / SCEE
     MM % fudgeLJ = 1.d0 / SCNB
-
-! checking input data ...
-If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposedely SCNB = 1 for GAFF MM_input_format "
 
 !=====================================================================================
 !  reading  ATOMS ...
@@ -476,11 +458,14 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     forall(i=1:2) BondPairsSymbols(:NbondsTypes,i)    = adjustl(InputChars(:NbondsTypes,i))
     forall(i=1:2) BondPairsParameters(:NbondsTypes,i) = InputReals(:NbondsTypes,i)
   
-   funct_bond( :NbondsTypes ) = "harm" 
-   do i = 1 , NbondsTypes 
-        BondPairsParameters(i,1) = InputReals(i,1) * TWO * factor1 * imol * cal_2_J 
-        BondPairsParameters(i,2) = InputReals(i,2) 
-   end do
+    ! ATTENTION: the following values are being converted to Dynemol internal units ...
+    ! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
+
+    funct_bond( :NbondsTypes ) = "harm" 
+    do i = 1 , NbondsTypes 
+         BondPairsParameters(i,1) = InputReals(i,1) * TWO * factor1 * imol * cal_2_J 
+         BondPairsParameters(i,2) = InputReals(i,2) 
+    end do
 
 !=====================================================================================
 !  reads ANGLES ...
@@ -514,6 +499,9 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     forall(i=1:3) AngleSymbols(:NangsTypes,i)     = InputChars(:NangsTypes,i)
     forall(i=1:4) AngleParameters(:NangsTypes,i)  = InputReals(:NangsTypes,i)
    
+    ! ATTENTION: the following values are being converted to Dynemol internal units ...
+    ! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
+
     do i = 1 , NangsTypes
         ! Harmonic potential ...
         ! factor1 = 1.0d26      <== Factor used to correct the units 
@@ -592,9 +580,9 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
     NImproperTypes = i - 1
 
-    allocate( Dihed_Type         ( NdihedTypes+NImproperTypes     )                   )
-    allocate( DihedSymbols       ( NdihedTypes+NImproperTypes , 4 )                   )
-    allocate( DihedParameters    ( NdihedTypes+NImproperTypes , 3 ) , source = D_zero )
+    allocate( Dihed_Type      ( NdihedTypes+NImproperTypes     )                   )
+    allocate( DihedSymbols    ( NdihedTypes+NImproperTypes , 4 )                   )
+    allocate( DihedParameters ( NdihedTypes+NImproperTypes , 3 ) , source = D_zero )
 
     ! Torsion ...
     Dihed_Type(:NdihedTypes) = 9 
@@ -610,6 +598,9 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
     forall(k=1:4) DihedSymbols(:NdihedTypes,k)    = InputChars(:NdihedTypes,k)
     forall(k=1:3) DihedParameters(:NdihedTypes,k) = InputReals(:NdihedTypes,k)
+
+    ! ATTENTION: the following values are being converted to Dynemol internal units ...
+    ! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
 
     do i = 1 , NdihedTypes
         select case( Dihed_Type(i) )
@@ -640,21 +631,28 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         read(33,100) keyword
         if( trim(keyword(1:9)) == "NONBONDED" ) exit
     end do
-    read(33,100)
     
     InputReals = D_zero
     i = 1
     read_loop5: do
         read(33, '(A)', iostat=ioerr) line
         if ( ioerr /= 0 ) exit read_loop5
-        read(line,*,iostat=ioerr) InputChars(i,1)
+        read(line,*,iostat=ioerr) InputChars(i,1) , InputChars(i,2)
         if( index(InputChars(i,1),"!") /= 0 ) cycle read_loop5
-        if( trim(InputChars(i,1)) == "SPEC" ) exit
+        if( trim(InputChars(i,1)) == "SPEC" ) exit  
         if( trim(InputChars(i,1)) == "HBON" ) exit
         if( trim(InputChars(i,1)) == "END " ) exit
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loop5
-        read(line,*, iostat=ioerr) InputChars(i,1) , (InputReals(i,j) , j=1,6)
+
+        forall(j=1:2) InputChars(i,j) = TO_UPPER_CASE(InputChars(i,j))
+
+        select case (InputChars(i,2))
+               case("LJ")
+                   read(line,*, iostat=ioerr) dummy , dummy , (InputReals(i,j) , j=1,4)
+               case("BUCK")
+                   read(line,*, iostat=ioerr) dummy , dummy , (InputReals(i,j) , j=1,3)
+               end select
         
         i = i + 1
     end do read_loop5
@@ -663,10 +661,22 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
     NBondParms = i - 1
 
     do i = 1 , NBondParms
-        where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( adjustR(FF % MMSymbol(1:2)) // "*" )  == InputChars(i,1) ) )
-            FF % sig = InputReals(i,3)
-            FF % eps = abs(InputReals(i,2))
-        end where
+        select case (InputChars(i,2))
+               case("LJ")
+                    where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*"  == InputChars(i,1)) )
+                        FF % LJ  = .true.
+                        FF % sig = InputReals(i,2)
+                        FF % eps = abs(InputReals(i,1))
+                    end where
+
+               case("BUCK")
+                    where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*"  == InputChars(i,1)) )
+                        FF % Buck  = .true.
+                        FF % BuckA = InputReals(i,1)
+                        FF % BuckB = d_one / InputReals(i,2)
+                        FF % BuckC = InputReals(i,3)
+                    end where
+        end select 
     end do
     backspace(33)
     FF % eps14 = FF % eps
@@ -674,37 +684,48 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
     do i = 1 , NBondParms
         if( InputReals(i,5) /= D_zero ) then
-            where( ( FF % MMSymbol == InputChars(i,1) ) .OR. ( ( adjustR(FF % MMSymbol(1:2)) // "*" ) == InputChars(i,1) ) )
-                FF % sig14 = InputReals(i,6)
-                FF % eps14 = abs(InputReals(i,5)) 
+            where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*" == InputChars(i,1)) )
+                FF % sig14 = InputReals(i,4)
+                FF % eps14 = abs(InputReals(i,3)) 
             end where 
         end if
     end do
 
     ! conversion 
-    ! factor1 = 1.0d26  <== Factor used to correct units 
+    ! imol*cal_2_J converts kcal/mol ==> micro J per molecule
+    ! factor1 = 1.0d26  <== Factor used to bring numbers close to unit
     ! GAFF  vs  GMX  LJ parameters:
     ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
     ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
 
+    ! ATTENTION: the following values are being converted to Dynemol internal units ...
+    ! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
     FF % eps   = sqrt( FF % eps   * factor1 * imol * cal_2_J )
     FF % eps14 = sqrt( FF % eps14 * factor1 * imol * cal_2_J )
+
     FF % sig   = FF % sig   * 2**(5.d0/6.d0)  ! amber_LJ
     FF % sig14 = FF % sig14 * 2**(5.d0/6.d0)  ! amber_LJ
-
+    ! for LJ potential only ... 
     select case( MM % CombinationRule )
-
         case (2)
-
-            FF % sig   = FF % sig   / TWO
-            FF % sig14 = FF % sig14 / TWO
-
+            FF % sig   = FF % sig   * HALF
+            FF % sig14 = FF % sig14 * HALF
         case (3)
-
             FF % sig   = sqrt( FF % sig   )
             FF % sig14 = sqrt( FF % sig14 )
-
     end select
+
+    ! conversion for BUCK potential (only one mixed combination rule)
+    FF % BuckA = sqrt( FF % BuckA * factor1 * imol * cal_2_J )
+    FF % BuckB = FF % BuckB * HALF
+    FF % BuckC = sqrt( FF % BuckC * factor1 * imol * cal_2_J )
+
+    do k = 1 , size(FF)
+       i = FF(k)% my_id
+       j = FF(k)% my_species
+       species(j)%atom(i)%lj   = FF(k)%lj
+       species(j)%atom(i)%buck = FF(k)%buck
+    end do
 
 !=====================================================================================
 !  SPECIALNonBonding parameters :: reading ...
@@ -713,20 +734,29 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
         if(ioerr == iostat_end) goto 99     ! <== end of file 
         if( trim(keyword(1:7)) == "SPECIAL" ) exit
     end do
-    read(33,100)
+
 
     InputReals = D_zero
     i = 1
     read_loopS: do
         read(33, '(A)', iostat=ioerr) line
         if ( ioerr /= 0 ) exit read_loopS
-        read(line,*,iostat=ioerr) InputChars(i,1)
+        read(line,*,iostat=ioerr) InputChars(i,1) , InputChars(i,2) , InputChars(i,3)
         if( index(InputChars(i,1),"!") /= 0 ) cycle read_loopS
         if( trim(InputChars(i,1)) == "HBON" ) exit
         if( trim(InputChars(i,1)) == "END " ) exit
         if( ioerr > 0  ) exit
         if( ioerr /= 0 ) cycle read_loopS
-        read(line,*, iostat=ioerr) (InputChars(i,j) , j=1,2) , (InputReals(i,j) , j=1,6)
+
+        ! convert to upper case ...
+        forall(j=1:3) InputChars(i,j) = TO_UPPER_CASE(InputChars(i,j))
+
+        select case (InputChars(i,3))
+               case("LJ")
+                   read(line,*, iostat=ioerr) dummy , dummy , dummy , (InputReals(i,j) , j=1,4)
+               case("BUCK")
+                   read(line,*, iostat=ioerr) dummy , dummy , dummy , (InputReals(i,j) , j=1,3)
+        end select
         
         i = i + 1
     end do read_loopS
@@ -740,18 +770,37 @@ If( (MM_input_format == "GAFF") .AND. (SCNB/=1.0) ) stop " >>> WARNING: supposed
 
         forall(i=1:2) SpecialPairs(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
 
-        SpecialPairs(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,3)
-        SpecialPairs(:SpecialNBParms) % Parms(2) = abs(InputReals(:SpecialNBParms,2))
+        do i = 1 , SpecialNBParms
 
-        ! conversion 
-        ! factor1 = 1.0d26  <== Factor used to correct units 
-        ! GAFF  vs  GMX  LJ parameters:
-        ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
-        ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+             select case (InputChars(i,3))
+                    case("LJ")
 
-        SpecialPairs(:SpecialNBParms) % Parms(1) = SpecialPairs(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
-        SpecialPairs(:SpecialNBParms) % Parms(2) = SpecialPairs(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
+                        SpecialPairs(i)% model = InputChars(i,3)
 
+                        SpecialPairs(i)% Parms(1) = InputReals(i,2)
+                        SpecialPairs(i)% Parms(2) = abs(InputReals(i,1))
+
+                        ! conversion 
+                        ! factor1 = 1.0d26  <== Factor used to correct units 
+                        ! GAFF  vs  GMX  LJ parameters:
+                        ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 
+                        ! -> sigma_GAFF = (sigma_GMX*10/2 ) * 2^(1/6)
+
+                        SpecialPairs(i)% Parms(1) = SpecialPairs(i)% Parms(1) * 2**(5.d0/6.d0) 
+                        SpecialPairs(i)% Parms(2) = SpecialPairs(i)% Parms(2) * factor1 * imol * cal_2_J 
+
+                    case("BUCK")
+
+                        SpecialPairs(i)% model = InputChars(i,3)
+
+                        ! conversion for BUCK potential (only one combination rule)
+                        SpecialPairs(i)% Parms(1) = InputReals(i,1) * factor1 * imol * cal_2_J 
+                        SpecialPairs(i)% Parms(2) = d_one / InputReals(i,2)
+                        SpecialPairs(i)% Parms(3) = InputReals(i,3) * factor1 * imol * cal_2_J 
+             end select 
+
+        end do
+ 
         allocate( SpecialPairs14 ( SpecialNBParms ) )
 
         forall(i=1:2) SpecialPairs14(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
@@ -1044,8 +1093,52 @@ do a = 1 , MM % N_of_species
 
         end do read_loop8
     end do read_loop6
+
     !=============================================================================
-end do
+
+    If( species(a) % Nbonds /= 0 ) then 
+        ! identify 14-pairs and long-range pairs; Nbonds14 and NintraIJ ...
+        ! for LJ only ...
+        CALL Identify_NonBondPairs( species , a )
+    else 
+        ! only NonBonding interactions for species(a) ...
+        ! for LJ, and Buckingham potentials if necessary ...
+
+        ! npairs = all pairs ... 
+        n_pairs = species(a)%N_of_Atoms * (species(a)%N_of_Atoms - 1) / 2
+
+        allocate( dummy_array_I ( n_pairs , 3 ) , source = I_zero )
+
+        k = 0
+ 
+        do i = 1   , species(a)% N_of_Atoms - 1
+        do j = i+1 , species(a)% N_of_Atoms
+
+           if( species(a)%atom(i)%LJ .AND. species(a)%atom(j)%LJ ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 1
+                end if
+
+           if( species(a)%atom(i)%BUCK .AND. species(a)%atom(j)%BUCK ) then
+                k = k + 1
+                dummy_array_I(k,1) = i
+                dummy_array_I(k,2) = j
+                dummy_array_I(k,3) = 2
+                end if
+
+        end do
+        end do
+        species(a) % NintraIJ = k
+        if( k > 0 ) allocate( species(a)% IntraIJ , source = dummy_array_I(1:k,:) )
+
+        deallocate( dummy_array_I)
+        
+    end if
+
+!==============================================================================================
+end do ! <== loop(a=1:MM % N_of_species)
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )
