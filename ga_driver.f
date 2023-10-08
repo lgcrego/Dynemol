@@ -97,16 +97,17 @@ Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , fi
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print*, "dE1  = ",UNI%erg(50) - UNI%erg(49) , 6.4937d0
-Print*, "dE2  = ",UNI%erg(51) - UNI%erg(49) , 7.9044d0
-Print*, "dE3  = ",UNI%erg(50) - UNI%erg(48) , 8.3523d0
-Print*, "dE4  = ",UNI%erg(49) - UNI%erg(48) , 1.8585d0
-Print*, "dE5  = ",UNI%erg(51) - UNI%erg(50) , 1.4106d0
-Print*, "dE5  = ",UNI%erg(48) - UNI%erg(47) , 0.0552d0
-Print*, "dE7  = ",UNI%erg(47) - UNI%erg(46) , 0.1978d0
-Print*, "dE8  = ",UNI%erg(52) - UNI%erg(51) , 0.1260d0
-Print*, "dE9  = ",UNI%erg(53) - UNI%erg(51) , 0.1540d0
-Print*, "dE10 = ",UNI%erg(48) - UNI%erg(46) , 0.2531d0
+Print 10, "dE1 = ",UNI%erg(32) - UNI%erg(31) , "  vs " , 2.70d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(31)) - 2.70d0
+Print 10, "dE2 = ",UNI%erg(32) - UNI%erg(30) , "  vs " , 3.78d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(30)) - 3.78d0
+!Print 10, "dE3 = ",UNI%erg(50) - UNI%erg(48) , "  vs " , 5.3971d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(48)) - 5.3971d0
+!Print 10, "dE4 = ",UNI%erg(49) - UNI%erg(48) , "  vs " , 1.5644d0 , "  => error = ", ( UNI%erg(49) - UNI%erg(48)) - 1.5644d0
+!Print 10, "dE5 = ",UNI%erg(51) - UNI%erg(50) , "  vs " , 1.3500d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(50)) - 1.3500d0
+!Print 10, "dE6 = ",UNI%erg(48) - UNI%erg(47) , "  vs " , 0.2046d0 , "  => error = ", ( UNI%erg(48) - UNI%erg(47)) - 0.2046d0
+!Print 10, "dE7 = ",UNI%erg(47) - UNI%erg(46) , "  vs " , 0.1116d0 , "  => error = ", ( UNI%erg(47) - UNI%erg(46)) - 0.1116d0
+!Print 10, "dE8 = ",UNI%erg(52) - UNI%erg(51) , "  vs " , 0.1929d0 , "  => error = ", ( UNI%erg(52) - UNI%erg(51)) - 0.1929d0
+!Print 10, "dE9 = ",UNI%erg(53) - UNI%erg(51) , "  vs " , 0.3880d0 , "  => error = ", ( UNI%erg(53) - UNI%erg(51)) - 0.3880d0
+
+10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 
