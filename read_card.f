@@ -777,7 +777,7 @@ if( COMMAND_ARGUMENT_COUNT() /= 0 ) then
             endif
 
             CALL GET_COMMAND_ARGUMENT( 2 , aux ) 
-            read( aux , '(i)' ) N_of_Configs 
+            read( aux , '(i3)' ) N_of_Configs 
             spawn_step = n_t / N_of_Configs
 
     end select
