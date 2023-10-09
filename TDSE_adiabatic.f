@@ -108,6 +108,7 @@ end If
 
 If( restart ) then
     CALL Restart_stuff( QDyn , frame_restart )
+    triggered = yes
 else
     CALL Preprocess( QDyn )
     triggered = yes
@@ -734,6 +735,7 @@ integer         , intent(out) :: frame_restart
 
 integer :: err
 integer :: mpi_D_R = mpi_double_precision
+logical :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
 
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
@@ -773,6 +775,7 @@ end If
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+CALL MPI_Bcast( job_status , 2 , mpi_logical , 0 , world , err )
 
 end subroutine Restart_stuff
 !
