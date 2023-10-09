@@ -120,11 +120,15 @@ If( QMMM ) CALL ForceQMMM  ! <== new QM , new MM ...
 
 CALL this% VV2( dt )
  
-if( mod(frame,MM_frame_step) == 0 ) then
-    CALL Saving_MM_frame( frame , dt )
-elseif( spawn .AND.  mod(frame,spawn_step) == 0 ) then
-    CALL GenerateConfigs( frame , dt )
-endif
+if( mod(frame,MM_frame_step) == 0 ) &
+    then
+        CALL Saving_MM_frame( frame , dt )
+    endif
+
+if( spawn .AND. mod(frame,spawn_step) == 0 ) &
+    then
+        CALL GenerateConfigs( frame , dt )
+    endif
 
 Unit_Cell% MD_Kin = this% Kinetic * kJmol_2_eV * MM% N_of_Molecules
 Unit_Cell% MD_Pot = Pot_total     * kJmol_2_eV * MM% N_of_Molecules
