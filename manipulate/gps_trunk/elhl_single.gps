@@ -5,9 +5,9 @@ set border lw 2
 ##########################################
 # Adjust these ranges to your needs:
 #
-set yrange  [-16:-6]       # energy
-set xrange  [0:0.1]        # time
-set cbrange [-1:1]     # occupation
+set yrange  [-20:-5]  # energy
+set xrange  [0:0.2]   # time
+set cbrange [-1:1]    # occupation
 ##########################################
 
 # x margins
@@ -28,11 +28,7 @@ set output "elhl_NADyn.png"
 
 set multiplot
 
-# Occupation --------------------------------------
-
 set lmargin at screen x0;  set rmargin at screen x1
-
-#set logscale cb
 
 set ytics in offset 0.7, 0.0 mirror
 set xtics in offset 0.0, 0.9
@@ -42,11 +38,11 @@ set xlabel "Time (ps)"   offset 0.0, 1.6
 
 set cbtics offset -0.2,0
 
-
 set pm3d map corners2color c1
-# set style fill transparent solid 0.5 noborder
 
 # great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
+
+# Electron-Hole occupancy ---------------------------------
 set palette defined ( 0 '#0fffee',1 '#0090ff', 2 '#000fff',3 '#000090',4 '#ffffff',5 '#7f0000', 6 '#ee0000', 7 '#ff7000', 8 '#ffee00')
 set colorbox user origin x1+0.01,y0 size 0.035,Ly
 set format cb "%4.2f"

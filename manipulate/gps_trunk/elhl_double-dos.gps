@@ -5,10 +5,10 @@ set border lw 2
 ##########################################
 # Adjust these ranges to your needs:
 #
-set yrange  [-16:-6]       # energy
-set xrange  [0:400]        # time
-set cbrange [4e-3:0.5]     # occupation
-set zrange  [4e-3:1]       # not plotted if outside this range (transparent)
+set yrange  [-20:-6]       # energy
+set xrange  [0:0.1]        # time
+set cbrange [5e-2:1]       # occupation
+set zrange  [5e-2:1]       # not plotted if outside this range (transparent)
 ##########################################
 
 # x margins
@@ -23,14 +23,11 @@ Ly = y1 - y0
 
 set bmargin at screen y0;  set tmargin at screen y1
 
-# Electron ========================================
-
 set output "elhl_NADyn.png"
 
 set multiplot
 
-# Occupation --------------------------------------
-
+# -------------------------------------------------
 set lmargin at screen x0;  set rmargin at screen x1
 
 set logscale cb
@@ -42,21 +39,24 @@ set ylabel "Energy (eV)" offset 0.2, 0.0
 set xlabel "Time (fs)"   offset 0.0, 1.6
 
 set cbtics offset -0.2,0
-
+# -------------------------------------------------
 
 set pm3d map corners2color c1
-# set style fill transparent solid 0.5 noborder
 
 #  great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
 
-set palette defined ( -0.1 'white', 0 '#F7FCFD', 1 '#E0ECF4', 2 '#BFD3E6', 3 '#9EBCDA', 4 '#8C96C6', 5 '#8C6BB1', 6 '#88419D', 7 '#6E016B', 8 '#4d004b' )
+# Electron ----------------------------------------
+#set palette defined ( -0.1 'white', 0 '#F7FCFD', 1 '#E0ECF4', 2 '#BFD3E6', 3 '#9EBCDA', 4 '#8C96C6', 5 '#8C6BB1', 6 '#88419D', 7 '#6E016B', 8 '#4d004b' )
+set palette cubehelix start 1 cycles 0 saturation 2
 set colorbox user origin x1+0.01,y0 size 0.035,Ly
 set format cb ""
-splot "Occup_smear.dat" using ($1*1000):2:3 notitle
+splot "Occup_smear.dat" using 1:2:3 notitle
 
-set palette defined ( -0.1 'white', 0 '#FFF7EC', 1 '#FEE8C8', 2 '#FDD49E', 3 '#FDBB84', 4 '#FC8D59', 5 '#EF6548', 6 '#D7301F', 7 '#990000', 8 '#67000d' )
+# Hole    ----------------------------------------
+#set palette defined ( -1 '#ffffff', 0 '#000090',1 '#000fff',2 '#0090ff',3 '#0fffee',4 '#90ff70',5 '#ffee00',6 '#ff7000',7 '#ee0000',8 '#7f0000')
+set palette cubehelix start 3 cycles 0 saturation 3
 set colorbox user origin x1+0.055,y0 size 0.035,Ly
 set format cb "10^{%L}"
-splot "Occup_smear.dat" using ($1*1000):2:($4) notitle
+splot "Occup_smear.dat" using 1:2:4 notitle
 
 unset multiplot
