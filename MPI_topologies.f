@@ -92,7 +92,16 @@ select case ( driver )
                Call mpi_barrier( world , err )
                stop
                end if
+
+       case ( "slice_FSSH" )
+               CALL warning("halting: FSSH not yet implemented with MPI; use SingleNode version")
+               call MPI_FINALIZE(err)
+               stop
+
        case default
+               CALL warning("halting: your driver option might not be implemented for running with MPI; use SingleNode version")
+               call MPI_FINALIZE(err)
+               stop
 
 end select
 
