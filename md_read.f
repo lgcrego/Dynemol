@@ -750,7 +750,7 @@ character(len=:) , allocatable  :: string(:)
  ! Print # of Improper DHSs
      write(51, 224) species(i) % residue, species(i) % NImpropers
  ! Print total MM_charge
-     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge)
+     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge), merge(" <==" , "    " , abs(sum(species(i)%atom%MM_charge)) > 1.d-3)
      write(51, *) " "
  end do
  !========================================================================================================

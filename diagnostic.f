@@ -84,7 +84,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
  CALL GA_Eigen( Extended_Cell, ExCell_basis, UNI )
 
  ! save energies of the TOTAL system 
- OPEN(unit=9,file='system-ergs.dat',status='unknown')
+ OPEN(unit=9,file='ancillary.trunk/system-ergs.dat',status='unknown')
      do i = 1 , size(ExCell_basis)
          write(9,*) i , UNI%erg(i)
      end do
@@ -104,12 +104,12 @@ CALL Read_Command_Lines_Arguments( MOnum )
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
  Print*, " " 
- Print*, "dE1 = ", UNI%erg(115) - UNI%erg(114) ,   2.6470
- Print*, "dE2 = ", UNI%erg(114) - UNI%erg(113) ,   0.3040
- Print*, "dE3 = ", UNI%erg(115) - UNI%erg(113) ,   2.9510
- Print*, "dE4 = ", UNI%erg(113) - UNI%erg(112) ,   0.8950
- Print*, "dE5 = ", UNI%erg(112) - UNI%erg(111) ,   0.4360
- Print*, "dE6 = ", UNI%erg(117) - UNI%erg(116) ,   1.6000
+ Print*, "dE1 = ", UNI%erg(32) - UNI%erg(31) ,   2.7
+ Print*, "dE2 = ", UNI%erg(32) - UNI%erg(30) ,   3.78
+ Print*, "dE3 = ", UNI%erg(32) - UNI%erg(29) ,   3.87
+ Print*, "dE4 = ", UNI%erg(32) - UNI%erg(28) ,   3.87
+ Print*, "dE5 = ", UNI%erg(33) - UNI%erg(31) ,   4.6848
+ Print*, "dE6 = ", UNI%erg(34) - UNI%erg(31) ,   4.6848
  
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 
@@ -273,6 +273,9 @@ character(6) :: MOstr
 total = COMMAND_ARGUMENT_COUNT()
 
 select case (total)
+
+       case (0) 
+            !fine, carry on
 
        case (2)
             call get_command_argument(1,str)

@@ -40,13 +40,9 @@ character :: option,             &
              calc_occ_pl,        &
              calc_occ_der_pl,    &
              calc_coherences_pl, &
-             calc_unif_grid,     &
              calc_occ_smear,     &
              calc_rho_abxdE_ab,  &
-
-             calc_rho_ab_smear,  &
-             calc_rho_int_dt,    &
-             calc_rho_int_dE
+             calc_rho_ab_smear
 
 logical :: done, need_grid(2)
 
@@ -155,7 +151,7 @@ TIME_END("...done in ")
 write(*,*)
 !------------------------------------------------------------------------
 ! time step 
-write(*,'(a)',advance='no') " >> time step for treating the data (it_step = integer value): "
+write(*,'(a)',advance='no') " >> time-step for coarse-graining the time-axis (integer value): "
 read(*,*) it_step
 write(*,*)
 
@@ -360,7 +356,7 @@ if ( need_grid(1) ) then
     read(*,*) Ei
     write(*,'(a)',advance='no') " >> Enter the end of the energy grid (in eV): "
     read(*,*) Ef
-    write(*,'(a)',advance='no') " >> Enter the resolution of the energy grid (in eV): "
+    write(*,'(a)',advance='no') " >> Enter the resolution of the energy grid (in eV ; DEFAULT = 0.02): "
     read(*,*) E_resolution
 
     Ewindow = Ef - Ei                      ! size of the energy grid
@@ -379,6 +375,7 @@ if ( need_grid(1) ) then
 
         ! index conversion: [levels] erg(i) -> occ_grid(indexE) [grid]
         indexE = int( ((ergs(iE,ip,it) - Ei)/Ewindow)*n_grid1 )
+        indexE = merge(1,indexE,indexE<1)
     
         ! just an histogram (levels can coincide into the same bin)
         occ_grid(indexE,ip,it) = occ_grid(indexE,ip,it) + occ(iE,ip,it)
@@ -405,7 +402,7 @@ if ( calc_occ_smear == 'X' ) then
     TIME_INIT
     PRINT_INIT(" Smear occupation (grid_1)")
     
-    write(*,'(a)',advance='no') "  >> Enter the broadening width (sigma) in eV: "
+    write(*,'(a)',advance='no') "  >> Enter the broadening width (sigma) in eV (DEFAULT = 0.05): "
     read(*,*) sigma
 
     isigma = int(10*sigma/dEg1 + 0.5)
