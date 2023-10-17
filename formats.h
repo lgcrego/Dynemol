@@ -188,7 +188,7 @@
 
 224 format(1x,'Number of Improper DHDs in ' ,a3 ' = ',I6)
 
-225 format(1x,'Total MM_charge in ' ,a3 ' = ',F11.6)
+225 format(1x,'Total MM_charge in ' ,a3 ' = ',F11.6,a4)
 
 230 format(/,1x,'>>> Saving Security Copy (ref:it/frame/t): ', 2I6 , F11.6 )
 
