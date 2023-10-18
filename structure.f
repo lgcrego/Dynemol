@@ -316,6 +316,9 @@ system% BasisPointer = 0
 
  end If
 
+!call debug_EH(system)
+!call debug_EH(basis)
+
  end subroutine Basis_Builder
 !
 !
@@ -365,8 +368,8 @@ do i = 1 , size(output_units)
           If( N_of_atom_type /= 0 ) write(output_units(i),121) , atom(AtNo)%symbol , N_of_atom_type
       
       end do
-      
-      ! total number of residues ...
+
+     ! total number of residues ...
       do residue = 1 , size(Unit_Cell%list_of_residues)
       
           N_of_residue_type = count( a%residue == Unit_Cell%list_of_residues(residue) )
@@ -433,6 +436,8 @@ checking_atom_count = 0
 
 do i = 1 , a% atoms
 
+    if( a%QMMM(i) == "MM" ) cycle 
+
     string(i) = a% MMSymbol(i)//a% residue(i)
 
     ! find different (EHSymbol,residue) pairs ... 
@@ -457,8 +462,8 @@ do i = 1 , a% atoms
 
 end do
 
-If ( checking_atom_count /= a%atoms ) then
-    TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' warning.signal |cat")
+If ( checking_atom_count /= count(a%QMMM=="QM") ) then
+    TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' .warning.signal |cat")
     stop
 End If
 
