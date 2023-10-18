@@ -334,6 +334,10 @@ read_loop: do
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
                 read(command,*) thermal_relaxation_time
         
+        case( "PRESSURE_RELAXATION_" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,*) pressure_relaxation_time
+        
         case( "CUTOFF_RADIUS" ) 
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
                 read(command,*) , cutoff_radius 
@@ -719,7 +723,8 @@ select case( DRIVER )
     case( "MM_Dynamics" )
 
         QMMM = F_
-        dynamic = F_
+        dynamic = T_
+        nuclear_matter = "MDynamics" 
         
     case default
         Print*, " >>> Check your driver options <<< :" , driver
