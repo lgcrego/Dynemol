@@ -80,7 +80,7 @@ integer               :: err
 integer               :: mpi_D_R = mpi_double_precision
 real*8                :: Rab , DP_4_vector(4)
 real*8  , ALLOCATABLE :: h(:,:) , snd_h(:,:)
-logical               :: evaluate , job_done
+logical               :: evaluate , job_done, job_status(2)
 
 ! instantiating DP_4_matrix ...
 if( EnvCrew .AND. (.not. done) ) CALL allocate_DP_4_matrix
@@ -175,7 +175,8 @@ If( EnvCrew ) then ! <== evaluates snd_h ...
 
     CALL MPI_reduce( snd_h , h , N*N , MPI_D_R , mpi_SUM , 0 , EnvComm , err )
 
-    CALL MPI_BCAST( job_done , 1 , mpi_logical , 0 , world , err )
+    CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err )
+    job_done = job_status(1)
     If( job_done ) then 
         call MPI_FINALIZE(err)
         STOP

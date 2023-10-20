@@ -9,7 +9,7 @@ module CSDM_adiabatic_m
     use blas95
     use MPI_definitions_m       , only: master , world , myid,           &
                                         KernelComm , KernelCrew ,        &
-                                        ForceComm , ForceCrew! , EnvCrew 
+                                        ForceComm , ForceCrew , EnvCrew 
     use parameters_m            , only: t_i , n_t , t_f , n_part ,       &
                                         frame_step , nuclear_matter ,    &
                                         EnvField_ , DP_Moment ,          &
@@ -281,7 +281,7 @@ CALL Basis_Builder( Extended_Cell , ExCell_basis )
 
 If( Induced_ ) CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )
 
-If( EnvField_ ) then
+If( EnvField_ .AND. (master .OR. EnvCrew) ) then
 
     hole_save  = hole_state
     hole_state = 0

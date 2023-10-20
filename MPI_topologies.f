@@ -177,6 +177,35 @@ end subroutine setup_MPI_labor_force
      CALL MPI_COMM_SIZE (ForceCrewComm , npforce , err )               ! <== gets the total number of processes
  end if
 
+! processes released for next drafting ...
+ drafted = .false.
+
+!------------------------------------------------------------------------
+! EnvComm group = (0,[EnvProcs]) ; to work in "even_more_extended_huckel" ...
+
+ If( EnvField_ ) then
+ 
+     IF( myid == 0 ) then                    ! <== case(0)
+            my_color = 0
+            drafted  = .true.
+     ElseIf( myid > ForceCrewLimit ) then    ! <== case(ForceCrewLimit+1:)
+            my_color = 0
+            drafted  = .true.
+            EnvCrew  = .true.
+     Else
+            my_color = MPI_undefined
+     EndIf
+ 
+     CALL MPI_Comm_split( world , my_color , myid , EnvComm  , err )
+ 
+     If( drafted ) then
+        CALL MPI_COMM_RANK (EnvComm , myEnvId , err )   ! <== sets the rank of processes
+        CALL MPI_COMM_SIZE (EnvComm , npEnv   , err )   ! <== gets the total number of processes
+     end If
+ 
+ EndIf
+!------------------------------------------------------------------------
+
  end subroutine setup_CSDM_Crew
 !
 !
