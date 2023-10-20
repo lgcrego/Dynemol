@@ -14,7 +14,6 @@ module F_intra_m
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
     use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
-    use Allocation_m      , only: Allocate_Structures
     use CSDM_master       , only: Ehrenfest_master
     use Ehrenfest_Builder , only: EhrenfestForce 
     use Surface_Hopping   , only: SH_Force
@@ -34,6 +33,7 @@ module F_intra_m
     ! imported module variables ...
     integer         :: PST(2)
     real*8          :: t_rate
+    character(2)    :: mode
     type(structure) :: system
     type(R_eigen)   :: QM
     type(STO_basis) , allocatable , dimension(:)   :: basis(:)
@@ -1057,11 +1057,12 @@ end subroutine ForceQMMM
 
 ! local variables ... 
 
-call clone(sys,system)
 basis  = vec
+system = sys
 PST    = PSE
-MO_bra = mtx1
-MO_ket = mtx2
+
+MO_bra      = mtx1
+MO_ket      = mtx2
 
 QM% erg = Eigen% erg
 QM% L   = Eigen% L
@@ -1072,22 +1073,26 @@ end subroutine StoreQMArgs_CSDM
 !
 !
 !
-!=============================================================================
- subroutine StoreQMArgs_AO_and_FSSH( sys , vec , mtx1 , mtx2 , Eigen , delta )
-!=============================================================================
+!===================================================================================
+ subroutine StoreQMArgs_AO_and_FSSH( sys , vec , mtx1 , mtx2 , Eigen , delta , txt )
+!===================================================================================
  implicit none
- type(structure)           , intent(in) :: sys
- type(STO_basis)           , intent(in) :: vec(:)
- complex*16                , intent(in) :: mtx1(:,:)
- complex*16                , intent(in) :: mtx2(:,:)
- type(R_eigen)             , intent(in) :: Eigen
- real*8         , optional , intent(in) :: delta
+ type(structure)             , intent(inout):: sys
+ type(STO_basis)             , intent(in)   :: vec(:)
+ complex*16                  , intent(in)   :: mtx1(:,:)
+ complex*16                  , intent(in)   :: mtx2(:,:)
+ type(R_eigen)               , intent(in)   :: Eigen
+ real*8           , optional , intent(in)   :: delta
+ character(len=*) , optional , intent(in)   :: txt
 
-call clone(sys,system)
-basis  = vec
-MO_bra = mtx1
-MO_ket = mtx2
+! local variables ... 
+
+basis   = vec
+system  = sys
+MO_bra  = mtx1
+MO_ket  = mtx2
 if(present(delta)) t_rate  = delta
+if(present(txt  )) mode    = txt
 
 QM% erg = Eigen% erg
 QM% L   = Eigen% L
@@ -1116,54 +1121,6 @@ allocate(QM%L  (BasisSize,BasisSize))
 allocate(QM%R  (BasisSize,BasisSize))
 
 end subroutine AllocateQMArgs
-!
-!
-!
-!==========================
- subroutine clone( a , b )
-!==========================
- implicit none
- type(structure) , intent(in)  :: a
- type(structure) , intent(out) :: b
-
-CALL Allocate_Structures( a%atoms , b )
-
-b% atoms                  = a% atoms 
-b% N_of_electrons         = a% N_of_electrons
-b% N_of_Solvent_Molecules = a% N_of_Solvent_Molecules
-b% N_of_Solute_Molecules  = a% N_of_Solute_Molecules
-b% nr(:)                  = a% nr(:)
-b% copy_No(:)             = a% copy_No(:)
-b% BasisPointer(:)        = a% BasisPointer(:)
-b% fragment(:)            = a% fragment(:)
-b% symbol(:)              = a% symbol(:)
-b% residue(:)             = a% residue(:)
-b% MMSymbol(:)            = a% MMSymbol(:)
-b% QMMM(:)                = a% QMMM(:)
-b% AtNo(:)                = a% AtNo(:)
-b% Nvalen(:)              = a% Nvalen(:)
-b% coord(:,:)             = a% coord(:,:)
-b% k_WH(:)                = a% k_WH(:)
-b% solvation_hardcore(:)  = a% solvation_hardcore(:)
-b% hardcore(:)            = a% hardcore(:)
-b% V_shift(:)             = a% V_shift(:)
-b% polar(:)               = a% polar(:)
-b% BoxSides(3)            = a% BoxSides(3)
-b% Center_of_Mass(3)      = a% Center_of_Mass(3)
-b% Center_of_Charge(3)    = a% Center_of_Charge(3)
-b% T_xyz(3)               = a% T_xyz(3)
-b% MD_Kin                 = a% MD_Kin
-b% MD_Pot                 = a% MD_Pot
-b% QM_erg                 = a% QM_erg
-b% QM_wp_erg(2)           = a% QM_wp_erg(2)
-b% Total_erg              = a% Total_erg
-b% solute(:)              = a% solute(:)
-b% DPF(:)                 = a% DPF(:) 
-b% El(:)                  = a% El(:)
-b% Hl(:)                  = a% Hl(:)
-b% flex(:)                = a% flex(:)
-end subroutine clone
-!
 !
 !
 end module F_intra_m
