@@ -34,8 +34,8 @@ contains
  type(R_eigen)   , intent(in)    :: QM
 
 ! local variables ... 
- integer                         :: i , i1 , i2 , n , n_MO , Fermi_level , method
- real*8          , allocatable   :: bra(:), ket(:), Force(:,:), force_atom(:,:)
+ integer              :: i , i1 , i2 , n , n_MO , Fermi_level , method
+ real*8 , allocatable :: bra(:), ket(:), Force(:,:), force_atom(:,:)
 
  n_MO = size(QM%erg)
  allocate( bra  ( size(basis)              ) )
@@ -60,6 +60,7 @@ contains
     ! bra = ket ...
     bra = QM%L(n,:)
     ket = bra 
+
     do i = 1 , system% atoms
 
         If( system% QMMM(i) /= "QM" ) cycle
@@ -93,7 +94,7 @@ contains
 
  end select
 
-! center of mass force ...
+! center of mass force (must be zero) ...
  do n = 1 , n_MO
     Print 200, n , sum( Force(:,n) )
  end do
@@ -102,12 +103,8 @@ contains
  Fermi_level = system% N_of_electrons / 2
  forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
 
- do i = 1 , 3*system% atoms
-    write(30,*) i , Force(i,0)
- end do
-
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-OPEN( unit=3 , file='HFP_forces.nmd' , status='unknown' )
+OPEN( unit=3 , file='ancillary.trunk/HFP_forces.nmd' , status='unknown' )
 
 write(3,*) "HFP Force Analysis"
 
@@ -124,6 +121,8 @@ end do
 
 close(3)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+print*, ""
+print*, '>> saving HFP_forces.nmd in directory ancillary.trunk/ <<'
 
 include 'formats.h'
 
@@ -144,7 +143,7 @@ real*8           , intent(in) :: erg
 integer          , intent(in) :: site 
 
 ! local variables ...
-integer :: i , j , k , ik , xyz
+integer :: i , j , k , ik , xyz , DOSk , BPk
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) , grad_S(:,:)
@@ -152,9 +151,13 @@ real*8                :: Force(3) , tmp_coord(3) , delta_b(3)
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
+grad_S = D_zero
+Force  = D_zero
 
 !force on atom site ...
-k = site 
+k    = site 
+DOSk = atom( system% AtNo(k) )% DOS
+BPk  = system% BasisPointer(k)
 
 ! save coordinate ...
 tmp_coord = system% coord(k,:)
@@ -164,17 +167,15 @@ do xyz = 1 , 3
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
 
        system% coord (k,:) = tmp_coord + delta_b
-       CALL Overlap_Matrix( system , basis , S_fwd , purpose='Pulay')
+       CALL Overlap_Matrix( system , basis , S_fwd )
 
        system% coord (k,:) = tmp_coord - delta_b
-       CALL Overlap_Matrix( system , basis , S_bck , purpose='Pulay')
+       CALL Overlap_Matrix( system , basis , S_bck )
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       Force(xyz) = D_zero
-
-       do ik = 1 , atom( system% AtNo(k) )% DOS  
-            i = system% BasisPointer(k) + ik
+       do ik = 1 , DOSk  
+            i = BPk + ik
             do j = 1 , size(basis)
 
                 Force(xyz) = Force(xyz) - ( X_ij(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
