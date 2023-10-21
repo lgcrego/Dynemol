@@ -156,7 +156,7 @@
 
 194   FORMAT(/,1x,"  ==> done with Recursive steps")
 
-200   FORMAT(1x,'Center of Mass Force (MO = ',I3,') = ',F10.7,'   eV/Angs')     
+200   FORMAT(1x,'Force at the Center of Mass (MO = ',I3,') = ',F10.7,'   eV/Angs')     
 
 201 format(1x,'Number of atoms in         ' , a3' = ',I6)
                                           

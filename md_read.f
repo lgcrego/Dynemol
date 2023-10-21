@@ -283,9 +283,10 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
     End If
 
-    If( molecule(i)%NintraIJ > 0 ) & 
+    If( molecule(i)%NintraIJ > 0 ) then 
     molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
     molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
+    End if 
 
     k = k + molecule(i) % N_of_atoms
 

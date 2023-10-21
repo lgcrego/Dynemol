@@ -17,15 +17,16 @@ contains
 !
 !
 !
-!=========================================
-subroutine ad_hoc_tuning( system , frame )
-!=========================================
+!======================================
+subroutine ad_hoc_tuning( sys , frame )
+!======================================
 implicit none
-type(universe)  , intent(inout) :: system
+type(universe)  , intent(inout) :: sys
 integer         , optional      :: frame
 
 ! local variables ...
-real*8       :: delta_t = 0.d0
+integer :: i  
+real*8  :: delta_t = 0.d0
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
@@ -39,7 +40,7 @@ real*8       :: delta_t = 0.d0
 
  delta_t = 2.5d-4
 
-! If( system%time == 0.d0 .AND. present(frame) ) system % time = delta_t * (frame -1)
+! If( sys%time == 0.d0 .AND. present(frame) ) sys % time = delta_t * (frame -1)
 
 !----------------------------------
 !      define SPECIAL atoms 
@@ -52,14 +53,26 @@ real*8       :: delta_t = 0.d0
 !----------------------------------
 !      define fragment's
 !----------------------------------
-where( system% atom% resid == "MA+" ) system% atom% fragment = "S"
-where( system% atom% resid == "PBI" ) system% atom% fragment = "C"
 
 !----------------------------------
 !      define operations: 
 ! copy, delete, translate, rotate, group
 !----------------------------------
-system % atom % copy = .true.
+
+where(                                                          &
+       sqrt(                                                    &
+            (sys%atom(:)%xyz(1) -sys%atom(1)%xyz(1))**2 + &
+            (sys%atom(:)%xyz(2) -sys%atom(1)%xyz(2))**2 + &
+            (sys%atom(:)%xyz(3) -sys%atom(1)%xyz(3))**2   &
+       ) <= 8                                                   &
+) sys%atom(:)%resid = "INP"       
+
+do i=1,size(sys%atom) 
+   where(sys%atom%nresid == sys%atom(i)%nresid) sys%atom%resid = sys%atom(i)%resid
+end do
+
+where(sys%atom%resid == "INP") sys%atom%fragment = "Q"
+
 !----------------------------------
 !      define resid's
 !----------------------------------
@@ -68,7 +81,7 @@ system % atom % copy = .true.
 !      define nresid's
 !----------------------------------
 
-!where(system % atom % Symbol /= "Si") system % atom %  nresid = 1
+!where(sys % atom % Symbol /= "Si") sys % atom %  nresid = 1
 
 !----------------------------------
 !     Selective_Dynamics
@@ -88,7 +101,7 @@ system % atom % copy = .true.
 !end if
 
 !----------------------------------
-!CALL Information_from_ITP( system ) 
+!CALL Information_from_ITP( sys ) 
 !----------------------------------
 
 

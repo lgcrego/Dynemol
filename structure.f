@@ -314,6 +314,9 @@ system% BasisPointer = 0
 
  end If
 
+!call debug_EH(system)
+!call debug_EH(basis)
+
  end subroutine Basis_Builder
 !
 !
@@ -432,6 +435,8 @@ checking_atom_count = 0
 
 do i = 1 , a% atoms
 
+    if( a%QMMM(i) == "MM" ) cycle 
+
     string(i) = a% MMSymbol(i)//a% residue(i)
 
     ! find different (EHSymbol,residue) pairs ... 
@@ -456,7 +461,7 @@ do i = 1 , a% atoms
 
 end do
 
-If ( checking_atom_count /= a%atoms ) then
+If ( checking_atom_count /= count(a%QMMM=="QM") ) then
     TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' .warning.signal |cat")
     stop
 End If
