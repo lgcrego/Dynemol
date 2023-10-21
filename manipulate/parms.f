@@ -7,8 +7,6 @@ use types_m
 
     public :: Symbol_2_AtNo , AtNo_2_Symbol , MMSymbol_2_Symbol , Pack_Residues , Identify_Residues
 
-!    private
-
 contains
 !    
 !
@@ -22,7 +20,7 @@ contains
  integer          :: ioerr , i , AtNo , Ang , DOS_sum
  character(len=1) :: spdf
 
- OPEN(unit=3,file='my_eht_parameters.dat',status='old')
+ OPEN(unit=3,file=manipulatedir//'my_eht_parameters.dat',status='old')
 
  AtNo = 1
  Ang  = 0
@@ -81,7 +79,7 @@ integer                 :: ioerr , i , size_of_array
 
 allocate( temp(300) )
 
-OPEN(unit=3,file='atomic_mass.dat',status='old')
+OPEN(unit=3,file=manipulatedir//'atomic_mass.dat',status='old')
 do 
     read(3,*,IOSTAT=ioerr) i , temp(i)  
     if(ioerr < 0) EXIT
