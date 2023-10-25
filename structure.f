@@ -462,11 +462,6 @@ do i = 1 , a% atoms
 
 end do
 
-If ( checking_atom_count /= count(a%QMMM=="QM") ) then
-    TorF = systemQQ("sed '11i >>> halting: inconsistency in subroutine EH_parm_diagnosis <<<' .warning.signal |cat")
-    stop
-End If
-
 write(12,*) ""
 
 close(unit=12)
