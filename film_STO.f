@@ -13,6 +13,7 @@
     private
 
     real*8 , parameter :: fringe = 8.d0
+    logical            :: done = .false.
 
     interface Gaussian_Cube_Format
         module procedure Gaussian_Cube_Format_Real
@@ -211,6 +212,13 @@
 
  deallocate(xyz , Psi)
 
+ if( .NOT. done)&
+ then
+     ! cloning the tcl script file into MO.trunk directorie ...
+     call system("cp "//dynemoldir//"manipulate/general.util/MO-show.tcl MO.trunk/.")
+     done = .true.
+ end if
+
  include 'formats.h'
 
  end subroutine Gaussian_Cube_Format_Real
@@ -403,6 +411,13 @@
  close(4)
 
  deallocate(xyz , Psi_2)
+
+ if( .NOT. done)&
+ then
+     ! cloning the tcl script file into MO.trunk directorie ...
+     call system("cp "//dynemoldir//"manipulate/general.util/MO-show.tcl MO.trunk/.")
+     done = .true.
+ end if
 
  include 'formats.h'
 
