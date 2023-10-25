@@ -29,8 +29,8 @@ module CSDM_adiabatic_m
                                         Extended_Cell ,                  &
                                         Generate_Structure ,             &
                                         Basis_Builder
-    use FMO_m                   , only: FMO_analysis ,                   &
-                                        orbital , eh_tag , PointerState                 
+    use FMO_m                   , only: FMO_analysis , PointerState ,    &
+                                        orbital , eh_tag                 
     use DP_main_m               , only: Dipole_Matrix ,                  &
                                         Dipole_Moment
     use TD_Dipole_m             , only: wavepacket_DP                                        
@@ -350,6 +350,7 @@ CALL DUAL_wvpckts
  
 ! save populations ...
 QDyn%dyn(it,:,:) = Populations( QDyn%fragments , ExCell_basis , DUAL_bra , DUAL_ket , t_i )
+PST = PointerState
 CALL dump_Qdyn( Qdyn )
 
 If( GaussianCube ) CALL Send_to_GaussianCube( it )
@@ -374,8 +375,6 @@ CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , Forc
 CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err )
 
 Unit_Cell% QM_erg = update_QM_erg()
-
-PST = PointerState
 
 !..........................................................................
 
@@ -601,8 +600,8 @@ do n = 1 , n_part
     ! dumps el-&-hl populations ...
     write(52,13) ( QDyn%dyn(it,nf,n) , nf=0,size(QDyn%fragments)+1 ) 
 
-    ! dumps el-&-hl wavepachet energies ...
-    write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , dimag( wp_energy(n) )
+    ! dumps el-&-hl wavepacket energies ...
+    write(53,14) QDyn%dyn(it,0,n) , real( wp_energy(n) ) , (UNI% Fermi_state - PST(n))*(-1)
 
     close(52)
     close(53)
@@ -612,7 +611,7 @@ end do
 11 FORMAT(A,I9,14I10)
 12 FORMAT(/15A10)
 13 FORMAT(F11.6,14F10.5)
-14 FORMAT(3F12.6)
+14 FORMAT(2F12.6,I12)
 
 end subroutine dump_Qdyn
 !

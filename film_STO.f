@@ -13,6 +13,7 @@
     private
 
     real*8 , parameter :: fringe = 8.d0
+    logical            :: done = .false.
 
     interface Gaussian_Cube_Format
         module procedure Gaussian_Cube_Format_Real
@@ -211,6 +212,13 @@
 
  deallocate(xyz , Psi)
 
+ if( .NOT. done)&
+ then
+     ! cloning the tcl script file into MO.trunk directorie ...
+     call system("cp "//dynemoldir//"manipulate/general.util/MO-show.tcl MO.trunk/.")
+     done = .true.
+ end if
+
  include 'formats.h'
 
  end subroutine Gaussian_Cube_Format_Real
@@ -237,13 +245,13 @@
  integer                  :: AtNo , i , j , ix , iy , iz , k , l
  character(len=2)         :: prefix
  character(len=5)         :: string 
- character(len=22)        :: f_name
+ character(len=31)        :: f_name
 
  allocate(xyz(extended_cell%atoms,3))
 
  write(string,'(i5.5)') it
  prefix = merge( "el" , el_hl , .NOT. present(el_hl) )
- f_name = prefix//'_dens_shot'//string//'.cube'
+ f_name = 'MO.trunk/'//prefix//'_dens_shot'//string//'.cube'
  OPEN(unit=4,file=f_name,status='unknown')  
 
 ! bounding box for isosurfaces ... 
@@ -372,7 +380,7 @@
             end do  ! <== DOS
         end do  ! <== atoms
 
-        Psi_2( ix+1 , iy+1 , iz+1 ) = cdabs( cdsqrt( TotalPsiBra * TotalPsiKet ) )
+        Psi_2( ix+1 , iy+1 , iz+1 ) = dreal( TotalPsiBra * TotalPsiKet )
 
     END DO          ! <==  Z coord
     END DO          ! <==  Y coord
@@ -403,6 +411,13 @@
  close(4)
 
  deallocate(xyz , Psi_2)
+
+ if( .NOT. done)&
+ then
+     ! cloning the tcl script file into MO.trunk directorie ...
+     call system("cp "//dynemoldir//"manipulate/general.util/MO-show.tcl MO.trunk/.")
+     done = .true.
+ end if
 
  include 'formats.h'
 
