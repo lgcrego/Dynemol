@@ -108,5 +108,11 @@ fort.*
 *.top
 *.itp
 *.log
+*.tga
+*.png
+*.bin
+*.swo
+*.psf
+*.prm
 a
 # End of https://www.gitignore.io/api/c,c++,cuda,fortran
