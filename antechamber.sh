@@ -41,7 +41,7 @@ usage() {
 if [[ "$#" -ne 0 ]]; then
     case "$1" in
       manipulate)
-        $DYNEMOLDIR/manipulate/a
+        $DYNEMOLDIR/manipulate/manipulate
         exit 1
         ;;
       resume)
