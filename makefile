@@ -178,11 +178,19 @@ SOURCE_CUDA= Chebyshev_gpu_kernels.o \
              dzgemv_kernels.o
 endif
 
+#########
+# RULES #
+#########
+                                                                                                                                                                                                                
+# Compiles dynemol and manipulate 
+all: dynemol Manipulate
 
 dynemol: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	rm -f dynemol
 	$(FC) $(INCS) $(LDFLAGS) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
 
+Manipulate: 
+	$(MAKE) -C ./manipulate 
 
 .F.o:
 	$(FC) $(FFLAGS1) $(INCS) -c $<

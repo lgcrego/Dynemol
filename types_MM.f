@@ -2,7 +2,7 @@ module MM_types
 
 use constants_m
 
-public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , DefineMorse, debug_MM
+public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , debug_MM
 public :: MMOPT_Control, Logicalkey
 
     type MM_atomic
@@ -116,11 +116,6 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: Parms(3)
         character(4)                        :: model
     end type DefinePairs
-
-    type DefineMorse
-        character(3)                        :: MMSymbols(2)
-        real*8                              :: Parms(3)
-    end type DefineMorse
 
     type LogicalKey
         logical       :: bonds(3)    = .false.
