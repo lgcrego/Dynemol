@@ -13,7 +13,7 @@ module F_intra_m
                                   harm_dih, imp_dih, harm_bond, morse_bond, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use MM_types          , only: MM_system , MM_molecular , MM_atomic , debug_MM
-    use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , SpecialMorse
+    use gmx2mdflex        , only: SpecialPairs , SpecialPairs14 , MorsePairs
     use Ehrenfest_CSDM    , only: Ehrenfest 
     use Ehrenfest_Builder , only: EhrenfestForce 
     use Surface_Hopping   , only: SH_Force
@@ -57,8 +57,8 @@ implicit none
 ! local_variables ...
 real*8 , allocatable  :: tmp_force(:,:,:), tmp_vdw(:,:,:), tmp_ele(:,:,:)
 real*8 , dimension (3):: rij, rjk, rkl, rik, rijk, rjkl, rijkl
-real*8  :: rij2, rijq, rjkq, rklq, rijsq, rjksq, rklsq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
-real*8  :: f1x, f1y, f1z, f2x, f2y, f2z, f3x, f3y, f3z, f4x, f4y, f4z
+real*8  :: rij2, rijq, rjkq, rijsq, rjksq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
+real*8  :: f1x, f1y, f1z, f2x, f2y, f2z, f3x, f3y, f3z, f4x, f4y, f4z, MorsA, MorsB, MorsC, dij
 real*8  :: fs, Fcoul, E_vdw, E_coul, cosphi, sinphi, coephi, coephi0,  qterm, qterm0, rterm, rterm0
 integer :: k, l, ithr, numthr, ati, atj, atk, atl, loop  
 logical :: flag1 , flag2
@@ -127,9 +127,14 @@ do i = 1 , MM % N_of_molecules
 
                 case ( "Mors" )
                 ! Morse potential ...
-                qterm0 = exp( -molecule(i) % kbond0(j,3) * ( rijsq - molecule(i) % kbond0(j,2) ) ) 
-                qterm  = molecule(i) % kbond0(j,1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
-                coephi = TWO * molecule(i) % kbond0(j,1) * molecule(i) % kbond0(j,3) * qterm0 * ( D_ONE - qterm0 ) / rijsq 
+
+                MorsA = molecule(i)% kbond0(j,1)
+                MorsB = molecule(i)% kbond0(j,2)
+                MorsC = molecule(i)% kbond0(j,3)
+ 
+                qterm0 = exp( - MorsC*(rijsq - MorsB) ) 
+                qterm  = MorsA*(d_one - qterm0)**2
+                coephi = TWO * MorsA*MorsC * qterm0 * (d_one - qterm0) / rijsq 
                 morse_bond = morse_bond + qterm
  
             end select
@@ -439,29 +444,35 @@ deallocate( tmp_vdw , tmp_ele )
 !====================================================================
 ! Morse Intra/Inter potential for H transfer ...
 
-If( allocated(SpecialMorse) ) then
+If( allocated(MorsePairs) ) then
 
-   do k = 1 , MM % N_of_atoms - 1
-       do l = k , MM % N_of_atoms
-       read_loop2: do  n = 1, size(SpecialMorse) 
-           flag1 = ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                   ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
-           flag2 = ( adjustl( SpecialMorse(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
-                   ( adjustl( SpecialMorse(n) % MMSymbols(1) ) == adjustl( atom(l) % MMSymbol ) ) 
+   do i = 1 , MM % N_of_atoms - 1
+       do j = i+1 , MM % N_of_atoms
+       read_loop2: do  n = 1, size(MorsePairs) 
+           flag1 = ( adjustl( MorsePairs(n) % MMSymbols(1) ) == adjustl( atom(i) % MMSymbol ) ) .AND. &
+                   ( adjustl( MorsePairs(n) % MMSymbols(2) ) == adjustl( atom(j) % MMSymbol ) )
+           flag2 = ( adjustl( MorsePairs(n) % MMSymbols(2) ) == adjustl( atom(i) % MMSymbol ) ) .AND. &
+                   ( adjustl( MorsePairs(n) % MMSymbols(1) ) == adjustl( atom(j) % MMSymbol ) ) 
            if ( flag1 .OR. flag2 ) then
-               atk = atom(k) % my_id
-               atl = atom(l) % my_id
-               rkl(:)  = atom(atk) % xyz(:) - atom(atl) % xyz(:)
-               rkl(:)  = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
-               rklq    = rkl(1)*rkl(1) + rkl(2)*rkl(2) + rkl(3)*rkl(3)
-               rklsq   = SQRT(rklq)
-   
+               ati = atom(i) % my_id
+               atj = atom(j) % my_id
+               rij(:) = atom(ati) % xyz(:) - atom(atj) % xyz(:)
+               rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
+               rij2   = sum( rij(:)**2 )
+               dij    = sqrt(rij2)
+
+               MorsA = MorsePairs(n) % Parms(1)
+               MorsB = MorsePairs(n) % Parms(2)
+               MorsC = MorsePairs(n) % Parms(3)
+ 
                ! Morse potential ...
-               qterm0 = exp( -SpecialMorse(n) % Parms(3) * ( rklsq - SpecialMorse(n) % Parms(2) ) )
-               qterm  = SpecialMorse(n) % Parms(1) * ( D_ONE - qterm0 )*( D_ONE - qterm0 )
-               coephi = TWO * SpecialMorse(n) % Parms(1) * SpecialMorse(n) % Parms(3) * qterm0 * ( 1.d0 - qterm0 ) / rklsq
-               atom(atk) % fMorse(:) = atom(atk) % fMorse(:) - coephi*rkl(:)
-               atom(atl) % fMorse(:) = atom(atl) % fMorse(:) + coephi*rkl(:)
+               qterm0 = exp( - MorsC*(dij-MorsB) )
+               qterm  = MorsA*( d_one - qterm0 )**2
+               coephi = TWO * MorsA*MorsC * qterm0 * (d_one - qterm0)
+
+               atom(ati) % fMorse(:) = atom(ati) % fMorse(:) - coephi*rij(:)/dij
+               atom(atj) % fMorse(:) = atom(atj) % fMorse(:) + coephi*rij(:)/dij
+
                Morspot = qterm + Morspot
            end if
        end do read_loop2

@@ -1,5 +1,7 @@
 module types_m
 
+    character(len=:) , allocatable :: manipulatedir(:) , dynemolworkdir(:)
+
     type atomic
         real*8              :: xyz(3)
         real*8              :: mass
@@ -87,4 +89,59 @@ module types_m
         real*8 , dimension(3) :: xyz
     end type R3_vector
 
+contains
+!
+!
+!
+!===============================
+ subroutine get_environment_vars
+!===============================
+use ifport
+implicit none
+
+! local variables ... 
+character(len=255) :: directory , this_command
+logical            :: TorF , exist
+
+!!to get current directory ...
+!integer :: length
+!directory = FILE$CURDRIVE
+!length = getdrivedirqq(directory)
+!print*, directory
+
+!-------------------------------------------------------------
+! get environment variables ...
+
+call get_environment_variable("DYNEMOLWORKDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemolworkdir(1))
+dynemolworkdir = trim(directory)//"/"
+
+call get_environment_variable("DYNEMOLDIR",directory)
+allocate( character(len_trim(directory)+12) :: manipulatedir(1))
+manipulatedir = trim(directory)//"/manipulate/"
+!-------------------------------------------------------------
+
+end  subroutine get_environment_vars
+!
+!
+!
+!
+!
+!
+!============================
+ subroutine warning( string )
+!============================
+implicit none
+character(*) , intent(in) :: string
+
+! local variables ... 
+character(len=140) :: command
+
+command = "sed '11i >>> "//string//" <<<' .warning.signal |cat"
+CALL system(command)
+
+end subroutine warning
+!
+!
+!
 end module types_m

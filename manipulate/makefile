@@ -35,9 +35,9 @@ SOURCE = types_m.o \
          aminoacids.o \
 		 edview.o
 
-a: $(SOURCE)  
-	rm -f a
-	$(FC) $(INCS) -o a $(SOURCE) $(LIB) 
+manipulate: $(SOURCE)  
+	rm -f manipulate
+	$(FC) $(INCS) -o manipulate $(SOURCE) $(LIB) 
 	-rm -f *.log
 .f.o:
 	$(FC) $(FFLAGS) $(INCS) -c $*$(SUFFIX)

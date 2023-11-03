@@ -5,7 +5,7 @@ module gmx2mdflex
 use constants_m
 use for_force
 use type_m                 , only : dynemolworkdir , warning
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, DefineMorse, debug_MM
+use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
 use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
@@ -13,14 +13,12 @@ use setup_checklist        , only : Checking_Topology
 
 private
  
-public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialPairs14, SpecialMorse 
+public :: top2mdflex, itp2mdflex, SpecialPairs, SpecialPairs14, MorsePairs 
 
     ! module variables ...
-    character(3)     , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
-    real*8           , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
-    type(DefinePairs) , allocatable :: SpecialPairs(:)
-    type(DefinePairs) , allocatable :: SpecialPairs14(:)
-    type(DefineMorse) , allocatable :: SpecialMorse(:)
+    character(3)      , allocatable   , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
+    real*8            , allocatable   , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
+    type(DefinePairs) , allocatable           :: SpecialPairs(:), SpecialPairs14(:), MorsePairs(:)
 
 contains
 !
@@ -363,9 +361,9 @@ type(MM_system)                     , intent(inout) :: MM
 type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
  
 ! local variables ...
-character(3)    , allocatable   :: InputChars(:,:) , Input2Chars(:,:)
+character(3)    , allocatable   :: InputChars(:,:) , Input_Chars(:,:)
 character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
-real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
+real*8          , allocatable   :: InputReals(:,:) , Input_Reals(:,:)
 integer         , allocatable   :: InputIntegers(:,:)
 integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
 integer                         :: a , n , i , j , j1, k , ioerr , dummy_int , N_of_AtomTypes , n_pairs
@@ -375,9 +373,9 @@ character(200)                  :: line
 logical                         :: flag1, flag2, flag3, flag4, flag5, flag6, flag7, flag8
 
 allocate( InputChars    ( 10000 , 10 )                   )
-allocate( Input2Chars   ( 10000 , 10 )                   )
+allocate( Input_Chars   ( 10000 , 10 )                   )
 allocate( InputReals    ( 10000 , 10 ) , source = D_zero )
-allocate( Input2Reals   ( 10000 , 10 ) , source = D_zero )
+allocate( Input_Reals   ( 10000 , 10 ) , source = D_zero )
 allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! FF definitions ... 
@@ -496,54 +494,62 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
         if( ioerr > 0  ) exit
         if( ioerr /= 0 )  cycle read_loop5 
 
-        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
-        if( InputIntegers(i,1) == 3 ) then 
-            backspace(33)
-            read(line,*) (Input2Chars(k,j) , j=1,2) , dummy_int, (Input2Reals(k,j) , j=1,3) 
+        read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) 
+
+        if( InputIntegers(i,1) == 1 ) then 
+            ! Lennard-Jones
+            read(line,*,iostat=ioerr) (InputChars(i,j) , j=1,2) , InputIntegers(i,1) , (InputReals(i,j) , j=1,2)
+            i = i + 1
+        elseif( InputIntegers(i,1) == 3 ) then 
+            ! Morse
+            read(line,*) (Input_Chars(k,j) , j=1,2) , dummy_int, (Input_Reals(k,j) , j=1,3) 
             k = k + 1 
-            cycle read_loop5
         end if
-        i = i + 1
+
     end do read_loop5
     backspace(33)
 
-    NBondParms = i - 1
-
-    If( NBondParms /= 0 ) then  
-
-        allocate( SpecialPairs ( NbondParms ) )
-
-        forall(i=1:2) SpecialPairs(:NBondParms) % MMSymbols(i) = InputChars(:NbondParms,i)
-
-        SpecialPairs(:NBondParms) % Parms(1) = InputReals(:NbondParms,1) 
-        SpecialPairs(:NBondParms) % Parms(2) = InputReals(:NbondParms,2)
-
-        ! conversion 
-        ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
-        SpecialPairs(:NBondParms) % Parms(1) = SpecialPairs(:NBondParms) % Parms(1) * nano_2_angs    
-        SpecialPairs(:NBondParms) % Parms(2) = SpecialPairs(:NBondParms) % Parms(2) * factor1 * imol 
-
-    EndIf
-
-    ! SpecialMorse Potential :: Nothing special about it ... 
+    NBondParms  = i - 1
     NMorseParms = k - 1  
 
-    If( NMorseParms /= 0 ) then
+    If( NBondParms /= 0 ) &
+    Then  
+          allocate( SpecialPairs(NbondParms) )
+          ! Lennard-Jones
+          do j = 1 , NbondParms
+               forall(i=1:2) SpecialPairs(j) % MMSymbols(i) = InputChars(j,i)
 
-        allocate( SpecialMorse ( NMorseParms ) ) 
+               SpecialPairs(j) % model = "LJ"
 
-        forall(i=1:2) SpecialMorse(:NMorseParms) % MMSymbols(i) = Input2Chars(:NMorseParms,i) 
+               SpecialPairs(j) % Parms(1) = InputReals(j,1) 
+               SpecialPairs(j) % Parms(2) = InputReals(j,2)
 
-        SpecialMorse(:NMorseParms) % Parms(3) = Input2Reals(:NMorseParms,3)
-        SpecialMorse(:NMorseParms) % Parms(2) = Input2Reals(:NMorseParms,1)
-        SpecialMorse(:NMorseParms) % Parms(1) = Input2Reals(:NMorseParms,2) 
-        
-        ! conversion   
-        SpecialMorse(:NMorseParms) % Parms(1) = SpecialMorse(:NMorseParms) % Parms(1) * factor1 * imol
-        SpecialMorse(:NMorseParms) % Parms(2) = SpecialMorse(:NMorseParms) % Parms(2) * nano_2_angs
-        SpecialMorse(:NMorseParms) % Parms(3) = SpecialMorse(:NMorseParms) % Parms(3) / nano_2_angs
+               ! conversion 
+               ! factor1 = 1.0d26      <== Factor used to correct the units read from Gromacs
+               SpecialPairs(j) % Parms(1) = SpecialPairs(j) % Parms(1) * nano_2_angs    
+               SpecialPairs(j) % Parms(2) = SpecialPairs(j) % Parms(2) * factor1 * imol 
+          end do
+    endif
 
-    EndIf
+    If( NMorseParms /= 0 ) &
+    Then  
+          allocate( MorsePairs(NMorseParms) )
+          ! Morse Potential 
+          do j = 1 , NMorseParms
+              forall(i=1:2) MorsePairs(j) % MMSymbols(i) = Input_Chars(j,i) 
+
+              MorsePairs(j) % model = "Mors"
+
+              MorsePairs(j) % Parms(3) = Input_Reals(j,3)
+              MorsePairs(j) % Parms(2) = Input_Reals(j,1)
+              MorsePairs(j) % Parms(1) = Input_Reals(j,2) 
+              
+              ! conversion   
+              MorsePairs(j) % Parms(1) = MorsePairs(j) % Parms(1) * factor1 * imol
+              MorsePairs(j) % Parms(2) = MorsePairs(j) % Parms(2) * nano_2_angs
+              MorsePairs(j) % Parms(3) = MorsePairs(j) % Parms(3) / nano_2_angs
+          end do
+    endIf
 
 !=====================================================================================
 !  reads [ bondtypes ] ...
@@ -842,7 +848,7 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 close(33)
 
 deallocate( InputChars , InputReals , InputIntegers )
-deallocate( Input2Chars , Input2Reals )
+deallocate( Input_Chars , Input_Reals )
 !=====================================================================================
 
 do a = 1 , MM % N_of_species
@@ -1237,6 +1243,7 @@ do a = 1 , MM % N_of_species
     else 
         ! only NonBonding interactions for species(a) ...
         ! for LJ, and Buckingham potentials if necessary ...
+        ! this part does not apply to SpecialPairs ...
 
         ! npairs = all pairs ... 
         n_pairs = species(a)%N_of_Atoms * (species(a)%N_of_Atoms - 1) / 2

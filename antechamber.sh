@@ -14,19 +14,23 @@ usage() {
   echo " "
   echo "  -h, --help, help     Display this help message"
   echo " "
-  echo "  resume,   resumes MD simulation; need to mv velocities.out -> velocities.inpt; no need to update input.pdb"
+  echo "  manipulate,   calls suite of manipulate routines for pre- and post-processing data"
   echo " "
-  echo "  preview,  just initiates Dynemol, for the sake of checking initial execution"
+  echo "  resume,       resumes MD simulation; need to mv velocities.out -> velocities.inpt; no need to update input.pdb"
   echo " "
-  echo "  spawn     generates thermal configurations out of an MD run ; usage below"
-  echo "  spawn     {# of configurations to be saved}"
+  echo "  preview,      just initiates Dynemol, for the sake of checking initial execution"
   echo " "
-  echo "  PDOS      generates PDOS of atomic features , implemented in driver = diagnostic ; usage below"
-  echo "  PDOS      {EHSymbol or Symbol}"
-  echo "  PDOS      {AO} {MO_i} - {MO_f}              ,  range of MO's from MO_i to MO_f"
+  echo "  spawn,        generates thermal configurations out of an MD run ; usage below"
+  echo "  usage:        spawn {# of configurations to be saved}"
   echo " "
-  echo "  MO        generates MO cube files for visualization , implemented in driver = {diagnostic,Genetic_Alg} ; usage below"
-  echo "  MO        {MO_i} - {MO_f}             ,  range of MO's from MO_i to MO_f"
+  echo "  PDOS,         generates PDOS of atomic features , implemented in driver = diagnostic ; usage below"
+  echo "  usage:"
+  echo "  PDOS {EHSymbol or Symbol}"
+  echo "  PDOS {AO} {MO_i} - {MO_f} ,  range of MO's from MO_i to MO_f"
+  echo " "
+  echo "  MO,           generates MO cube files for visualization , implemented in driver = {diagnostic,Genetic_Alg} ; usage below"
+  echo "  usage:"
+  echo "  MO   {MO_i} - {MO_f}      ,  range of MO's from MO_i to MO_f"
   echo " "
   echo "  for (driver = MM_Dynamics) and (driver_MM = Parametrize) choose among the arguments below"
   echo "  newOPT , repeat , resume"
@@ -36,6 +40,10 @@ usage() {
 # Parse command line arguments
 if [[ "$#" -ne 0 ]]; then
     case "$1" in
+      manipulate)
+        $DYNEMOLDIR/manipulate/manipulate
+        exit 1
+        ;;
       resume)
         arguments="resume" 
         ;;

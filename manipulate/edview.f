@@ -30,6 +30,8 @@ integer                         :: AtNo, N_of_atom_type
 integer                         :: file_type
 
 
+CALL get_environment_vars
+
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
 

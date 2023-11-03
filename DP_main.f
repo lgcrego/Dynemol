@@ -213,6 +213,8 @@ DP_matrix_AO = D_zero
 do ib = 1 , system%atoms
 do ia = 1 , system%atoms
 
+    if(ia==ib) cycle
+
     if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle
 
     ! if atoms ia and ib remaing fixed => recover DP_matrix_AO ...

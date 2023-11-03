@@ -34,8 +34,8 @@ contains
  type(R_eigen)   , intent(in)    :: QM
 
 ! local variables ... 
- integer                         :: i , i1 , i2 , n , n_MO , Fermi_level , method
- real*8          , allocatable   :: bra(:), ket(:), Force(:,:), force_atom(:,:)
+ integer              :: i , i1 , i2 , n , n_MO , Fermi_level , method , n_eh(2)
+ real*8 , allocatable :: bra(:), ket(:), Force(:,:), force_atom(:,:)
 
  n_MO = size(QM%erg)
  allocate( bra  ( size(basis)              ) )
@@ -45,69 +45,114 @@ contains
  write(*,'(/a)') ' Choose the method : '
  write(*,'(/a)') ' (1) = Hellman-Feynman-Pulay '
  write(*,'(/a)') ' (2) = Numerical derivative of PES '
+ write(*,'(/a)') ' (3) = el-hl pair force '
+ write(*,'(/a)',advance='no') '>>>   '
  read (*,'(I)') method
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  select case( method )
 
- case( 1 )
- !=========================================================================
- ! Hellman-Feynman-Pulay ...
+        case( 1 )
+                 !=========================================================================
+                 ! Hellman-Feynman-Pulay ...
 
- CALL Overlap_Matrix( system , basis )
+                 CALL Overlap_Matrix( system , basis )
 
- do n = 1 , n_MO
+                 do n = 1 , n_MO
 
-    ! bra = ket ...
-    bra = QM%L(n,:)
-    ket = bra 
-    do i = 1 , system% atoms
+                    ! bra = ket ...
+                    bra = QM%L(n,:)
+                    ket = bra 
 
-        If( system% QMMM(i) /= "QM" ) cycle
+                    do i = 1 , system% atoms
 
-        i1 = (i-1)*3 + 1
-        i2 = (i-1)*3 + 3
+                        If( system% QMMM(i) /= "QM" ) cycle
 
-        Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, bra, ket, QM%erg(n), i )
+                        i1 = (i-1)*3 + 1
+                        i2 = (i-1)*3 + 3
 
-    end do
- end do
+                        Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, bra, ket, QM%erg(n), i )
 
- case( 2 )
- !=========================================================================
- ! numerical derivative of the PES ...
+                    end do
+                 end do
 
- verbose = .false.
- allocate( force_atom( n_MO , 3 ) )
+        case( 2 )
+                 !=========================================================================
+                 ! numerical derivative of the PES ...
 
- do i = 1 , system% atoms
+                 verbose = .false.
+                 allocate( force_atom( n_MO , 3 ) )
 
-        force_atom = grad_E( system, basis, i )
+                 do i = 1 , system% atoms
 
-        i1 = (i-1)*3 + 1
-        i2 = (i-1)*3 + 3
+                        force_atom = grad_E( system, basis, i )
 
-        forall( n=1:n_MO ) Force( i1:i2 , n ) = force_atom( n , : )
+                        i1 = (i-1)*3 + 1
+                        i2 = (i-1)*3 + 3
 
- end do
- !=========================================================================
+                        forall( n=1:n_MO ) Force( i1:i2 , n ) = force_atom( n , : )
+
+                 end do
+
+        case( 3 )
+                 !=========================================================================
+                 ! el-hl pair force ...
+
+                 write(*,'(/a)') '> enter MOs associated with the electron and hole:'
+                 write(*,'(a)',advance='no') 'n_el = '
+                 read (*,*) n_eh(1)
+                 write(*,'(a)',advance='no') 'n_hl = '
+                 read (*,*) n_eh(2)
+
+                 deallocate(force)
+                 allocate( Force( 3*system% atoms , 0:2 ) , source = D_zero )
+
+                 CALL Overlap_Matrix( system , basis )
+
+                 do n = 1 , 2
+
+                      bra = QM%L(n_eh(n),:)
+                      ket = bra 
+
+                      do i = 1 , system% atoms
+
+                          If( system% QMMM(i) /= "QM" ) cycle
+
+                          i1 = (i-1)*3 + 1
+                          i2 = (i-1)*3 + 3
+
+                          Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, bra, ket, QM%erg(n_eh(n)), i )
+
+                      end do
+                 end do
 
  end select
 
-! center of mass force ...
- do n = 1 , n_MO
-    Print 200, n , sum( Force(:,n) )
- end do
- 
- ! Force(:,0) = total force at ground state ...
- Fermi_level = system% N_of_electrons / 2
- forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+select case (method)
+       case(1:2)
+                ! center of mass force (must be zero) ...
+                do n = 1 , n_MO
+                   Print 200, n , sum( Force(:,n) )
+                end do
 
- do i = 1 , 3*system% atoms
-    write(30,*) i , Force(i,0)
- end do
+                ! Force(:,0) = total force at ground state ...
+                Fermi_level = system% N_of_electrons / 2
+                forall( i=1:size(Force(:,0)) ) Force(i,0) = sum( Force(i,1:Fermi_level) )
+ 
+       case(3)
+                ! center of mass force (must be zero) ...
+                do n = 1 , 2
+                   Print 200, n_eh(n) , sum( Force(:,n) )
+                end do
+
+                ! Force(:,0) = el-hl pair force ...
+                forall( i=1:size(Force(:,0)) ) Force(i,0) = Force(i,1) - Force(i,2)
+end select
+ 
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-OPEN( unit=3 , file='HFP_forces.nmd' , status='unknown' )
+OPEN( unit=3 , file='ancillary.trunk/HFP_forces.nmd' , status='unknown' )
 
 write(3,*) "HFP Force Analysis"
 
@@ -118,12 +163,23 @@ write( 3 , '(A7 ,1000I4)'   ) "resids "        , (system % nr(i)       , i = 1 ,
 write( 3 , '(A6 ,1000A2)'   ) "betas "         , [("0"                 , i = 1 , system% atoms)]             
 write( 3 , '(A12,3000F8.4)' ) "coordinates "   , (system % coord(i,:)  , i = 1 , system% atoms)
 
-do n = 0 , n_MO
-    write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , n , Force(:,n) 
-end do
+select case (method)
+       case(1:2)
+               do n = 0 , n_MO
+                   write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , n , Force(:,n) 
+               end do
+ 
+       case(3)
+                write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , 0 , Force(:,0) 
+                do n = 2 , 1 , -1
+                   write( 3 , '(A5 ,I4,3000F8.4)' ) "mode " , n_eh(n) , Force(:,n) 
+                end do
+end select
 
 close(3)
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+print*, ""
+print*, '>> saving HFP_forces.nmd in directory ancillary.trunk/ <<'
 
 include 'formats.h'
 
@@ -144,7 +200,7 @@ real*8           , intent(in) :: erg
 integer          , intent(in) :: site 
 
 ! local variables ...
-integer :: i , j , k , ik , xyz
+integer :: i , j , k , ik , xyz , DOSk , BPk
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) , grad_S(:,:)
@@ -152,9 +208,13 @@ real*8                :: Force(3) , tmp_coord(3) , delta_b(3)
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
+grad_S = D_zero
+Force  = D_zero
 
 !force on atom site ...
-k = site 
+k    = site 
+DOSk = atom( system% AtNo(k) )% DOS
+BPk  = system% BasisPointer(k)
 
 ! save coordinate ...
 tmp_coord = system% coord(k,:)
@@ -164,17 +224,15 @@ do xyz = 1 , 3
        delta_b = delta * merge(D_one , D_zero , xyz_key == xyz )
 
        system% coord (k,:) = tmp_coord + delta_b
-       CALL Overlap_Matrix( system , basis , S_fwd , purpose='Pulay')
+       CALL Overlap_Matrix( system , basis , S_fwd )
 
        system% coord (k,:) = tmp_coord - delta_b
-       CALL Overlap_Matrix( system , basis , S_bck , purpose='Pulay')
+       CALL Overlap_Matrix( system , basis , S_bck )
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       Force(xyz) = D_zero
-
-       do ik = 1 , atom( system% AtNo(k) )% DOS  
-            i = system% BasisPointer(k) + ik
+       do ik = 1 , DOSk  
+            i = BPk + ik
             do j = 1 , size(basis)
 
                 Force(xyz) = Force(xyz) - ( X_ij(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)

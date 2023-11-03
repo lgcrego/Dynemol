@@ -216,10 +216,17 @@ endif
 #########
 # RULES #
 #########
+
+# Compiles dynemol and manipulate 
+all: dynemol Manipulate
+
 dynemol: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	rm -f dynemol
 	$(FC) $(FC_ALL) $(INCLUDES) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIBS)
 	-rm -f *.log
+
+Manipulate:	
+	$(MAKE) -C ./manipulate 
 
 # Program runs very slowly with this
 safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0

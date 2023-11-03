@@ -9,7 +9,7 @@ module MD_read_m
     use syst                    , only : bath_T, press, talt, talp, initial_density 
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
-    use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs
+    use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs, MorsePairs
     use namd2mdflex             , only : psf2mdflex, prm2mdflex, convert_NAMD_velocities
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
@@ -283,9 +283,10 @@ do i = 1 , MM % N_of_molecules
     molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
     End If
 
-    If( molecule(i)%NintraIJ > 0 ) & 
+    If( molecule(i)%NintraIJ > 0 ) then 
     molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
     molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
+    End if 
 
     k = k + molecule(i) % N_of_atoms
 
@@ -718,7 +719,7 @@ implicit none
 
 ! local variabbles ...
 integer                         :: i , j , m , at1 , at2 , at3 , at4 , funct_dih , multiples , prototype
-real*8                          :: factor , factor_1 , factor_2 , eps , sig, BuckA, BuckB, BuckC
+real*8                          :: factor , factor_1 , factor_2 , eps , sig, BuckA, BuckB, BuckC, MorsA, MorsB, MorsC
 character(3)                    :: funct_type , flag
 character(len=:) , allocatable  :: string(:)
 
@@ -749,7 +750,7 @@ character(len=:) , allocatable  :: string(:)
  ! Print # of Improper DHSs
      write(51, 224) species(i) % residue, species(i) % NImpropers
  ! Print total MM_charge
-     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge)
+     write(51, 225) species(i) % residue, sum(species(i)%atom%MM_charge), merge(" <==" , "    " , abs(sum(species(i)%atom%MM_charge)) > 1.d-3)
      write(51, *) " "
  end do
  !========================================================================================================
@@ -779,25 +780,12 @@ character(len=:) , allocatable  :: string(:)
                      ! warns if NB paramater was not assigned to this atom  ...
                      flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
 
-                     select case (MM_input_format)
-                         case("NAMD","GAFF")
-                               eps = FF(i)% eps**2 / (factor1*imol) ! <== kJ/mol
-                               select case( MM % CombinationRule )
-                                   case (2)
-                                       sig = FF(i)%sig*two
-                                   case (3)
-                                       sig = FF(i)%sig**2
-                               end select
-
-                         case("GMX")
-                               eps = FF(i)% eps**2 / (factor1*imol) 
-                               eps = eps * J_2_cal                  ! <== kJ/mol
-                               select case( MM % CombinationRule )
-                                   case (2)
-                                       sig = FF(i)%sig*two
-                                   case (3)
-                                       sig = FF(i)%sig**2
-                               end select
+                     eps = FF(i)% eps**2 / (factor1*imol) ! <== kJ/mol
+                     select case( MM % CombinationRule )
+                         case (2)
+                             sig = FF(i)%sig*two
+                         case (3)
+                             sig = FF(i)%sig**2
                      end select
 
                      write(51,'(I5,A5,F12.5,t31,F12.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
@@ -810,7 +798,7 @@ character(len=:) , allocatable  :: string(:)
  end do
 
  ! Buckingham ...
- write(51,'(t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
+ write(51,'(/,t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
  do i = 1 , size(FF)
 
     if ( FF(i)%Buck) then
@@ -820,21 +808,16 @@ character(len=:) , allocatable  :: string(:)
                       ! warns if NB paramater was not assigned to this atom  ...
                       flag = merge( "<==" , "   " , FF(i)% BuckA * FF(i)%BuckB == 0 )
 
-                     select case (MM_input_format)
-                         case("NAMD","GAFF")
-                               BuckA = FF(i)% BuckA**2 / (factor1*imol) ! <== kJ/mol
-                               BuckB = FF(i)%BuckB*two
-                               BuckC = FF(i)% BuckC**2 / (factor1*imol) ! <== kJ/mol
+                     BuckA = FF(i)% BuckA**2 / (factor1*imol) ! <== kJ/mol
+                     BuckB = FF(i)%BuckB*two
+                     BuckC = FF(i)% BuckC**2 / (factor1*imol) ! <== kJ/mol
 
-                         case("GMX")
-                     end select
-
-                          write(51,'(I5,A5,3F16.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
-                                                        FF(i)% MMSymbol                        , & 
-                                                        BuckA                                  , &
-                                                        BuckB                                  , &
-                                                        BuckC                                  , &
-                                                        flag
+                     write(51,'(I5,A5,3F16.5,A4)') count(FF% MMSymbol == FF(i)% MMSymbol) , &
+                                                   FF(i)% MMSymbol                        , & 
+                                                   BuckA                                  , &
+                                                   BuckB                                  , &
+                                                   BuckC                                  , &
+                                                   flag
             endif
     end if
  end do
@@ -844,62 +827,77 @@ character(len=:) , allocatable  :: string(:)
  write(51, *) " "
  write(51,"(A)") "[ SpecialPairs ]"               
 
- ! Lennard-Jones ...
- write(51,'(t5,A2,t15,A11,t36,A8,t67,A35)') "LJ",  "eps(kJ/mol)", "sigma(A)", "V_LJ = 4*eps*( (s/r)^12 - (s/r)^6 )"
- do i = 1 , size(SpecialPairs)
-    ! warns if NB paramater was not assigned to this atom  ...
-    flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+ If( allocated(SpecialPairs) )&
+ Then
+      ! Lennard-Jones ...
+      write(51,'(t5,A2,t15,A11,t35,A8,t67,A36)') "LJ",  "eps(kJ/mol)", "sigma(A)", "V_LJ  = 4*eps*( (s/r)^12 - (s/r)^6 )"
+      do i = 1 , size(SpecialPairs)
+           ! warns if NB paramater was not assigned to this atom  ...
+           flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
 
-    if( SpecialPairs(i)% model == "LJ") then
+           if( SpecialPairs(i)% model == "LJ") then
 
-             select case (MM_input_format)
-                 case("NAMD","GAFF")
-                       eps = SpecialPairs(i)% Parms(2) / (factor1*imol) ! <== kJ/mol
-                       sig = SpecialPairs(i)% Parms(1)                  ! <== Angs
+               eps = SpecialPairs(i)% Parms(2) / (factor1*imol) ! <== kJ/mol
+               sig = SpecialPairs(i)% Parms(1)                  ! <== Angs
 
-                 case("GMX")
-             end select
+               write(51,'(2A5,F12.5,t31,F12.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
+                                                    SpecialPairs(i)% MMSymbols(2) , & 
+                                                    eps                           , &
+                                                    sig                           , &
+                                                    flag
+           endif
+      enddo
 
-             write(51,'(2A5,F12.5,t31,F12.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
-                                                  SpecialPairs(i)% MMSymbols(2) , & 
-                                                  eps                           , &
-                                                  sig                           , &
-                                                  flag
-    endif
- enddo
+      ! Buckingham ...
+      write(51,'(/,t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
+      do i = 1 , size(SpecialPairs)
+           ! warns if NB paramater was not assigned to this atom  ...
+           flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
 
- ! Buckingham ...
- write(51,'(t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
- do i = 1 , size(SpecialPairs)
-    ! warns if NB paramater was not assigned to this atom  ...
-    flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+           if( SpecialPairs(i)% model == "BUCK" ) then
 
-    if( SpecialPairs(i)% model == "BUCK" ) then
+               BuckA = SpecialPairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
+               BuckB = SpecialPairs(i)% Parms(2)                  ! <== Angs
+               BuckC = SpecialPairs(i)% Parms(3) / (factor1*imol) ! <== kJ/mol
 
-             select case (MM_input_format)
-                 case("NAMD","GAFF")
-                       BuckA = SpecialPairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
-                       BuckB = SpecialPairs(i)% Parms(2)                  ! <== Angs
-                       BuckC = SpecialPairs(i)% Parms(3) / (factor1*imol) ! <== kJ/mol
+               write(51,'(2A5,3F16.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
+                                           SpecialPairs(i)% MMSymbols(2) , & 
+                                           BuckA                         , &
+                                           BuckB                         , &
+                                           BuckC                         , &
+                                           flag
+           endif
+      enddo
+ endif 
 
-                 case("GMX")
-             end select
+ If( allocated(MorsePairs) )&
+ Then
+      ! Morse ...
+      write(51,'(/,t4,A4,t17,A9,t34,A9,t49,A9,t67,A30)') "Mors", "r0(A)" , "D(kJ/mol)" , "a(A^-1)" , "V_Mor = D*(1-exp(-a*(r-r0)))^2"
+      do i = 1 , size(MorsePairs)
+           ! warns if NB paramater was not assigned to this atom  ...
+           flag = merge( "<==" , "   " , MorsePairs(i)% Parms(1) * MorsePairs(i)% Parms(2) == 0 )
 
-             write(51,'(2A5,3F16.5,A4)') SpecialPairs(i)% MMSymbols(1) , & 
-                                         SpecialPairs(i)% MMSymbols(2) , & 
-                                         BuckA                         , &
-                                         BuckB                         , &
-                                         BuckC                         , &
-                                         flag
-    endif
- enddo
+           MorsA = MorsePairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
+           MorsB = MorsePairs(i)% Parms(2)                  ! <== Angs
+           MorsC = MorsePairs(i)% Parms(3)                  ! <== Angs^-1
+
+           write(51,'(2A5,3F15.4,A4)') MorsePairs(i)% MMSymbols(1) , & 
+                                       MorsePairs(i)% MMSymbols(2) , & 
+                                       MorsA                       , &
+                                       MorsB                       , &
+                                       MorsC                       , &
+                                       flag
+      enddo
+ endif 
 
  !========================================================================================================
  ! bond parms saving ...
  write(51, *) " "
  write(51,"(A)") "[ bondtypes ]"               
 
- write(51,'(t12,A4,t25,A5,t36,A13,t67,A15)') "type" , "r0(A)" , "k(kJ/mol/A^2)" , "V = k/2(r-r0)^2"
+ write(51,'(t12,A4,t25,A5,t36,A13,t56,A5,t67,A16)')        "type" , "r0(A)" , "k(kJ/mol/A^2)" , "------" , "V = k/2*(r-r0)^2"
+ write(51,'(t12,A4,t25,A5,t34,A13,t55,A6,t67,A26)') "type" , "r0(A)" , "D(kJ/mol)"     , "a(1/A)" , "V = D*(1-exp(-a*(r-r0)))^2"
 
  prototype = 1
  do m = 1 , MM % N_of_Molecules
