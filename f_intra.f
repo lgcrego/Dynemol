@@ -473,7 +473,8 @@ If( allocated(MorsePairs) ) then
                atom(ati) % fMorse(:) = atom(ati) % fMorse(:) - coephi*rij(:)/dij
                atom(atj) % fMorse(:) = atom(atj) % fMorse(:) + coephi*rij(:)/dij
 
-               Morspot = qterm + Morspot
+               Morspot = Morspot + qterm*factor3 
+
            end if
        end do read_loop2
        end do
@@ -485,7 +486,7 @@ end If
 !====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra
+pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot
 pot_total = pot_INTER + pot_INTRA - Vself
 pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 

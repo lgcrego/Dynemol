@@ -89,25 +89,28 @@ select case ( driver )
 
     case ( "MM_Dynamics" )
 
-        select case ( driver_MM )
+        if( master )&
+        then
+            select case ( driver_MM )
 
-            case ( "MM_Dynamics" )
-                CALL MMechanics        
+                case ( "MM_Dynamics" )
+                    CALL MMechanics        
 
-            case ( "MM_Optimize" )
-                CALL Optimize_Structure
+                case ( "MM_Optimize" )
+                    CALL Optimize_Structure
 
-            case ( "NormalModes" )
-                CALL normal_modes
+                case ( "NormalModes" )
+                    CALL normal_modes
 
-            case ( "Parametrize" )
-                CALL Optimize_Parameters_Driver
+                case ( "Parametrize" )
+                    CALL Optimize_Parameters_Driver
 
-            case default
-                Print*, " >>> Check your driver options <<< :" , driver
-                stop
+                case default
+                    Print*, " >>> Check your driver options <<< :" , driver
+                    stop
 
-        end select
+            end select
+        end if
 
     case default
         Print*, " >>> Check your driver options <<< :" , driver

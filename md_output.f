@@ -96,7 +96,7 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,'(''Bond Potential              :'',F14.4)') bdpot     *mol*factor3*1.d-6    
     write(10,'(''Harmonic Bond Potential     :'',F14.4)') harm_bond *mol*factor3*1.d-6    
     write(10,'(''Morse Bond Potential        :'',F14.4)') morse_bond*mol*factor3*1.d-6    
-    write(10,'(''Morse (Inter) Potential     :'',F14.4)') Morspot   *mol*factor3*1.d-6    
+    write(10,'(''Morse (Inter) Potential     :'',F14.4)') Morspot   *mol*1.d-6    
     write(10,'(''Angle Potential             :'',F14.4)') angpot    *mol*factor3*1.d-6   
     write(10,'(''Dihedral Potential          :'',F14.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral             :'',F14.4)') proper_dih*mol*factor3*1.d-6   
@@ -255,10 +255,10 @@ real*8  , intent(in) :: dt
 ! local variables ...
 integer           :: i , l 
 integer , save    :: counter = 1
-character(len=3)  :: string
-character(len=43) :: f_name
+character(len=4)  :: string
+character(len=44) :: f_name
 
-write(string,'(i3.3)') counter    
+write(string,'(i4.4)') counter    
 
 f_name = 'ancillary.trunk/configs/velocity_MM-'//string//'.out'
 
