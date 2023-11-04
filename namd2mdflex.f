@@ -42,9 +42,9 @@ real*8          , allocatable   :: InputReals(:,:)
 integer         , allocatable   :: InputIntegers(:,:) 
 character(1)                    :: dummy_char
 character(18)                   :: keyword 
-character(10)                   :: string  , word(10)
+character(10)                   :: string , ForceFlag , word(10)
 character(200)                  :: line 
-integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms , N_adhoc , dummy_int
+integer                         :: i , j , k , a , n , ioerr , counter , N_of_atoms , N_adhoc , dummy_int , enforce_execution
 integer                         :: Nbonds , Nangs , Ndiheds , Nimpropers
 logical                         :: TorF
 
@@ -271,8 +271,12 @@ do a = 1 , MM % N_of_species
 
 !----------------------------------------------------------------------------------------------
         TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ndiheds,:) )
-        If( TorF ) then
-            CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
+
+        call get_environment_variable("force_flag",ForceFlag)
+        enforce_execution = verify( "true" , ForceFlag )
+
+        If( TorF .AND. enforce_execution /= 0 ) then
+            CALL warning("error detected in Topology, 1) check log.trunk/Topology.test.log  OR 2) use  <dynemol -f> ")
             stop
         End If
 !----------------------------------------------------------------------------------------------
