@@ -34,14 +34,14 @@ type(MM_atomic)     , intent(inout) :: FF(:)
 type(MM_molecular)  , intent(inout) :: species(:)
 
 ! local variables ...
-character(15)   , allocatable   :: InputChars(:,:)
-real*8          , allocatable   :: InputReals(:,:)
-integer         , allocatable   :: InputIntegers(:,:) 
-character(18)                   :: keyword 
-character(10)                   :: string , word(3)
-character(200)                  :: line 
-logical                         :: TorF
-integer                         :: i , j , k , a , ioerr , dummy_int , counter , Nbonds , Nangs , Ndiheds , Ntorsion , N_of_atoms
+character(15)  , allocatable :: InputChars(:,:)
+real*8         , allocatable :: InputReals(:,:)
+integer        , allocatable :: InputIntegers(:,:) 
+character(18)                :: keyword 
+character(10)                :: string , ForceFlag , word(3)
+character(200)               :: line 
+logical                      :: TorF
+integer                      :: i, j, k, a, ioerr, dummy_int, counter, Nbonds, Nangs, Ndiheds, Ntorsion, N_of_atoms, enforce_execution
 
 allocate( InputChars    ( 20000 , 10 )                   )
 allocate( InputReals    ( 20000 , 10 ) , source = D_zero )
@@ -278,8 +278,12 @@ do a = 1 , MM % N_of_species
         species(a)% NImpropers = Ndiheds - Ntorsion
 
         TorF = Checking_Topology( species(a)%bonds , species(a)%angs , species(a)%diheds(:Ntorsion,:) )
-        If( TorF ) then
-            CALL warning("error detected in Topology , check log.trunk/Topology.test.log")
+
+        call get_environment_variable("force_flag",ForceFlag)
+        enforce_execution = verify( "true" , ForceFlag )
+
+        If( TorF .AND. enforce_execution /= 0 ) then
+            CALL warning("error detected in Topology, 1) check log.trunk/Topology.test.log  OR 2) use  <dynemol -f> ")
             stop
         End If
 

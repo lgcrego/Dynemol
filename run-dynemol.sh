@@ -5,7 +5,7 @@
 #Description	: execute Dynemol from pwd using local dynemol src files                                                                               
 #Args           : see usage                                                                                          
 #Author       	: Luis G C Rego
-#date           : 30/Sept/2023
+#date           : 04/Nov/2023
 ###################################################################
 
 set -e  # Enable the "exit on error" option
@@ -15,6 +15,7 @@ export DYNEMOLDIR=< path to dynemol directory >
 
 # Call antechamber.sh and pass all command-line arguments
 $DYNEMOLDIR/antechamber.sh "$@"
+source $DYNEMOLDIR/antechamber.sh
 
 arguments=$($DYNEMOLDIR/antechamber.sh "$@")
 
