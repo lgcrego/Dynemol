@@ -37,9 +37,18 @@ usage() {
   exit 1
 }
 
+force_flag=false
+
 # Parse command line arguments
 if [[ "$#" -ne 0 ]]; then
     case "$1" in
+      -h|--help|help)
+        usage
+        ;;
+      -f|--force)
+        force_flag=true
+        shift
+        ;;
       manipulate)
         $DYNEMOLDIR/manipulate/manipulate
         exit 1
@@ -71,14 +80,11 @@ if [[ "$#" -ne 0 ]]; then
              arguments="MO $2"\ -\ "$4" 
         fi
         ;;
-      -h|--help|help)
-        usage
-        ;;
       *)
         echo "Error: Unknown option: $1"
         usage
         ;;
     esac
 fi
-
 echo "$arguments"
+export force_flag
