@@ -23,7 +23,6 @@ integer                        :: i , j , k , L , m , n(3)
 integer                        :: cell_size = 0
 character(len=1)               :: string , again
 character(len=3) , allocatable :: basis_element(:)
-character(len=3)               :: element
 
 CALL system( "clear" )
 
@@ -36,12 +35,12 @@ do
     do i = 1 , 3
 
        write(string,'(i1)') i
-       write(*,'(/a)') '> enter A'//string//' crystal axis in cartesian system:'
-       write(*,'(a)',advance='no') 'A'//string//'_x = '
+       write(*,'(/a)') '> enter T'//string//' crystal axis in cartesian system:'
+       write(*,'(a)',advance='no') 'T'//string//'_x = '
        read (*,*) Bravais(1,i)
-       write(*,'(a)',advance='no') 'A'//string//'_y = '
+       write(*,'(a)',advance='no') 'T'//string//'_y = '
        read (*,*) Bravais(2,i)
-       write(*,'(a)',advance='no') 'A'//string//'_z = '
+       write(*,'(a)',advance='no') 'T'//string//'_z = '
        read (*,*) Bravais(3,i)
 
     end do
@@ -53,7 +52,7 @@ end do
 
 do
 ! define periodic coordinates ...
-    write(*,'(/a)') '> enter maximum coordinates (n1,n2,n3) of Bravais lattice:'
+    write(*,'(/a)') '> enter maximum coordinates (n1,n2,n3) of Bravais lattice (n>=0):'
     write(*,'(a)',advance='no') 'n1 = '
     read (*,*) n(1)
     write(*,'(a)',advance='no') 'n2 = '
@@ -66,12 +65,8 @@ do
     if (again /= 'n') EXIT 
 end do
 
-! choose element of periodic lattice ...
-write(*,'(/a)',advance='no') '> Symbol of element at the periodic lattice: '
-read (*,*) element
-
 ! define crystal basis ...
-write(*,'(/a)',advance='no') '> enter size of crystal basis (0 or unit cell size): '
+write(*,'(/a)',advance='no') '> enter size of crystal basis (1 or unit cell size): '
 read (*,*) cell_size
 allocate( basis_coords (3,cell_size) )
 allocate( basis_element  (cell_size) )
@@ -100,29 +95,25 @@ end do
 
 ! Building crystal ...
 write(*,'(/a)') 'Building the Crystal ...'
+print*, crystal% System_Characteristics
 
-crystal% N_of_atoms = (n(1)+1) * (n(2)+1) * (n(3)+1) * m
+crystal% N_of_atoms = n(1)*n(2)*n(3)*cell_size
 allocate( crystal% atom( crystal% N_of_atoms) )
 
 CALL Initialize_System( crystal )
 
-crystal% atom% Symbol   = element
-crystal% atom% MMSymbol = crystal% atom% Symbol 
-
 L = 0
-do i = 0 , n(1)
-   do j = 0 , n(2)
-      do k = 0 , n(3)
+do i = 1 , n(1)
+   do j = 1 , n(2)
+      do k = 1 , n(3)
 
-         L = L + 1
-         crystal% atom(L)% xyz(1) = Bravais(1,1)*i + Bravais(1,2)*j + Bravais(1,3)*k
-         crystal% atom(L)% xyz(2) = Bravais(2,1)*i + Bravais(2,2)*j + Bravais(2,3)*k
-         crystal% atom(L)% xyz(3) = Bravais(3,1)*i + Bravais(3,2)*j + Bravais(3,3)*k
-
-         ref = crystal% atom(L)% xyz
+         ref(1) = Bravais(1,1)*i + Bravais(1,2)*j + Bravais(1,3)*k
+         ref(2) = Bravais(2,1)*i + Bravais(2,2)*j + Bravais(2,3)*k
+         ref(3) = Bravais(3,1)*i + Bravais(3,2)*j + Bravais(3,3)*k
 
          do m = 1 , cell_size
             L = L + 1
+            crystal% atom(L)% Symbol   = basis_element(m)
             crystal% atom(L)% xyz(:) = ref(:) + basis_coords(:,m)
          end do
 
@@ -130,8 +121,10 @@ do i = 0 , n(1)
    end do
 end do
 
+crystal% atom% MMSymbol = crystal% atom% Symbol 
+
 ! define crystal box ...
-crystal% box(:) = max( Bravais(:,1)*(n(1)+1) , Bravais(:,2)*(n(2)+1) , Bravais(:,3)*(n(3)+1) )
+crystal% box(:) = max( Bravais(:,1)*n(1) , Bravais(:,2)*n(2) , Bravais(:,3)*n(3) )
 
 end subroutine buildup_crystal
 !
