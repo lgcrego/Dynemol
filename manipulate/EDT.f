@@ -306,7 +306,6 @@ type(universe) , intent(inout) :: system
 
 !local variables
 integer          :: New_No_of_atoms
-character(len=1) :: choice
 type(universe)   :: temp
 
 New_No_of_atoms = count( .NOT. system%atom%delete )
@@ -522,16 +521,25 @@ implicit none
 type(universe) , intent(inout) :: system
 
 ! local variables ...
-type(atomic)           , allocatable    :: temp(:)
-type(integer_interval)                  :: n_x , n_y , n_z
-integer                                 :: New_N_of_atoms , i , j , k , n , counter , S_counter , F_counter , Replication_Factor 
-integer                                 :: max_nresid = 0 , P_counter 
-character(len=3)                        :: string
-logical                , save           :: done = .false.
+type(atomic)           , allocatable :: temp(:)
+type(integer_interval)               :: n_x , n_y , n_z
+integer                              :: New_N_of_atoms , i , j , k , n , counter , S_counter , F_counter , Replication_Factor 
+integer                              :: max_nresid = 0 , P_counter 
+character(len=3)                     :: string
+logical                              :: replicate_ALL = .true.
+logical                , save        :: done = .false.
 
 ! reading parameters ...
 If( .NOT. done ) then
-    write(*,'(/a)') '> MIND: the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    write(*,'(/a)') '> Do you want to replicate the whole structure? (y/n, default=y)'
+    write(*,'(/a)') '> MIND: if you choose to replicate a specific fragment, the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    read (*,'(a)') string
+    if( string == 'n' ) &
+    then
+        replicate_ALL = .false.
+        return
+    endif
+
     Print*, " "
     write(*,'(a)') '> Enter replication control keys (integer)'
     write(*,'(a)',advance='no') 'n_x%inicio (<= 0) = '
@@ -608,7 +616,7 @@ system%N_of_Surface_atoms      =  system%N_of_Surface_atoms      * Replication_f
 system%N_of_Solvent_atoms      =  system%N_of_Solvent_atoms      * Replication_factor
 system%N_of_Solvent_molecules  =  system%N_of_Solvent_molecules  * Replication_factor
 
-where(system%atom%copy == .false.) system%atom%delete = .true.
+if( .not. replicate_ALL) where(system%atom%copy == .false.) system%atom%delete = .true.
 CALL Eliminate_fragment( system )    
 
 write(string,'(i3.3)') Replication_Factor
