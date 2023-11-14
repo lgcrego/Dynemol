@@ -610,20 +610,17 @@ do i = 1 , size(trj)
 end do
 
 ! Information about the Solvent System ...
-
-! solvent molecules must be contiguous ...
-trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' )         &
-                            - minval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' ) + 1
-
-do i = 1 , size(trj)
-
-    allocate( trj(i) % solvent( trj(i)%N_of_Solvent_Molecules ) )
-
-    trj(i)%solvent%N_of_Atoms = count( trj(i)%atom%fragment == 'S' ) / trj(i)%N_of_Solvent_molecules
-
-    CALL Center_of_Gravity( trj(i) )
-
-end do
+If( any(trj(1) % atom % fragment == 'S') )&
+then
+        ! solvent molecules must be contiguous ...
+        trj%N_of_Solvent_Molecules =  maxval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' )         &
+                                    - minval( trj(1) % atom % nr, trj(1) % atom % fragment == 'S' ) + 1
+        do i = 1 , size(trj)
+            allocate( trj(i) % solvent( trj(i)%N_of_Solvent_Molecules ) )
+            trj(i)%solvent%N_of_Atoms = count( trj(i)%atom%fragment == 'S' ) / trj(i)%N_of_Solvent_molecules
+            CALL Center_of_Gravity( trj(i) )
+        end do
+end if
 
 ! Formats ...
 32 format(5x, i6)

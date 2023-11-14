@@ -183,7 +183,7 @@ If( present(PDOS) ) then
 end if
 
 ! save peak and broadened specs ...
-If( present(SPEC) ) then
+If( spectrum ) then
     OPEN( unit=3 , file='dos.trunk/spectrum.dat' , status='unknown' )
         do i = 1 , size(SPEC%func)
             write(3,11) SPEC%grid(i) , SPEC%average(i) , SPEC%peaks(i)
@@ -192,7 +192,7 @@ If( present(SPEC) ) then
 end if
 
 ! save time-dependent electron or hole populations ...
-If( present(Qdyn) ) then
+If( survival ) then
 
     N_of_fragments = size( QDyn%fragments )
 
