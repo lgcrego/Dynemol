@@ -410,6 +410,10 @@ do i = 1 , MM % N_of_molecules
                          case(2) 
                          call Buckingham( rij2 , ati , atj , fs , E_vdw )
 
+                         case(0)  ! <== electrostatic
+                         fs    = d_zero
+                         E_vdw = d_zero
+
                   end select
 
                   tmp_vdw(ati,1:3,ithr) = tmp_vdw(ati,1:3,ithr) + fs * rij(:)

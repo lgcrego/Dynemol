@@ -677,15 +677,26 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
                     where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*"  == InputChars(i,1)) )
                         FF % Buck  = .true.
                         FF % BuckA = InputReals(i,1)
-                        FF % BuckB = d_one / InputReals(i,2)
+                        FF % BuckB = merge( d_one / InputReals(i,2) , InputReals(i,2) ,  InputReals(i,2) /= 0.0 )
                         FF % BuckC = InputReals(i,3)
                     end where
         end select 
     end do
     backspace(33)
+
+    ! every atom must have a nonbonding character ...
+    if( master ) &
+    then
+         do i = 1 , size(FF)
+              if( (FF(i)% LJ == .false.) .AND. (FF(i)% Buck == .false.) ) then
+                 CALL warning(" atom type  "//FF(i)%MMSymbol//" is neither LJ nor BUCK, if necessary use 0.0 for the FF parameters ")
+                 stop
+              endif
+         end do
+    end if
+
     FF % eps14 = FF % eps
     FF % sig14 = FF % sig
-
     do i = 1 , NBondParms
         if( InputReals(i,5) /= D_zero ) then
             where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*" == InputChars(i,1)) )
@@ -729,6 +740,8 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
        j = FF(k)% my_species
        species(j)%atom(i)%lj   = FF(k)%lj
        species(j)%atom(i)%buck = FF(k)%buck
+       if(FF(k)%lj)   species(j)%atom(i)%eps   = FF(k)%eps
+       if(FF(k)%buck) species(j)%atom(i)%buckA = FF(k)%buckA
     end do
 
 !=====================================================================================
@@ -1118,19 +1131,31 @@ do a = 1 , MM % N_of_species
         do i = 1   , species(a)% N_of_Atoms - 1
         do j = i+1 , species(a)% N_of_Atoms
 
-           if( species(a)%atom(i)%LJ .AND. species(a)%atom(j)%LJ ) then
-                k = k + 1
-                dummy_array_I(k,1) = i
-                dummy_array_I(k,2) = j
-                dummy_array_I(k,3) = 1
-                end if
+             flag1 = species(a)%atom(i)% LJ   .AND. species(a)%atom(j)% LJ    .AND. (species(a)%atom(i)% eps   /= 0.0)
+             flag2 = species(a)%atom(i)% BUCK .AND. species(a)%atom(j)% BUCK  .AND. (species(a)%atom(i)% buckA /= 0.0)
+             flag3 = species(a)%atom(i)% MM_charge * species(a)%atom(j)% MM_charge /= 0.0 
 
-           if( species(a)%atom(i)%BUCK .AND. species(a)%atom(j)%BUCK ) then
-                k = k + 1
-                dummy_array_I(k,1) = i
-                dummy_array_I(k,2) = j
-                dummy_array_I(k,3) = 2
-                end if
+             if( flag1 ) &
+                  then
+                      k = k + 1
+                      dummy_array_I(k,1) = i
+                      dummy_array_I(k,2) = j
+                      dummy_array_I(k,3) = 1
+
+             elseif( flag2 ) &
+                  then
+                      k = k + 1
+                      dummy_array_I(k,1) = i
+                      dummy_array_I(k,2) = j
+                      dummy_array_I(k,3) = 2
+
+             elseif( flag3 ) &
+                  then
+                      k = k + 1
+                      dummy_array_I(k,1) = i
+                      dummy_array_I(k,2) = j
+                      dummy_array_I(k,3) = 0  ! <== only Electrostatic
+              end if
 
         end do
         end do

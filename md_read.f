@@ -75,6 +75,10 @@ do i = 1 , MM % N_of_species
 end do
 
 ! pass information from structure to molecular dynamics ...
+if (MM% N_of_atoms /= unit_cell% atoms .AND. master ) then
+    CALL warning(" inconsistency in total # of atoms : check card_inpt and input.pdb ")
+    STOP 
+end If
 CALL Structure_2_MD
 
 !----------------------
@@ -688,7 +692,7 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'Al'
         case( 'Ti' , 'TI' )
             a(i)%Symbol = 'Ti'
-        case( 'Li' )
+        case( 'Li' , 'LI' )
             a(i)%Symbol = 'Li'
         case( 'Ru' )
             a(i)%Symbol = 'Ru'
