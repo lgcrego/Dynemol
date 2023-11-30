@@ -2,7 +2,7 @@ module MD_read_m
 
     use constants_m
     use atomicmass
-    use MM_input       
+    use MM_input                ! <== MM and species are defined here
     use MPI_definitions_m       , only : master
     use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
@@ -53,6 +53,12 @@ If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM speci
 ! types of molecules ...
 CALL allocate_molecule( MM % N_of_molecules )
 
+! just checking ...
+if (MM % N_of_molecules /= sum(species % N_of_molecules)) then
+    CALL warning(" inconsistency in total # of molecules : check card_inpt and input.pdb ")
+    STOP 
+end If
+
 MM % N_of_atoms = 0
 l = 1
 do i = 1 , MM % N_of_species
@@ -63,6 +69,12 @@ do i = 1 , MM % N_of_species
     end do
     MM % N_of_atoms = MM % N_of_atoms + Total_N_of_atoms_of_species_i 
 end do
+
+! just checking ...
+if (MM% N_of_atoms /= unit_cell% atoms) then
+    CALL warning(" inconsistency in total # of atoms : check card_inpt and input.pdb ")
+    STOP 
+end If
 
 allocate ( atom ( MM % N_of_atoms ) )
 k = 1
@@ -75,10 +87,6 @@ do i = 1 , MM % N_of_species
 end do
 
 ! pass information from structure to molecular dynamics ...
-if (MM% N_of_atoms /= unit_cell% atoms .AND. master ) then
-    CALL warning(" inconsistency in total # of atoms : check card_inpt and input.pdb ")
-    STOP 
-end If
 CALL Structure_2_MD
 
 !----------------------

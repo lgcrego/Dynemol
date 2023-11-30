@@ -195,7 +195,7 @@ if( nuclear_matter == "MDynamics" ) then
            write(10,'(t36,"relax time (ps)  = " , A7)') adjustl(number_string)
            write( number_string , '(F6.2)' ) pressure
            write(10,'(t36,"pressure (atm) = " , A6)') adjustl(number_string)
-           write( number_string , '(F8.5)' ) pressure_relaxation_time
+           write( number_string , '(E12.5)' ) pressure_relaxation_time
            write(10,'(t36,"pressure_relax time (ps) = " , A7)') merge( adjustl(number_string) , "P-fixed" , pressure_relaxation_time < large )
        end If
        write(10,'(t36,"read_velocities :" , A10)') merge(".true. <==",".false.   ",read_velocities)           
