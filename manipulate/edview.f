@@ -122,9 +122,9 @@ do
     write(*,'(/a)') '2  : Rotation '
     write(*,'(/a)') '3  : Reflection '
     write(*,'(/a)') '4  : Copy '      
-    write(*,'(/a)') '5  : Statistics '
+    write(*,'(/a)') '5  : Delete '
     write(*,'(/a)') '6  : Sort fragments together '
-    write(*,'(/a)') '7  : Delete fragment '
+    write(*,'(/a)') '7  : Statistics '
     write(*,'(/a)') '8  : Include fragment '
     write(*,'(/a)') '9  : Include Solvent '
     write(*,'(/a)') '10 : Replication '
@@ -153,13 +153,13 @@ do
             CALL Copy( structure )
 
         case ('5')
-            CALL Statistics( trajectories )
+            CALL Eliminate_Fragment( structure )
 
         case ('6')
             CALL Sort_Fragments( structure )
 
         case ('7')
-            CALL Eliminate_Fragment( structure )
+            CALL Statistics( trajectories )
 
         case ('8')
             CALL Include_Fragment( structure )
