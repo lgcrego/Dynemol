@@ -305,8 +305,66 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !local variables
-integer          :: New_No_of_atoms
+integer          :: New_No_of_atoms , rn , begin_of_block
 type(universe)   :: temp
+character(len=1) :: option
+character(len=3) :: residue
+integer          , allocatable :: rn_mask(:) , displace(:)
+character(len=3) , allocatable :: residue_mask(:)
+
+allocate( displace(system%N_of_atoms) , source = 0 ) 
+
+CALL systemQQ( "clear" )
+
+write(*,'(/a)') ' Choose stuff to Delete : '
+write(*,'(/a)') ' (1) = use ad-hoc tuning '
+write(*,'(/a)') ' (2) = residue number '
+write(*,'(/a)') ' (3) = residue name '
+write(*,'(/a)',advance='no') '>>>   '
+read (*,'(a)') option
+
+select case( option )
+    case( '1' ) 
+        ! do nothing, proceed ...
+
+    case( '2' )
+        write(*,'(/a)') "choose the residue numbers  to be deleted (0 to exit) : "
+
+        allocate ( rn_mask(system%N_of_atoms) )
+        rn_mask(:) = system%atom(:)%nresid 
+        do
+           read*, rn
+           If( rn == 0 ) exit
+           
+           where( system% atom(:)% nresid == rn ) system% atom(:)% delete = .true.
+
+           begin_of_block = minloc( rn_mask , mask = rn_mask==rn , dim=1 )
+           displace(begin_of_block:) = displace(begin_of_block:) + 1
+        end do
+        deallocate( rn_mask )
+
+    case( '3' )
+        write(*,'(1x,3/a)') "choose the residue numbers  to be deleted (@ to exit) : "
+
+        allocate ( residue_mask(system%N_of_atoms) ) 
+        residue_mask(:) = system%atom(:)%resid 
+        do
+           read*, residue
+           If( residue == "@" ) exit
+
+           where( system% atom(:)% resid == residue ) system% atom(:)% delete = .true.
+
+           where( system% atom(:)% resid == residue ) system% atom(:)% nresid = -1
+
+           begin_of_block = minloc( residue_mask , mask = residue_mask==residue , dim=1 )
+           displace(begin_of_block:) = displace(begin_of_block:) + 1
+        end do
+        deallocate( residue_mask )
+ 
+end select
+
+! accommodate the residue numbers ...
+system%atom%nresid = system%atom%nresid - displace
 
 New_No_of_atoms = count( .NOT. system%atom%delete )
 allocate( temp%atom( New_No_of_atoms ) , source=system%atom )
@@ -315,6 +373,8 @@ temp%atom = pack( system%atom, .NOT. system%atom%delete )
 
 CALL move_alloc(from=temp%atom,to=system%atom)
 system%N_of_atoms = New_No_of_atoms
+
+deallocate( displace )
 
 end subroutine Eliminate_Fragment
 !
@@ -327,8 +387,8 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !local variables
-integer                 :: nr , i , j , indx1 , indx2 
-real*8                  :: delta(3)
+integer :: nr , i , j , indx1 , indx2 
+real*8  :: delta(3) , GeoCenter(3)
 
 do nr = minval(system%atom%nresid) , maxval(system%atom%nresid)
 
@@ -345,9 +405,13 @@ do nr = minval(system%atom%nresid) , maxval(system%atom%nresid)
         do j = 1 , 3
              if( abs(delta(j)) > system%box(j)*HALF ) system%atom(i)%xyz(j) = system%atom(i)%xyz(j) - sign( system%box(j) , delta(j) )
         end do 
-
     end do
+end do
 
+do concurrent (i=1:3)
+   GeoCenter(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
+   ! translate coordinates to the original geometric center ...
+   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
 end do
 
 end subroutine ReGroup_Molecule
@@ -521,16 +585,25 @@ implicit none
 type(universe) , intent(inout) :: system
 
 ! local variables ...
-type(atomic)           , allocatable    :: temp(:)
-type(integer_interval)                  :: n_x , n_y , n_z
-integer                                 :: New_N_of_atoms , i , j , k , n , counter , S_counter , F_counter , Replication_Factor 
-integer                                 :: max_nresid = 0 , P_counter 
-character(len=3)                        :: string
-logical                , save           :: done = .false.
+type(atomic)           , allocatable :: temp(:)
+type(integer_interval)               :: n_x , n_y , n_z
+integer                              :: New_N_of_atoms , i , j , k , n , counter , S_counter , F_counter , Replication_Factor 
+integer                              :: max_nresid = 0 , P_counter 
+character(len=3)                     :: string
+logical                              :: replicate_ALL = .true.
+logical                , save        :: done = .false.
 
 ! reading parameters ...
 If( .NOT. done ) then
-    write(*,'(/a)') '> MIND: the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    write(*,'(/a)') '> Do you want to replicate the whole structure? (y/n, default=y)'
+    write(*,'(/a)') '> MIND: if you choose to replicate a specific fragment, the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    read (*,'(a)') string
+    if( string == 'n' ) &
+    then
+        replicate_ALL = .false.
+        return
+    endif
+
     Print*, " "
     write(*,'(a)') '> Enter replication control keys (integer)'
     write(*,'(a)',advance='no') 'n_x%inicio (<= 0) = '
@@ -607,7 +680,7 @@ system%N_of_Surface_atoms      =  system%N_of_Surface_atoms      * Replication_f
 system%N_of_Solvent_atoms      =  system%N_of_Solvent_atoms      * Replication_factor
 system%N_of_Solvent_molecules  =  system%N_of_Solvent_molecules  * Replication_factor
 
-where(system%atom%copy == .false.) system%atom%delete = .true.
+if( .not. replicate_ALL) where(system%atom%copy == .false.) system%atom%delete = .true.
 CALL Eliminate_fragment( system )    
 
 write(string,'(i3.3)') Replication_Factor

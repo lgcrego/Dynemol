@@ -64,7 +64,7 @@ If( present(title) ) then
     write(4,'(A96)') title
 else
     OPEN(unit=4,file='seed.pdb',status='unknown')
-    write(4,6) sys%Surface_Characteristics
+    write(4,6) sys%System_Characteristics
 end if
 
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
@@ -312,7 +312,7 @@ If( (verify("gro",file_name)==0) .OR. (verify("gro",file_type)==0) ) then
 ! .gro files 
 !---------------
 
-    read(3,*) system%Surface_Characteristics
+    read(3,*) system%System_Characteristics
     read(3,*) system%N_of_atoms
 
     allocate( system%atom(system%N_of_atoms) )
@@ -343,7 +343,7 @@ else
 ! .pdb files 
 !---------------
 
-    read(3,99) system%Surface_Characteristics
+    read(3,99) system%System_Characteristics
     
 !   reads the unit cell vectors for Direct coordinate mode ...
     read(unit=3,fmt=105,iostat=ioerr) keyword
@@ -470,7 +470,7 @@ integer ::  i , k
 
 OPEN(unit=4,file="seed.pdb",status="unknown")
 
-write(4,6) 'COMPND' , '"',sys%Surface_Characteristics,'"'
+write(4,6) 'COMPND' , '"',sys%System_Characteristics,'"'
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 
 do i = 1 , sys%N_of_atoms

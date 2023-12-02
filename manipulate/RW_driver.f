@@ -39,7 +39,7 @@ do
      write(*,'(/a)') '3 : POSCAR format '
      write(*,'(/a)') '4 : PDB format '
      write(*,'(/a)') '5 : Generate Topology ( must have CONECT in the pdb file; "obabel -ipdb input.pdb -opdb -O output.pdb" ) '
-     write(*,'(/a)') '6 : DONE '
+     write(*,'(/a)') '0 : DONE '
      write(*,'(/a)',advance='no') '>>>   '
      read (*,'(a)') Writing_Method
      

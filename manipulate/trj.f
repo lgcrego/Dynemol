@@ -124,6 +124,7 @@ do
 
                 case ( 1 )
                    do i = 1 , size(trj)
+                        trj(i)% atom(:)% group = .true.
                         CALL ReGroup( trj(i) )
                    end do
 

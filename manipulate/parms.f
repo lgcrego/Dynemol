@@ -357,11 +357,13 @@ character(len=1)    :: element
             a(i)%Symbol = 'Zn' 
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 
-        case( 'Pb' ) 
+        case( 'Cs' , 'CS' ) 
+            a(i)%Symbol = 'Cs' 
+        case( 'Pb' , 'PB' ) 
             a(i)%Symbol = 'Pb' 
         case( 'HC' ) 
             a(i)%Symbol = 'H'  
-        case( 'C=' , 'CTr' , 'CS' , 'CC' , 'CM' , 'YC' ) 
+        case( 'C=' , 'CTr' , 'CC' , 'CM' , 'YC' ) 
             a(i)%Symbol = 'C'  
         case( 'SS' ) 
             a(i)%Symbol = 'S'  
