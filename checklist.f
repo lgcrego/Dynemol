@@ -107,9 +107,7 @@ if( .not. static ) then
             write(10,'(" GaussianCube_step = " , I0)') GaussianCube_step      
    
         tag = merge("no ","yes",NetCharge)       
-        write(10 , '(" NetCharge       :" , A10)' , advance=tag) merge(".true. <==",".false.   ",NetCharge)       
-        If( NetCharge ) &
-            write(10,'(" CH_and_DP_step = " , I0)') CH_and_DP_step      
+        write(10 , '(" NetCharge       :" , A10)') merge(".true. <==",".false.   ",NetCharge)       
    
         write(10,'(" DensityMatrix   :" , A10)') merge(".true. <==",".false.   ",DensityMatrix)   
         write(10,'(" AutoCorrelation :" , A10)') merge(".true. <==",".false.   ",AutoCorrelation) 

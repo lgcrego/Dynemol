@@ -5,8 +5,8 @@
                                       n_part ,      &
                                       spectrum ,    &
                                       survival ,    &
-                                      NetCharge ,   &
-                                      CH_and_DP_step
+                                      NetCharge 
+    use MM_input            , only  : MM_frame_step
     use tuning_m            , only  : eh_tag                                      
     use Babel_m             , only  : System_Characteristics    
     use Structure_Builder   , only  : system => Extended_Cell    
@@ -22,6 +22,7 @@
     ! module variables ...
     integer                , save :: counter = 0
     real*8  , allocatable  , save :: Net_Charge(:)
+    logical                       :: done = .false.
 
  contains
 !
@@ -72,7 +73,7 @@ do ati = 1 , system%atoms
 end do
 
 ! dump atomic net-charges for visualization
-If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
+If ( NetCharge .AND. (mod(counter,MM_frame_step)==0) ) CALL dump_NetCharge (t) 
 
 counter = counter + 1
 
@@ -137,7 +138,7 @@ do n = 1 , n_part
       end do
 
 ! dump atomic net-charges for visualization
-If ( NetCharge .AND. (mod(counter,CH_and_DP_step)==0) ) CALL dump_NetCharge (t) 
+If ( NetCharge .AND. (mod(counter,MM_frame_step)==0) ) CALL dump_NetCharge (t) 
 
 counter = counter + 1
 
@@ -274,50 +275,18 @@ integer :: ati , i , j
 
 !xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 !saving net_charge ...
-OPEN(unit=21 , file="dyn.trunk/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
+OPEN(unit=21 , file="ancillary.trunk/NetCharge.inpt" , status = "unknown", action = "write" , position = "append" )
 do ati = 1 , system%atoms
     write(21,'(F9.5)',advance='no') net_charge(ati) 
 end do
 close(21)
 
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPEN(unit=24 , file="dyn.trunk/CH-DP-frames.pdb" , status = "unknown", action = "write" , position = "append" )
-
-If( counter == 0 ) write(24,6) System_Characteristics
-
-write(24,4) 'REMARK' , 'manipulated by charge-transfer'
-write(24,5) 'TITLE'  , 'manipulated by charge-transfer     t= ', t
-write(24,4) 'REMARK' , 'manipulated by charge-transfer'
-write(24,1) 'CRYST1' , system%T_xyz(1) , system%T_xyz(2) , system%T_xyz(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-write(24,3) 'MODEL'  , counter
-
-do i = 1 , system%atoms
-
-             write(24,2)'HETATM'                        ,  &    ! <== non-standard atom
-                        i                               ,  &    ! <== global number
-                        system%Symbol(i)                ,  &    ! <== atom type
-                        system%residue(i)               ,  &    ! <== residue name
-                        system%nr(i)                    ,  &    ! <== residue sequence number
-                        ( system%coord(i,j) , j=1,3 )   ,  &    ! <== xyz coordinates
-                        net_charge(i)                   ,  &    ! <== wavepacket occupancy
-                        0.d0                            ,  &    
-                        system%Symbol(i)                        ! <== chemical element symbol
-
-end do
-
-write(24,'(a)') 'TER'
-write(24,'(a)') 'ENDMDL'
-
-close(24)
-
-1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
-2 FORMAT(a6,i5,t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t56,f8.5,t65,f8.5,t77,a2)
-3 FORMAT(a6,i9,11i7)
-4 FORMAT(a6,t15,a31)
-5 FORMAT(a5,t15,a39,f9.5)
-6 FORMAT(a6,a72)
-!xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
+if( .NOT. done)&
+then
+    ! cloning the tcl script file into MO.trunk directorie ...
+    call systemQQ("cp "//dynemoldir//"manipulate/genral.util/ChargeColor.tcl ancillary.trunk/.")
+    done = .true.
+end if
 end subroutine dump_NetCharge
 !
 !

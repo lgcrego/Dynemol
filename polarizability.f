@@ -2,8 +2,8 @@
 
     use type_m
     use constants_m
-    use parameters_m            , only : file_type ,                &
-                                         CH_and_DP_step
+    use parameters_m            , only : file_type 
+    use MM_input                , only : MM_frame_step
     use Babel_m                 , only : System_Characteristics
     use Semi_Empirical_Parms    , only : atom
     use Structure_Builder       , only : system => Extended_Cell    
@@ -101,7 +101,7 @@ do ati = 1 , N_of_atoms
 
 end do
 
-If( mod(counter,CH_and_DP_step)==0 ) CALL visualize_Induced_DP 
+If( mod(counter,MM_frame_step)==0 ) CALL visualize_Induced_DP 
 
 ! NOTICE: dipole moment is multiplied by DP_potential_factor ...
 Induced_DP_Dressed = Induced_DP * DP_potential_factor * half
