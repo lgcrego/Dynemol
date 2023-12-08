@@ -132,10 +132,6 @@ read_loop: do
         case( "NETCHARGE" ) 
                 NetCharge = get_logical(line)
 
-        case( "CH_AND_DP_STEP" ) 
-                read(line,*,iostat=ioerr) keyword , equal_sign , command
-                read(command,'(i)') CH_and_DP_step
-
         case( "DENSITYMATRIX" ) 
                 DensityMatrix = get_logical(line)
 
@@ -819,7 +815,6 @@ Alpha_Tensor = .false.
 GaussianCube = .false.
 GaussianCube_step = 5000000
 NetCharge = .false.
-CH_and_DP_step = 5000000
 DensityMatrix = .false.
 AutoCorrelation = .false.
 VDOS_ = .false.

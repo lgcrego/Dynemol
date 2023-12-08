@@ -3,7 +3,7 @@ module EH_parms_module
 use type_m ,       only :  real_interval , warning
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
-integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
+integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step 
 integer                 :: Pop_Size , N_generations , Top_Selection , CT_dump_step , Environ_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate

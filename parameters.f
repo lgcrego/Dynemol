@@ -52,10 +52,6 @@ logical, parameter :: T_ = .true. , F_ = .false.
   GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = F_                      ! <== pdb format charge Occupancy 
-  CH_and_DP_step    = 1000000                 ! <== time step for saving charge and Induced DP values
-                                              ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
-
   DensityMatrix     = F_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
   VDOS_             = F_
