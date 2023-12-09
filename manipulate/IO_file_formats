@@ -65,7 +65,7 @@ real*8
    T13   T23   T33
    chemical elements 
    N_of_different_chemical_elements 
-   x    y    z   TorF   TorF   TorF
+   x    y    z   TorF   TorF   TorF         (each field separarated by spaces)
    .    .    .   .      .      .
    .    .    .   .      .      .
    .    .    .   .      .      .
