@@ -284,7 +284,7 @@ close(21)
 if( .NOT. done)&
 then
     ! cloning the tcl script file into MO.trunk directorie ...
-    call systemQQ("cp "//dynemoldir//"manipulate/genral.util/ChargeColor.tcl ancillary.trunk/.")
+    call systemQQ("cp "//dynemoldir//"manipulate/general.util/ChargeColor.tcl ancillary.trunk/.")
     done = .true.
 end if
 end subroutine dump_NetCharge

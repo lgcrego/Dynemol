@@ -158,11 +158,11 @@ SOURCE2 = constants_m.o \
 		  Ehrenfest.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
+		  data_output.o \
 		  f_intra.o \
 		  f_inter.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
-		  data_output.o \
           backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
