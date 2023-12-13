@@ -385,8 +385,8 @@ endif
 
 !========================================================================================= 
 
-! use this to debug: { atom , molecule , species , FF , species } ...
-!call debug_MM( FF )
+! use this to debug: { atom , molecule , species , FF } ...
+!call debug_MM( molecule )
 
 If( master ) CALL MM_diagnosis( )
 
@@ -523,6 +523,8 @@ integer :: i
             a(i)%AtNo = 25
         case( 'FE','Fe')
             a(i)%AtNo = 26
+        case( 'NB','Nb')
+            a(i)%AtNo = 41
         case( 'RU','Ru')
             a(i)%AtNo = 44
         case( 'I')
@@ -712,6 +714,8 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'S'
         case( 'Pb' , 'PB' )
             a(i)%Symbol = 'Pb'
+        case( 'Nb' , 'NB' )
+            a(i)%Symbol = 'Nb'
         case( 'P' )
             a(i)%Symbol = 'P'
     end select
@@ -733,7 +737,8 @@ implicit none
 ! local variabbles ...
 integer                         :: i , j , m , at1 , at2 , at3 , at4 , funct_dih , multiples , prototype
 real*8                          :: factor , factor_1 , factor_2 , eps , sig, BuckA, BuckB, BuckC, MorsA, MorsB, MorsC
-character(3)                    :: funct_type , flag
+logical                         :: flag
+character(3)                    :: funct_type , arrow
 character(len=:) , allocatable  :: string(:)
 
  open( unit = 51 , file = "log.trunk/MM_parms_log.out" , status = "replace", action = "write" , position = "append" )
@@ -791,7 +796,7 @@ character(len=:) , allocatable  :: string(:)
            if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
                      
                      ! warns if NB paramater was not assigned to this atom  ...
-                     flag = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
+                     arrow = merge( "<==" , "   " , FF(i)% sig * FF(i)%eps == 0 )
 
                      eps = FF(i)% eps**2 / (factor1*imol) ! <== kJ/mol
                      select case( MM % CombinationRule )
@@ -805,7 +810,7 @@ character(len=:) , allocatable  :: string(:)
                                                             FF(i)% MMSymbol                        , & 
                                                             eps                                    , &
                                                             sig                                    , &
-                                                            flag                 
+                                                            arrow                 
            endif
     endif
  end do
@@ -819,7 +824,7 @@ character(len=:) , allocatable  :: string(:)
             if( .NOT. any(FF(1:i-1)% MMSymbol == FF(i)% MMSymbol) ) then 
 
                       ! warns if NB paramater was not assigned to this atom  ...
-                      flag = merge( "<==" , "   " , FF(i)% BuckA * FF(i)%BuckB == 0 )
+                      arrow = merge( "<==" , "   " , FF(i)% BuckA * FF(i)%BuckB == 0 )
 
                      BuckA = FF(i)% BuckA**2 / (factor1*imol) ! <== kJ/mol
                      BuckB = FF(i)%BuckB*two
@@ -830,7 +835,7 @@ character(len=:) , allocatable  :: string(:)
                                                    BuckA                                  , &
                                                    BuckB                                  , &
                                                    BuckC                                  , &
-                                                   flag
+                                                   arrow
             endif
     end if
  end do
@@ -845,10 +850,14 @@ character(len=:) , allocatable  :: string(:)
       ! Lennard-Jones ...
       write(51,'(t5,A2,t15,A11,t35,A8,t67,A36)') "LJ",  "eps(kJ/mol)", "sigma(A)", "V_LJ  = 4*eps*( (s/r)^12 - (s/r)^6 )"
       do i = 1 , size(SpecialPairs)
-           ! warns if NB paramater was not assigned to this atom  ...
-           flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
 
-           if( SpecialPairs(i)% model == "LJ") then
+           ! for checking if the specialpair exists in the input.pdb ...
+           flag = any(atom(:)%MMSymbol == specialpairs(i)%MMSymbols(1)) .AND. any(atom(:)%MMSymbol == specialpairs(i)%MMSymbols(2))
+
+           ! warns if NB paramater was not assigned to this atom  ...
+           arrow = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+
+           if( SpecialPairs(i)% model == "LJ" .AND. flag == .true. ) then
 
                eps = SpecialPairs(i)% Parms(2) / (factor1*imol) ! <== kJ/mol
                sig = SpecialPairs(i)% Parms(1)                  ! <== Angs
@@ -857,17 +866,21 @@ character(len=:) , allocatable  :: string(:)
                                                     SpecialPairs(i)% MMSymbols(2) , & 
                                                     eps                           , &
                                                     sig                           , &
-                                                    flag
+                                                    arrow
            endif
       enddo
 
       ! Buckingham ...
       write(51,'(/,t4,A4,t17,A9,t36,A7,t49,A9,t67,A27)') "BUCK", "A(kJ/mol)", "B(A^-1)", "C(kJ/mol)", "V_Bck = A*exp(-B*r) - C/r^6"
       do i = 1 , size(SpecialPairs)
-           ! warns if NB paramater was not assigned to this atom  ...
-           flag = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
 
-           if( SpecialPairs(i)% model == "BUCK" ) then
+           ! for checking if the specialpair exists in the input.pdb ...
+           flag = any(atom(:)%MMSymbol == specialpairs(i)%MMSymbols(1)) .AND. any(atom(:)%MMSymbol == specialpairs(i)%MMSymbols(2))
+
+           ! warns if NB paramater was not assigned to this atom  ...
+           arrow = merge( "<==" , "   " , SpecialPairs(i)% Parms(1) * SpecialPairs(i)% Parms(2) == 0 )
+
+           if( SpecialPairs(i)% model == "BUCK" .AND. flag == .true. ) then
 
                BuckA = SpecialPairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
                BuckB = SpecialPairs(i)% Parms(2)                  ! <== Angs
@@ -878,7 +891,7 @@ character(len=:) , allocatable  :: string(:)
                                            BuckA                         , &
                                            BuckB                         , &
                                            BuckC                         , &
-                                           flag
+                                           arrow
            endif
       enddo
  endif 
@@ -889,7 +902,7 @@ character(len=:) , allocatable  :: string(:)
       write(51,'(/,t4,A4,t17,A9,t34,A9,t49,A9,t67,A30)') "Mors", "r0(A)" , "D(kJ/mol)" , "a(A^-1)" , "V_Mor = D*(1-exp(-a*(r-r0)))^2"
       do i = 1 , size(MorsePairs)
            ! warns if NB paramater was not assigned to this atom  ...
-           flag = merge( "<==" , "   " , MorsePairs(i)% Parms(1) * MorsePairs(i)% Parms(2) == 0 )
+           arrow = merge( "<==" , "   " , MorsePairs(i)% Parms(1) * MorsePairs(i)% Parms(2) == 0 )
 
            MorsA = MorsePairs(i)% Parms(1) / (factor1*imol) ! <== kJ/mol
            MorsB = MorsePairs(i)% Parms(2)                  ! <== Angs
@@ -900,7 +913,7 @@ character(len=:) , allocatable  :: string(:)
                                        MorsA                       , &
                                        MorsB                       , &
                                        MorsC                       , &
-                                       flag
+                                       arrow
       enddo
  endif 
 
@@ -929,7 +942,7 @@ character(len=:) , allocatable  :: string(:)
        if( .NOT. any(string(1:i-1) == string(i)) ) then 
  
            ! warns if paramater was not assigned to this bond ...
-           flag = merge( "<==" , "   " , sum(molecule(m)%kbond0(i,:)) == 0 )
+           arrow = merge( "<==" , "   " , sum(molecule(m)%kbond0(i,:)) == 0 )
  
            funct_type = molecule(m) % funct_bond(i) 
  
@@ -939,7 +952,7 @@ character(len=:) , allocatable  :: string(:)
                                                      molecule(m)%kbond0(i,2)                  , &
                                                      molecule(m)%kbond0(i,1) / (factor1*imol) , &
                                                      molecule(m)%kbond0(i,3) * nano_2_angs    , &
-                                                     flag
+                                                     arrow
        end if
     end do
     deallocate(string)
@@ -973,7 +986,7 @@ character(len=:) , allocatable  :: string(:)
        if( .NOT. any(string(1:i-1) == string(i)) ) then 
 
            ! warns if paramater was not assigned to this angle ...
-           flag = merge( "<==" , "   " , sum(molecule(m)%kang0(i,:)) == 0 )
+           arrow = merge( "<==" , "   " , sum(molecule(m)%kang0(i,:)) == 0 )
 
            funct_type = molecule(m) % funct_angle(i)
 
@@ -991,7 +1004,7 @@ character(len=:) , allocatable  :: string(:)
 
                    write(51,'(2F15.3,A3)') molecule(m)%kang0(i,2) / deg_2_rad   , &
                                            molecule(m)%kang0(i,1) / factor_1    , &
-                                           flag 
+                                           arrow 
 
                case('urba')
 
@@ -999,7 +1012,7 @@ character(len=:) , allocatable  :: string(:)
                                            molecule(m)%kang0(i,1) / factor_1    , &
                                            molecule(m)%kang0(i,4) / nano_2_angs , &
                                            molecule(m)%kang0(i,3) / factor_2    , &
-                                           flag
+                                           arrow
 
                case default
 
@@ -1038,7 +1051,7 @@ character(len=:) , allocatable  :: string(:)
        if( (.NOT. any(string(1:i-1) == string(i))) .OR. (.NOT. any(molecule(m)%kdihed0(1:i-1,1) == molecule(m)%kdihed0(i,1))) ) then 
 
            ! warns if paramater was not assigned to this dihedral ...
-           flag = merge( "<==" , "   " , sum(abs(molecule(m)%kdihed0(i,:))) == 0 )
+           arrow = merge( "<==" , "   " , sum(abs(molecule(m)%kdihed0(i,:))) == 0 )
 
            funct_dih = molecule(m) % funct_dihed(i)
 
@@ -1057,7 +1070,7 @@ character(len=:) , allocatable  :: string(:)
                    write(51,'(3F12.5,A3)') molecule(m)%kdihed0(i,1) / deg_2_rad  , &
                                            molecule(m)%kdihed0(i,2) / factor     , &  
                                            molecule(m)%kdihed0(i,3)              , &
-                                           flag
+                                           arrow
 
                case ('cos3') ! V = C0 + C1*cos(phi-180) + C2*cos^2(phi-180) + C3*cos^3(phi-180) + C4*cos^4(phi-180) + C5*cos(phi-180)  
                              ! Eq. 4.61 (GMX 5.0.5 manual)
@@ -1068,7 +1081,7 @@ character(len=:) , allocatable  :: string(:)
                                            molecule(m)%kdihed0(i,4) / factor     , & 
                                            molecule(m)%kdihed0(i,5) / factor     , &
                                            molecule(m)%kdihed0(i,6) / factor     , &
-                                           flag
+                                           arrow
 
                case ('harm') ! V = 1/2.k[cos(phi) - cos(phi0)]²
                         ! factor1 = 1.0d26      <== Factor used to correct the units 
@@ -1078,7 +1091,7 @@ character(len=:) , allocatable  :: string(:)
                    write(51,'(6F12.5,A3)') molecule(m)%kdihed0(i,1) / factor     , &
                                            molecule(m)%kdihed0(i,2) / factor     , &  
                                            molecule(m)%kdihed0(i,3) / factor     , &
-                                           flag
+                                           arrow
 
                case ('chrm')  ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] (multiple) ; Eq. 4.60 (GMX 5.0.5 manual)
 
@@ -1101,7 +1114,7 @@ character(len=:) , allocatable  :: string(:)
                                                               molecule(m)%kdihed0(i,8) / factor     , &  
                                                               molecule(m)%kdihed0(i,9)              
                        endif; endif; EndIf
-                   write(51,'(A3)') flag
+                   write(51,'(A3)') arrow
 
                case default
 

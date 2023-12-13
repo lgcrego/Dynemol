@@ -87,10 +87,14 @@ integer :: i
             a(i)%AtNo = 30 
         case( 'SE','Se' ) 
             a(i)%AtNo = 34 
+        case( 'NB','Nb' ) 
+            a(i)%AtNo = 41 
         case( 'Ru' ) 
             a(i)%AtNo = 44 
         case( 'CD','Cd' )
             a(i)%AtNo = 48 
+        case( 'SN','Sn' ) 
+            a(i)%AtNo = 50
         case( 'I' ) 
             a(i)%AtNo = 53 
         case( 'Pb' ) 
@@ -151,10 +155,14 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 30 
         case( 'SE','Se' ) 
             a%AtNo(i) = 34 
+        case( 'NB','Nb' ) 
+            a%AtNo(i) = 41 
         case( 'Ru' ) 
             a%AtNo(i) = 44 
         case( 'CD','Cd' ) 
             a%AtNo(i) = 48 
+        case( 'SN','Sn' ) 
+            a%AtNo(i) = 50
         case( 'I' ) 
             a%AtNo(i) = 53 
         case( 'Pb' ) 
@@ -218,10 +226,14 @@ integer :: i
             a(i)%Symbol = 'Zn'
         case( 34 ) 
             a(i)%Symbol = 'Se'
+        case( 41 ) 
+            a(i)%Symbol = 'Nb'
         case( 44 ) 
             a(i)%Symbol = 'Ru'
         case( 48 ) 
             a(i)%Symbol = 'Cd'
+        case( 50 ) 
+            a(i)%Symbol = 'Sn'
         case( 53 ) 
             a(i)%Symbol = 'I'
         case( 82 ) 
@@ -285,10 +297,14 @@ integer :: i
             a%Symbol(i) = 'Zn'
         case( 34 ) 
             a%Symbol(i) = 'Se'
+        case( 41 ) 
+            a%Symbol(i) = 'Nb'
         case( 44 ) 
             a%Symbol(i) = 'Ru'
         case( 48 ) 
             a%Symbol(i) = 'Cd'
+        case( 50 ) 
+            a%Symbol(i) = 'Sn'
         case( 53 ) 
             a%Symbol(i) = 'I'
         case( 82 ) 
@@ -373,6 +389,9 @@ character(len=2)    :: element2
 
         case( 'Se','SE' ) 
             a(i)%Symbol = 'Se' 
+
+        case( 'Nb','NB' ) 
+            a(i)%Symbol = 'Nb' 
 
         case( 'Ru' ) 
             a(i)%Symbol = 'Ru' 

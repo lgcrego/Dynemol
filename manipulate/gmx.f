@@ -5,7 +5,7 @@ use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo
 use RW_routines         , only : Initialize_System
 use diagnosis_m
 use FUNCTION_routines   , only : res , Solvent_residue_groups 
-use Topology_routines   , only : connect , dump_topol
+use Topology_routines   , only : connect , dump_topol , InputIntegers
 
 contains
 !
@@ -18,7 +18,6 @@ implicit none
 type(universe) , intent(inout) :: sys
 
 ! local variables ...
-integer                             ::  i , j , fragment_nresid
 character(1)                        :: answer
 logical             , parameter     ::  BACK = .TRUE. 
 
@@ -61,7 +60,7 @@ type(universe)                  , intent(inout) ::  sys
 character(*)        , optional  , intent(in)    :: title
 
 ! local variables ...
-integer ::  i , j , k , nr 
+integer ::  i , k
 
 !----------------------------------------------
 !     generate pdb file for GROMACS
@@ -71,7 +70,7 @@ If( present(title) ) then
     write(4,'(A96)') title
 else
     OPEN(unit=4,file='seed.pdb',status='unknown')
-    write(4,6) sys%Surface_Characteristics
+    write(4,6) sys%System_Characteristics
 end if
 
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
@@ -106,7 +105,7 @@ close(4)
 1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
 2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
 3 FORMAT(a6,i9,11i5)
-6 FORMAT(a6,a72)
+6 FORMAT(a72)
 
 end subroutine Dump_pdb
 !
@@ -181,7 +180,7 @@ type(universe)  , intent(inout) :: sys
 
 ! local variables ...
 integer                         :: i , j , indx , Ti_size , O2_size , rest_size
-real*8                          :: distance , total_charge , total_charge_of_group
+real*8                          :: distance , total_charge_of_group
 logical                         :: flag(4)
 type(atomic)    , allocatable   :: pbc(:) , temp_Ti(:) , temp_O2(:) , temp_rest(:)
 
@@ -308,7 +307,7 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-integer        :: i , j , N_of_elements , N_of_atoms ,  iptr
+integer        :: i , j , N_of_atoms ,  iptr
 type(universe) :: temp
 
 allocate( temp%atom(1) )
@@ -348,9 +347,9 @@ character(*)    , optional  , intent(in)  :: file_name
 character(*)    , optional  , intent(in)  :: file_type
 
 ! local variables ...
-integer                         :: i , j , indx , ioerr , useless , N_of_atoms
-character(len=50)               :: dumb
-character(len=5)                :: MMSymbol_char
+integer                         :: i, j, indx, ioerr, useless, N_of_atoms
+character(len=80)               :: line
+character(len=5)                :: MMSymbol_char , FFSymbol_char
 character(len=6)                :: keyword
 character(len=3)    , parameter :: ACN(6) = ['YN','YC','CT','HC','HC','HC']
 
@@ -380,7 +379,7 @@ If( (verify("gro",file_name)==0) .OR. (verify("gro",file_type)==0) ) then
 ! .gro files 
 !---------------
 
-    read(3,*) system%Surface_Characteristics
+    read(3,*) system%System_Characteristics
     read(3,*) system%N_of_atoms
 
     allocate( system%atom(system%N_of_atoms) )
@@ -411,7 +410,7 @@ else
 ! .pdb files 
 !---------------
 
-    read(3,99) system%Surface_Characteristics
+    read(3,99) system%System_Characteristics
     
 !   reads the unit cell vectors for Direct coordinate mode ...
     read(unit=3,fmt=105,iostat=ioerr) keyword
@@ -425,7 +424,7 @@ else
     N_of_atoms = 0
     do
         read(unit=3,fmt=105,iostat=ioerr) keyword
-        if ( keyword == "MASTER" .or. keyword == "END" ) exit
+        if ( keyword == "MASTER" .or. keyword == "CONECT" ) exit
         N_of_atoms = N_of_atoms + 1
         print*, N_of_atoms
     end do
@@ -439,20 +438,42 @@ else
 !   read data ...    
     do
         read(unit=3,fmt=105,iostat = ioerr) keyword
-        if( keyword == "CRYST1" ) then
+        if( keyword == "CRYST1" .or. keyword == "AUTHOR" ) then
             do i = 1 , system%N_of_atoms
                 read(3,115)  MMSymbol_char                      ,  &    ! <== atom type
                              system%atom(i)%resid               ,  &    ! <== residue name
                              system%atom(i)%nresid              ,  &    ! <== residue sequence number
                              (system%atom(i)%xyz(j) , j=1,3)    ,  &    ! <== xyz coordinates 
-                             system%atom(i)%symbol                      ! <== chemical element symbol
+                             system%atom(i)%symbol              ,  &    ! <== chemical element symbol
+                             system%atom(i)%charge              ,  &    ! <== atom MM charge 
+                             FFSymbol_char                              ! <== FF atom type
 
                 system%atom(i)%MMSymbol = adjustl(MMSymbol_char)
-
+                system%atom(i)%FFSymbol = adjustl(FFSymbol_char)
+                system%atom(i)%my_intra_id = i 
+                print*, system%atom(i)%MMSymbol 
             end do
         end if
-        if ( keyword == "MASTER" .or. keyword == "END") exit
+        if ( keyword == "MASTER" .or. keyword == "CONECT" .or. keyword == "END" ) exit
     end do
+    backspace(3)
+
+   ! Generating a bond matrix for topology generation ...
+   if ( keyword == "CONECT" ) then 
+        allocate( InputIntegers(2*N_of_atoms,5), source = 0 )
+        i = 0
+        do
+          read(3,103) line
+          if( trim(line(1:6)) == "MASTER" ) exit
+          i = i + 1
+          read(line(7:11) ,'(I5)') InputIntegers(i,1)
+          read(line(12:16),'(I5)') InputIntegers(i,2)
+          read(line(17:21),'(I5)') InputIntegers(i,3)
+          read(line(22:26),'(I5)') InputIntegers(i,4)
+          read(line(27:31),'(I5)') InputIntegers(i,5)
+        end do
+        system%total_conect = i
+   end if 
 
     system% atom% resid = adjustl(system% atom% resid)
 !----------------------
@@ -491,9 +512,11 @@ end do
 30  format(I5,A3,A7,I5,3F8.4)
 99  format(a72)
 100 format(t10, f6.3, t19, f6.3, t28, f6.3)
+103 format(a80)
 105 format(a6)
 110 format(t8, i4)
-115 FORMAT(t12,a5,t18,a4,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
+115 FORMAT(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2,t80,f8.4,t90,a3)
+
 
 end subroutine read_GROMACS
 !
@@ -506,7 +529,7 @@ implicit none
 type(universe) , intent(inout) ::  sys
 
 ! local variables ...
-integer ::  i , j , k , nr 
+integer ::  i , k
 
 !----------------------------------------------
 !     generate pdb file from gro file
@@ -514,7 +537,7 @@ integer ::  i , j , k , nr
 
 OPEN(unit=4,file="seed.pdb",status="unknown")
 
-write(4,6) sys%Surface_Characteristics
+write(4,6) 'COMPND' , '"',sys%System_Characteristics,'"'
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 
 do i = 1 , sys%N_of_atoms

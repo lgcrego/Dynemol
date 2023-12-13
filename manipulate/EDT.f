@@ -601,7 +601,7 @@ If( .NOT. done ) then
     if( string == 'n' ) &
     then
         replicate_ALL = .false.
-        return
+        if( .not. any(system%atom%copy==.true.) ) return
     endif
 
     Print*, " "
@@ -680,11 +680,14 @@ system%N_of_Surface_atoms      =  system%N_of_Surface_atoms      * Replication_f
 system%N_of_Solvent_atoms      =  system%N_of_Solvent_atoms      * Replication_factor
 system%N_of_Solvent_molecules  =  system%N_of_Solvent_molecules  * Replication_factor
 
-if( .not. replicate_ALL) where(system%atom%copy == .false.) system%atom%delete = .true.
-CALL Eliminate_fragment( system )    
+if( replicate_ALL == .false.) &
+then
+        where(system%atom%copy == .false.) system%atom%delete = .true.
+        CALL Eliminate_Fragment( system )    
+end if
 
 write(string,'(i3.3)') Replication_Factor
-system%Surface_Characteristics = trim(system%Surface_Characteristics)//'-Replicated:'//string
+system%System_Characteristics = trim(system%System_Characteristics)//'-Replicated:'//string
 
 end subroutine Replicate
 !
