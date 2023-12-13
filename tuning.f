@@ -73,6 +73,34 @@ else
 
 end if
 
+                                                                                                                                                                                                                
+where(                                                        &
+       sqrt(                                                  &
+            (univ%atom(2:)%xyz(1) - univ%atom(1)%xyz(1))**2 + &
+            (univ%atom(2:)%xyz(2) - univ%atom(1)%xyz(2))**2 + &
+            (univ%atom(2:)%xyz(3) - univ%atom(1)%xyz(3))**2   &
+       ) <= 8.5                                               &
+) univ%atom(2:)%residue = "$$$"
+
+do i=1,size(univ%atom)
+   where(univ%atom%nr == univ%atom(i)%nr) univ%atom%residue = univ%atom(i)%residue
+end do
+
+where(univ%atom%residue == "$$$") univ%atom%fragment = "Q"
+where(univ%atom%residue == "$$$") univ%atom%QMMM     = "QM"
+where(univ%atom%residue == "$$$") univ%atom%residue  = "ACN"
+
+where(univ%atom%nr == 195) univ%atom%fragment = "1"
+where(univ%atom%nr == 140) univ%atom%fragment = "2"
+where(univ%atom%nr == 082) univ%atom%fragment = "3"
+where(univ%atom%nr == 415) univ%atom%fragment = "4"
+where(univ%atom%nr == 416) univ%atom%fragment = "5"
+where(univ%atom%nr == 132) univ%atom%fragment = "6"
+where(univ%atom%nr == 287) univ%atom%fragment = "7"                                                                                                                                                             
+where(univ%atom%nr == 175) univ%atom%fragment = "8"
+where(univ%atom%nr == 133) univ%atom%fragment = "9"
+where(univ%atom%nr == 395) univ%atom%fragment = "10"
+
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------

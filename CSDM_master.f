@@ -133,7 +133,7 @@ real*8         , intent(in):: t_rate
 
 ! local variables ...
 integer             :: i , j , Fermi , newPST(2)
-real*8              :: rn , EH_jump
+real*8              :: rn , EH_jump , kinetic_of_QM_atoms
 real*8, allocatable :: rho(:,:) , base(:,:) , P_switch(:,:) , B_kl(:,:) , Omega(:,:)
 character(len=7)    :: method
 
@@ -185,7 +185,9 @@ do j = 1 , 2
 
 EH_jump = (QM%erg(newPST(1)) - QM%erg(PST(1))) - (QM%erg(newPST(2)) - QM%erg(PST(2)))
 
-if( EH_jump > Unit_Cell% MD_Kin ) then
+kinetic_of_QM_atoms = get_kinetic_of_QM_atoms(system)
+
+if( EH_jump > kinetic_of_QM_atoms ) then
    !transitions are not allowed ; energy forbidden 
    return
    endif
@@ -318,6 +320,31 @@ end if
 deallocate( v_x_dNA ) 
 
 end subroutine Tully_way
+!
+!
+!
+!
+!===============================================================
+ function get_kinetic_of_QM_atoms(system)  result(kinetic_of_QM)
+!===============================================================
+use MD_read_m, only: atom
+implicit none
+type(structure), intent(in):: system
+
+!local variables ...
+integer :: n
+real*8  :: kinetic_of_QM
+
+kinetic_of_QM = d_zero
+do n = 1 , system%atoms
+    If( system%QMMM(n) == "MM" .OR. system%flex(n) == F_ ) cycle
+    kinetic_of_QM = kinetic_of_QM + atom(n)%mass * sum(atom(n)%vel(:)*atom(n)%vel(:)) * half   ! <== J/kmol
+    end do
+
+kinetic_of_QM = kinetic_of_QM * micro        ! <== kJ/mol
+kinetic_of_QM = kinetic_of_QM * kJmol_2_eV   ! <== eV
+    
+end function get_kinetic_of_QM_atoms
 !
 !
 !
