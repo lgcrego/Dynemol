@@ -36,14 +36,12 @@ contains
 !
 !
 !
-!============================================================
- subroutine MolecularMechanics( t_rate , frame , Net_Charge )
-!============================================================
+!===============================================
+ subroutine MolecularMechanics( t_rate , frame )
+!===============================================
 implicit none
 real*8             , intent(in) :: t_rate
 integer            , intent(in) :: frame
-real*8  , optional , intent(in) :: Net_Charge(:)
-
 
 If( VDOS_ ) CALL VDOS_Correlation( frame )
 
@@ -51,16 +49,16 @@ If( VDOS_ ) CALL VDOS_Correlation( frame )
 select case( thermostat )
 
     case( "Berendsen" )
-         CALL VelocityVerlet( VV_Berendsen , t_rate , frame , Net_Charge )
+         CALL VelocityVerlet( VV_Berendsen , t_rate , frame )
 
     case( "Nose_Hoover" )
-         CALL VelocityVerlet( VV_Nose_Hoover , t_rate , frame , Net_Charge )
+         CALL VelocityVerlet( VV_Nose_Hoover , t_rate , frame )
 
     case( "NH_Reversible" )
-         CALL VelocityVerlet( VV_NH_Reversible , t_rate , frame , Net_Charge )
+         CALL VelocityVerlet( VV_NH_Reversible , t_rate , frame )
 
     case( "Microcanonical" )
-         CALL VelocityVerlet( VV_NVE , t_rate , frame , Net_Charge )
+         CALL VelocityVerlet( VV_NVE , t_rate , frame )
 
     case default
         Print*, " >>> Check your thermostat options <<< :" , thermostat
@@ -83,15 +81,14 @@ end subroutine MolecularMechanics
 !
 !
 !
-!==============================================================
-subroutine VelocityVerlet( this , t_rate , frame , Net_Charge )
+!=================================================
+subroutine VelocityVerlet( this , t_rate , frame )
 ! nuclear velocities in units of m/s in atom%vel
-!==============================================================
+!=================================================
 implicit none
 class(VV)          , intent(inout) :: this
 real*8             , intent(in)    :: t_rate
 integer            , intent(in)    :: frame
-real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
@@ -174,12 +171,11 @@ end subroutine VelocityVerlet
 !
 !
 !
-!==================================================
-subroutine preprocess_MM( frame_init , Net_Charge )
-!==================================================
+!=====================================
+subroutine preprocess_MM( frame_init )
+!=====================================
 implicit none
 integer , optional , intent(inout) :: frame_init
-real*8  , optional , intent(in)    :: Net_Charge(:)
 
 ! local variables ...
 integer         :: frame , i 
@@ -225,9 +221,6 @@ else
     QMMM = NO
     CALL ForceIntra
     QMMM = YES
-
-    ! QMMM coupling ...
-    if( QMMM ) CALL QMMM_FORCE( Net_Charge )
 
     ! saving the first frame ==> frame 0 = input ...
     CALL Saving_MM_frame( frame=0 , dt=D_zero )

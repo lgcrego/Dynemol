@@ -702,10 +702,12 @@ select case( DRIVER )
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
         
         dynamic = T_ 
+        NetCharge = T_
 
     case( "avrg_confgs" )
  
         dynamic = ( F_ .OR. Survival )
+        NetCharge = F_
  
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
@@ -720,6 +722,7 @@ select case( DRIVER )
 
         QMMM = F_
         dynamic = T_
+        NetCharge = F_
         nuclear_matter = "MDynamics" 
         
     case default
@@ -746,8 +749,6 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     CALL warning("MUST turn off HFP_Forces; execution halted, check input card")
     stop 
 end if
-
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...

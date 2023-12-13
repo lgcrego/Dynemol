@@ -33,8 +33,7 @@ module Chebyshev_driver_m
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Polarizability_m            , only : Build_Induced_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations ,                  &
-                                             Net_Charge
+    use Data_Output                 , only : Populations 
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
@@ -110,7 +109,6 @@ do frame = frame_init , frame_final , frame_step
 
     ! calculate, for using in MM ...
     If( QMMM ) then
-        Net_Charge_MM = Net_Charge
         CALL EhrenfestForce( Extended_Cell , ExCell_basis )
     end If
 
@@ -139,9 +137,9 @@ do frame = frame_init , frame_final , frame_step
         case( "MDynamics" )
 
             ! MM preprocess ...
-            if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
+            if( frame == frame_step+1 ) CALL preprocess_MM()   
             ! MM precedes QM ; notice calling with frame -1 ...
-            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
+            CALL MolecularMechanics( t_rate , frame - 1 )   ! <== MM precedes QM ...
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)

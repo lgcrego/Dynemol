@@ -40,8 +40,7 @@ module TDSE_adiabatic_m
     use QCModel_Huckel          , only: EigenSystem , S_root_inv 
     use Schroedinger_m          , only: DeAllocate_QDyn
     use Psi_Squared_Cube_Format , only: Gaussian_Cube_Format
-    use Data_Output             , only: Populations ,                    &
-                                        Net_Charge                       
+    use Data_Output             , only: Populations 
     use Backup_m                , only: Security_Copy ,                  &
                                         Restart_state ,                  &
                                         Restart_Sys                      
@@ -64,7 +63,6 @@ module TDSE_adiabatic_m
     type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
     Complex*16      , allocatable , dimension(:,:) :: MO_bra , MO_ket , AO_bra , AO_ket , DUAL_ket , DUAL_bra
     Complex*16      , allocatable , dimension(:)   :: phase
-    real*8          , allocatable , dimension(:)   :: Net_Charge_MM
     real*8          :: t
     integer         :: it , mm , nn
 
@@ -127,8 +125,6 @@ do frame = frame_init , frame_final , frame_step
     ! calculate for use in MM ...
     If( QMMM ) then
 
-        Net_Charge_MM = Net_Charge
-
         CALL MPI_BCAST( UNI%erg , mm    , mpi_D_R , 0 , KernelComm , err )
         CALL MPI_BCAST( UNI%L   , mm*mm , mpi_D_R , 0 , KernelComm , err )
         CALL MPI_BCAST( MO_bra  , mm*2  , mpi_D_C , 0 , KernelComm , err )
@@ -180,13 +176,13 @@ do frame = frame_init , frame_final , frame_step
         case( "MDynamics" )
 
             ! MM preprocess ...
-            if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
+            if( frame == frame_step+1 ) CALL preprocess_MM()   
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = QMMM .AND. (HFP_Forces == .true.)
 
             ! MM precedes QM ; notice calling with frame -1 ...
-            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   
+            CALL MolecularMechanics( t_rate , frame - 1 )   
 
         case default
 
@@ -369,8 +365,6 @@ If( DensityMatrix ) then
 End If
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
-
-allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 ! ForceCrew is on stand-by for this ...
 CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
@@ -765,8 +759,6 @@ CALL MPI_BCAST( UNI%R   , mm*mm , mpi_D_R , 0 , KernelComm , err )
 
 ! done for KernelCrew ; KernelCrew also dwell in EhrenfestForce ...
 If( KernelCrew  ) CALL EhrenfestForce( Extended_Cell , ExCell_basis , UNI , MO_bra , MO_ket )
-
-If( QMMM ) allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 If( Induced_ ) then
      CALL Build_Induced_DP( instance = "allocate" )

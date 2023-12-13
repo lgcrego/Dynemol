@@ -141,17 +141,21 @@ select case( DRIVER )
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" )
         
         dynamic = T_ 
+        NetCharge = T_
 
     case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
 
         dynamic = ( F_ .OR. Survival )
+        NetCharge = F_
 
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
     case( "MM_Dynamics" )
 
         QMMM = F_
-        dynamic = F_
+        dynamic = T_                                                                                                                                                                                            
+        NetCharge = F_
+        nuclear_matter = "MDynamics"
         
     case default
         Print*, " >>> Check your driver options <<< :" , driver
@@ -182,8 +186,6 @@ end if
 
 If ( driver == "slice_Cheb" .AND. electron_state*hole_state == 0 )  &
 stop ">>> execution halted: driver=[slice_Cheb] only propagates ElHl pairs; for individual wvpckts use other drivers <<<"
-
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...

@@ -81,7 +81,7 @@ select case ( nuclear_matter )
     case( "MDynamics" )
 
         ! MM preprocess ...
-        CALL preprocess_MM( Net_Charge = Net_Charge )   
+        CALL preprocess_MM()   
 
     case default
 
@@ -287,7 +287,7 @@ select case ( nuclear_matter )
     case( "MDynamics" )
 
         ! MM preprocess ...
-        CALL preprocess_MM( Net_Charge = Net_Charge )   
+        CALL preprocess_MM()   
 
     case default
 
