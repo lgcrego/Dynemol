@@ -355,11 +355,11 @@ real*8 :: chrgk , chrgl , ir2 , KRIJ , expar , r_kl
 chrgk = atom(k)% charge
 chrgl = atom(l)% charge
 
-if( QMMM ) &
-then
-     chrgk = atom(k)% charge + Net_Charge(k)
-     chrgl = atom(l)% charge + Net_Charge(l)
-endif
+!if( QMMM ) &
+!then
+!     chrgk = atom(k)% charge + Net_Charge(k)
+!     chrgl = atom(l)% charge + Net_Charge(l)
+!endif
 
 r_kl  = SQRT(rkl2)
 
