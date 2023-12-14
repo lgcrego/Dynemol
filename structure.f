@@ -21,7 +21,7 @@
                                              System_Characteristics ,   & 
                                              trj 
     use Allocation_m                , only : Allocate_Structures
-    use Semi_Empirical_Parms        , only : atom ,                     &
+    use Semi_Empirical_Parms        , only : ChemAtom => atom ,         &
                                              Include_OPT_parameters
 
     type(structure)                 , public  :: Unit_Cell , Extended_Cell 
@@ -237,7 +237,7 @@ integer :: copy , nr_sum , ix , iy , k , n
 system% BasisPointer = 0
 
 ! total number of orbitals ...
- N_of_orbitals = sum( atom(system%AtNo)%DOS , system%QMMM == "QM" )
+ N_of_orbitals = sum( ChemAtom(system%AtNo)%DOS , system%QMMM == "QM" )
 
 ! building AO basis ...  
  allocate( basis(N_of_orbitals) )
@@ -251,7 +251,7 @@ system% BasisPointer = 0
 
     system% BasisPointer(i) = k-1  ! <== BasisPointer + {DOS} = {atom subspace}
 
-    do l = 0 , atom(AtNo)%AngMax
+    do l = 0 , ChemAtom(AtNo)%AngMax
 
         do m = -l , +l
 
@@ -272,16 +272,16 @@ system% BasisPointer = 0
             basis(k) % V_shift             =  system % V_shift  (i)
             basis(k) % solvation_hardcore  =  system % solvation_hardcore (i)
 
-            basis(k) % n        =  atom(AtNo) % Nquant(l)
+            basis(k) % n        =  ChemAtom(AtNo) % Nquant(l)
             basis(k) % l        =  l
             basis(k) % m        =  m
 
-            basis(k) % IP       =  atom(AtNo) % IP    (l)
-            basis(k) % Nzeta    =  atom(AtNo) % Nzeta (l)
-            basis(k) % coef(1)  =  atom(AtNo) % coef  (l,1)
-            basis(k) % coef(2)  =  atom(AtNo) % coef  (l,2)
-            basis(k) % zeta(1)  =  atom(AtNo) % zeta  (l,1)
-            basis(k) % zeta(2)  =  atom(AtNo) % zeta  (l,2)
+            basis(k) % IP       =  ChemAtom(AtNo) % IP    (l)
+            basis(k) % Nzeta    =  ChemAtom(AtNo) % Nzeta (l)
+            basis(k) % coef(1)  =  ChemAtom(AtNo) % coef  (l,1)
+            basis(k) % coef(2)  =  ChemAtom(AtNo) % coef  (l,2)
+            basis(k) % zeta(1)  =  ChemAtom(AtNo) % zeta  (l,1)
+            basis(k) % zeta(2)  =  ChemAtom(AtNo) % zeta  (l,2)
             basis(k) % k_WH     =  system % k_WH(i)
 
             basis(k) % x        =  system % coord (i,1)
@@ -345,7 +345,7 @@ call sleep(3) ! waits 3 seconds ...
 do i = 1 , size(output_units) 
 
       ! total number of orbitals ...
-      N_of_orbitals = sum( atom(a%AtNo)%DOS , a%QMMM == "QM" )
+      N_of_orbitals = sum( ChemAtom(a%AtNo)%DOS , a%QMMM == "QM" )
       write(output_units(i),120) N_of_orbitals
       
       ! total number of electrons ...
@@ -361,11 +361,11 @@ do i = 1 , size(output_units)
       write(output_units(i),143) count( a%QMMM == "MM" )
       
       ! total number of atoms of given type ...
-      do AtNo = 1 , size(atom)
+      do AtNo = 1 , size(ChemAtom)
       
           N_of_atom_type = count( a%AtNo == AtNo )
          
-          If( N_of_atom_type /= 0 ) write(output_units(i),121) , atom(AtNo)%symbol , N_of_atom_type
+          If( N_of_atom_type /= 0 ) write(output_units(i),121) , ChemAtom(AtNo)%symbol , N_of_atom_type
       
       end do
 
