@@ -528,6 +528,9 @@ If(master) then
    else
         Print*, ">> OPT_parms were not used <<"
    end if
+
+   call sleep(4) ! waits 4 seconds ...
+
 end If
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
@@ -630,8 +633,8 @@ do n_EHS = 1 , N_of_EHSymbol
                         OPT_basis(j)%n               ,   &
                  Lquant(OPT_basis(j)%l)              ,   &
                         OPT_basis(j)%IP              ,   &
-                        OPT_basis(j)%zeta(1)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
-                        OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
+                        OPT_basis(j)%zeta(1)         ,   &  ! <== Mind that we are not converting zeta to atomic unit to avoid IO errors ...
+                        OPT_basis(j)%zeta(2)         ,   &  ! <== Mind that we are not converting zeta to atomic unit to avoid IO errors ...
                         OPT_basis(j)%coef(1)         ,   &
                         OPT_basis(j)%coef(2)         ,   &
                         OPT_basis(j)%k_WH            ,   &

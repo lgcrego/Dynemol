@@ -72,7 +72,7 @@ If( DIPOLE_ ) CALL Util_multipoles
 CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
 
 ! calculations with new parameters ...
-CALL GA_eigen( Extended_Cell, OPT_basis, UNI , info )
+CALL GA_eigen( Extended_Cell, OPT_basis, UNI , flag=2 )
 
 CALL Total_DOS( UNI%erg, TDOS )
 

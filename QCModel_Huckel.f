@@ -110,7 +110,7 @@ select case ( driver )
 
           Deallocate( Lv , Rv )
 
-    case ("slice_FSSH" )
+    case ("slice_FSSH" , "diagnostic")
 
           !--------------------------------------------------------
           ! Overlap Matrix Factorization: S^(1/2) ...
