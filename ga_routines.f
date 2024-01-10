@@ -94,7 +94,7 @@ do generation = 1 , N_generations
     ! sharing these variables with ga_QCModel ...
     Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
 
-     do i = 1 , Pop_Size
+    do i = 1 , Pop_Size
 
         ! intent(in):basis ; intent(inout):GA_basis ...
         CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
@@ -474,6 +474,8 @@ end if
 
 10 if( ioerr > 0 ) stop "input-GA.dat file not found; terminating execution"
 
+call sleep(4) ! waits 4 seconds ...
+
 include 'formats.h'
 
 end subroutine Read_GA_key
@@ -572,8 +574,8 @@ do n_EHS = 1 , N_of_EHSymbol
                         OPT_basis(j)%n               ,   &
                  Lquant(OPT_basis(j)%l)              ,   &
                         OPT_basis(j)%IP              ,   &
-                        OPT_basis(j)%zeta(1)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
-                        OPT_basis(j)%zeta(2)*a_Bohr  ,   &      ! <== zetas of opt_eht_parms.output are written in units of a0^{-1} ...
+                        OPT_basis(j)%zeta(1)         ,   &  ! <== Mind that we are not converting zeta to atomic unit to avoid IO errors ...
+                        OPT_basis(j)%zeta(2)         ,   &  ! <== Mind that we are not converting zeta to atomic unit to avoid IO errors ...
                         OPT_basis(j)%coef(1)         ,   &
                         OPT_basis(j)%coef(2)         ,   &
                         OPT_basis(j)%k_WH            ,   &

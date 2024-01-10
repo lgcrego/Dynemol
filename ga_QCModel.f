@@ -804,6 +804,15 @@ end function C_Mulliken
 
  If ( present(flag) .AND. info/=0 ) write(*,*) 'info = ',info,' in GA_Eigen '
 
+ If ( present(flag) .AND. flag==2 ) &
+ then
+      OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
+          do i = 1 , N
+              write(9,*) i , FMO%erg(i)
+          end do
+      CLOSE(9)
+ end if
+
  !--------------------------------------------------------
  ! Overlap Matrix Factorization: S^(1/2) ...
  Allocate( S_eigen(N) )

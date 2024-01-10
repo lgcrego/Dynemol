@@ -77,7 +77,18 @@ module Semi_Empirical_Parms
  close(3)
 
  ! transform zetas to units of Angs^{-1} ...
- forall( Ang=0:3 , i=1:2 ) atom(:)%zeta(Ang,i) =  atom(:)%zeta(Ang,i) / a_Bohr 
+ forall( Ang=0:3 , i=1:2 ) atom(:)%zeta(Ang,i) = atom(:)%zeta(Ang,i) / a_Bohr 
+
+ ! truncate zeta parameters to 1.d-4 ...
+ do concurrent ( Ang=0:3 , i=1:2 )
+      atom(:)%zeta(Ang,i) = atom(:)%zeta(Ang,i) * 1.d4
+      atom(:)%zeta(Ang,i) = int(atom(:)%zeta(Ang,i))
+      atom(:)%zeta(Ang,i) = atom(:)%zeta(Ang,i) * 1.d-4
+
+      atom(:)%coef(Ang,i) = atom(:)%coef(Ang,i) * 1.d4
+      atom(:)%coef(Ang,i) = int(atom(:)%coef(Ang,i))
+      atom(:)%coef(Ang,i) = atom(:)%coef(Ang,i) * 1.d-4
+end do
 
  If( OPT_parms ) CALL read_OPT_parameters
 
@@ -171,12 +182,23 @@ close(3)
 Print 44
 Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
-! transform zetas to units of Angs^{-1} ...
-forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
+! mind that we are NOT reading zeta parameters in atomic units to avoid truncation errors durig IO ...
+forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i)  !! / a_Bohr  ; keep it like this 
+
+! truncate zeta parameters to 1.d-5 ...
+do concurrent ( i=1:2 )
+     EH_atom(:)%zeta(0,i) = EH_atom(:)%zeta(0,i) * 1.d5
+     EH_atom(:)%zeta(0,i) = int(EH_atom(:)%zeta(0,i))
+     EH_atom(:)%zeta(0,i) = EH_atom(:)%zeta(0,i) * 1.d-5
+
+     EH_atom(:)%coef(0,i) = EH_atom(:)%coef(0,i) * 1.d5
+     EH_atom(:)%coef(0,i) = int(EH_atom(:)%coef(0,i))
+     EH_atom(:)%coef(0,i) = EH_atom(:)%coef(0,i) * 1.d-5
+end do
 
 include 'formats.h'
 
-17 format(A8,t10,A12,t23,A11,t35,I7,t44,I10,t55,I9,t65,I5,t71,A6,t80,F9.6,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
+17 format(A8,t10,A12,t23,A11,t35,I7,t44,I10,t55,I9,t65,I5,t71,A6,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
 
 end subroutine read_OPT_parameters
 ! 
