@@ -9,7 +9,7 @@ module GA_driver_m
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
- use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
+ use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis , Cube_Coef , Cube_Zeta
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -105,10 +105,18 @@ Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", (
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 
 ! Population analysis ...
-If( GaussianCube ) then
+If( GaussianCube ) &
+then
+    ! do it again because the STO have been optimized
+    do i = 1 , size(OPT_basis)  
+        Cube_Coef(i,:) = OPT_basis(i) % coef(:)
+        Cube_Zeta(i,:) = OPT_basis(i) % zeta(:) * a_Bohr
+    end do
+
     do i = 1 , size(MOnum)
         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
     end do
+
     Print 220 , MOnum(:)
 end if
 
