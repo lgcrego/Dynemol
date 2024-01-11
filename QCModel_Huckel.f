@@ -110,7 +110,9 @@ select case ( driver )
 
           Deallocate( Lv , Rv )
 
-    case ("slice_FSSH" , "diagnostic")
+
+    case ("slice_FSSH")
+
 
           !--------------------------------------------------------
           ! Overlap Matrix Factorization: S^(1/2) ...
@@ -168,6 +170,12 @@ select case ( driver )
           QM%R = Rv
 
           Deallocate( Lv , Rv , S_matrix , S_root )
+
+
+    case ("diagnostic")
+
+         deallocate(dumb_S)
+         call Lowdin( h , S_matrix , QM , N )
 
 end select
 
@@ -275,6 +283,66 @@ allocate( S_root_inv(N,N) , source = matrix_inv )
 #undef matrix_inv
 
 end subroutine invert
+!
+!
+!
+!
+!==========================================
+ subroutine Lowdin( h , S_matrix , QM , N )
+!==========================================
+implicit none
+real*8        , allocatable , intent(inout) :: h(:,:)
+real*8        , allocatable , intent(inout) :: S_matrix(:,:)
+type(R_eigen)               , intent(inout) :: QM
+integer                     , intent(in)    :: N
+
+! local variables ...
+real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) 
+real*8  , ALLOCATABLE :: dumb_S(:,:), tool(:,:), S_eigen(:) 
+integer               :: i , info 
+
+ !--------------------------------------------------------
+ ! Overlap Matrix Factorization: S^(1/2) ...
+ Allocate( dumb_S , source = S_matrix )
+ Allocate( S_eigen(N) )
+
+ CALL SYEVD(dumb_S , S_eigen , 'V' , 'L' , info)
+
+ Allocate( tool(N,N) , source = transpose(dumb_S) )
+
+ forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
+
+ CALL gemm(dumb_S , tool , S_matrix , 'N' , 'N')
+ !now S_matrix = S^(1/2), Lowdin Orthogonalization matrix ...
+
+ DEALLOCATE( S_eigen , dumb_S , tool )
+
+ !---------------------------------------------------
+ !RIGHT EIGENVECTOR ALSO CHANGE: |C> --> S^(1/2).|C> 
+ !
+ !normalizes the L&R eigenvectors as < L(i) | R(i) > = 1
+ !---------------------------------------------------
+
+ Allocate( Lv(N,N) )
+ Allocate( Rv(N,N) )
+
+ Lv = h
+
+ ! Rv = S^(1/2) * Lv ...
+ CALL symm( S_matrix , Lv , Rv )
+
+ ALLOCATE(QM%R(N,N))
+ ALLOCATE(QM%L(N,N))
+
+ ! eigenvectors in the columns of QM%R
+ QM%R = Rv
+ ! eigenvectors in the rows of QM%L
+ QM%L = transpose(Rv)
+
+ Deallocate( h , Lv , Rv , S_matrix )
+
+end subroutine Lowdin
+!
 !
 !
 !

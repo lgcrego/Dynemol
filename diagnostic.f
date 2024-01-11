@@ -104,12 +104,6 @@ CALL Read_Command_Lines_Arguments( MOnum )
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
  Print*, " " 
- Print*, "dE1 = ", UNI%erg(32) - UNI%erg(31) ,   2.7
- Print*, "dE2 = ", UNI%erg(32) - UNI%erg(30) ,   3.78
- Print*, "dE3 = ", UNI%erg(32) - UNI%erg(29) ,   3.87
- Print*, "dE4 = ", UNI%erg(32) - UNI%erg(28) ,   3.87
- Print*, "dE5 = ", UNI%erg(33) - UNI%erg(31) ,   4.6848
- Print*, "dE6 = ", UNI%erg(34) - UNI%erg(31) ,   4.6848
  
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 

@@ -825,7 +825,7 @@ end function C_Mulliken
 
  forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
- !now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
+ !now S_FMO = S^(1/2) Lowdin Orthogonalization matrix ...
  CALL gemm(dumb_S , tool , S_FMO , 'N' , 'N')
 
  DEALLOCATE( S_eigen , dumb_S , tool )
