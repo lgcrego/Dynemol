@@ -76,6 +76,12 @@ module Semi_Empirical_Parms
 
  close(3)
 
+ ! EXPLANATION ABOUT THE ZETA PARAMETERS:
+ ! the zeta parameters of my_eht_parameters.dat are given in units of a_Bohr
+ ! Dynemol works with Angs units
+ ! thus we convert the zeta parameters of this file: zeta(a_B^-1) --> zeta(Ang^-1)
+ ! Mind that for producing cube files we use zeta(a_B^-1), but this is another story.
+
  ! transform zetas to units of Angs^{-1} ...
  forall( Ang=0:3 , i=1:2 ) atom(:)%zeta(Ang,i) = atom(:)%zeta(Ang,i) / a_Bohr 
 
@@ -139,8 +145,8 @@ do i = 1 , size(EH_atom)
                 EH_atom(i)%n            ,   &
                 spdf                    ,   &
                 EH_atom(i)%IP(0)        ,   &
-                EH_atom(i)%zeta(0,1)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of a0^{-1} ...
-                EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of a0^{-1} ...
+                EH_atom(i)%zeta(0,1)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of Ang^{-1} ...
+                EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of Ang^{-1} ...
                 EH_atom(i)%coef(0,1)    ,   &
                 EH_atom(i)%coef(0,2)    ,   &
                 EH_atom(i)%k_WH(0)
@@ -182,7 +188,14 @@ close(3)
 Print 44
 Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
-! mind that we are NOT reading zeta parameters in atomic units to avoid truncation errors durig IO ...
+ ! EXPLANATION ABOUT THE ZETA PARAMETERS:
+ ! the zeta parameters of OPT_EHT_PARMS.INPUT are given in units of Ang^-1
+ ! the zeta parameters of MY_EHT_PARAMETERS.DAT are given in units of a_Bohr^-1
+ ! Dynemol works with Angs units
+ ! here we read zeta parameters in Ang unit to avoid truncation errors during IO with GA/CG routines
+ ! Mind that for producing cube files we use zeta(a_B^-1), but this is another story.
+
+! mind that we are NOT reading zeta parameters in atomic units to avoid truncation errors during IO ...
 forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i)  !! / a_Bohr  ; keep it like this 
 
 ! truncate zeta parameters to 1.d-5 ...

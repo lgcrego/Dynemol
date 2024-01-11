@@ -32,7 +32,7 @@ module CSDM_adiabatic_m
     use TD_Dipole_m             , only: wavepacket_DP                                        
     use Polarizability_m        , only: Build_Induced_DP
     use Solvated_M              , only: Prepare_Solvated_System 
-    use QCModel_Huckel          , only: EigenSystem , S_root_inv 
+    use QCModel_Huckel          , only: EigenSystem 
     use Schroedinger_m          , only: DeAllocate_QDyn
     use Psi_Squared_Cube_Format , only: Gaussian_Cube_Format
     use Data_Output             , only: Populations 
