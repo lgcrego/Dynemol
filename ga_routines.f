@@ -586,6 +586,13 @@ do n_EHS = 1 , N_of_EHSymbol
 enddo
 If( unit_tag == 13 ) close(13)
 
+! EXPLANATION ABOUT THE ZETA PARAMETERS:                                                                                                                                                                       
+! the zeta parameters of OPT_EHT_PARMS.INPUT are given in units of Ang^-1
+! the zeta parameters of MY_EHT_PARAMETERS.DAT are given in units of a_Bohr^-1
+! Dynemol works with Angs units
+! here we read zeta parameters in Ang unit to avoid truncation errors during IO with GA/CG routines
+! Mind that for producing cube files we use zeta(a_B^-1), but this is another story.
+
 17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6,t141,A1,F5.2,A1)
 
 include 'formats.h'
