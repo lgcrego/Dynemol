@@ -188,11 +188,11 @@ forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr
 ! truncate zeta parameters to 1.d-5 ...
 do concurrent ( i=1:2 )
      EH_atom(:)%zeta(0,i) = EH_atom(:)%zeta(0,i) * 1.d5
-     EH_atom(:)%zeta(0,i) = int(EH_atom(:)%zeta(0,i))
+     EH_atom(:)%zeta(0,i) = anint(EH_atom(:)%zeta(0,i))
      EH_atom(:)%zeta(0,i) = EH_atom(:)%zeta(0,i) * 1.d-5
 
      EH_atom(:)%coef(0,i) = EH_atom(:)%coef(0,i) * 1.d5
-     EH_atom(:)%coef(0,i) = int(EH_atom(:)%coef(0,i))
+     EH_atom(:)%coef(0,i) = anint(EH_atom(:)%coef(0,i))
      EH_atom(:)%coef(0,i) = EH_atom(:)%coef(0,i) * 1.d-5
 end do
 
