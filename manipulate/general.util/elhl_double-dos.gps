@@ -41,13 +41,6 @@ set pm3d map corners2color c1
 
 # great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
 
-# Electron ----------------------------------------
-set palette defined(0"#7f0000",1"#ee0000",2"#ff7000",3"#ffee00")
-unset colorbox
-#set colorbox user origin x1+0.01,y0+0.01 size 0.035,Ly*0.97
-#set format cb ""
-splot "Occup_smear.dat" using 1:2:3 notitle
-
 # Hole    ----------------------------------------
 set palette defined(0"#000090",1"#0000ff",2"#1e90ff",3"#00ffff")
 unset colorbox
@@ -55,9 +48,16 @@ unset colorbox
 #set format cb "%4.1f"
 splot "Occup_smear.dat" using 1:2:4 notitle
 
+# Electron ----------------------------------------
+set palette defined(0"#7f0000",1"#ee0000",2"#ff7000",3"#ffee00")
+unset colorbox
+#set colorbox user origin x1+0.01,y0+0.01 size 0.035,Ly*0.97
+#set format cb ""
+splot "Occup_smear.dat" using 1:2:3 notitle
+
 unset xtics 
 unset xlabel
 unset ytics 
 unset ylabel
-plot "Occup_el.dat" using 1:3 w p pt 7 ps 0.001 lc rgb 'grey30' notitle 
+plot "Occup_el.dat" using 1:3 w p pt 7 ps 0.001 lc rgb 'black' notitle 
 unset multiplot
