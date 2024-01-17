@@ -1,8 +1,8 @@
 module Semi_Empirical_Parms
 
     use type_m
-    use parameters_m                , only : OPT_parms
-    use MPI_definitions_m           , only : master
+    use parameters_m      , only : OPT_parms
+    use MPI_definitions_m , only : master
 
     type(EHT) , public , protected :: atom(300) 
     type(EHT) , allocatable , save :: EH_atom(:)
@@ -76,12 +76,6 @@ module Semi_Empirical_Parms
  end do    
 
  close(3)
-
- ! EXPLANATION ABOUT THE ZETA PARAMETERS:
- ! the zeta parameters of my_eht_parameters.dat are given in units of a_Bohr
- ! Dynemol works with Angs units
- ! thus we convert the zeta parameters of this file: zeta(a_B^-1) --> zeta(Ang^-1)
- ! Mind that for producing cube files we use zeta(a_B^-1), but this is another story.
 
  ! transform zetas to units of Angs^{-1} ...
  forall( Ang=0:3 , i=1:2 ) atom(:)%zeta(Ang,i) = atom(:)%zeta(Ang,i) / a_Bohr 
@@ -189,15 +183,7 @@ close(3)
 If( master ) Print 44
 If( master ) Print 45 , ( EH_atom(i)% EHSymbol , EH_atom(i)% residue , i = 1,size(EH_atom) )
 
- ! EXPLANATION ABOUT THE ZETA PARAMETERS:
- ! the zeta parameters of OPT_EHT_PARMS.INPUT are given in units of Ang^-1
- ! the zeta parameters of MY_EHT_PARAMETERS.DAT are given in units of a_Bohr^-1
- ! Dynemol works with Angs units
- ! here we read zeta parameters in Ang unit to avoid truncation errors during IO with GA/CG routines
- ! Mind that for producing cube files we use zeta(a_B^-1), but this is another story.
-
-! mind that we are NOT reading zeta parameters in atomic units to avoid truncation errors during IO ...
-forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i)  !! / a_Bohr  ; keep it like this 
+forall( i=1:2 ) EH_atom(:)%zeta(0,i) =  EH_atom(:)%zeta(0,i) / a_Bohr 
 
 ! truncate zeta parameters to 1.d-5 ...
 do concurrent ( i=1:2 )
