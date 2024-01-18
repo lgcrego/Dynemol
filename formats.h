@@ -1,4 +1,4 @@
-27    FORMAT("Powered   by   Master/MPI => total #_of tasks (processes) = ",I3)
+27    FORMAT("Powered   by   Master/MPI => total #_of tasks (processes) = ",I4)
 
 28    FORMAT(t27,"=> threads per task = ",I3,/)
 
