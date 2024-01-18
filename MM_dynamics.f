@@ -178,7 +178,8 @@ implicit none
 integer , optional , intent(inout) :: frame_init
 
 ! local variables ...
-integer         :: frame , i 
+integer :: frame , i 
+logical :: aux
 
 ! select thermostat ...
 select case( thermostat )
@@ -218,9 +219,15 @@ else
     CALL Cleanup
 
     CALL ForceInter
-    QMMM = NO
-    CALL ForceIntra
-    QMMM = YES
+
+      !---------------
+      aux  = QMMM
+      QMMM = NO
+     
+      CALL ForceIntra
+     
+      QMMM = aux
+      !---------------
 
     ! saving the first frame ==> frame 0 = input ...
     CALL Saving_MM_frame( frame=0 , dt=D_zero )
