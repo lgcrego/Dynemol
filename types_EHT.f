@@ -311,7 +311,7 @@ if ( .NOT. exist ) then
 ! copy warning.sign template to dynemolworkdir ...
 inquire(file=dynemolworkdir//".warning.signal", EXIST=exist)
 If( .not. exist ) then
-    write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal"
+    write(this_command,'(A)') "cp "//dynemoldir//"warning.signal .warning.signal 2> "//dynemoldir//"qdynamo.err"
     TorF = systemQQ( this_command )
 endif
 
