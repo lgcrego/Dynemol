@@ -365,12 +365,13 @@ do
     write(*,*) ' (14) El                        '
     write(*,*) ' (15) Hl                        '
     write(*,*) ' (16) flex                      '
-    write(*,*) ' (17) solute                    '
-    write(*,*) ' (18) QM-MM                     '
-    write(*,*) ' (19) atoms                     '
-    write(*,*) ' (20) N_of_electrons            '
-    write(*,*) ' (21) N_of_solvent_Molecules    '
-    write(*,*) ' (22) N_of_solute_Molecules     '
+    write(*,*) ' (17) V_shit                    '
+    write(*,*) ' (18) solute                    '
+    write(*,*) ' (19) QM-MM                     '
+    write(*,*) ' (20) atoms                     '
+    write(*,*) ' (21) N_of_electrons            '
+    write(*,*) ' (22) N_of_solvent_Molecules    '
+    write(*,*) ' (23) N_of_solute_Molecules     '
     write(*,*) ' any other number cotinues      '
 
 
@@ -430,21 +431,24 @@ do
             write(*,70) a % flex(:)
 
         case(17)
-            write(*,70) a % solute(:)
+            write(*,70) merge(.true.,.false., a % V_shift(:) /= 0.0)
 
         case(18)
-            write(*,20) a % QMMM(:)
+            write(*,70) a % solute(:)
 
         case(19)
-            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
+            write(*,20) a % QMMM(:)
 
         case(20)
-            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
+            write(*,'(a14,i5)') "N. of atoms = ", a % atoms 
 
         case(21)
-            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+            write(*,'(a18,i5)') "N. of electrons = ", a % N_of_electrons
 
         case(22)
+            write(*,'(a26,i5)') "N. of Solvent Molecules = ", a % N_of_solvent_Molecules
+
+        case(23)
             write(*,'(a25,i5)') "N. of Solute Molecules = ", a % N_of_solute_Molecules
 
         case default

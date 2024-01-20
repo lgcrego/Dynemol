@@ -36,14 +36,15 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
 
 !=====================================================================================
-!  reading  the input CARD ...
+!  reading  the input CARD, one line at a time ...
 
 read_loop: do 
 
     read(33,'(A)',iostat=ioerr) line
     if ( ioerr /= 0 ) exit read_loop
-    read(line,*,iostat=ioerr) keyword
+    read(line,*,iostat=ioerr) keyword   ! <== keyword = first contiguous string from line
     keyword = to_upper_case(keyword)
+
     if( index(keyword,"!") /= 0 ) cycle read_loop 
 
     select case ( keyword )
@@ -86,18 +87,6 @@ read_loop: do
 
         case( "AD_HOC" ) 
             ad_hoc = get_logical(line)
-
-            ! skip for now, entry to be fully read later from subroutine ad_hoc_tuning ...
-            if( ad_hoc == .true. ) then
-                do 
-                   read(33,'(A)',iostat=ioerr) line
-                   read(line,*,iostat=ioerr) command
-                   command = to_upper_case(command)
-                   If( command(1:6) /= "AD_HOC" ) exit
-                   !this prevents double reading in the case of blank lines ...
-                   line = "XXXXXXXXXXXXXXXXXXXXXX"
-                end do
-            end if
 
 !--------------------------------------------------------------------                                                                                                   
 !           READING FILE FORMAT
@@ -445,7 +434,7 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
 
 !==============================
-!  reading  the input CARD ...
+!  reading  the input CARD, one line at a time ...
 
 read_loop: do 
 
@@ -459,45 +448,46 @@ read_loop: do
     if( keyword == "AD_HOC" ) then
 
         do 
-           read(33,'(A)',iostat=ioerr) line
+              read(33,'(A)',iostat=ioerr) line
 
-           CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
+              CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
 
-           if( done ) exit
+              if( ioerr /= 0 ) exit
+              if( done ) cycle 
 
-           if( EH_MM == "QM" .AND. present(structure) ) then
+              if( EH_MM == "QM" .AND. present(structure) ) then
 
-                   select case(feature)
+                      select case(feature)
 
-                          case( "ATOM" )
+                             case( "ATOM" )
 
-                          case( "RESIDUE" )
-                              structure%atom(start:finale) % residue = label 
-                          case( "NR" )
-                              structure%atom(start:finale) % nr = int_value 
-                          case( "V_SHIFT" )
-                              structure%atom(start:finale) % v_shift = real_value 
-                          case( "QMMM" )
-                              structure%atom(start:finale) % QMMM = label 
+                             case( "RESIDUE" )
+                                 structure%atom(start:finale) % residue = label 
+                             case( "NR" )
+                                 structure%atom(start:finale) % nr = int_value 
+                             case( "V_SHIFT" )
+                                 structure%atom(start:finale) % v_shift = real_value 
+                             case( "QMMM" )
+                                 structure%atom(start:finale) % QMMM = label 
 
-                          end select
-                          end if
+                             end select
+                             end if
 
-           if( EH_MM == "MM" .AND. present(atom) ) then
+              if( EH_MM == "MM" .AND. present(atom) ) then
 
-                   select case(feature)
+                      select case(feature)
 
-                          case( "RESIDUE" )
-                              atom(start:finale) % residue = label 
-                          case( "NR" )
-                              atom(start:finale) % nr = int_value 
-                          end select
-                          endif
+                             case( "RESIDUE" )
+                                 atom(start:finale) % residue = label 
+                             case( "NR" )
+                                 atom(start:finale) % nr = int_value 
+                             end select
+                             endif
 
-           !this prevents double reading in the case of blank lines ...
-           line = "XXXXXXXXXXXXXXXXXXXXXX"
+              !this prevents double reading in the case of blank lines ...
+              line = "XXXXXXXXXXXXXXXXXXXXXX"
            
-        end do
+        end do  
 
     end if
     !this prevents double reading in the case of blank lines ...
