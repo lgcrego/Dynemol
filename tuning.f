@@ -2,8 +2,8 @@ module tuning_m
 
     use type_m
     use constants_m
-    use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment
-    use parameters_m       , only : static , electron_state , hole_state , n_part , Survival
+    use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment , solvent_QM_droplet_radius
+    use parameters_m       , only : static , electron_state , hole_state , n_part , Survival , ad_hoc_droplet
 
     public :: ad_hoc_tuning , eh_tag , orbital 
 
@@ -72,34 +72,6 @@ else
 
 end if
 
-                                                                                                                                                                                                                
-where(                                                        &
-       sqrt(                                                  &
-            (univ%atom(2:)%xyz(1) - univ%atom(1)%xyz(1))**2 + &
-            (univ%atom(2:)%xyz(2) - univ%atom(1)%xyz(2))**2 + &
-            (univ%atom(2:)%xyz(3) - univ%atom(1)%xyz(3))**2   &
-       ) <= 8.5                                               &
-) univ%atom(2:)%residue = "$$$"
-
-do i=1,size(univ%atom)
-   where(univ%atom%nr == univ%atom(i)%nr) univ%atom%residue = univ%atom(i)%residue
-end do
-
-where(univ%atom%residue == "$$$") univ%atom%fragment = "Q"
-where(univ%atom%residue == "$$$") univ%atom%QMMM     = "QM"
-where(univ%atom%residue == "$$$") univ%atom%residue  = "ACN"
-
-where(univ%atom%nr == 195) univ%atom%fragment = "1"
-where(univ%atom%nr == 140) univ%atom%fragment = "2"
-where(univ%atom%nr == 082) univ%atom%fragment = "3"
-where(univ%atom%nr == 415) univ%atom%fragment = "4"
-where(univ%atom%nr == 416) univ%atom%fragment = "5"
-where(univ%atom%nr == 132) univ%atom%fragment = "6"
-where(univ%atom%nr == 287) univ%atom%fragment = "7"                                                                                                                                                             
-where(univ%atom%nr == 175) univ%atom%fragment = "8"
-where(univ%atom%nr == 133) univ%atom%fragment = "9"
-where(univ%atom%nr == 395) univ%atom%fragment = "10"
-
 !---------------------------------------------------
 !      define %El   : mandatory !!
 !---------------------------------------------------
@@ -120,6 +92,7 @@ where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !   Solute      =   R
 !   Cluster     =   C 
 !   Passivator  =   P 
+!   Quantum     =   Q 
 !   ghost       =   #
 !--------------------------------------------
 
@@ -128,13 +101,25 @@ DO i = 1 , size(univ%atom)
     select case(univ%atom(i)%residue)
 
         ! this is water, this is water, this is water ...
-        case( 'H2O' , 'WAT' , 'TIP' , 'COH' , 'SOL' )
+        case( 'H2O' , 'WAT' , 'TIP' )
+            univ%atom(i)%fragment = 'S'
+            univ%atom(i)%solvation_hardcore = 3.d0
+
+        ! this is acetonitrile ...
+        case( 'ACN' )
+            univ%atom(i)%fragment = 'S'
+            univ%atom(i)%solvation_hardcore = 3.d0
+
+        ! case default ...
+        case( 'SOL' )
             univ%atom(i)%fragment = 'S'
             univ%atom(i)%solvation_hardcore = 3.d0
 
     end select
 
 END DO
+
+if( ad_hoc_droplet) call QM_droplet( univ )
 
 call warnings( univ%atom ) 
 
@@ -143,6 +128,76 @@ Print 46
 include 'formats.h'
 
 end subroutine ad_hoc_tuning
+!
+!
+!
+!=============================
+ subroutine QM_droplet( univ )
+!=============================
+implicit none
+type(universe) , intent(inout) :: univ
+
+!local variables ...
+integer :: i, nr , nr_max
+real*8  :: distance
+real*8  :: solvent_CG(3) , solute_CG(3)
+
+call ReGroup_Molecules(univ)
+
+nr_max =  maxval(univ%atom(:)%nr)
+
+univ % atom % solute = univ % atom % El 
+
+! identify the CG of the solute ...
+forall( i=1:3 ) solute_CG(i) = sum( univ%atom%xyz(i) , univ%atom%solute == .true. ) / count(univ%atom%solute)
+
+do nr = 1 , nr_max
+
+      forall( i=1:3 ) solvent_CG(i) = sum( univ%atom%xyz(i) , univ%atom%nr == nr ) / count(univ%atom%nr==nr)
+      
+      distance = sqrt( (solute_CG(1) - solvent_CG(1))**2 + &
+                       (solute_CG(2) - solvent_CG(2))**2 + &
+                       (solute_CG(3) - solvent_CG(3))**2   )
+
+      if( distance <= solvent_QM_droplet_radius ) &
+      then
+          where( univ%atom%nr == nr ) 
+               univ%atom%QMMM    = "QM"
+               univ%atom%fragment = "Q"
+          end where
+      end if
+end do
+
+end subroutine QM_droplet
+!
+!=================================
+subroutine ReGroup_Molecules(univ)
+!=================================
+implicit none
+type(universe) , intent(inout) :: univ
+
+!local variables
+integer :: nr , i , j , indx1 , indx2 
+real*8  :: delta(3) 
+
+do nr = minval(univ%atom%nr) , maxval(univ%atom%nr)
+
+    ! atomic pointers for molecule with nresidue = nr
+    indx1 = minval( [(i , i=1,size(univ%atom))] , (univ%atom%nr == nr) )
+    indx2 = maxval( [(i , i=1,size(univ%atom))] , (univ%atom%nr == nr) )
+
+    do i = indx1+1 , indx2
+
+        delta = univ%atom(i)%xyz - univ%atom(indx1)%xyz
+
+        do j = 1 , 3
+             if( abs(delta(j)) > univ%box(j)*HALF ) univ%atom(i)%xyz(j) = univ%atom(i)%xyz(j) - sign( univ%box(j) , delta(j) )
+        end do 
+    end do
+end do
+
+end subroutine ReGroup_Molecules
+!
 !
 !
 !

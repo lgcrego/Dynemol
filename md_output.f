@@ -1,11 +1,12 @@
 module MD_dump_m
 
     use constants_m
-    use MM_types        , only: MM_atomic
-    use MM_input        , only: MM_frame_step , thermostat
-    use parameters_m    , only: n_t, restart
-    use syst            , only: bath_T, Initial_density
-    use MD_read_m       , only: MM , atom , molecule , species
+    use MM_types          , only: MM_atomic
+    use MM_input          , only: MM_frame_step , thermostat
+    use parameters_m      , only: n_t, restart
+    use syst              , only: bath_T, Initial_density
+    use MD_read_m         , only: MM , atom , molecule , species
+    use Structure_Builder , only: unit_cell 
 
     public :: output , cleanup , saving_MM_frame , GenerateConfigs
 
@@ -153,7 +154,7 @@ close(11)
                             atom(i) % EHSymbol       ,          &     ! <== atom type of Huckel's 
                             ' '                      ,          &     ! <== alternate location indicator
                             atom(i) % residue        ,          &     ! <== residue name
-                            ' '                      ,          &     ! <== chain identifier
+                            unit_cell % fragment(i)     ,          &     ! <== chain identifier
                             atom(i) % nr             ,          &     ! <== residue sequence number
                             ' '                      ,          &     ! <== code for insertion of residues
                             ( atom(i) % xyz(l) , l=1,3 )   ,    &     ! <== xyz coordinates
@@ -235,7 +236,7 @@ end subroutine ReGroupMolecule
  inquire(file=filename, EXIST=filefound)
  if (filefound) then
    write (cmd, '("/bin/rm ", A)' ) TRIM (filename)
-   call SYSTEM (cmd)
+   call SYSTEMQQ (cmd)
  endif
 
 end subroutine CLEANUP
@@ -255,10 +256,10 @@ real*8  , intent(in) :: dt
 ! local variables ...
 integer           :: i , l 
 integer , save    :: counter = 1
-character(len=3)  :: string
-character(len=43) :: f_name
+character(len=4)  :: string
+character(len=44) :: f_name
 
-write(string,'(i3.3)') counter    
+write(string,'(i4.4)') counter    
 
 f_name = 'ancillary.trunk/configs/velocity_MM-'//string//'.out'
 

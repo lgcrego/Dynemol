@@ -17,7 +17,7 @@ character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces , Band_structure
-logical                 :: resume , rnd_seed
+logical                 :: resume , rnd_seed , ad_hoc_droplet
 
 end module EH_parms_module
 

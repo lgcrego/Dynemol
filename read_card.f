@@ -6,10 +6,11 @@ use MM_parms_module
 
 private
 
-   public :: ReadInputCard , ReadInputCard_ADHOC , electron_fragment , hole_fragment
+   public :: ReadInputCard , ReadInputCard_ADHOC , electron_fragment , hole_fragment , solvent_QM_droplet_radius
 
    ! module variables ...
-   character(len=3) :: electron_fragment , hole_fragment
+   real*8           :: solvent_QM_droplet_radius
+   character(len=3) :: electron_fragment , hole_fragment 
 
 contains
 !
@@ -456,7 +457,7 @@ read_loop: do
               if( done ) cycle 
 
               if( EH_MM == "QM" .AND. present(structure) ) then
-
+ 
                       select case(feature)
 
                              case( "ATOM" )
@@ -469,7 +470,9 @@ read_loop: do
                                  structure%atom(start:finale) % v_shift = real_value 
                              case( "QMMM" )
                                  structure%atom(start:finale) % QMMM = label 
-
+                             case( "DROPLET" )
+                                 ad_hoc_droplet = .true. 
+                                 solvent_QM_droplet_radius = real_value
                              end select
                              end if
 
@@ -536,9 +539,9 @@ end subroutine allocate_species
 !
 !
 !
-!=======================================
+!=============================================================================================================
  subroutine get_line_apart(  line , done , EH_MM , feature , start , finale , label , int_value , real_value )
-!=======================================
+!=============================================================================================================
 implicit none
 character(*)            , intent(in)  :: line
 logical                 , intent(out) :: done 
@@ -569,7 +572,12 @@ EH_MM = command(8:9)
 n1 = index(command,"(") 
 n2 = index(command,")") 
 
-feature = command(11:n1-1)
+if( n1 /= 0) &
+then
+     feature = command(11:n1-1)
+else
+     if( index(command,"DROPLET") /= 0 ) feature = "DROPLET"
+endif
 
 interval = command(n1+1:n2-1)
 n = index(interval,":") 
@@ -606,7 +614,7 @@ select case(feature)
        case( "RESIDUE" , "ATOM" , "QMMM" )
        label = trim(string)
 
-       case( "V_SHIFT" )
+       case( "V_SHIFT" , "DROPLET" )
        read(string,'(f9.5)') real_value
 
        case( "NR" )
@@ -798,6 +806,7 @@ rnd_seed = .false.
 DK_of_mixing = "local"
 OPT_parms = .false.
 ad_hoc = .true.
+ad_hoc_droplet = .false.
 file_type = "structure"
 file_format = "pdb"
 HFP_Forces = .false.
