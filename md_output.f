@@ -1,11 +1,12 @@
 module MD_dump_m
 
     use constants_m
-    use MM_types        , only: MM_atomic
-    use MM_input        , only: MM_frame_step , thermostat
-    use parameters_m    , only: n_t, restart
-    use syst            , only: bath_T, Initial_density
-    use MD_read_m       , only: MM , atom , molecule , species
+    use MM_types          , only: MM_atomic
+    use MM_input          , only: MM_frame_step , thermostat
+    use parameters_m      , only: n_t, restart
+    use syst              , only: bath_T, Initial_density
+    use MD_read_m         , only: MM , atom , molecule , species
+    use Structure_Builder , only: unit_cell 
 
     public :: output , cleanup , saving_MM_frame , GenerateConfigs
 
@@ -96,7 +97,7 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,'(''Bond Potential              :'',F14.4)') bdpot     *mol*factor3*1.d-6    
     write(10,'(''Harmonic Bond Potential     :'',F14.4)') harm_bond *mol*factor3*1.d-6    
     write(10,'(''Morse Bond Potential        :'',F14.4)') morse_bond*mol*factor3*1.d-6    
-    write(10,'(''Morse (Inter) Potential     :'',F14.4)') Morspot   *mol*1.d-6    
+    write(10,'(''Morse (Inter) Potential     :'',F14.4)') Morspot   *mol*factor3*1.d-6    
     write(10,'(''Angle Potential             :'',F14.4)') angpot    *mol*factor3*1.d-6   
     write(10,'(''Dihedral Potential          :'',F14.4)') dihpot    *mol*factor3*1.d-6   
     write(10,'(''Proper Dihedral             :'',F14.4)') proper_dih*mol*factor3*1.d-6   
@@ -153,7 +154,7 @@ close(11)
                             atom(i) % EHSymbol       ,          &     ! <== atom type of Huckel's 
                             ' '                      ,          &     ! <== alternate location indicator
                             atom(i) % residue        ,          &     ! <== residue name
-                            ' '                      ,          &     ! <== chain identifier
+                            unit_cell % fragment(i)     ,          &     ! <== chain identifier
                             atom(i) % nr             ,          &     ! <== residue sequence number
                             ' '                      ,          &     ! <== code for insertion of residues
                             ( atom(i) % xyz(l) , l=1,3 )   ,    &     ! <== xyz coordinates
@@ -235,7 +236,7 @@ end subroutine ReGroupMolecule
  inquire(file=filename, EXIST=filefound)
  if (filefound) then
    write (cmd, '("/bin/rm ", A)' ) TRIM (filename)
-   call SYSTEM (cmd)
+   call SYSTEMQQ (cmd)
  endif
 
 end subroutine CLEANUP
