@@ -120,6 +120,8 @@ DO i = 1 , size(univ%atom)
 
 END DO
 
+if( ad_hoc_droplet) call QM_droplet( univ )
+
 call warnings( univ%atom ) 
 
 If( master ) Print 46
