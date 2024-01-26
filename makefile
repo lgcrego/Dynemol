@@ -81,6 +81,7 @@ SOURCE2 = constants_m.o \
 		  types_EHT.o \
 		  types_MM.o \
                   parms_var_module.o \
+		  util.o \
                   read_card.o \
 		  parameters.o \
                   MPI_topologies.o \
@@ -88,7 +89,6 @@ SOURCE2 = constants_m.o \
 		  parameters_MM.o \
 		  checklist.o \
 		  allocation_m.o \
-		  util.o \
 		  EHT_input.o \
 		  tuning.o \
                   IdentifyNonBonded.o \
