@@ -2,6 +2,10 @@ module util_m
 
     use constants_m
 
+    public:: fact , binomial , TO_UPPER_CASE
+
+private
+
 contains
 !
 !
@@ -34,6 +38,37 @@ real*8               :: binomial
 binomial = fact(n)/(fact(k)*fact(n-k))
 
 end function binomial
+!
+!
+!
+!======================================
+ pure FUNCTION TO_UPPER_CASE ( STRING )
+!======================================
+ implicit none
+ CHARACTER ( LEN = * )              , INTENT(IN)    :: STRING
+ CHARACTER ( LEN = LEN ( STRING ) )                 :: TO_UPPER_CASE
+
+! Local parameters ...
+INTEGER, PARAMETER :: BIG_A = ICHAR ( "A" ), LITTLE_A = ICHAR ( "a" ), LITTLE_Z = ICHAR ( "z" )
+
+! Local scalars ...
+INTEGER :: I, ICHR
+
+! Loop over the characters in the string ...
+DO I = 1,LEN ( STRING )
+
+!   Get the ASCII order for the character to be converted ...
+    ICHR = ICHAR ( STRING(I:I) )
+
+!   Use the order to change the case of the character ...
+    IF ( ( ICHR >= LITTLE_A ) .AND. ( ICHR <= LITTLE_Z ) ) THEN
+        TO_UPPER_CASE(I:I) = CHAR ( ICHR + BIG_A - LITTLE_A )
+    ELSE
+        TO_UPPER_CASE(I:I) = STRING(I:I)
+    END IF
+END DO
+
+END FUNCTION TO_UPPER_CASE
 !
 !
 !
