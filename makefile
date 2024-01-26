@@ -118,13 +118,13 @@ SOURCE2 = constants_m.o \
 		  types_EHT.o \
 		  types_MM.o \
           parms_var_module.o \
+		  util.o \
 		  OPT_parent.o \
           read_card.o \
 		  parameters.o \
 		  parameters_MM.o \
                   checklist.o \
 		  allocation_m.o \
-		  util.o \
 		  EHT_input.o \
 		  tuning.o \
                   IdentifyNonBonded.o \

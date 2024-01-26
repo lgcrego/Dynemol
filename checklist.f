@@ -3,6 +3,7 @@ MODULE setup_checklist
  use type_m
  use parameters_m
  use MM_input        
+ use util_m       , only: to_upper_case
 
  public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
 
@@ -68,9 +69,10 @@ implicit none
 character(len=3) :: month(12)=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
  
 ! local variables ... 
- integer :: date_time(8)
- character(len=3)  :: tag
- character(len=12) :: number_string
+ integer           :: ioerr , date_time(8)
+ character(len=3)  :: tag , EH_MM
+ character(len=12) :: number_string , keyword
+ character(len=80) :: line
 
 open (10, file='log.trunk/driver_parms_and_tuning.log', status='unknown')
 
@@ -220,8 +222,40 @@ if( ad_hoc ) then
    if( DRIVER /= "MM_Dynamics" ) then
        open (10, file='log.trunk/driver_parms_and_tuning.log', status='old', access='append')
        write(10,'("==  Electronic Tuning  ==")')
-       write(10,*)
-       CALL system("awk '/univ/ && NR >= 37 && NR <= 85' < $DYNEMOLDIR/tuning.f | awk '!/ !/' >> log.trunk/driver_parms_and_tuning.log")
+       write(10,'(/" ad_hoc          :" , A10)') merge(".true. <==",".false.   ",ad_hoc)          
+       !=========================
+       open(33, file='card.inpt', status='old', iostat=ioerr)
+       read_loop: do 
+           read(33,'(A)',iostat=ioerr) line
+           if ( ioerr /= 0 ) exit read_loop
+           read(line,*,iostat=ioerr) keyword ! <== keyword = first contiguous string from line
+           keyword = to_upper_case(keyword)
+       
+           if( index(keyword,"!") /= 0 ) cycle read_loop 
+       
+           if( keyword == "AD_HOC" ) then
+               do 
+                     read(33,'(A)',iostat=ioerr) line
+       
+                     CALL get_line_apart( line , done , EH_MM )
+       
+                     if( ioerr /= 0 ) exit
+                     if( done ) cycle 
+       
+                     if( EH_MM == "QM" ) &
+                     then
+                          write(10,'(t2,A80)') adjustl(line) 
+                     end if
+                     !this prevents double reading in the case of blank lines ...
+                     line = "XXXXXXXXXXXXXXXXXXXXXX"
+               end do  
+           end if
+           !this prevents double reading in the case of blank lines ...
+           keyword = "XXXXXXXXXXXXXXXXXXXXXX"
+       end do read_loop
+       close(33)
+       !=========================
+       CALL system("awk '/univ/ && NR >= 50 && NR <= 85' < $DYNEMOLDIR/tuning.f | awk '!/ !/' >> log.trunk/driver_parms_and_tuning.log")
        close(10)
    end if
 
@@ -240,6 +274,33 @@ end if
 include 'formats.h'
 
 end subroutine dump_driver_parameters_and_tuning
+!
+!
+!
+!=================================================
+ subroutine get_line_apart(  line , done , EH_MM )
+!=================================================
+implicit none
+character(*) , intent(in)  :: line
+logical      , intent(out) :: done 
+character(*) , intent(out) :: EH_MM
+
+! local variables ...
+integer            :: ioerr
+character(len=40)  :: command , command1 , command2 
+
+done = .false.
+
+read(line,*,iostat=ioerr) command , command1 , command2
+command = to_upper_case(command)
+If( command(1:6) /= "AD_HOC" ) then
+    done = .true. 
+    return
+    endif
+
+EH_MM = command(8:9) 
+
+end subroutine get_line_apart
 !
 !
 !
