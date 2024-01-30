@@ -518,15 +518,16 @@ if ( calc_rho_ab_smear == 'X' ) then
     TIME_INIT
     PRINT_INIT(" Smear Coherences vs. E difference (grid_2)")
 
-    allocate(f(n_part))
+    write(*,'(a)',advance='no') "  >> Enter the broadening width (sigma) in eV (DEFAULT = 0.02): "
+    read(*,*) sigma
+
+    isigma = int(10*sigma/dEg2 + 0.5)
 
     write(*,*) "Calculating..."
 
-    isigma = int(20*sigma/dEg2 + 0.5)
+    open(out, file='Occup_diff_smear.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
 
-    ! reusing array occ
     if(allocated(occ)) deallocate(occ)
-    allocate( occ(n_grid2,n_part,n_t), source = 0.d0 )
 
 #undef SOFT
 #define SOFT(expr) dsqrt(expr)
@@ -534,27 +535,19 @@ if ( calc_rho_ab_smear == 'X' ) then
 ! #define SOFT(expr) (log10(expr) + 1.d0)
 ! #define SOFT(expr) (expr)
 
-    !$omp parallel do private(it,iE,ip,k) shared(isigma,occ,rho,sigma)
-    do it = 1, n_t
-    do iE = 1, n_grid2
-    do ip = 1, n_part
-        do k = max(1, iE-isigma), min(n_grid2, iE+isigma)
-            occ(iE,ip,it) = occ(iE,ip,it) + rho(k,ip,it) * SOFT(dexp( -((iE-k)*dEg2)**2 / (2*sigma**2) ))
-        end do
-    end do
-    end do
-    end do
-    !$omp end parallel do
-
-    TIME_END("...done in ")
-    write(*,*) "Writing to Occup_diff_smear.dat ..."
-
-    open(out, file='Occup_diff_smear.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+    allocate(f(n_part))
 
     do it = 1, n_t, it_step
-    do iE = 1, nE
-        write(out,'(2f11.6,2es13.3e3)') t(it), E_GRID2(iE), occ(iE,:,it)
-    end do;  write(out,*)
+    do iE = 1, n_grid2
+    do ip = 1, n_part
+        f(ip) = 0.d0
+        do k = max(1, iE-isigma), min(n_grid2, iE+isigma)
+            f(ip) = f(ip) + rho(k,ip,it) * SOFT(dexp( -((iE-k)*dEg2)**2 / (2*sigma**2) ))
+        end do
+    end do
+    write(out,'(2f11.6,2es13.3e3)') t(it), E_GRID2(iE), f(:)
+    end do
+    write(out,*)
     end do
 
     close(out)
