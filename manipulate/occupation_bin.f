@@ -558,6 +558,8 @@ if ( calc_rho_ab_smear == 'X' ) then
 end if
 !------------------------------------------------------------------------
 
+stop
+
 end subroutine Post_proccess_Occupation
 
 end module Occupation

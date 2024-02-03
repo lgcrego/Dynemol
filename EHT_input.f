@@ -104,6 +104,7 @@ end do
 
 ! local variables ... 
  integer        :: ioerr , nr , i 
+ real*8         :: V_shift
  character(6)   :: spdf
  character(2)   :: dumb 
  character(8)   :: Symbol_char
@@ -144,7 +145,8 @@ do i = 1 , size(EH_atom)
                 EH_atom(i)%zeta(0,2)    ,   &      ! <== zetas of opt_eht_parms.input are given in units of Ang^{-1} ...
                 EH_atom(i)%coef(0,1)    ,   &
                 EH_atom(i)%coef(0,2)    ,   &
-                EH_atom(i)%k_WH(0)
+                EH_atom(i)%k_WH(0)      ,   &
+                V_shift
 
     select case ( adjustl(spdf) )
         case('s')
@@ -162,6 +164,7 @@ do i = 1 , size(EH_atom)
     EH_atom(i) % residue  =  adjustl( residue_char  )
     EH_atom(i) % DOS      =  atom( EH_atom(i)%AtNo ) % DOS
     EH_atom(i) % AngMax   =  atom( EH_atom(i)%AtNo ) % AngMax
+    EH_atom(i) % V_shift  =  V_shift
 
     ! input-error checking ...
     ! "Happy families are all alike; every unhappy family is unhappy in its own way"
@@ -175,7 +178,7 @@ do i = 1 , size(EH_atom)
         CALL warning("error in opt_eht_parms.input ; check Nzeta parameter")
         STOP 
     end If
- 
+
 end do
 
 close(3)
@@ -198,7 +201,7 @@ end do
 
 include 'formats.h'
 
-17 format(A8,t10,A12,t23,A11,t35,I7,t44,I10,t55,I9,t65,I5,t71,A6,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6)
+17 format(A8,t10,A12,t23,A11,t35,I7,t44,I10,t55,I9,t65,I5,t71,A6,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6,t140,F9.6)
 
 end subroutine read_OPT_parameters
 ! 
@@ -229,6 +232,7 @@ do i = 1 , size(EH_atom)
                     basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
                     basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
                     basis%k_WH      =  EH_atom(i)%k_WH  (0)
+                    basis%V_shift   =  EH_atom(i)%V_shift
                     basis%modified  =  .true.
                
                 end where
@@ -245,6 +249,7 @@ do i = 1 , size(EH_atom)
                     basis%zeta(1)   =  EH_atom(i)%zeta  (0,1)
                     basis%zeta(2)   =  EH_atom(i)%zeta  (0,2)
                     basis%k_WH      =  EH_atom(i)%k_WH  (0)
+                    basis%V_shift   =  EH_atom(i)%V_shift
                     basis%modified  =  .true.
                
                 end where
@@ -273,13 +278,15 @@ do i = 1 , size(EH_atom)
            case( "*" )
                 where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol)           &
                 .AND.  (adjustl(system%residue(1:2)) == EH_atom(i)%residue(1:2))) 
-                    system%Nvalen = EH_atom(i)%Nvalen
+                    system%Nvalen  = EH_atom(i)%Nvalen
+                    system%V_shift = EH_atom(i)%V_shift
                 end where
 
            case default 
                 where( (adjustl(system%MMSymbol) == EH_atom(i)%EHSymbol)           &
                 .AND.  (adjustl(system%residue) == EH_atom(i)%residue)) 
-                    system%Nvalen = EH_atom(i)%Nvalen
+                    system%Nvalen  = EH_atom(i)%Nvalen
+                    system%V_shift = EH_atom(i)%V_shift
                 end where
 
     end select
