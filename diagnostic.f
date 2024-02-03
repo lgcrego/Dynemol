@@ -103,8 +103,19 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
- Print*, " " 
+Print*, " " 
+Print 10, "dE1 = ",UNI%erg(32) - UNI%erg(31) , "  vs " , 2.74 , "  => error = ", ( UNI%erg(32) - UNI%erg(31)) - 2.74
+Print 10, "dE2 = ",UNI%erg(32) - UNI%erg(30) , "  vs " , 3.78 , "  => error = ", ( UNI%erg(32) - UNI%erg(30)) - 3.78
+Print 10, "dE3 = ",UNI%erg(32) - UNI%erg(29) , "  vs " , 3.87 , "  => error = ", ( UNI%erg(32) - UNI%erg(29)) - 3.87
+Print 10, "dE3 = ",UNI%erg(32) - UNI%erg(28) , "  vs " , 3.87 , "  => error = ", ( UNI%erg(32) - UNI%erg(28)) - 3.87
+Print 10, "dE1 = ",UNI%erg(33) - UNI%erg(31) , "  vs " , 4.65 , "  => error = ", ( UNI%erg(33) - UNI%erg(31)) - 4.65
+Print 10, "dE2 = ",UNI%erg(34) - UNI%erg(31) , "  vs " , 4.65 , "  => error = ", ( UNI%erg(34) - UNI%erg(31)) - 4.65
+Print 10, "dE3 = ",UNI%erg(31) - UNI%erg(30) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(30)) - 1.23
+Print 10, "dE1 = ",UNI%erg(31) - UNI%erg(29) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(29)) - 1.23
+Print 10, "dE2 = ",UNI%erg(31) - UNI%erg(28) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(28)) - 1.23
  
+10 format(A6,F9.5,A5,F9.5,A13,F9.5)
+
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 
      ! use this to check the orbitals separately ... 
