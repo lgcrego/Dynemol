@@ -128,6 +128,7 @@ module type_m
         real*8           :: k_WH(0:3)
         integer          :: DOS 
         real*8           :: polar
+        real*8           :: V_shift
     end type EHT     
 
 
@@ -599,6 +600,7 @@ do
     write(*,*) ' (15) El             '
     write(*,*) ' (16) Hl             '
     write(*,*) ' (17) flex           '
+    write(*,*) ' (18) V_shift        '
     write(*,*) ' any other number continues     '
 
 
@@ -659,6 +661,9 @@ do
 
         case(17)
             write(*,70) a(:) % flex
+
+        case(18)
+            write(*,60) a(:) % V_shift
 
         case default
             exit
