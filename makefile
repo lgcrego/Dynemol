@@ -118,13 +118,13 @@ SOURCE2 = constants_m.o \
 		  types_EHT.o \
 		  types_MM.o \
           parms_var_module.o \
+		  util.o \
 		  OPT_parent.o \
           read_card.o \
 		  parameters.o \
 		  parameters_MM.o \
                   checklist.o \
 		  allocation_m.o \
-		  util.o \
 		  EHT_input.o \
 		  tuning.o \
                   IdentifyNonBonded.o \
@@ -158,11 +158,11 @@ SOURCE2 = constants_m.o \
 		  Ehrenfest.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
+		  data_output.o \
 		  f_intra.o \
 		  f_inter.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
-		  data_output.o \
           backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \

@@ -804,6 +804,15 @@ end function C_Mulliken
 
  If ( present(flag) .AND. info/=0 ) write(*,*) 'info = ',info,' in GA_Eigen '
 
+ If ( present(flag) .AND. flag==2 ) &
+ then
+      OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
+          do i = 1 , N
+              write(9,*) i , FMO%erg(i)
+          end do
+      CLOSE(9)
+ end if
+
  !--------------------------------------------------------
  ! Overlap Matrix Factorization: S^(1/2) ...
  Allocate( S_eigen(N) )
@@ -816,7 +825,7 @@ end function C_Mulliken
 
  forall( i=1:N ) tool(:,i) = sqrt(S_eigen) * tool(:,i)
 
- !now S_matrix = S^(1/2) Lowdin Orthogonalization matrix ...
+ !now S_FMO = S^(1/2) Lowdin Orthogonalization matrix ...
  CALL gemm(dumb_S , tool , S_FMO , 'N' , 'N')
 
  DEALLOCATE( S_eigen , dumb_S , tool )

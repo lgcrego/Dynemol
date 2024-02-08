@@ -59,7 +59,7 @@ N_of_residues = size( Unit_Cell%list_of_residues )
 
  CALL Generate_Structure(1)
 
- If( NetCharge .AND. (.NOT. allocated(Net_Charge)) ) allocate( Net_Charge(Extended_Cell%atoms) )
+ If( NetCharge .AND. (.NOT. allocated(Net_Charge)) ) allocate( Net_Charge(Extended_Cell%atoms) , source = D_zero )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 

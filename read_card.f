@@ -6,10 +6,11 @@ use MM_parms_module
 
 private
 
-   public :: ReadInputCard , ReadInputCard_ADHOC , electron_fragment , hole_fragment
+   public :: ReadInputCard , ReadInputCard_ADHOC , electron_fragment , hole_fragment , solvent_QM_droplet_radius
 
    ! module variables ...
-   character(len=3) :: electron_fragment , hole_fragment
+   real*8           :: solvent_QM_droplet_radius
+   character(len=3) :: electron_fragment , hole_fragment 
 
 contains
 !
@@ -36,14 +37,15 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
 
 !=====================================================================================
-!  reading  the input CARD ...
+!  reading  the input CARD, one line at a time ...
 
 read_loop: do 
 
     read(33,'(A)',iostat=ioerr) line
     if ( ioerr /= 0 ) exit read_loop
-    read(line,*,iostat=ioerr) keyword
+    read(line,*,iostat=ioerr) keyword   ! <== keyword = first contiguous string from line
     keyword = to_upper_case(keyword)
+
     if( index(keyword,"!") /= 0 ) cycle read_loop 
 
     select case ( keyword )
@@ -87,18 +89,6 @@ read_loop: do
         case( "AD_HOC" ) 
             ad_hoc = get_logical(line)
 
-            ! skip for now, entry to be fully read later from subroutine ad_hoc_tuning ...
-            if( ad_hoc == .true. ) then
-                do 
-                   read(33,'(A)',iostat=ioerr) line
-                   read(line,*,iostat=ioerr) command
-                   command = to_upper_case(command)
-                   If( command(1:6) /= "AD_HOC" ) exit
-                   !this prevents double reading in the case of blank lines ...
-                   line = "XXXXXXXXXXXXXXXXXXXXXX"
-                end do
-            end if
-
 !--------------------------------------------------------------------                                                                                                   
 !           READING FILE FORMAT
 !
@@ -131,10 +121,6 @@ read_loop: do
 
         case( "NETCHARGE" ) 
                 NetCharge = get_logical(line)
-
-        case( "CH_AND_DP_STEP" ) 
-                read(line,*,iostat=ioerr) keyword , equal_sign , command
-                read(command,'(i)') CH_and_DP_step
 
         case( "DENSITYMATRIX" ) 
                 DensityMatrix = get_logical(line)
@@ -449,7 +435,7 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
 
 !==============================
-!  reading  the input CARD ...
+!  reading  the input CARD, one line at a time ...
 
 read_loop: do 
 
@@ -463,45 +449,48 @@ read_loop: do
     if( keyword == "AD_HOC" ) then
 
         do 
-           read(33,'(A)',iostat=ioerr) line
+              read(33,'(A)',iostat=ioerr) line
 
-           CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
+              CALL get_line_apart( line , done , EH_MM , feature , start , finale , label , int_value , real_value)
 
-           if( done ) exit
+              if( ioerr /= 0 ) exit
+              if( done ) cycle 
 
-           if( EH_MM == "QM" .AND. present(structure) ) then
+              if( EH_MM == "QM" .AND. present(structure) ) then
+ 
+                      select case(feature)
 
-                   select case(feature)
+                             case( "ATOM" )
 
-                          case( "ATOM" )
+                             case( "RESIDUE" )
+                                 structure%atom(start:finale) % residue = label 
+                             case( "NR" )
+                                 structure%atom(start:finale) % nr = int_value 
+                             case( "V_SHIFT" )
+                                 structure%atom(start:finale) % v_shift = real_value 
+                             case( "QMMM" )
+                                 structure%atom(start:finale) % QMMM = label 
+                             case( "DROPLET" )
+                                 ad_hoc_droplet = .true. 
+                                 solvent_QM_droplet_radius = real_value
+                             end select
+                             end if
 
-                          case( "RESIDUE" )
-                              structure%atom(start:finale) % residue = label 
-                          case( "NR" )
-                              structure%atom(start:finale) % nr = int_value 
-                          case( "V_SHIFT" )
-                              structure%atom(start:finale) % v_shift = real_value 
-                          case( "QMMM" )
-                              structure%atom(start:finale) % QMMM = label 
+              if( EH_MM == "MM" .AND. present(atom) ) then
 
-                          end select
-                          end if
+                      select case(feature)
 
-           if( EH_MM == "MM" .AND. present(atom) ) then
+                             case( "RESIDUE" )
+                                 atom(start:finale) % residue = label 
+                             case( "NR" )
+                                 atom(start:finale) % nr = int_value 
+                             end select
+                             endif
 
-                   select case(feature)
-
-                          case( "RESIDUE" )
-                              atom(start:finale) % residue = label 
-                          case( "NR" )
-                              atom(start:finale) % nr = int_value 
-                          end select
-                          endif
-
-           !this prevents double reading in the case of blank lines ...
-           line = "XXXXXXXXXXXXXXXXXXXXXX"
+              !this prevents double reading in the case of blank lines ...
+              line = "XXXXXXXXXXXXXXXXXXXXXX"
            
-        end do
+        end do  
 
     end if
     !this prevents double reading in the case of blank lines ...
@@ -550,9 +539,9 @@ end subroutine allocate_species
 !
 !
 !
-!=======================================
+!=============================================================================================================
  subroutine get_line_apart(  line , done , EH_MM , feature , start , finale , label , int_value , real_value )
-!=======================================
+!=============================================================================================================
 implicit none
 character(*)            , intent(in)  :: line
 logical                 , intent(out) :: done 
@@ -583,7 +572,12 @@ EH_MM = command(8:9)
 n1 = index(command,"(") 
 n2 = index(command,")") 
 
-feature = command(11:n1-1)
+if( n1 /= 0) &
+then
+     feature = command(11:n1-1)
+else
+     if( index(command,"DROPLET") /= 0 ) feature = "DROPLET"
+endif
 
 interval = command(n1+1:n2-1)
 n = index(interval,":") 
@@ -620,7 +614,7 @@ select case(feature)
        case( "RESIDUE" , "ATOM" , "QMMM" )
        label = trim(string)
 
-       case( "V_SHIFT" )
+       case( "V_SHIFT" , "DROPLET" )
        read(string,'(f9.5)') real_value
 
        case( "NR" )
@@ -706,10 +700,12 @@ select case( DRIVER )
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
         
         dynamic = T_ 
+        NetCharge = T_
 
     case( "avrg_confgs" )
  
         dynamic = ( F_ .OR. Survival )
+        NetCharge = F_
  
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
@@ -724,6 +720,7 @@ select case( DRIVER )
 
         QMMM = F_
         dynamic = T_
+        NetCharge = F_
         nuclear_matter = "MDynamics" 
         
     case default
@@ -750,8 +747,6 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     CALL warning("MUST turn off HFP_Forces; execution halted, check input card")
     stop 
 end if
-
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...
@@ -811,6 +806,7 @@ rnd_seed = .false.
 DK_of_mixing = "local"
 OPT_parms = .false.
 ad_hoc = .true.
+ad_hoc_droplet = .false.
 file_type = "structure"
 file_format = "pdb"
 HFP_Forces = .false.
@@ -819,7 +815,6 @@ Alpha_Tensor = .false.
 GaussianCube = .false.
 GaussianCube_step = 5000000
 NetCharge = .false.
-CH_and_DP_step = 5000000
 DensityMatrix = .false.
 AutoCorrelation = .false.
 VDOS_ = .false.

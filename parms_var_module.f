@@ -3,7 +3,7 @@ module EH_parms_module
 use type_m ,       only :  real_interval , warning
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
-integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step , CH_and_DP_step
+integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step 
 integer                 :: Pop_Size , N_generations , Top_Selection , CT_dump_step , Environ_step
 real*8                  :: t_i , t_f , sigma
 real*8                  :: Pop_range , Mutation_rate
@@ -17,7 +17,7 @@ character (len=8)       :: selection_by
 logical                 :: DensityMatrix , AutoCorrelation , VDOS_ , Mutate_Cross , QMMM , LCMO , preview , Adaptive_
 logical                 :: GaussianCube , Survival , SPECTRUM , DP_Moment , Alpha_Tensor , OPT_parms , ad_hoc , restart
 logical                 :: verbose , static , EnvField_ , Coulomb_ , CG_ , profiling , Induced_ , NetCharge , HFP_Forces , Band_structure
-logical                 :: resume , rnd_seed
+logical                 :: resume , rnd_seed , ad_hoc_droplet
 
 end module EH_parms_module
 

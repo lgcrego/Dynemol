@@ -1,7 +1,7 @@
 module GMX_routines
 
 use types_m
-use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo , Atomic_mass
+use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo
 use RW_routines         , only : Initialize_System
 use diagnosis_m
 use FUNCTION_routines   , only : res , Solvent_residue_groups 
@@ -18,7 +18,8 @@ implicit none
 type(universe) , intent(inout) :: sys
 
 ! local variables ...
-logical             , parameter     :: BACK = .TRUE. 
+character(1)                        :: answer
+logical             , parameter     ::  BACK = .TRUE. 
 
 !determine charge groups for TiO2 itp file ...
 !CALL TiO2_charge_groups(sys)
@@ -41,6 +42,11 @@ CALL diagnosis(sys)
 CALL Connect(sys)
 
 CALL Dump_pdb(sys)
+
+write(*,'(/a)') ">>>  Save itp file ? (y/n)"
+read (*,'(a)') answer
+
+If( answer == "y" ) CALL Dump_itp(sys)
 
 end subroutine save_GROMACS
 !
@@ -99,9 +105,70 @@ close(4)
 1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
 2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
 3 FORMAT(a6,i9,11i5)
-6 FORMAT(a6,a72)
+6 FORMAT(a72)
 
 end subroutine Dump_pdb
+!
+!
+!
+!=========================
+subroutine Dump_itp( sys )
+!=========================
+implicit none 
+type(universe)                      , intent(inout) :: sys
+
+! local variables ...
+integer                             :: i , n , N_of_resid_atoms , N_of_resid_groups , N_of_resid_elements
+type(atomic)        , allocatable   :: helper(:)
+character(len=3)    , allocatable   :: residues(:)
+
+CALL Identify_Residues( sys , residues )
+
+!----------------------------------------------
+!   generate .ipt files for GROMACS
+!----------------------------------------------
+
+allocate( helper(sys%N_of_atoms) )
+
+OPEN(unit=10,file='seed.itp',status='unknown')
+
+do n = 1 , size(residues)
+
+    N_of_resid_atoms    =  count ( sys%atom%resid == residues(n) )
+
+    if( n > 1 ) then
+        N_of_resid_groups = maxval( sys%atom%nresid , sys%atom%resid == residues(n) ) - maxval( sys%atom%nresid , sys%atom%resid == residues(n-1) )  
+    else
+        N_of_resid_groups = maxval( sys%atom%nresid , sys%atom%resid == residues(n) ) 
+    end if
+
+    N_of_resid_elements =  N_of_resid_atoms / N_of_resid_groups
+
+    helper = pack( sys%atom , sys%atom%resid == residues(n) , helper )  
+
+!    do i = 1 , N_of_resid_elements
+    do i = 1 , N_of_resid_atoms
+
+        write(10,5) i                               ,  &        ! <== serial number within the residue
+                    helper(i)%Symbol                ,  &        ! <== force field descriptor of atom type
+                    helper(i)%nresid                ,  &        ! <== residue identifier
+                    helper(i)%resid                 ,  &        ! <== residue name
+                    helper(i)%MMSymbol              ,  &        ! <== atom type
+                    helper(i)%nrcg                  ,  &        ! <== charge group
+                    helper(i)%charge                ,  &        ! <== charge of atom type       
+                    helper(i)%mass                              ! <== mass of chemical element 
+                    
+    end do
+    write(10,*) '$$$'
+end do
+close(10)
+
+deallocate( helper )
+
+5 FORMAT(i6,a8,i8,a7,a8,i8,F9.4,F9.4)
+
+
+end subroutine Dump_itp
 !
 !
 !
@@ -544,7 +611,7 @@ allocate( residues(counter) )
 residues = temp(1:counter)
 deallocate( temp )
 
-end subroutine Identify_Residues 
+end subroutine Identify_Residues
 !
 !
 !

@@ -27,8 +27,7 @@ module Chebyshev_driver_m
     use Schroedinger_m              , only : DeAllocate_QDyn
     use Polarizability_m            , only : Build_Induced_DP
     use Psi_Squared_Cube_Format     , only : Gaussian_Cube_Format
-    use Data_Output                 , only : Populations ,                  &
-                                             Net_Charge
+    use Data_Output                 , only : Populations 
     use Backup_m                    , only : Security_Copy ,                &
                                              Restart_state ,                &
                                              Restart_Sys
@@ -45,7 +44,6 @@ module Chebyshev_driver_m
     ! module variables ...
     type(STO_basis) , allocatable , dimension(:)   :: ExCell_basis
     Complex*16      , allocatable , dimension(:,:) :: AO_bra , AO_ket , DUAL_ket , DUAL_bra , past_AO_bra , past_AO_ket
-    real*8          , allocatable , dimension(:)   :: Net_Charge_MM
     real*8                                         :: t
     integer                                        :: nn , it
 
@@ -106,7 +104,6 @@ do frame = frame_init , frame_final , frame_step
 
     ! calculate, for use in MM ...
     If( QMMM ) then
-        Net_Charge_MM = Net_Charge
         CALL EhrenfestForce( Extended_Cell , ExCell_basis , past_AO_bra , past_AO_ket )
     end If
 
@@ -135,9 +132,9 @@ do frame = frame_init , frame_final , frame_step
         case( "MDynamics" )
 
             ! MM preprocess ...
-            if( frame == frame_step+1 ) CALL preprocess_MM( Net_Charge = Net_Charge_MM )   
+            if( frame == frame_step+1 ) CALL preprocess_MM()   
             ! MM precedes QM ; notice calling with frame -1 ...
-            CALL MolecularMechanics( t_rate , frame - 1 , Net_Charge = Net_Charge_MM )   ! <== MM precedes QM ...
+            CALL MolecularMechanics( t_rate , frame - 1 )   ! <== MM precedes QM ...
 
             ! IF QM_erg < 0 => turn off QMMM ; IF QM_erg > 0 => turn on QMMM ...
             QMMM = (.NOT. (Unit_Cell% QM_erg < D_zero)) .AND. (HFP_Forces == .true.)
@@ -244,8 +241,6 @@ CALL preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , AO_bra , AO_ket ,
 ! stop here to preview and check input and system info ...
 If( preview ) stop
 
-allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
-
 If( GaussianCube ) CALL Send_to_GaussianCube  ( it )
 
 If( Induced_ ) CALL Build_Induced_DP( ExCell_basis , Dual_bra , Dual_ket )
@@ -335,8 +330,6 @@ CALL Restart_State ( DUAL_bra , DUAL_ket , AO_bra , AO_ket , t , it , frame_rest
 CALL Restart_Sys ( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart )
 
 CALL Preprocess_ElHl_Chebyshev( Extended_Cell , ExCell_basis , DUAL_ket , AO_bra , AO_ket )
-
-allocate( Net_Charge_MM (Extended_Cell%atoms) , source = D_zero )
 
 If( Induced_ ) then
       CALL Build_Induced_DP( basis = ExCell_basis , instance = "allocate" )

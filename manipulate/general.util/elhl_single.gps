@@ -5,8 +5,8 @@ set border lw 2
 ##########################################
 # Adjust these ranges to your needs:
 #
-set yrange  [-20:-5]  # energy
-set xrange  [0:0.2]   # time
+set yrange  [-15:-5]  # energy
+set xrange  [0:0.5]   # time
 set cbrange [-1:1]    # occupation
 ##########################################
 
@@ -22,19 +22,18 @@ Ly = y1 - y0
 
 set bmargin at screen y0;  set tmargin at screen y1
 
-# Electron ========================================
-
+#  ========================================
 set output "elhl_NADyn.png"
 
 set multiplot
 
 set lmargin at screen x0;  set rmargin at screen x1
 
-set ytics in offset 0.7, 0.0 mirror
-set xtics in offset 0.0, 0.9
+set ytics out offset 1.1, 0.0 nomirror scale 0.5
+set xtics out offset 0.0, 0.8 nomirror scale 0.5
 
 set ylabel "Energy (eV)" offset 0.2, 0.0
-set xlabel "Time (ps)"   offset 0.0, 1.6
+set xlabel "Time (ps)"   offset 0.0, 1.2
 
 set cbtics offset -0.2,0
 
@@ -42,10 +41,16 @@ set pm3d map corners2color c1
 
 # great palletes can be found in http://slpr.sakura.ne.jp/qp/pm3d-colormap/
 
-# Electron-Hole occupancy ---------------------------------
-set palette defined ( 0 '#0fffee',1 '#0090ff', 2 '#000fff',3 '#000090',4 '#ffffff',5 '#7f0000', 6 '#ee0000', 7 '#ff7000', 8 '#ffee00')
-set colorbox user origin x1+0.01,y0 size 0.035,Ly
-set format cb "%4.2f"
+# back-ground: Electron-Hole occupancy ====
+set palette defined ( 0 '#0fffee',1 '#0090ff', 2 '#000fff',3 '#000090',4 '#ffffff',5 '#7f0000', 6 '#ee0000', 7 '#ff7000', 8 '#ffee00' )
+unset colorbox
+#set colorbox user origin x1+0.01,y0+0.01 size 0.035,Ly*0.97
+#set format cb "%4.2f"
 splot "Occup_smear.dat" using 1:2:($3-$4) notitle
 
+unset xtics 
+unset xlabel
+unset ytics 
+unset ylabel
+plot "Occup_el.dat" using 1:3 w p pt 7 ps 0.001 lc rgb 'black' notitle 
 unset multiplot

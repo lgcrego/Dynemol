@@ -43,7 +43,28 @@ type(universe) , intent(out) :: system
 integer          , allocatable  :: atom_No(:)
 integer                         :: i , j , ioerr , N_of_elements
 real*8                          :: x0 , y0 , z0 , factor
+character(len=1)                :: choice 
 character(len=3), allocatable   :: element(:) 
+
+call systemQQ("clear")
+! reads the number of atoms of each species ...
+write(*,'(/a)',advance='no') 'Do you need a cheat sheet of the poscar.dat file format? (y or n): '
+read(*,*) choice
+if( choice == "y" ) then
+     print*, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+     print*, "System Characteristics                                                        "
+     print*, "scale factor (float)                                                          "
+     print*, "   T11   T12   T13                                                            "
+     print*, "   T21   T22   T23                                                            "
+     print*, "   T13   T23   T33                                                            "
+     print*, "   list of chemical elements (in the order that they are listed below)        "
+     print*, "   quantity of each different_chemical_elements                               "
+     print*, "   x    y    z    TorF   TorF   TorF        (each field separarated by spaces)"
+     print*, "   .    .    .    .      .      .                                             "
+     print*, "   .    .    .    .      .      .                                             "
+     print*, "   .    .    .    .      .      .                                             "
+     print*, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+end if
 
 ! read System Characteristics and list of chemical elements ...
 OPEN(unit=3,file='poscar.dat',form="formatted",access="sequential",status='old',iostat=ioerr,err=10)
@@ -63,7 +84,7 @@ system%box(3) = dsqrt(x0*x0 + y0*y0 + z0*z0)
 system%box = system%box * factor
 
 ! reads the number of atoms of each species ...
-write(*,'(/a)',advance='no') 'Number of distinct chemical elements (in the order that appears in poscar.dat): '
+write(*,'(/a)',advance='no') '>>> Number of distinct chemical elements (chemical species): '
 read(*,*) N_of_elements
 allocate( atom_No(N_of_elements) )
 allocate( element(N_of_elements) )

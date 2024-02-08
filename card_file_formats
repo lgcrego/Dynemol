@@ -70,10 +70,6 @@
   GaussianCube      =        ! <== .TRUE. for generating cube files for MO visualization 
   GaussianCube_step =        ! <== time step for saving Gaussian Cube files (Integer)
 
-  NetCharge         =        ! <== .TRUE. for dumping charge Occupancy in pdb format 
-  CH_and_DP_step    =        ! <== time step for saving charge and Induced DP values (Integer)
-                             ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
-
   DensityMatrix     =        ! <== .TRUE. for generating data for postprocessing with manipulate program
   AutoCorrelation   =        ! <== .TRUE. for generating data for postprocessing with manipulate program
   VDOS_             =        ! <== .TRUE. velocity DOS data for postprocessing with manipulate program

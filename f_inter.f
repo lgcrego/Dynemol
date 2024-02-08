@@ -3,12 +3,13 @@ module F_inter_m
     use constants_m
     use omp_lib
     use type_m       , only : warning
-    use parameters_m , only : PBC
+    use parameters_m , only : PBC , QMMM
     use for_force    , only : rcut , vrecut , frecut , rcutsq , pot_INTER , Coul_inter , &
                               Vself , evdw , vscut , fscut , KAPPA
     use md_read_m    , only : atom , MM , molecule , special_pair_mtx
     use MM_types     , only : MM_system , MM_molecular , MM_atomic , debug_MM
     use setup_m      , only : offset
+    use Data_Output  , only : Net_Charge
     use gmx2mdflex   , only : SpecialPairs
 
     public :: FORCEINTER
@@ -353,6 +354,12 @@ real*8 :: chrgk , chrgl , ir2 , KRIJ , expar , r_kl
 
 chrgk = atom(k)% charge
 chrgl = atom(l)% charge
+
+if( QMMM ) &
+then
+     chrgk = atom(k)% charge + Net_Charge(k)
+     chrgl = atom(l)% charge + Net_Charge(l)
+endif
 
 r_kl  = SQRT(rkl2)
 

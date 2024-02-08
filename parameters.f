@@ -51,10 +51,6 @@ logical, parameter :: T_ = .true. , F_ = .false.
   GaussianCube      = F_                       
   GaussianCube_step = 5000000                 ! <== time step for saving Gaussian Cube files
 
-  NetCharge         = F_                      ! <== pdb format charge Occupancy 
-  CH_and_DP_step    = 1000000                 ! <== time step for saving charge and Induced DP values
-                                              ! <== pdb format: charge --> Occupancy ; DP --> next to occupancy
-
   DensityMatrix     = F_                      ! <== generates data for postprocessing 
   AutoCorrelation   = F_             
   VDOS_             = F_
@@ -143,17 +139,21 @@ select case( DRIVER )
     case( "q_dynamics" , "slice_Cheb" , "slice_AO" , "slice_FSSH" , "slice_CSDM" )
         
         dynamic = T_ 
+        NetCharge = T_
 
     case( "avrg_confgs" , "Genetic_Alg" , "diagnostic" )
 
         dynamic = ( F_ .OR. Survival )
+        NetCharge = F_
 
         If( Top_Selection > Pop_size ) stop ">> Top_Selection > Pop_size; execution aborted"
 
     case( "MM_Dynamics" )
 
         QMMM = F_
-        dynamic = F_
+        dynamic = T_                                                                                                                                                                                            
+        NetCharge = F_
+        nuclear_matter = "MDynamics"
         
     case default
         Print*, " >>> Check your driver options <<< :" , driver
@@ -179,8 +179,6 @@ elseif ( QMMM == F_ .AND. HFP_Forces == T_ .AND. driver /= "diagnostic" ) then
     CALL warning("MUST turn off HFP_Forces; execution halted, check parameters.f")
     stop 
 end if
-
-If ( nuclear_matter == "MDynamics" ) NetCharge = T_
 
 !-------------------------------------------------------------
 ! get command line argument to preview input data, then stop  ...

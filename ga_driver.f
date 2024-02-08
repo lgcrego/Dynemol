@@ -9,7 +9,7 @@ module GA_driver_m
  use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
- use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis
+ use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis , Cube_Coef , Cube_Zeta
  use Oscillator_m               , only : Optical_Transitions
  use Data_Output                , only : Dump_stuff
  use Psi_squared_cube_format    , only : Gaussian_Cube_Format
@@ -71,7 +71,7 @@ If( DIPOLE_ ) CALL Util_multipoles
 CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
 
 ! calculations with new parameters ...
-CALL GA_eigen( Extended_Cell, OPT_basis, UNI )
+CALL GA_eigen( Extended_Cell, OPT_basis, UNI , flag=2 )
 
 CALL Total_DOS( UNI%erg, TDOS )
 
@@ -96,25 +96,27 @@ Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , fi
 !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(32) - UNI%erg(31) , "  vs " , 2.70d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(31)) - 2.70d0
-Print 10, "dE2 = ",UNI%erg(32) - UNI%erg(30) , "  vs " , 3.78d0 , "  => error = ", ( UNI%erg(32) - UNI%erg(30)) - 3.78d0
-!Print 10, "dE3 = ",UNI%erg(50) - UNI%erg(48) , "  vs " , 5.3971d0 , "  => error = ", ( UNI%erg(50) - UNI%erg(48)) - 5.3971d0
-!Print 10, "dE4 = ",UNI%erg(49) - UNI%erg(48) , "  vs " , 1.5644d0 , "  => error = ", ( UNI%erg(49) - UNI%erg(48)) - 1.5644d0
-!Print 10, "dE5 = ",UNI%erg(51) - UNI%erg(50) , "  vs " , 1.3500d0 , "  => error = ", ( UNI%erg(51) - UNI%erg(50)) - 1.3500d0
-!Print 10, "dE6 = ",UNI%erg(48) - UNI%erg(47) , "  vs " , 0.2046d0 , "  => error = ", ( UNI%erg(48) - UNI%erg(47)) - 0.2046d0
-!Print 10, "dE7 = ",UNI%erg(47) - UNI%erg(46) , "  vs " , 0.1116d0 , "  => error = ", ( UNI%erg(47) - UNI%erg(46)) - 0.1116d0
-!Print 10, "dE8 = ",UNI%erg(52) - UNI%erg(51) , "  vs " , 0.1929d0 , "  => error = ", ( UNI%erg(52) - UNI%erg(51)) - 0.1929d0
-!Print 10, "dE9 = ",UNI%erg(53) - UNI%erg(51) , "  vs " , 0.3880d0 , "  => error = ", ( UNI%erg(53) - UNI%erg(51)) - 0.3880d0
+Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 6.50d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 6.5d0
+Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 2.10d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 2.10d0
+Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.d0
 
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
 
 ! Population analysis ...
-If( GaussianCube ) then
+If( GaussianCube ) &
+then
+    ! do it again because the STO have been optimized
+    do i = 1 , size(OPT_basis)  
+        Cube_Coef(i,:) = OPT_basis(i) % coef(:)
+        Cube_Zeta(i,:) = OPT_basis(i) % zeta(:) * a_Bohr
+    end do
+
     do i = 1 , size(MOnum)
         CALL Gaussian_Cube_Format( UNI%L(MOnum(i),:) , UNI%R(:,MOnum(i)) , MOnum(i) , 0.d0 )
     end do
+
     Print 220 , MOnum(:)
 end if
 
