@@ -49,7 +49,6 @@ real*8                                   :: evaluate_cost
 ! local variables ...
 integer  :: i , dumb
 real*8   :: eval(200) = D_zero
-real*8   :: REF_DP(3) , REF_Alpha(3)
 logical  :: input_mode
 
 input_mode = Adaptive_GA% mode
@@ -59,8 +58,9 @@ input_mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 32, 31, 2.70d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 32, 30, 3.78d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 5, 4, 8.d0, 0.4 )
+eval(me) = MO_erg_diff( OPT_UNI, 4, 3, 2.10d0, 0.6 )
+eval(me) = MO_erg_diff( OPT_UNI, 3, 2, 4.d0, 0.4 )
 !===========
 !  28    H-3
 !  29    H-2
@@ -99,29 +99,30 @@ eval(me) = MO_erg_diff( OPT_UNI, 32, 30, 3.78d0 )
 ! adaptive = {input_mode,lock} : logical flag to enable adpative GA method , lock sets reference = end
 !----------------------------------------------------------------------------------------------
 
-!30 ===================
-eval(me) =  Exclude (OPT_UNI, basis, MO=30, AO="Pz", EHSymbol = "NC", from_to = real_interval( 0.9 , 0.01), adaptive = input_mode)    
-eval(me) =  Exclude (OPT_UNI, basis, MO=30, EHSymbol = "N*", from_to = real_interval( 0.9 , 0.01), adaptive = input_mode)    
-eval(me) =  Exclude (OPT_UNI, basis, MO=30, EHSymbol = "CA", from_to = real_interval( 0.9 , 0.1), adaptive = input_mode)    
-eval(me) =  Exclude (OPT_UNI, basis, MO=30, EHSymbol = "CQ", from_to = real_interval( 0.9 , 0.2), adaptive = input_mode)    
-eval(me) =  Localize (OPT_UNI, basis, MO=30, EHSymbol = "NC", from_to = real_interval( 0.01 , 0.9 ), adaptive = input_mode)    
+!3 ===================
+eval(me) =  exclude (OPT_UNI, basis, MO=3, AO="S",  EHSymbol = "HW", from_to = real_interval( 0.91 , 0.30 ), adaptive  = input_mode) 
 
-!31 ===================
-eval(me) =  MO_character( OPT_UNI , basis , MO=31 , AO='Pz')
-eval(me) =  Localize (OPT_UNI, basis, MO=31, EHSymbol = "NC", from_to = real_interval( 0.01 , 0.90 ), adaptive  = input_mode) 
-
-!32 ===================
-eval(me) =  MO_character( OPT_UNI , basis , MO=32 , AO='Pz')
-eval(me) =  Exclude (OPT_UNI, basis, MO=32, EHSymbol = "NC", from_to = real_interval( 0.9, 0.1), adaptive = input_mode) 
-
+!5 ===================
+eval(me) =  MO_character( OPT_UNI , basis , MO=5 , AO='S')
+eval(me) =  exclude (OPT_UNI, basis, MO=5, AO="S",  EHSymbol = "HW", from_to = real_interval( 0.75 , 0.65 ), adaptive  = input_mode) 
+!eval(me) =  exclude (OPT_UNI, basis, MO=5, AO="S",  EHSymbol = "OW", from_to = real_interval( 0.93 , 0.12 ), adaptive  = input_mode) 
+!eval(me) =  exclude (OPT_UNI, basis, MO=5, AO="Pz", EHSymbol = "OW", from_to = real_interval( 0.97 , 0.36 ), adaptive  = input_mode) 
+eval(me) =  Bond_Type( sys , OPT_UNI , MO=5 , atom1=1 , AO1="S" , atom2=2 , AO2="S" , instance="-" ) 
+eval(me) =  Bond_Type( sys , OPT_UNI , MO=5 , atom1=1 , AO1="S" , atom2=3 , AO2="S" , instance="-" ) 
+!
+!!6 ===================
+!eval(me) =  MO_character( OPT_UNI , basis , MO=6 , AO='Py')
+!eval(me) =  Localize (OPT_UNI, basis, MO=6, AO="S", EHSymbol = "HW", from_to = real_interval( 0.1, 0.5), adaptive  = input_mode) 
+!eval(me) =  Localize (OPT_UNI, basis, MO=6, AO="Py", EHSymbol = "OW", from_to = real_interval( 0.1, 0.4), adaptive = input_mode) 
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------
-!REF_DP = [ 0.d-4 , 1.85d0 , 0.0000d0 ]
-!eval()  = DP(1) - REF_DP(1)     
-!eval()  = DP(2) - REF_DP(2)    
-!eval()  = DP(3) - REF_DP(3)   
+REF_DP = [ 0.0d0 , 0.0d0 , 1.85d0 ]
+eval(me+1) = DP(1) - REF_DP(1)     
+eval(me+2) = DP(2) - REF_DP(2)    
+eval(me+3) = DP(3) - REF_DP(3) 
+me = me + 3
 
 !-----------------------------------------------------
 ! Polarizability: Alpha tensor diagonal elements  ...

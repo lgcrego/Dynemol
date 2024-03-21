@@ -20,7 +20,7 @@ module diagnostic_m
                                       Generate_Structure ,   &
                                       Basis_Builder 
  use GA_QCModel_m            , only : Mulliken
- use DP_main_m               , only : Dipole_Matrix
+ use DP_main_m               , only : Dipole_Matrix , Dipole_Moment
  use Dielectric_Potential    , only : Environment_SetUp
  use Oscillator_m            , only : Optical_Transitions
  use Psi_squared_cube_format , only : Gaussian_Cube_Format
@@ -75,7 +75,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
+ If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
 
  If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
@@ -92,20 +92,16 @@ CALL Read_Command_Lines_Arguments( MOnum )
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
 
+ If( DP_Moment ) CALL Dipole_Moment( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP_total=DP )
+
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(32) - UNI%erg(31) , "  vs " , 2.74 , "  => error = ", ( UNI%erg(32) - UNI%erg(31)) - 2.74
-Print 10, "dE2 = ",UNI%erg(32) - UNI%erg(30) , "  vs " , 3.78 , "  => error = ", ( UNI%erg(32) - UNI%erg(30)) - 3.78
-Print 10, "dE3 = ",UNI%erg(32) - UNI%erg(29) , "  vs " , 3.87 , "  => error = ", ( UNI%erg(32) - UNI%erg(29)) - 3.87
-Print 10, "dE3 = ",UNI%erg(32) - UNI%erg(28) , "  vs " , 3.87 , "  => error = ", ( UNI%erg(32) - UNI%erg(28)) - 3.87
-Print 10, "dE1 = ",UNI%erg(33) - UNI%erg(31) , "  vs " , 4.65 , "  => error = ", ( UNI%erg(33) - UNI%erg(31)) - 4.65
-Print 10, "dE2 = ",UNI%erg(34) - UNI%erg(31) , "  vs " , 4.65 , "  => error = ", ( UNI%erg(34) - UNI%erg(31)) - 4.65
-Print 10, "dE3 = ",UNI%erg(31) - UNI%erg(30) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(30)) - 1.23
-Print 10, "dE1 = ",UNI%erg(31) - UNI%erg(29) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(29)) - 1.23
-Print 10, "dE2 = ",UNI%erg(31) - UNI%erg(28) , "  vs " , 1.23 , "  => error = ", ( UNI%erg(31) - UNI%erg(28)) - 1.23
+Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.00d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.0d0
+Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 2.10d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 2.10d0
+Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.d0
  
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
@@ -150,7 +146,6 @@ character(len=21)    :: string
 character(len=2) , allocatable :: list(:)
 ! local parameters ...
 integer , parameter  :: grid_size = 1500
-
 
 allocate( list , source = fetch_names(sys , basis , instance=token) )
 

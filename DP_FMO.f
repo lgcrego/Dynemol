@@ -79,7 +79,7 @@
  CALL DP_eigen_FMO( FMO_system , FMO_basis , FMO )
 
  CALL Build_DIPOLE_Matrix( FMO_system , FMO_basis )
- 
+
  CALL Dipole_Moment( FMO_system , FMO_basis , Q_center , FMO%L , FMO%R , DP_FMO )
 
  DeAllocate( FMO_basis )
@@ -101,7 +101,6 @@
 ! local variables ... 
  integer               :: i , j , info
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
-
 
  ALLOCATE( s_FMO   (size(basis),size(basis)) )
  ALLOCATE( h_FMO   (size(basis),size(basis)) )
@@ -295,6 +294,9 @@ If( .not. excited_DPF ) then
 
 end If
 
+! minus sign is due to the negative electron chage ...
+Electronic_DP = -Electronic_DP
+
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
 deallocate(R_vector)
@@ -369,7 +371,7 @@ do ia = 1 , system%atoms
     ! calculate rotation matrix for the highest l
     call RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
 
-    If(Rab > cutoff_Angs) goto 10
+    If(Rab > cutoff_Angs) cycle
 
     do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
     do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
@@ -417,7 +419,7 @@ do ia = 1 , system%atoms
 !---------------------------------------------------------------------------------------------------- 
     enddo
     enddo
-10 end do
+end do
 end do
 
 end subroutine Build_DIPOLE_Matrix

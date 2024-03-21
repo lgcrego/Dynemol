@@ -4,7 +4,7 @@ use type_m
 use constants_m
 use setup_checklist      
 use card_reading            , only : ReadInputCard
-use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
+use parameters_m            , only : Define_Environment , driver , restart
 use MM_input                , only : Define_MM_Environment , driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
@@ -19,7 +19,7 @@ use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
 
 ! local variables ...
-logical :: go_without_card
+logical :: go_without_card 
 
 ! Initialize GPU if necessary 
 call GPU_Init(0,1)
@@ -50,7 +50,7 @@ CALL read_EHT_parameters
 
 CALL Read_Structure
 
-If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_Environment
+If( need_MM_stuff ) CALL Build_MM_Environment
 
 CALL dump_driver_parameters_and_tuning
 

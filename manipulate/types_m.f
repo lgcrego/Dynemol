@@ -100,8 +100,7 @@ use ifport
 implicit none
 
 ! local variables ... 
-character(len=255) :: directory , this_command
-logical            :: TorF , exist
+character(len=255) :: directory
 
 !!to get current directory ...
 !integer :: length

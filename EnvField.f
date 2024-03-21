@@ -259,7 +259,7 @@ V_phi(:) = Q(:)/distance(:)
 do j = 1 , 3
 
     ! first order ...
-    V_phi2(:,j) = Q(:) * versor(:,j) / (distance(:)*distance(:))
+    V_phi2(:,j) = Q(:) * ( - versor(:,j) / (distance(:)*distance(:)) )
 
 end do
 
@@ -277,8 +277,8 @@ Q_phi(1) = sum( V_phi(:) )
 ! second order ...
 forall( j=1:3 ) Q_phi(j+1) = sum( V_phi2(:,j) )
 
-! applying optical dielectric screening ; fix sign problem ...
-Q_phi = - Q_phi * units / (refractive_index)**2
+! applying optical dielectric screening ...
+Q_phi = Q_phi * units / (refractive_index)**2
 
 deallocate( versor , distance , Q , V_phi , V_phi2 )
 
@@ -309,17 +309,20 @@ forall(j=1:3) MolPBC(1:N_of_M)% CC(j)      = Mol(:)% CC(j)
               MolPBC(1:N_of_M)% nr         = Mol(:)% nr
               MolPBC(1:N_of_M)% N_of_Atoms = Mol(:)% N_of_Atoms
 
-do i = 1 , N_of_M
+do concurrent (i=1:N_of_M)
+
     na = Mol(i)% N_of_Atoms
     If( .not. allocated(MolPBC(i)% PC% Q) ) Then
         allocate( MolPBC(i)% PC% Q(na)     )
         allocate( MolPBC(i)% PC% nr(na)    )
         allocate( MolPBC(i)% PC% xyz(na,3) )
     end If
+   
     MolPBC(i)% PC% Q   = Mol(i)% PC% Q  
     MolPBC(i)% PC% nr  = Mol(i)% PC% nr 
     MolPBC(i)% PC% xyz = Mol(i)% PC% xyz
-    end do
+
+end do
 
 nr_max = Mol(N_of_M)%nr 
 

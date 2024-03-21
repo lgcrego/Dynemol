@@ -1,15 +1,16 @@
 MODULE setup_checklist
 
  use type_m
- use parameters_m
  use MM_input        
+ use parameters_m 
  use util_m       , only: to_upper_case
 
- public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
+ public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology , need_MM_stuff
 
  private
 
  ! module variables ... 
+ logical :: need_MM_stuff
  logical :: done = .false.
 
  contains
@@ -54,6 +55,7 @@ If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     stop
 End If
 
+need_MM_stuff = EnvField_ .OR. (driver == "MM_Dynamics") .OR. (nuclear_matter == "MDynamics") .OR. (Environ_Type == "DP_MM")
 
 end subroutine checklist
 !

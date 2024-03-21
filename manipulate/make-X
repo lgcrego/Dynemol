@@ -1,4 +1,4 @@
-#
+# makefile for ifx and icx based oneAPI
 
 SUFFIX=.f
 
