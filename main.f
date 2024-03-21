@@ -6,7 +6,7 @@ use constants_m
 use setup_checklist      
 use card_reading            , only : ReadInputCard
 use MPI_definitions_m       , only : launch_MPI , setup_MPI_labor_force , master , myid
-use parameters_m            , only : Define_Environment , driver , nuclear_matter , restart
+use parameters_m            , only : Define_Environment , driver , restart
 use MM_input                , only : Define_MM_Environment , driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
@@ -63,7 +63,7 @@ CALL read_EHT_parameters
 
 CALL Read_Structure
 
-If( driver == "MM_Dynamics" .OR. nuclear_matter == "MDynamics" ) CALL Build_MM_Environment
+If( need_MM_stuff ) CALL Build_MM_Environment
 
 If( master ) then
     CALL dump_driver_parameters_and_tuning

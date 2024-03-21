@@ -19,7 +19,7 @@ module diagnostic_m
                                       Generate_Structure ,   &
                                       Basis_Builder 
  use GA_QCModel_m            , only : Mulliken , GA_Eigen
- use DP_main_m               , only : Dipole_Matrix
+ use DP_main_m               , only : Dipole_Matrix , Dipole_Moment
  use Dielectric_Potential    , only : Environment_SetUp
  use Oscillator_m            , only : Optical_Transitions
  use Psi_squared_cube_format , only : Gaussian_Cube_Format
@@ -74,7 +74,7 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  CALL Basis_Builder( Extended_Cell, ExCell_basis )
 
- If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP )
+ If( any([DP_Moment,Spectrum,EnvField_]) ) CALL Dipole_Matrix( Extended_Cell, ExCell_basis, UNI%L, UNI%R )
 
  If( EnvField_ ) CALL Environment_SetUp( Extended_Cell )
 
@@ -98,6 +98,8 @@ CALL Read_Command_Lines_Arguments( MOnum )
  do nr = 1 , N_of_residues
     CALL Partial_DOS( Extended_Cell , UNI , PDOS , nr )            
  end do
+
+ If( DP_Moment ) CALL Dipole_Moment( Extended_Cell, ExCell_basis, UNI%L, UNI%R , DP_total=DP )
 
  If( Spectrum ) CALL Optical_Transitions( Extended_Cell, ExCell_basis, UNI , SPEC )
 
@@ -157,7 +159,6 @@ character(len=21)    :: string
 character(len=2) , allocatable :: list(:)
 ! local parameters ...
 integer , parameter  :: grid_size = 1500
-
 
 allocate( list , source = fetch_names(sys , basis , instance=token) )
 

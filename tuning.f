@@ -120,7 +120,7 @@ DO i = 1 , size(univ%atom)
 
 END DO
 
-if( ad_hoc_droplet) call QM_droplet( univ )
+if(ad_hoc_droplet) call QM_droplet( univ )
 
 call warnings( univ%atom ) 
 
@@ -147,7 +147,12 @@ call ReGroup_Molecules(univ)
 
 nr_max =  maxval(univ%atom(:)%nr)
 
-univ % atom % solute = univ % atom % El 
+if( any(univ % atom % El) ) &
+then
+       univ % atom % solute = univ % atom % El 
+else
+       where( univ % atom % nr == 1 ) univ % atom % solute = .true. 
+end if
 
 ! identify the CG of the solute ...
 forall( i=1:3 ) solute_CG(i) = sum( univ%atom%xyz(i) , univ%atom%solute == .true. ) / count(univ%atom%solute)

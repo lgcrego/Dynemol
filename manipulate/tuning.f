@@ -17,17 +17,16 @@ contains
 !
 !
 !
-!=========================================
-subroutine ad_hoc_tuning( system , frame )
-!=========================================
+!======================================
+subroutine ad_hoc_tuning( sys , frame )
+!======================================
 implicit none
-type(universe)  , intent(inout) :: system
+type(universe)  , intent(inout) :: sys
 integer         , optional      :: frame
 
 ! local variables ...
-integer      :: i 
-real*8       :: delta_t = 0.d0
-character(3) :: MMSymbols(60)
+integer :: i  
+real*8  :: delta_t = 0.d0
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
@@ -41,7 +40,7 @@ character(3) :: MMSymbols(60)
 
  delta_t = 2.5d-4
 
-! If( system%time == 0.d0 .AND. present(frame) ) system % time = delta_t * (frame -1)
+! If( sys%time == 0.d0 .AND. present(frame) ) sys % time = delta_t * (frame -1)
 
 !----------------------------------
 !      define SPECIAL atoms 
@@ -59,7 +58,7 @@ character(3) :: MMSymbols(60)
 !      define operations: 
 ! copy, delete, translate, rotate, group
 !----------------------------------
-where(system % atom % resid == "MOL") system % atom % copy = .true.
+
 !----------------------------------
 !      define resid's
 !----------------------------------
@@ -68,7 +67,7 @@ where(system % atom % resid == "MOL") system % atom % copy = .true.
 !      define nresid's
 !----------------------------------
 
-!where(system % atom % Symbol /= "Si") system % atom %  nresid = 1
+!where(sys % atom % Symbol /= "Si") sys % atom %  nresid = 1
 
 !----------------------------------
 !     Selective_Dynamics
@@ -88,7 +87,7 @@ where(system % atom % resid == "MOL") system % atom % copy = .true.
 !end if
 
 !----------------------------------
-!CALL Information_from_ITP( system ) 
+!CALL Information_from_ITP( sys ) 
 !----------------------------------
 
 
@@ -103,7 +102,6 @@ implicit none
 type(universe)  , intent(inout) :: system
 
 ! local variables ...
-integer                     :: i , ioerr
 character(1)  , allocatable :: fragment(:)
 
 ! setting up residue structure ...

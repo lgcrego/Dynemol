@@ -434,7 +434,7 @@ open(33, file='card.inpt', status='old', iostat=ioerr, err=10)
 !   file error msg ...
 10 if( ioerr > 0 ) stop '"card.inpt" file not found; terminating execution'
 
-!==============================
+!=================================================
 !  reading  the input CARD, one line at a time ...
 
 read_loop: do 
@@ -470,11 +470,21 @@ read_loop: do
                                  structure%atom(start:finale) % v_shift = real_value 
                              case( "QMMM" )
                                  structure%atom(start:finale) % QMMM = label 
+                             case( "DP_MOMENT" )
+                                 structure%atom(start:finale) % DPF = .true. 
                              case( "DROPLET" )
                                  ad_hoc_droplet = .true. 
                                  solvent_QM_droplet_radius = real_value
                              end select
                              end if
+
+              if( EH_MM == "MM" .AND. present(structure) ) then
+
+                      select case(feature)
+                             case( "DP_MOMENT" )
+                                 structure%atom(start:finale) % DPF = .true. 
+                             end select
+                             endif
 
               if( EH_MM == "MM" .AND. present(atom) ) then
 
@@ -554,11 +564,15 @@ integer      , optional , intent(out) :: int_value
 real*8       , optional , intent(out) :: real_value
 
 ! local variables ...
-integer            :: n , n1 , n2 , ioerr
-character(len=10)  :: interval , string
-character(len=40)  :: command , command1 , command2 
+integer                         :: n , n1 , n2 , ioerr
+character(len=10)               :: interval , string
+character(len=:) , allocatable  :: command , command1 , command2 
 
 done = .false.
+
+allocate( character(len=40) :: command  )
+allocate( character(len=40) :: command1 )
+allocate( character(len=40) :: command2 )
 
 read(line,*,iostat=ioerr) command , command1 , command2
 command = to_upper_case(command)
@@ -621,6 +635,8 @@ select case(feature)
        read(string,'(i)') int_value
 
 end select
+
+deallocate( command , command1 , command2 )
 
 end subroutine get_line_apart
 !
@@ -820,9 +836,11 @@ AutoCorrelation = .false.
 VDOS_ = .false.
 EnvField_ = .false.
 Environ_step = 5
+Environ_Type = "Ch_MM"
 Coulomb_ = .false.
 Induced_ = .false.
 frame_step = 1
+spawn_step = 100
 restart = .false.
 step_security = 1000
 t_i = 0.d0
@@ -843,7 +861,7 @@ pressure_relaxation_time = infty
 cutoff_radius = 50.d0
 damping_Wolf = 0.001d0
 driver_MM = "MM_Dynamics"
-read_velocities = .true.
+read_velocities = .false.
 MM_log_step = 50
 MM_frame_step = 50
 Units_mm = "eV"

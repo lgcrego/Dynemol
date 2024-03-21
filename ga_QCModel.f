@@ -57,7 +57,13 @@ real*8 :: cost , delta_E
 
 delta_E = GA%erg(up) - GA%erg(down)
 
-w = merge( weight , 1.0 , present(weight) ) 
+if( present(weight) ) &
+then
+    w = weight  
+else
+    w = 1.0
+endif
+
 cost = (delta_E - dE_ref) * w
 
 i_ = i_ + 1
@@ -774,7 +780,6 @@ end function C_Mulliken
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
  real*8  , ALLOCATABLE :: S_eigen(:) , tool(:,:)
 
-
 ! local parameters ... 
  real*8  , parameter   :: one = 1.d0 , zero = 0.d0
 
@@ -804,13 +809,16 @@ end function C_Mulliken
 
  If ( present(flag) .AND. info/=0 ) write(*,*) 'info = ',info,' in GA_Eigen '
 
- If ( present(flag) .AND. flag==2 ) &
+ If ( present(flag) ) &
  then
-      OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
-          do i = 1 , N
-              write(9,*) i , FMO%erg(i)
-          end do
-      CLOSE(9)
+     If ( flag==2 ) &
+     then
+          OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
+              do i = 1 , N
+                  write(9,*) i , FMO%erg(i)
+              end do
+          CLOSE(9)
+     end if
  end if
 
  !--------------------------------------------------------
@@ -1173,7 +1181,6 @@ If( .not. allocated(occupancy)) then
     allocate(occupancy(Fermi_state), source = 2)
     occupancy(Fermi_state) =  2 - mod( sum( system%Nvalen ) , 2 )
 end If
-
  
 allocate( a(n_basis,n_basis) )
 allocate( b(n_basis,n_basis) )
@@ -1183,26 +1190,24 @@ allocate( origin_Independent(Fermi_state) )
 do xyz = 1 , 3
 
 !   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
-
-    forall(states=1:Fermi_state)
-
-        forall(i=1:n_basis) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-
+    do states=1,Fermi_state
+        do concurrent(i=1:n_basis) 
+           a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+           end do
         origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:) * R_vec(:,states) )
-
-    end forall    
+        end do    
  
 !   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
-
     b = DP_matrix_AO(:,:,xyz)
-       
     CALL gemm(L_vec,b,a,'N','N',one,zero)    
-
     forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:))
 
 end do
 
 forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+
+! minus sign is due to the negative electron chage ...
+Electronic_DP = -Electronic_DP
  
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
