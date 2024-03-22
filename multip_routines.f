@@ -72,7 +72,7 @@ lb_max = atom(AtNo_b)%AngMax
 xab = xb - xa
 yab = yb - ya
 zab = zb - za
-Rab = dsqrt(xab*xab + yab*yab + zab*zab)
+
 xy  = dsqrt(xab*xab + yab*yab) 
 if (xy .gt. tol) then
     sinal = yab / xy
@@ -81,8 +81,16 @@ else
     sinal = 0.d0
     cosal = 1.d0
 endif
-sinbet = xy / Rab
-cosbet = zab / Rab
+
+Rab = dsqrt(xab*xab + yab*yab + zab*zab)
+if (xy .gt. tol) then
+    sinbet = xy / Rab
+    cosbet = zab / Rab
+else
+    sinbet = 0.d0
+    cosbet = 1.d0
+endif
+
 singa = 0.d0
 cosga = 1.d0
 lmax = max(lmult, la_max, lb_max)

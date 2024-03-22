@@ -41,7 +41,7 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
     ! local
     type(structure)              :: pbc_system
     type(STO_basis), allocatable :: pbc_basis(:)
-    integer                      :: NonZero, S_size
+    integer                      :: NonZero , S_size , PBC_aux(3)
     real*8                       :: Sparsity
 
     CALL util_overlap
@@ -54,8 +54,12 @@ subroutine OVERLAP_MATRIX(system, basis, S_matrix, purpose, site)
 
     select case (purpose)
         case('FMO')
+            PBC_aux = PBC
+            PBC = 0
+            ! if no PBC pbc_system = system
             CALL Generate_Periodic_Structure( system, pbc_system, pbc_basis )
             CALL Build_Overlap_Matrix(system, basis, pbc_system, pbc_basis, S_matrix)
+            PBC = PBC_aux
 
         case('GA-CG')
             ! if no PBC pbc_system = system ; do NOT use OPT_parms
@@ -170,7 +174,7 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
 
     motion_detector_ready = present(recycle) .AND. ready
 
-    S_matrix = 0
+    S_matrix = d_zero
 
     !$OMP parallel do &
     !$OMP   default(shared) &

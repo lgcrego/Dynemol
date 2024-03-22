@@ -32,12 +32,13 @@ implicit none
 ! local variables ...
  integer                        :: i , nr , N_of_residues 
  integer         , allocatable  :: MOnum(:)
- real*8                         :: first_cost , DP(3) , Alpha_ii(3)
+ real*8                         :: first_cost , Alpha_ii(3)
  logical                        :: DIPOLE_
  type(R_eigen)                  :: UNI
  type(f_grid)                   :: TDOS , SPEC
  type(f_grid)    , allocatable  :: PDOS(:) 
  type(STO_basis) , allocatable  :: OPT_basis(:)
+ real*8                         :: DP(3) = d_zero 
 
 ! preprocessing stuff ...................................
 
@@ -63,10 +64,14 @@ CALL Basis_Builder( Extended_Cell, ExCell_basis )
 ! setting up constraints ...
 CALL GA_eigen( Extended_Cell, ExCell_basis, UNI )
 
-! calculates the cost on input, for future comparison ...
-first_cost = evaluate_cost(Extended_Cell, UNI, ExCell_basis)
+If( DIPOLE_ ) &
+then
+    CALL Util_multipoles
+    CALL GA_DP_Analysis( Extended_Cell, ExCell_basis, UNI%L, UNI%R, DP )  
+end if
 
-If( DIPOLE_ ) CALL Util_multipoles
+! calculates the cost on input, for future comparison ...
+first_cost = evaluate_cost(Extended_Cell, UNI, ExCell_basis, DP ) 
 
 ! Optimization of Huckel parameters ... 
 CALL Genetic_Algorithm( ExCell_basis, OPT_basis )
@@ -91,13 +96,17 @@ If( spectrum ) CALL Optical_Transitions( Extended_Cell, OPT_basis, UNI , SPEC )
 
 ! compare costs to evalualte otimization ...
 Print*, " " 
-Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost
-
-!Print 154, DP, sqrt( dot_product(DP,DP) )
-!Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
+If( DIPOLE_ ) &
+then
+    Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, DP ,ShowCost=.true. ) , first_cost
+    Print 154, DP, sqrt( dot_product(DP,DP) )
+   !Print 189 , Alpha_ii , sum( Alpha_ii ) / three 
+else
+    Print 210 , evaluate_cost( Extended_Cell, UNI, OPT_basis, ShowCost=.true. ) , first_cost
+end if
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 6.50d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 6.5d0
+Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.00d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.0d0
 Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 2.10d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 2.10d0
 Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.d0
 

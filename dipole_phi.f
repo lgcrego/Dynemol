@@ -175,6 +175,9 @@ do nr = first_nr , last_nr
         ! classical electronic_DP ...
         forall(xyz=1:3) Electronic_DP(xyz) = sum( atom(i1:i2)%MM_charge*nr_vector(:,xyz) )
 
+        ! minus sign is due to the negative electron chage ...
+        Electronic_DP = -Electronic_DP
+
         DP_FMO(nr,:) = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
         deallocate( nr_vector )

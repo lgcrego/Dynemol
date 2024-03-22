@@ -1,0 +1,52 @@
+#!/usr/bin/gnuplot
+
+# Check if correct number of arguments are provided
+if (ARGC != 5) {
+    print "Usage: gnuplot -c panel_elhl.gp y_min y_max nf nrows ncolumns" 
+    exit 1
+}
+
+# Assign command-line arguments to variables
+y_min = ARGV[1]
+y_max = ARGV[2]
+nf = ARGV[3]
+nrows = ARGV[4]
+ncolumns = ARGV[5]
+
+set terminal pngcairo enhanced font ",16"  size 1920,1080
+set output "panel.png"
+# Set the layout of the matrix 
+set multiplot layout nrows,ncolumns 
+set lmargin 0
+set rmargin 0
+set tmargin 0
+set bmargin 0
+set format ''
+
+# Set y-axis range for each iteration
+set yrange [y_min:y_max]
+
+# Loop through each data file
+do for [i=1:nf] {
+    # Hide tick marks and labels
+    unset xtics
+    unset ytics
+    unset xlabel
+    unset ylabel
+    # Plot the corresponding data file
+    plot sprintf("./hl_data-%02d", i) using 1:2 with lines lc rgb 'blue'  lw 1.2 notitle
+}
+
+do for [i=1:nf] {
+    # Hide tick marks and labels
+    unset xtics
+    unset ytics
+    unset xlabel
+    unset ylabel
+    # Plot the corresponding data file
+    plot sprintf("./el_data-%02d", i) using 1:2 with lines lc rgb 'red' lw 1.2 notitle 
+}
+
+
+
+

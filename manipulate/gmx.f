@@ -307,17 +307,15 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-integer        :: i , j , N_of_atoms ,  iptr
-type(universe) :: temp
+integer               :: i , j , N_of_atoms ,  iptr
+integer , allocatable :: list(:)
+type(universe)        :: temp
 
+! sorting the fragments
 allocate( temp%atom(1) )
-
 N_of_atoms = size(system%atom)
-
 do i = 1 , N_of_atoms-1
-
     iptr = i
-
     do j = i+1 , N_of_atoms
         if( LLT( system%atom(j)%fragment , system%atom(iptr)%fragment ) ) then
             iptr = j
@@ -329,10 +327,25 @@ do i = 1 , N_of_atoms-1
         system%atom(i)    = system%atom(iptr)
         system%atom(iptr) = temp%atom(1)
     end if
-
 end do
-
 deallocate( temp%atom )
+
+! get rid of gaps in nr
+j = 1
+allocate( list(N_of_atoms) )
+list(1) = 1
+do i = 2 , N_of_atoms
+    if( system%atom(i)%nresid == system%atom(i-1)%nresid ) &
+    then
+         list(i) = list(i-1)
+    else
+         j = j + 1
+         list(i) = j
+    end if
+end do
+system%atom(:)%nresid = list(:)
+
+deallocate(list)
 
 end subroutine Sort_Fragments
 !

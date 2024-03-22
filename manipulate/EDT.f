@@ -76,8 +76,57 @@ type(universe)              , intent(inout) :: system
 integer        , optional   , intent(in)    :: copies(:)
 
 ! local variables ...
-real*8       :: T_vector(3) ,T_versor(3) , distance
-integer      :: i , option , at2 , at1
+real*8                         :: T_vector(3) ,T_versor(3) , distance
+integer                        :: i , option , at2 , at1 , rn
+character(len=1)               :: choice
+character(len=3)               :: residue
+integer          , allocatable :: rn_mask(:) 
+character(len=3) , allocatable :: residue_mask(:)
+
+
+
+CALL systemQQ( "clear" )
+
+write(*,'(/a)') ' Choose stuff to Copy : '
+write(*,'(/a)') ' (1) = use ad-hoc tuning '
+write(*,'(/a)') ' (2) = residue number '
+write(*,'(/a)') ' (3) = residue name '
+write(*,'(/a)',advance='no') '>>>   '
+read (*,'(a)') choice
+
+select case( choice )
+    case( '1' ) 
+        ! do nothing, proceed ...
+
+    case( '2' )
+        write(*,'(/a)') "choose the residue numbers to be translated (0 to finish) : "
+
+        allocate ( rn_mask(system%N_of_atoms) )
+        rn_mask(:) = system%atom(:)%nresid 
+        do
+           read*, rn
+           If( rn == 0 ) exit
+           
+           where( system% atom(:)% nresid == rn ) system% atom(:)% translate = .true.
+
+        end do
+        deallocate( rn_mask )
+
+    case( '3' )
+        write(*,'(1x,3/a)') "choose the name of the residue to be translated (@ to finish) : "
+
+        allocate ( residue_mask(system%N_of_atoms) ) 
+        residue_mask(:) = system%atom(:)%resid 
+        do
+           read*, residue
+           If( residue == "@" ) exit
+
+           where( system% atom(:)% resid == residue ) system% atom(:)% translate = .true.
+
+        end do
+        deallocate( residue_mask )
+ 
+end select
 
 ! define translation vector
 write(*,'(a)',advance='no') '> Use cartesian axis(1) or ad-hoc vector(2)? : '
@@ -328,7 +377,7 @@ select case( option )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(/a)') "choose the residue numbers  to be deleted (0 to exit) : "
+        write(*,'(/a)') "choose the residue numbers to be deleted (0 to finish) : "
 
         allocate ( rn_mask(system%N_of_atoms) )
         rn_mask(:) = system%atom(:)%nresid 
@@ -344,7 +393,7 @@ select case( option )
         deallocate( rn_mask )
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the residue numbers  to be deleted (@ to exit) : "
+        write(*,'(1x,3/a)') "choose the name of the residue to be deleted (@ to finish) : "
 
         allocate ( residue_mask(system%N_of_atoms) ) 
         residue_mask(:) = system%atom(:)%resid 

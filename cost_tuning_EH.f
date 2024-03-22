@@ -49,7 +49,6 @@ real*8                                   :: evaluate_cost
 ! local variables ...
 integer  :: i , dumb
 real*8   :: eval(200) = D_zero
-real*8   :: REF_DP(3) , REF_Alpha(3)
 logical  :: input_mode
 
 input_mode = Adaptive_GA% mode

@@ -259,7 +259,7 @@ V_phi(:) = Q(:)/distance(:)
 do j = 1 , 3
 
     ! first order ...
-    V_phi2(:,j) = Q(:) * versor(:,j) / (distance(:)*distance(:))
+    V_phi2(:,j) = Q(:) * ( - versor(:,j) / (distance(:)*distance(:)) )
 
 end do
 
@@ -277,8 +277,8 @@ Q_phi(1) = sum( V_phi(:) )
 ! second order ...
 forall( j=1:3 ) Q_phi(j+1) = sum( V_phi2(:,j) )
 
-! applying optical dielectric screening ; fix sign problem ...
-Q_phi = - Q_phi * units / (refractive_index)**2
+! applying optical dielectric screening ...
+Q_phi = Q_phi * units / (refractive_index)**2
 
 deallocate( versor , distance , Q , V_phi , V_phi2 )
 

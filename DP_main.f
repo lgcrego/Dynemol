@@ -8,6 +8,7 @@ module DP_main_m
     use Semi_Empirical_Parms    , only  : atom
     use parameters_m            , only  : verbose ,                             &
                                           DP_Moment ,                           &
+                                          Environ_Type ,                        &
                                           static ,                              &
                                           hole_state ,                          &
                                           excited_state => electron_state        ! for static calculations initial state = excited state
@@ -74,16 +75,11 @@ forall(i=1:3) NonZero(i) = count(DP_matrix_AO(:,:,i) /= D_zero)
 
 Sparsity(:) = dfloat(NonZero(:))/dfloat((M_size**2))
 
-If( verbose ) Print 73, Sparsity
-
-! execute only for static calculations ...
-if ( DP_Moment .AND. static ) CALL Dipole_Moment( system , basis , L_vec , R_vec , DP_total=Total_DP )
-
-!----------------------------------------------------------
-If( verbose ) then
-    Print*, '>> Dipole Moment done <<'
-    Print 155
-end If
+If( verbose ) &
+then 
+     Print 73, Sparsity
+     Print 155
+end if
 
 include 'formats.h'
 
@@ -165,14 +161,24 @@ If( hole_state /= I_zero ) then
     Electronic_DP = Electronic_DP - hole_DP + excited_DP
 
 end If
+! minus sign is due to the negative electron chage ...
+Electronic_DP = -Electronic_DP
+
+!================================================
+! use classical MM dipole moment, if requested ...
+If( Environ_Type == "DP_MM" ) call MM_DP_Moment( system , R_vector , Electronic_DP )
+!================================================
 
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
-
 !--------------------------------------------------------------------------------------
 
-If( verbose ) Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
-
-If( present(DP_total) ) DP_total = Total_DP
+If( verbose .AND. present(DP_total) ) &
+then
+    DP_total = Total_DP
+    Print*, " "
+    Print*, '>> Dipole Moment done <<'
+    Print 154, Total_DP, sqrt(sum(Total_DP*Total_DP))
+end if
 
 deallocate(R_vector , AO_mask)
 
@@ -344,25 +350,15 @@ allocate( origin_Dependent  (Fermi_state) )
 allocate( origin_Independent(Fermi_state) )
 
 ! origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
-
-!$OMP parallel
-    !$OMP single
-    do states = 1 , Fermi_state
-        !$OMP task untied
-        do i = 1 , n_basis
-            a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-        end do
-
-        origin_Dependent(states) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
-        !$OMP end task
+do states = 1 , Fermi_state
+    do concurrent (i=1:n_basis)
+        a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
     end do
-    !$OMP end single
-!$OMP end parallel
+    origin_Dependent(states) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
+end do
 
 ! origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
-
 b = DP_matrix_AO(:,:,xyz)
-
 CALL gemm( L_vec , b , a , 'N' , 'N' , D_one , D_zero )
 
 forall( states=1:Fermi_state ) origin_Independent(states) = occupancy(states) * sum( a(states,:)*L_vec(states,:) , AO_mask )
@@ -423,6 +419,27 @@ wavepacket_DP = origin_Dependent%DP + origin_Independent%DP
 deallocate( a , b )
 
 end function wavepacket_DP
+!
+!
+!
+!==============================================================
+ subroutine MM_DP_Moment( system , R_vector , MM_DP )
+!==============================================================
+use MD_read_m , only : MM_Atom => atom
+implicit none
+type(structure) , intent(in)  :: system
+real*8          , intent(in)  :: R_vector(:,:)
+real*8          , intent(out) :: MM_DP(3)
+
+! local variables ...
+integer :: xyz
+
+! classical electronic_DP ...  
+do xyz = 1,3 
+   MM_DP(xyz) = sum( MM_atom(:)%MM_charge * R_vector(:,xyz) , system%DPF == .true. )
+   end do
+
+end subroutine MM_DP_Moment 
 !
 !
 !
