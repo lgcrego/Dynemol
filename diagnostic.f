@@ -99,9 +99,9 @@ CALL Read_Command_Lines_Arguments( MOnum )
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.00d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.0d0
-Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 2.10d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 2.10d0
-Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.d0
+Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.91d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.91d0
+Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 1.84d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 1.84d0
+Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.28d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.28d0
  
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
