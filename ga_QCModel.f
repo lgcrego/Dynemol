@@ -1160,10 +1160,15 @@ real*8                        :: Nuclear_DP(3), Electronic_DP(3), Center_of_Char
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:), b(:,:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
+logical         , allocatable :: AO_mask(:)
 
 ! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
 real*8          , parameter   :: one = 1.d0 , zero = 0.d0
+
+! define system for DP_Moment calculation ...
+allocate( AO_mask(size(basis)) , source = .true. )
+AO_mask = merge( basis%DPF , AO_mask , any(basis%DPF) )
 
 Center_of_Charge = C_of_C(system)
 
@@ -1188,20 +1193,18 @@ allocate( origin_Dependent(Fermi_state) )
 allocate( origin_Independent(Fermi_state) )
 
 do xyz = 1 , 3
-
 !   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
     do states=1,Fermi_state
         do concurrent(i=1:n_basis) 
            a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
            end do
-        origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:) * R_vec(:,states) )
+        origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
         end do    
  
 !   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
     b = DP_matrix_AO(:,:,xyz)
     CALL gemm(L_vec,b,a,'N','N',one,zero)    
-    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:))
-
+    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:) , AO_mask)
 end do
 
 forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
@@ -1214,6 +1217,7 @@ Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 deallocate( R_vector , a , b   )
 deallocate( origin_Dependent   )
 deallocate( origin_Independent )
+deallocate( AO_mask )
 
 ! AlphaPolar will deallocate it ...
 If( .not. Alpha_Tensor ) deallocate( DP_matrix_AO )
