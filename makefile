@@ -120,13 +120,13 @@ SOURCE2 = constants_m.o \
           read_card.o \
 		  parameters.o \
 		  parameters_MM.o \
-                  checklist.o \
 		  allocation_m.o \
 		  EHT_input.o \
 		  tuning.o \
                   IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
+          checklist.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  structure.o \

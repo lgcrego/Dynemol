@@ -44,11 +44,11 @@ else
     CALL system("echo dyn.trunk/ dos.trunk/ opt.trunk/ ancillary.trunk/ | xargs -n 1 cp log.trunk/card.inpt ")
 end if
 
-CALL checklist
-
 CALL read_EHT_parameters
 
 CALL Read_Structure
+
+CALL checklist
 
 If( need_MM_stuff ) CALL Build_MM_Environment
 
