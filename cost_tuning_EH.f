@@ -58,10 +58,10 @@ input_mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0, 0.8 )                                                                                                                                   
-eval(me) = MO_erg_diff( OPT_UNI, 16, 15, 2.81d0, 0.8 )
-eval(me) = MO_erg_diff( OPT_UNI, 15, 14, 0.06d0, 0.8 )
-eval(me) = MO_erg_diff( OPT_UNI, 14, 13, 1.08d0, 0.8 )
+eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0 )                                                                                                                                   
+eval(me) = MO_erg_diff( OPT_UNI, 16, 15, 2.81d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 15, 14, 0.06d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 14, 13, 1.08d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 13, 12, 8.76d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 12, 11, 0.21d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 11, 10, 0.28d0 )

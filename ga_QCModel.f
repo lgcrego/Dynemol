@@ -902,11 +902,12 @@ end function Build_Huckel
 !
 !
 !======================================================
- subroutine GA_DP_Analysis( system , basis , Total_DP )
+ subroutine GA_DP_Analysis( system , basis , L_vec , R_vec , Total_DP )
 !======================================================
 implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
+real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , intent(out)   :: Total_DP(3)
 
 !local variables ...

@@ -118,7 +118,6 @@ Print 10, "dE10 = ",UNI%erg(8 ) - UNI%erg(7 ) , "  vs " , 0.13d0 , "  => error =
 Print 10, "dE11 = ",UNI%erg(7 ) - UNI%erg(6 ) , "  vs " , 3.16d0 , "  => error = ", ( UNI%erg(7 ) - UNI%erg(6 )) - 3.16d0
 Print 10, "dE12 = ",UNI%erg(6 ) - UNI%erg(5 ) , "  vs " , 0.10d0 , "  => error = ", ( UNI%erg(6 ) - UNI%erg(5 )) - 0.10d0
 
-
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
 CALL Dump_OPT_parameters( OPT_basis , output='STDOUT' )
