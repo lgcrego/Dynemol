@@ -80,23 +80,23 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
-                  parms_var_module.o \
+          parms_var_module.o \
 		  util.o \
-                  read_card.o \
+          read_card.o \
 		  parameters.o \
-                  MPI_topologies.o \
+          MPI_topologies.o \
 		  OPT_parent.o \
 		  parameters_MM.o \
-		  checklist.o \
 		  allocation_m.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
-		  gmx2mdflex.o \
-                  namd2mdflex.o \
 		  structure.o \
+		  checklist.o \
+		  gmx2mdflex.o \
+          namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
@@ -110,29 +110,29 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
-                  CSDM_master.o \
-                  decoherence.o \
+          CSDM_master.o \
+          decoherence.o \
 		  QCModel_Huckel.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
 		  FMO.o \
-                  CSDM_workers.o \
-                  FSSH.o \
+          CSDM_workers.o \
+          FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
 		  f_intra.o \
 		  f_inter.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -158,11 +158,11 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
-                  ElHl_Chebyshev_GPU.o \
+          ElHl_Chebyshev_GPU.o \
 		  TDSE_adiabatic.o \
-                  CSDM_adiabatic.o \
+          CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
