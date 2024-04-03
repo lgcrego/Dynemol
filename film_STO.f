@@ -119,17 +119,11 @@
 
  allocate( Psi(n_xyz_steps(1)+1,n_xyz_steps(2)+1,n_xyz_steps(3)+1) , source = D_zero ) 
 
-!$OMP parallel private(ix,iy,iz,x,y,z,x0,y0,z0,SlaterOrbital,r,AtNo,i,j,k,l,TotalPsiKet)
-!$OMP single
- DO ix = 0 , n_xyz_steps(1)
+ DO concurrent ( ix=0:n_xyz_steps(1) , iy=0:n_xyz_steps(2) , iz=0:n_xyz_steps(3) ) 
+
     x = (a + ix * dx) / a_Bohr
-    
-    !$OMP task untied
-    DO iy = 0 , n_xyz_steps(2)
-        y = (b + iy * dy) / a_Bohr
- 
-    DO iz = 0 , n_xyz_steps(3) 
-        z = (c + iz * dz) / a_Bohr
+    y = (b + iy * dy) / a_Bohr
+    z = (c + iz * dz) / a_Bohr
 
         i = 0 
         TotalPsiKet = C_zero 
@@ -182,12 +176,7 @@
 
         Psi( ix+1 , iy+1 , iz+1 ) = TotalPsiKet
 
-    END DO          ! <==  Z coord
-    END DO          ! <==  Y coord
-    !$OMP end task 
- END DO             ! <==  X coord
-!$OMP end single 
-!$OMP end parallel 
+ END DO   
 
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 

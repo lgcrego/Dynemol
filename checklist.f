@@ -1,15 +1,17 @@
 MODULE setup_checklist
 
  use type_m
- use parameters_m
  use MM_input        
- use util_m       , only: to_upper_case
+ use parameters_m 
+ use util_m            , only: to_upper_case
+ use Structure_Builder , only: Unit_Cell
 
- public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology
+ public :: checklist , dump_driver_parameters_and_tuning , Checking_Topology , need_MM_stuff
 
  private
 
  ! module variables ... 
+ logical :: need_MM_stuff
  logical :: done = .false.
 
  contains
@@ -48,12 +50,16 @@ select case( DRIVER )
 
 end select
 
+If ( DP_moment .neqv. any(Unit_Cell%DPF(:)) ) then
+    stop ">>> halting: variables DP_moment and %DPF (via ad_hoc tuning) do not agree, check consistency of input parameters"
+End If
 
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     CALL warning("halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics")
     stop
 End If
 
+need_MM_stuff = EnvField_ .OR. (driver == "MM_Dynamics") .OR. (nuclear_matter == "MDynamics") .OR. (Environ_Type == "DP_MM")
 
 end subroutine checklist
 !

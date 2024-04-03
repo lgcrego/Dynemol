@@ -7,6 +7,7 @@ module GA_QCModel_m
     use lapack95
     use parameters_m            , only : Alpha_Tensor , EnvField_ , Induced_
     use Semi_Empirical_Parms    , only : element => atom  
+    use Allocation_m            , only : Allocate_Structures
     use Structure_Builder       , only : Extended_Cell 
     use Overlap_Builder         , only : Overlap_Matrix
     use Hamiltonians            , only : X_ij , even_more_extended_Huckel
@@ -28,10 +29,12 @@ module GA_QCModel_m
     ! module variables ...
     Real*8  , allocatable :: DP_matrix_AO(:,:,:)
     Real*8  , allocatable :: H0(:,:) , S(:,:)        ! <== to be used by AlphaPolar ...
+    type(structure)       :: sys_DPF                 ! <== to be used by GA_DP_Analysis ...
     integer , allocatable :: occupancy(:)
     integer               :: i_= 0
     type(on_the_fly)      :: Adaptive_GA
     logical               :: eval_CG_cost = .false.
+    logical               :: done = .false.
 
     ! module parameters ...
     real*8 :: big = 1.d2
@@ -57,7 +60,13 @@ real*8 :: cost , delta_E
 
 delta_E = GA%erg(up) - GA%erg(down)
 
-w = merge( weight , 1.0 , present(weight) ) 
+if( present(weight) ) &
+then
+    w = weight  
+else
+    w = 1.0
+endif
+
 cost = (delta_E - dE_ref) * w
 
 i_ = i_ + 1
@@ -774,7 +783,6 @@ end function C_Mulliken
  real*8  , ALLOCATABLE :: Lv(:,:) , Rv(:,:) , s_FMO(:,:) , h_FMO(:,:) , dumb_S(:,:) 
  real*8  , ALLOCATABLE :: S_eigen(:) , tool(:,:)
 
-
 ! local parameters ... 
  real*8  , parameter   :: one = 1.d0 , zero = 0.d0
 
@@ -804,13 +812,16 @@ end function C_Mulliken
 
  If ( present(flag) .AND. info/=0 ) write(*,*) 'info = ',info,' in GA_Eigen '
 
- If ( present(flag) .AND. flag==2 ) &
+ If ( present(flag) ) &
  then
-      OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
-          do i = 1 , N
-              write(9,*) i , FMO%erg(i)
-          end do
-      CLOSE(9)
+     If ( flag==2 ) &
+     then
+          OPEN(unit=9,file='ancillary.trunk/system-GA-ergs.dat',status='unknown')
+              do i = 1 , N
+                  write(9,*) i , FMO%erg(i)
+              end do
+          CLOSE(9)
+     end if
  end if
 
  !--------------------------------------------------------
@@ -890,18 +901,26 @@ end function Build_Huckel
 !
 !
 !
-!======================================================================
+!======================================================
  subroutine GA_DP_Analysis( system , basis , L_vec , R_vec , Total_DP )
-!======================================================================
+!======================================================
 implicit none
 type(structure) , intent(in)    :: system
 type(STO_basis) , intent(in)    :: basis(:)
 real*8          , intent(in)    :: L_vec(:,:) , R_vec(:,:)
 real*8          , intent(out)   :: Total_DP(3)
 
-CALL Build_Dipole_Matrix( system , basis )
+!local variables ...
+type(STO_basis) , allocatable :: basis_DPF(:)
+type(R_eigen)                 :: DPF       
 
-CALL Dipole_Moment( system , basis , L_vec , R_vec , Total_DP )
+CALL preprocess( system , basis , basis_DPF)
+
+CALL GA_eigen( sys_DPF , basis_DPF , DPF )
+
+CALL Build_Dipole_Matrix( sys_DPF , basis_DPF )
+
+CALL Dipole_Moment( sys_DPF , basis_DPF , DPF%L , DPF%R , Total_DP )
 
 end subroutine GA_DP_Analysis
 !
@@ -1152,10 +1171,15 @@ real*8                        :: Nuclear_DP(3), Electronic_DP(3), Center_of_Char
 real*8          , allocatable :: R_vector(:,:)
 real*8          , allocatable :: a(:,:), b(:,:)
 type(R3_vector) , allocatable :: origin_Dependent(:), origin_Independent(:)
+logical         , allocatable :: AO_mask(:)
 
 ! local parameters ...
 real*8          , parameter   :: Debye_unit = 4.803204d0
 real*8          , parameter   :: one = 1.d0 , zero = 0.d0
+
+! define system for DP_Moment calculation ...
+allocate( AO_mask(size(basis)) , source = .true. )
+AO_mask = merge( basis%DPF , AO_mask , any(basis%DPF) )
 
 Center_of_Charge = C_of_C(system)
 
@@ -1174,41 +1198,37 @@ If( .not. allocated(occupancy)) then
     occupancy(Fermi_state) =  2 - mod( sum( system%Nvalen ) , 2 )
 end If
 
- 
 allocate( a(n_basis,n_basis) )
 allocate( b(n_basis,n_basis) )
 allocate( origin_Dependent(Fermi_state) )
 allocate( origin_Independent(Fermi_state) )
 
 do xyz = 1 , 3
-
 !   origin dependent DP = sum{C_dagger * vec{R} * S_ij * C}
-
-    forall(states=1:Fermi_state)
-
-        forall(i=1:n_basis) a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
-
-        origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:) * R_vec(:,states) )
-
-    end forall    
+    do states=1,Fermi_state
+        do concurrent(i=1:n_basis) 
+           a(states,i) = L_vec(states,i) * R_vector(basis(i)%atom,xyz)
+           end do
+        origin_Dependent(states)%DP(xyz) = occupancy(states) * sum( a(states,:)*R_vec(:,states) , AO_mask )
+        end do    
  
 !   origin independent DP = sum{C_dagger * vec{DP_matrix_AO(i,j)} * C}
-
     b = DP_matrix_AO(:,:,xyz)
-       
     CALL gemm(L_vec,b,a,'N','N',one,zero)    
-
-    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:))
-
+    forall(states=1:Fermi_state) origin_Independent(states)%DP(xyz) = occupancy(states) * sum(a(states,:)*L_vec(states,:) , AO_mask)
 end do
 
 forall(xyz=1:3) Electronic_DP(xyz) = sum( origin_Dependent%DP(xyz) + origin_Independent%DP(xyz) )
+
+! minus sign is due to the negative electron chage ...
+Electronic_DP = -Electronic_DP
  
 Total_DP = ( Nuclear_DP - Electronic_DP ) * Debye_unit
 
 deallocate( R_vector , a , b   )
 deallocate( origin_Dependent   )
 deallocate( origin_Independent )
+deallocate( AO_mask )
 
 ! AlphaPolar will deallocate it ...
 If( .not. Alpha_Tensor ) deallocate( DP_matrix_AO )
@@ -1241,6 +1261,73 @@ integer              :: i , j
  deallocate(Qi_Ri)
 
 end function C_of_C
+!
+!
+!
+!===================================================
+ subroutine preprocess( system , basis , basis_DPF )
+!===================================================
+implicit none
+type(structure)               , intent(in)  :: system
+type(STO_basis)               , intent(in)  :: basis(:)
+type(STO_basis) , allocatable , intent(out) :: basis_DPF(:)
+
+!local variables ...
+integer :: i , j , k , size_DPF
+
+! just do it, once and for all ...
+!-------------------------------------------------------------------
+If( .not. done ) &
+then
+     size_DPF = count(system%DPF)
+     sys_DPF%atoms = size_DPF
+     call Allocate_Structures( size_DPF , sys_DPF )
+
+     do i=1,3
+         sys_DPF%coord(:,i) = pack(system%coord(:,i) , system%DPF )
+     end do
+     sys_DPF%AtNo     = pack( system%AtNo   , system%DPF )
+     sys_DPF%Nvalen   = pack( system%Nvalen , system%DPF )
+     sys_DPF%QMMM     = pack( system%QMMM   , system%DPF )
+     sys_DPF%k_WH     = pack( system%k_WH      , system%DPF )
+     sys_DPF%symbol   = pack( system%symbol    , system%DPF )
+     sys_DPF%fragment = pack( system%fragment  , system%DPF )
+     sys_DPF%MMSymbol = pack( system%MMSymbol  , system%DPF )
+     sys_DPF%residue  = pack( system%residue   , system%DPF )
+     sys_DPF%nr       = pack( system%nr        , system%DPF )
+     sys_DPF%V_shift  = pack( system%V_shift   , system%DPF )
+     sys_DPF%T_xyz    = system%T_xyz
+     sys_DPF%copy_No  = 0
+
+     sys_DPF%BasisPointer    = pack( system%BasisPointer , system%DPF )
+
+     sys_DPF%BasisPointer(1) = 0
+     do i = 2 , sys_DPF%atoms
+          sys_DPF%BasisPointer(i) = sys_DPF%BasisPointer(i-1) + element(sys_DPF%AtNo(i-1))%DOS
+     end do
+
+     sys_DPF%N_of_electrons = sum( sys_DPF%Nvalen , sys_DPF%QMMM == "QM" )
+
+     !===================================================================== 
+
+     size_DPF  = count(basis%DPF)
+     allocate( basis_DPF(size_DPF) )
+
+     done = .true.
+end if
+!-------------------------------------------------------------------
+
+basis_DPF = pack( basis , basis(:)%DPF )
+k=1
+do i = 1 , sys_DPF%atoms
+   do j = 1 , element(sys_DPF%AtNo(i))%DOS
+        basis_DPF(k)%atom = i
+        basis_DPF(k)%indx = k
+        k = k + 1
+   end do
+end do
+
+end subroutine preprocess     
 !
 !
 !

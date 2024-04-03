@@ -59,20 +59,6 @@ real*8  :: delta_t = 0.d0
 ! copy, delete, translate, rotate, group
 !----------------------------------
 
-where(                                                          &
-       sqrt(                                                    &
-            (sys%atom(:)%xyz(1) -sys%atom(1)%xyz(1))**2 + &
-            (sys%atom(:)%xyz(2) -sys%atom(1)%xyz(2))**2 + &
-            (sys%atom(:)%xyz(3) -sys%atom(1)%xyz(3))**2   &
-       ) <= 8.5                                                   &
-) sys%atom(:)%resid = "INP"       
-
-do i=1,size(sys%atom) 
-   where(sys%atom%nresid == sys%atom(i)%nresid) sys%atom%resid = sys%atom(i)%resid
-end do
-
-where(sys%atom%resid == "INP") sys%atom%fragment = "Q"
-
 !----------------------------------
 !      define resid's
 !----------------------------------

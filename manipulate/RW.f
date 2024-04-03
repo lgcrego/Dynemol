@@ -202,7 +202,7 @@ integer :: i , j , ioerr , ASCII
 
 OPEN(unit=3,file='input.xyz',status='old',iostat=ioerr,err=10)
 read(3,*) system%N_of_atoms
-read(3,*) system%Surface_Characteristics
+read(3,*) system%System_Characteristics
 
 ! reads the unit cell vectors for Direct coordinate mode
 read(3,*) system%box(1)
