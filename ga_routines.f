@@ -645,7 +645,7 @@ do n_EHS = 1 , N_of_EHSymbol
 enddo
 If( unit_tag == 13 ) close(13)
 
-17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6,t142,F5.2)
+17 format(t1,A2,t13,A3,t26,A3,t36,I3,t45,I3,t57,I3,t65,I3,t72,A3,t80,F9.5,t90,F9.6,t100,F9.6,t110,F9.6,t120,F9.6,t130,F9.6,t142,F6.2)
 
 include 'formats.h'
 

@@ -2,19 +2,18 @@
 .SUFFIXES:
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
-#FC=ifort -xHost -ip -fpp
-FC = mpiifort -xHost -ip -fpp
+FC = mpiifx -xHost -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
 SAFE = #-g -traceback -check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
-FFLAGS1 = -O3 -align 
+FFLAGS1 = -O2 -align 
 FFLAGS2 = -O2 -align -qopenmp -parallel -no-wrap-margin $(FREE) $(SAFE)
 
 LDFLAGS = -static-intel
 
-CXX = icpc -std=c++11
+CXX = icpx -std=c++11
 SAFE_CXX = #-g -traceback
 CFLAGS = -O2 -align -xHost -ip -qopenmp -fno-exceptions -restrict $(SAFE_CXX)
 
@@ -80,23 +79,23 @@ SOURCE2 = constants_m.o \
 		  exec_time.o \
 		  types_EHT.o \
 		  types_MM.o \
-                  parms_var_module.o \
+          parms_var_module.o \
 		  util.o \
-                  read_card.o \
+          read_card.o \
 		  parameters.o \
-                  MPI_topologies.o \
+          MPI_topologies.o \
 		  OPT_parent.o \
 		  parameters_MM.o \
-		  checklist.o \
 		  allocation_m.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
-		  gmx2mdflex.o \
-                  namd2mdflex.o \
 		  structure.o \
+		  checklist.o \
+		  gmx2mdflex.o \
+          namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \

@@ -3,7 +3,8 @@ MODULE setup_checklist
  use type_m
  use MM_input        
  use parameters_m 
- use util_m       , only: to_upper_case
+ use util_m            , only: to_upper_case
+ use Structure_Builder , only: Unit_Cell
  use OMP_lib
  use MPI_definitions_m , only : np
 
@@ -51,6 +52,9 @@ select case( DRIVER )
 
 end select
 
+If ( DP_moment .neqv. any(Unit_Cell%DPF(:)) ) then
+    stop ">>> halting: variables DP_moment and %DPF (via ad_hoc tuning) do not agree, check consistency of input parameters"
+End If
 
 If ( (frame_step /= 1) .AND. (file_type /= "trajectory") ) then
     CALL warning("halting: frame_step /= 1, only for avrg_confgs or time-slice dynamics")

@@ -57,11 +57,11 @@ end if
 
 CALL setup_MPI_labor_force
 
-If( master ) CALL checklist
-
 CALL read_EHT_parameters
 
 CALL Read_Structure
+
+If( master ) CALL checklist
 
 If( need_MM_stuff ) CALL Build_MM_Environment
 
