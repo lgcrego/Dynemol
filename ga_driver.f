@@ -105,9 +105,18 @@ else
 end if
 
 Print*, " " 
-Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.00d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.0d0
-Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 2.10d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 2.10d0
-Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.d0
+Print 10, "dE1  = ",UNI%erg(17) - UNI%erg(16) , "  vs " , 0.29d0 , "  => error = ", ( UNI%erg(17) - UNI%erg(16)) - 0.29d0
+Print 10, "dE2  = ",UNI%erg(16) - UNI%erg(15) , "  vs " , 2.81d0 , "  => error = ", ( UNI%erg(16) - UNI%erg(15)) - 2.81d0
+Print 10, "dE3  = ",UNI%erg(15) - UNI%erg(14) , "  vs " , 0.06d0 , "  => error = ", ( UNI%erg(15) - UNI%erg(14)) - 0.06d0
+Print 10, "dE4  = ",UNI%erg(14) - UNI%erg(13) , "  vs " , 1.08d0 , "  => error = ", ( UNI%erg(14) - UNI%erg(13)) - 1.08d0
+Print 10, "dE5  = ",UNI%erg(13) - UNI%erg(12) , "  vs " , 8.76d0 , "  => error = ", ( UNI%erg(13) - UNI%erg(12)) - 8.76d0
+Print 10, "dE6  = ",UNI%erg(12) - UNI%erg(11) , "  vs " , 0.21d0 , "  => error = ", ( UNI%erg(12) - UNI%erg(11)) - 0.21d0
+Print 10, "dE7  = ",UNI%erg(11) - UNI%erg(10) , "  vs " , 0.28d0 , "  => error = ", ( UNI%erg(11) - UNI%erg(10)) - 0.28d0
+Print 10, "dE8  = ",UNI%erg(10) - UNI%erg(9 ) , "  vs " , 1.22d0 , "  => error = ", ( UNI%erg(10) - UNI%erg(9 )) - 1.22d0
+Print 10, "dE9  = ",UNI%erg(9 ) - UNI%erg(8 ) , "  vs " , 0.83d0 , "  => error = ", ( UNI%erg(9 ) - UNI%erg(8 )) - 0.83d0
+Print 10, "dE10 = ",UNI%erg(8 ) - UNI%erg(7 ) , "  vs " , 0.13d0 , "  => error = ", ( UNI%erg(8 ) - UNI%erg(7 )) - 0.13d0
+Print 10, "dE11 = ",UNI%erg(7 ) - UNI%erg(6 ) , "  vs " , 3.16d0 , "  => error = ", ( UNI%erg(7 ) - UNI%erg(6 )) - 3.16d0
+Print 10, "dE12 = ",UNI%erg(6 ) - UNI%erg(5 ) , "  vs " , 0.10d0 , "  => error = ", ( UNI%erg(6 ) - UNI%erg(5 )) - 0.10d0
 
 10 format(A6,F9.5,A5,F9.5,A13,F9.5)
 
