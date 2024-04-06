@@ -491,7 +491,7 @@ integer :: i
  DO i = 1 , size(a)
 
     select case(adjustl(a(i)%Symbol))
-        case( 'H')
+        case( 'H' , "$$" )
             a(i)%AtNo = 1
         case( 'LI','Li')
             a(i)%AtNo = 3
