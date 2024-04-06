@@ -529,8 +529,11 @@ allocate( tmp_DP(nmax,3) , source=D_zero )
 length = tmp_ij( tmp_ij(1) - 1 ) - 1             ! <== physical size of DP_pack and ija
 nnz    = tmp_ij( tmp_ij(1) - 1 ) - 2             ! <== number of nonzero elements
 
-allocate( DP_pack(length,3) , source = tmp_DP  )
-allocate( ija    (length  ) , source = tmp_ij  )
+allocate( DP_pack(length,3) )
+forall(i=1:3) DP_pack(:length,i) = tmp_DP(:length,i)  
+
+allocate( ija (length) )
+ija(:length) = tmp_ij(:length)  
 
 deallocate( tmp_DP , tmp_IJ )
 

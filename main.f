@@ -5,7 +5,7 @@ use type_m
 use constants_m
 use setup_checklist      
 use card_reading            , only : ReadInputCard
-use MPI_definitions_m       , only : launch_MPI , setup_MPI_labor_force , master , myid
+use MPI_definitions_m       , only : launch_MPI , setup_MPI_labor_force , master , myid , world
 use parameters_m            , only : Define_Environment , driver , restart
 use MM_input                , only : Define_MM_Environment , driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
@@ -63,6 +63,7 @@ CALL Read_Structure
 
 If( master ) CALL checklist
 
+CALL MPI_Bcast( need_MM_stuff , 2 , mpi_logical , 0 , world , err )
 If( need_MM_stuff ) CALL Build_MM_Environment
 
 If( master ) then

@@ -2,18 +2,19 @@
 .SUFFIXES:
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
-FC = mpiifx -xHost -fpp
+#FC=ifort -xHost -ip -fpp
+FC = mpiifort -xHost -ip -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
 SAFE = #-g -traceback -check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
 
-FFLAGS1 = -O2 -align 
+FFLAGS1 = -O3 -align 
 FFLAGS2 = -O2 -align -qopenmp -parallel -no-wrap-margin $(FREE) $(SAFE)
 
 LDFLAGS = -static-intel
 
-CXX = icpx -std=c++11
+CXX = icpc -std=c++11
 SAFE_CXX = #-g -traceback
 CFLAGS = -O2 -align -xHost -ip -qopenmp -fno-exceptions -restrict $(SAFE_CXX)
 
@@ -109,29 +110,29 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
-                  CSDM_master.o \
-                  decoherence.o \
+          CSDM_master.o \
+          decoherence.o \
 		  QCModel_Huckel.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
 		  FMO.o \
-                  CSDM_workers.o \
-                  FSSH.o \
+          CSDM_workers.o \
+          FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
 		  f_intra.o \
 		  f_inter.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
-                  backup_MM.o \
+          backup_MM.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -157,11 +158,11 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
-                  ElHl_Chebyshev_GPU.o \
+          ElHl_Chebyshev_GPU.o \
 		  TDSE_adiabatic.o \
-                  CSDM_adiabatic.o \
+          CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
