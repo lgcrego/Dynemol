@@ -135,7 +135,7 @@ do generation = 1 , N_generations
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
-!       gather data and evaluate population cost ...
+        ! gather data and evaluate population cost ...
         snd_cost(i) = evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
@@ -150,7 +150,7 @@ do generation = 1 , N_generations
     CALL SelectTheFittest( cost , Pop , Pop_Size , GeneSize , BestCost)
 
 !   Mutation_&_Crossing preserves the top-selections ...
-    If( Mutate_Cross .AND. (mod(generation,10) /= 0) ) then
+    If( Mutate_Cross .AND. (mod(generation,5) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
         assign 159 to label
     else
@@ -722,22 +722,25 @@ select case ( selection_by )
           allocate( Prob_Selection(Pop_Size) )
           Prob_Selection = fitness / normalization
 
-          allocate( wheel(0:Pop_size) )
           allocate( indx (Pop_Size)   )
+          allocate( wheel(0:Pop_size) )
+          wheel(0:) = d_zero
+          do i = 1 , Pop_size
+               wheel(i) = wheel(i-1) + Prob_Selection(i)
+          end do
 
           do j = 1 , Pop_size
-
-               wheel(0:) = d_zero
                call random_number(rn)
-
-               do i = 1 , Pop_size
-                    wheel(i) = wheel(i-1) + Prob_Selection(i)
-                    if( rn > wheel(i-1) .AND. rn <= wheel(i) ) then
-                        indx(j)  = i
-                        cycle
-                        end if 
-                        end do
-                        end do 
+               i_loop:do i = 1 , Pop_size
+                    if( rn > wheel(i-1) .AND. rn <= wheel(i) ) &
+                    then
+                        indx(j) = i
+                        exit i_loop
+                    end if 
+               end do i_loop
+          end do 
+          ! just double-checking ...
+          forall(j=1:Pop_size) indx(j) = merge( Pop_size , j , indx(j) > Pop_size )
 
           print*, minloc(cost) , cost(minloc(cost))
 
