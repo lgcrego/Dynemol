@@ -663,22 +663,25 @@ select case ( selection_by )
           allocate( Prob_Selection(Pop_Size) )
           Prob_Selection = fitness / normalization
 
-          allocate( wheel(0:Pop_size) )
           allocate( indx (Pop_Size)   )
+          allocate( wheel(0:Pop_size) )
+          wheel(0:) = d_zero
+          do i = 1 , Pop_size
+               wheel(i) = wheel(i-1) + Prob_Selection(i)
+          end do
 
           do j = 1 , Pop_size
-
-               wheel(0:) = d_zero
                call random_number(rn)
-
-               do i = 1 , Pop_size
-                    wheel(i) = wheel(i-1) + Prob_Selection(i)
-                    if( rn > wheel(i-1) .AND. rn <= wheel(i) ) then
-                        indx(j)  = i
-                        cycle
-                        end if 
-                        end do
-                        end do 
+               i_loop:do i = 1 , Pop_size
+                    if( rn > wheel(i-1) .AND. rn <= wheel(i) ) &
+                    then
+                        indx(j) = i
+                        exit i_loop
+                    end if 
+               end do i_loop
+          end do 
+          ! just double-checking ...
+          forall(j=1:Pop_size) indx(j) = merge( Pop_size , j , indx(j) > Pop_size )
 
           print*, minloc(cost) , cost(minloc(cost))
 
