@@ -16,7 +16,7 @@ module GA_QCModel_m
                                          multipoles1c ,         &
                                          multipoles2c 
 
-    public :: MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
+    public :: MO_erg, MO_erg_diff, GA_eigen, GA_DP_Analysis, Mulliken, AlphaPolar, Bond_Type, MO_character, Localize, Exclude
     public :: eval_CG_cost , Adaptive_GA, i_ 
 
     private 
@@ -41,6 +41,36 @@ module GA_QCModel_m
     real*8 :: penalty = 1.d1
 
 contains
+!
+!
+!
+!=====================================================================
+ function MO_erg( GA , MO , ref , weight ) result(cost)
+!=====================================================================
+implicit none
+type(R_eigen)            , intent(in) :: GA
+integer                  , intent(in) :: MO
+real*8                   , intent(in) :: ref
+real          , optional , intent(in) :: weight
+
+!local variables ...
+real   :: w
+real*8 :: cost , delta_E
+
+delta_E = dabs(GA%erg(MO) - ref)
+
+if( present(weight) ) &
+then
+    w = weight  
+else
+    w = 1.0
+endif
+
+cost = delta_E * w
+
+i_ = i_ + 1
+
+end function MO_erg
 !
 !
 !
