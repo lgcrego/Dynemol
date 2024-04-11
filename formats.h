@@ -122,6 +122,8 @@
 
 163   FORMAT(/,1x,'AdaptiveCost_GA /     RND_Pop   : ',I5,' /',I5)
 
+164   FORMAT(/,1x,'>>> repositioning basis <<<')
+
 165   FORMAT(1x,'========= ',A20,' =========')
 
 166   FORMAT(1x,'truncation error = ',F8.5)
