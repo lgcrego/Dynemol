@@ -60,7 +60,7 @@ integer                         :: mpi_D_R = mpi_double_precision
 integer                         :: i , generation , err , Pop_start , GeneSize , label
 logical                         :: done = .false.
 type(R_eigen)                   :: GA_UNI
-type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
+type(STO_basis) , allocatable   :: basis_local_min(:) , CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
 ! reading input-GA key ...
 CALL Read_GA_key( basis )
@@ -93,9 +93,11 @@ If( master ) then
 end If
 !-----------------------------------------------
 
-! create new basis ...
-allocate( GA_basis (size(basis)) )
+! clone basis ...
+allocate( GA_basis        (size(basis)) )
+allocate( basis_local_min (size(basis)) )
 GA_basis = basis
+basis_local_min = basis
 
 allocate( cost    (Pop_size), source=D_zero ) 
 allocate( snd_cost(Pop_size) )
@@ -112,10 +114,18 @@ do generation = 1 , N_generations
         STOP
         end If
 
-    CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
     ! for on_the_fly cost evaluation ...
     CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
     CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
+
+    ! optimized basis becomes basis_local_min ...
+    CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
+    if( (mod(generation,30) == 0) ) &
+    then
+        basis_local_min = GA_basis
+        Pop(1,:) = 0.d0
+        if( master ) Print 164
+    end if
 
     ! sharing these variables with ga_QCModel ...
     Adaptive_GA%gen = generation ; Adaptive_GA%Ngen = N_generations
@@ -126,8 +136,9 @@ do generation = 1 , N_generations
     ! evaluate cost only for new Pop outside top_selection ...
     do i = myid + 1 , Pop_Size , np
 
-        ! intent(in):basis ; intent(inout):GA_basis ...
-        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
+        ! search around basis_local_min ...
+        ! intent(in):basis_local_min ; intent(inout):GA_basis ...
+        CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(i,:) ) 
 
         CALL GA_eigen( Extended_Cell , GA_basis , GA_UNI )
 
@@ -170,9 +181,17 @@ do generation = 1 , N_generations
     write(23,*) generation , BestCost
 
     ! saving the temporary optimized parameters ...
-    ! intent(in):basis ; intent(inout):GA_basis ...
-    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) ) 
+    ! intent(in):basis_local_min ; intent(inout):GA_basis ...
+    CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) ) 
     CALL Dump_OPT_parameters( GA_basis , output = "tmp" )
+
+    ! optimized basis becomes basis_local_min ...
+    if( (mod(generation,30) == 0) ) &
+    then
+        basis_local_min = GA_basis
+        Pop(1,:) = 0.d0
+        Print 164
+    end if
 
     If( generation == N_generations ) then
          done = .true.
@@ -198,7 +217,7 @@ If( CG_ ) then
     do i = 1 , Top_Selection 
 
         ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
+        CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(i,:) )
 
         GA_Selection(:,i) = GA_basis
 
@@ -210,18 +229,18 @@ If( CG_ ) then
     allocate( OPT_basis (size(basis)) )
     OPT_basis = CG_basis
 
-    deallocate( GA_basis , CG_basis , GA_Selection )
+    deallocate( GA_basis , CG_basis , GA_Selection , basis_local_min )
 
 else
 
     ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
+    CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
     OPT_basis = GA_basis
 
-    deallocate( GA_basis )
+    deallocate( GA_basis , basis_local_min )
 
 end if
 
