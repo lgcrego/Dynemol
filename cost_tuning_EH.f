@@ -58,18 +58,28 @@ input_mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0 )                                                                                                                                   
+eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 16, 15, 2.81d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 15, 14, 0.06d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 14, 13, 1.08d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 13, 12, 8.76d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 12, 11, 0.21d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 11, 10, 0.28d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 12, 11, 0.21d0 , 3.0)
+eval(me) = MO_erg_diff( OPT_UNI, 11, 10, 0.28d0 , 3.0)
 eval(me) = MO_erg_diff( OPT_UNI, 10, 9 , 1.22d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 9 , 8 , 0.83d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 8 , 7 , 0.13d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 7 , 6 , 3.16d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 6 , 5 , 0.10d0 )
+
+
+eval(me) = MO_erg_diff( OPT_UNI, 12, 9 , 1.709d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 12, 8 , 2.54d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 12, 7 , 2.67d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 12, 10, 0.485d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 11, 9 , 1.50d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 11, 8 , 2.33d0 )
+eval(me) = MO_erg_diff( OPT_UNI,  9, 7 , 0.958d0 )
+eval(me) = MO_erg_diff( OPT_UNI,  8, 6 , 3.291d0 )
 !----------------------------------------------------------------------------------------------
 ! ==> MO_character( OPT_UNI , basis , MO , AO )
 ! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
@@ -103,23 +113,23 @@ eval(me) = MO_erg_diff( OPT_UNI, 6 , 5 , 0.10d0 )
 !eval(me) =  exclude (OPT_UNI, basis, MO=39, AO="S",  EHSymbol = "HW", from_to = real_interval( 0.91 , 0.30 ), adaptive  = input_mode) 
 
 !5 LUMO ===================
-!eval(me) =  MO_character( OPT_UNI , basis , MO=41 , AO='S')
-eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="Py", EHSymbol = "$$", from_to = real_interval( 0.45 , 0.40 ), adaptive  = lock) 
-eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "$$", from_to = real_interval( 0.325 , 0.32 ), adaptive  = input_mode) 
+eval(me) =  MO_character( OPT_UNI , basis , MO=41 , AO='S')
+eval(me) =  exclude (OPT_UNI, basis,  MO=41, AO="Py", EHSymbol = "$$", from_to = real_interval( 0.92 , 0.40 ),  adaptive  = input_mode) 
+eval(me) =  exclude(OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "$$", from_to = real_interval( 0.825 , 0.32 ), adaptive  = input_mode) 
 !eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "OW", from_to = real_interval( 0.93 , 0.12 ), adaptive  = input_mode) 
 !eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="Pz", EHSymbol = "OW", from_to = real_interval( 0.97 , 0.36 ), adaptive  = input_mode) 
 !eval(me) =  Bond_Type( sys , OPT_UNI , MO=41 , atom1=1 , AO1="S" , atom2=2 , AO2="S" , instance="-" ) 
 !eval(me) =  Bond_Type( sys , OPT_UNI , MO=41 , atom1=1 , AO1="S" , atom2=3 , AO2="S" , instance="-" ) 
 !
 !6 LUMO+1 ===================
-!eval(me) =  MO_character( OPT_UNI , basis , MO=42 , AO='Py')
+eval(me) =  MO_character( OPT_UNI , basis , MO=42 , AO='Py')
 !eval(me) =  Localize (OPT_UNI, basis, MO=42, AO="S", EHSymbol = "HW", from_to = real_interval( 0.1, 0.5), adaptive  = input_mode) 
 !eval(me) =  Localize (OPT_UNI, basis, MO=42, AO="Py", EHSymbol = "OW", from_to = real_interval( 0.1, 0.4), adaptive = input_mode) 
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------
-REF_DP = [ 0.0d0 , 0.0d0 , 2.2d0 ]
+REF_DP = [ 0.0d0 , 0.0d0 , 1.85d0 ]
 eval(me+1) = DP(1) - REF_DP(1)     
 eval(me+2) = DP(2) - REF_DP(2)    
 eval(me+3) = DP(3) - REF_DP(3) 

@@ -104,17 +104,17 @@ DO i = 1 , size(univ%atom)
         ! this is water, this is water, this is water ...
         case( 'H2O' , 'WAT' , 'TIP' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 1.d0
+            univ%atom(i)%solvation_hardcore = 2.d0
 
         ! this is acetonitrile ...
         case( 'ACN' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 3.d0
+            univ%atom(i)%solvation_hardcore = 2.d0
 
         ! case default ...
         case( 'SOL' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 3.d0
+            univ%atom(i)%solvation_hardcore = 2.d0
 
     end select
 

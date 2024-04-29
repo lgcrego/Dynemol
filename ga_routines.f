@@ -118,12 +118,13 @@ do generation = 1 , N_generations
     CALL MPI_BCAST( generation    , 1 , mpi_Integer , 0 , world , err )
     CALL MPI_BCAST( N_generations , 1 , mpi_Integer , 0 , world , err )
 
-    ! optimized basis becomes basis_local_min ...
     CALL MPI_BCAST( Pop , Pop_Size*GeneSize , mpi_D_R , 0 , world , err )
+    ! optimized basis becomes basis_local_min ...
     if( (mod(generation,30) == 0) ) &
     then
+        CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) )
         basis_local_min = GA_basis
-        Pop(1,:) = 0.d0
+        Pop(1,:) = D_zero
         if( master ) Print 164
     end if
 
@@ -184,14 +185,6 @@ do generation = 1 , N_generations
     ! intent(in):basis_local_min ; intent(inout):GA_basis ...
     CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) ) 
     CALL Dump_OPT_parameters( GA_basis , output = "tmp" )
-
-    ! optimized basis becomes basis_local_min ...
-    if( (mod(generation,30) == 0) ) &
-    then
-        basis_local_min = GA_basis
-        Pop(1,:) = 0.d0
-        Print 164
-    end if
 
     If( generation == N_generations ) then
          done = .true.
@@ -437,7 +430,7 @@ do  L = 0 , 2
         gene = gene + GA%key(4,EHS)
         If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
 
-        ! single STO orbitals ...
+        ! single STO orbitals; positive by definition ...
         gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
         If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
         where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = abs( Pop(gene) + basis%zeta(1) )

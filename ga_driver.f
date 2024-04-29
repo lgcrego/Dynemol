@@ -2,7 +2,6 @@ module GA_driver_m
 
  use type_m
  use constants_m
- use MPI_definitions_m          , only : slave 
  use parameters_m               , only : spectrum , DP_Moment , GaussianCube , Alpha_Tensor , OPT_parms
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm , Dump_OPT_parameters
