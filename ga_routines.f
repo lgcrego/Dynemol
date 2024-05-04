@@ -53,9 +53,9 @@ type(STO_basis) , allocatable   , intent(out)   :: OPT_basis(:)
 real*8                          :: BestCost
 real*8          , allocatable   :: Pop(:,:) , cost(:) 
 real*8                          :: GA_DP(3) , Alpha_ii(3)
-integer                         :: i , generation , info , Pop_start , GeneSize
+integer                         :: i , generation , info , Pop_start , GeneSize , label
 type(R_eigen)                   :: GA_UNI
-type(STO_basis) , allocatable   :: CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
+type(STO_basis) , allocatable   :: basis_local_min(:), CG_basis(:) , GA_basis(:) , GA_Selection(:,:)
 
 ! reading input-GA key ...
 CALL Read_GA_key( basis )
@@ -80,9 +80,11 @@ Pop(1,:) = D_zero
 
 !-----------------------------------------------
 
-! create new basis ...
-allocate( GA_basis (size(basis)) )
+! clone basis ...
+allocate( GA_basis        (size(basis)) )
+allocate( basis_local_min (size(basis)) )
 GA_basis = basis
+basis_local_min = basis
 
 allocate( cost(Pop_size) )
 
@@ -96,8 +98,9 @@ do generation = 1 , N_generations
 
     do i = 1 , Pop_Size
 
-        ! intent(in):basis ; intent(inout):GA_basis ...
-        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) ) 
+        ! search around basis_local_min ...
+        ! intent(in):basis_local_min ; intent(inout):GA_basis ...
+        CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(i,:) ) 
 
         CALL GA_eigen( Extended_Cell , GA_basis , GA_UNI )
 
@@ -105,7 +108,7 @@ do generation = 1 , N_generations
 
         If( Alpha_Tensor ) CALL AlphaPolar( Extended_Cell , GA_basis , Alpha_ii )
 
-!       gather data and evaluate population cost ...
+        ! gather data and evaluate population cost ...
         cost(i) = evaluate_cost( Extended_Cell , GA_UNI , GA_basis , GA_DP , Alpha_ii )
 
     end do
@@ -115,13 +118,15 @@ do generation = 1 , N_generations
 !   Mutation_&_Crossing preserves the top-selections ...
     If( Mutate_Cross .AND. (mod(generation,10) /= 0) ) then
         CALL Mutation_and_Crossing( Pop )
+        assign 159 to label 
     else
         Pop_start = Pop_size/4 + 1
         CALL generate_RND_Pop( Pop_start , Pop )       
+       assign 163 to label
     end If
 
     If( Adaptive_ ) then
-        Print 159 , generation , N_generations
+        Print label , generation , N_generations
     else
         Print 160 , generation , N_generations
     EndIf
@@ -129,9 +134,17 @@ do generation = 1 , N_generations
     write(23,*) generation , BestCost
 
     ! saving the temporary optimized parameters ...
-    ! intent(in):basis ; intent(inout):GA_basis ...
-    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) ) 
+    ! intent(in):basis_local_min ; intent(inout):GA_basis ...
+    CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) ) 
     CALL Dump_OPT_parameters( GA_basis , output = "tmp" )
+
+    ! optimized basis becomes basis_local_min ...
+    if( (mod(generation,30) == 0) ) &
+    then
+        basis_local_min = GA_basis
+        Pop(1,:) = 0.d0
+        Print 164
+    end if
 
 end do
 
@@ -150,7 +163,7 @@ If( CG_ ) then
     do i = 1 , Top_Selection 
 
         ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-        CALL modify_EHT_parameters( basis , GA_basis , Pop(i,:) )
+        CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(i,:) )
 
         GA_Selection(:,i) = GA_basis
 
@@ -162,18 +175,18 @@ If( CG_ ) then
     allocate( OPT_basis (size(basis)) )
     OPT_basis = CG_basis
 
-    deallocate( GA_basis , CG_basis , GA_Selection )
+    deallocate( GA_basis , CG_basis , GA_Selection , basis_local_min )
 
 else
 
     ! optimized parameters by GA method : intent(in):basis ; intent(inout):GA_basis ...    
-    CALL modify_EHT_parameters( basis , GA_basis , Pop(1,:) )
+    CALL modify_EHT_parameters( basis_local_min , GA_basis , Pop(1,:) )
 
     ! create OPT basis ...
     allocate( OPT_basis (size(basis)) )
     OPT_basis = GA_basis
 
-    deallocate( GA_basis )
+    deallocate( GA_basis , basis_local_min )
 
 end if
 
@@ -670,7 +683,7 @@ select case ( selection_by )
                wheel(i) = wheel(i-1) + Prob_Selection(i)
           end do
 
-          do j = 1 , Pop_size
+          do concurrent (j=1:Pop_size)
                call random_number(rn)
                i_loop:do i = 1 , Pop_size
                     if( rn > wheel(i-1) .AND. rn <= wheel(i) ) &
