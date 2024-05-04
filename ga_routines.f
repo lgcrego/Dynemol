@@ -378,11 +378,14 @@ do  L = 0 , 2
 
     If( GA%key(L+1,EHS) == 1 ) then
 
-        ! changes VSIP ...
+        ! changes VSIP; defined as negative, only bound states ... 
         gene = gene + GA%key(4,EHS)
-        If( GA%key(4,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
+        If( GA%key(4,EHS) == 1 ) then
+            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%IP = Pop(gene) + basis%IP
+            where( GA_basis%IP >= d_zero ) GA_basis%IP = -1.d-2
+        end If
 
-        ! single STO orbitals ...
+        ! single STO orbitals; positive by definition ...
         gene = gene + GA%key(5,EHS) - GA%key(6,EHS)
         If( (GA%key(5,EHS) == 1) .AND. (GA%Key(6,EHS) == 0) ) &
         where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%zeta(1) = abs( Pop(gene) + basis%zeta(1) )
@@ -409,9 +412,12 @@ do  L = 0 , 2
 
         End If
 
-        ! changes k_WH ...
+        ! changes k_WH ; defined as positive paramter, to guarantee E(bonding) < E(anti-bonding) ...
         gene = gene + GA%key(7,EHS)
-        If( GA%key(7,EHS) == 1 ) where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
+        If( GA%key(7,EHS) == 1 ) then
+            where( (GA_basis%EHSymbol == GA%EHSymbol(EHS)) .AND. (GA_basis%l == L) ) GA_basis%k_WH = Pop(gene) + basis%k_WH
+            where( GA_basis%k_WH < d_zero ) GA_basis%k_WH = +1.d-2
+        end If
 
     end If
 
