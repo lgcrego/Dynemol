@@ -18,8 +18,8 @@ module CG_class_m
     public :: EH_OPT
 
     type , extends(GA_OPT) :: EH_OPT
-        integer                         :: ITMAX_EH = 100              ! <== 50-200 is a good compromise of accuracy and safety
-        real*8                          :: BracketSize_EH = 1.d-3      ! <== this value may vary between 1.0d-3 and 1.0d-5
+        integer                         :: ITMAX_EH = 50              ! <== 50-200 is a good compromise of accuracy and safety
+        real*8                          :: BracketSize_EH = 1.d-5      ! <== this value may vary between 1.0d-3 and 1.0d-5
         logical                         :: profiling_EH = .true. 
         type(STO_basis) , allocatable   :: basis(:)
     contains
@@ -175,9 +175,12 @@ do  L = 0 , 2
 
     If( me%key(L+1,EHS) == 1 ) then
 
-        ! changes VSIP ...
+        ! changes VSIP; defined as negative, only bound states ...
         gene = gene + me%key(4,EHS)
-        If( me%key(4,EHS) == 1 ) where( (CG_basis%EHSymbol == me%EHSymbol(EHS)) .AND. (CG_basis%l == L) ) me%basis%IP = me%basis%IP + me%p(gene)
+        If( me%key(4,EHS) == 1 ) then
+            where( (CG_basis%EHSymbol == me%EHSymbol(EHS)) .AND. (CG_basis%l == L) ) me%basis%IP = me%basis%IP + me%p(gene)
+            where( me%basis%IP >= d_zero ) me%basis%IP = -1.d-2
+        end If
 
         ! single STO orbitals ...
         gene = gene + me%key(5,EHS) - me%key(6,EHS)
@@ -206,9 +209,12 @@ do  L = 0 , 2
 
         End If
 
-        ! changes k_WH ...
+        ! changes k_WH ; defined as positive paramter, to guarantee E(bonding) < E(anti-bonding) ...
         gene = gene + me%key(7,EHS)
-        If( me%key(7,EHS) == 1 ) where( (CG_basis%EHSymbol == me%EHSymbol(EHS)) .AND. (CG_basis%l == L) ) me%basis%k_WH = me%basis%k_WH + me%p(gene) 
+        If( me%key(7,EHS) == 1 ) then
+            where( (CG_basis%EHSymbol == me%EHSymbol(EHS)) .AND. (CG_basis%l == L) ) me%basis%k_WH = me%basis%k_WH + me%p(gene)
+            where( me%basis%k_WH < d_zero ) me%basis%k_WH = +1.d-2
+        end If
 
     end If
 

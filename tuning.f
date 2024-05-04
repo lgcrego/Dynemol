@@ -102,19 +102,22 @@ DO i = 1 , size(univ%atom)
     select case(univ%atom(i)%residue)
 
         ! this is water, this is water, this is water ...
+        ! consider RDF(H-O) ~ 1.85A , RDF(H-H) ~ 2.35A, RDF(O-O) ~ 2.75A
+        ! radius of solvation hardcore = radius of first solvation shell; RDF_2(H-O) ~ 3.25A
+        ! for r < R_hardcore, eHuckel applies; for r > R_hardcore nonbonding hamiltonian applies
         case( 'H2O' , 'WAT' , 'TIP' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 2.d0
+            univ%atom(i)%solvation_hardcore = 3.d0
 
         ! this is acetonitrile ...
         case( 'ACN' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 2.d0
+            univ%atom(i)%solvation_hardcore = 3.d0
 
         ! case default ...
         case( 'SOL' )
             univ%atom(i)%fragment = 'S'
-            univ%atom(i)%solvation_hardcore = 2.d0
+            univ%atom(i)%solvation_hardcore = 3.d0
 
     end select
 

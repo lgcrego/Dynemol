@@ -71,7 +71,7 @@ do its=1,this % ITMAX                                           ! Loop over iter
 
    NaN = merge( .true. , .false. , local_minimum /= local_minimum )
 
-   If( this% cost() - fp > THIRD ) then
+   If( this% cost() - fp > 1.d-3 ) then
       local_minimum = real_large
       If(this% driver == "MM_Optimize") &
          this% message = " >>> FF-Manifold is too steep; try: 1) pre-process by Annealing or 2) decrease BracketSize in MM_ERG_class.f <<<"
