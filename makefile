@@ -1,4 +1,4 @@
-.SUFFIXES: .f .F .for .cpp .F90 .cu .o
+# makefile for ifx and icx based oneAPI
 
 #make dynemol - standard compilation
 #make safe - compilation with safe features
@@ -7,33 +7,33 @@
 #make gdb - prepare code to GDB (equivalent to debug + serial) analysis
 #make vtune - prepare code to intel-Vtune analysis
 
+.SUFFIXES: .f .F .for .cpp .F90 .cu .o
 
 ##########################
 # FORTRAN CONFIGURATIONS #
 ##########################
 # Compiler
-FC = ifort
+FC = ifx
 
 # Applied to all fortran files
-FC_ALL = -xHost -ip -align -no-wrap-margin
+FC_ALL = -xHost -align -no-wrap-margin
 
 # Parallelization flags
-FC_PARALLEL = -qopenmp -parallel
+FC_PARALLEL = -qopenmp
+f_FLAGS = -O2 -static-intel $(FC_PARALLEL)
 
-# Others flags for each file type *.f, *.F and *.F90
-F_FLAGS =  -O3
+# applied to .F files
+F_FLAGS =  -O2
 F90_FLAGS = $(F_FLAGS)
-f_FLAGS = -O2 -static $(FC_PARALLEL)
-
 
 ######################
 # CPP CONFIGURATIONS #
 ######################
 # Compiler
-CC = icpc -std=c++11
+CC = icpx -std=c++11
 
 # Applied to all cpp files
-CC_ALL = -xHost -ip
+CC_ALL = -xHost 
 
 # Parallelization flags
 CC_PARALLEL = -qopenmp
@@ -80,7 +80,6 @@ LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
 INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
 endif
 
-
 ############################
 # LIBARRIES CONFIGURATIONS #
 ############################
@@ -94,8 +93,6 @@ LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
 LIB_OMP = -liomp5 -lpthread
 
 INCLUDES_MKL = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
-
-
 LIBS  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCLUDES = $(INCLUDES_MKL)
 
@@ -229,7 +226,7 @@ Manipulate:
 	$(MAKE) -C ./manipulate 
 
 # Program runs very slowly with this
-safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: FC_ALL += -g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
 safe: dynemol
 
@@ -267,7 +264,7 @@ vtune: debug
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
 
 .cpp.o:
-	$(CC) $(CC_ALL) -align -fno-exceptions -restrict $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
+	$(CC) $(CC_ALL) -align -fno-exceptions $(CC_FLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<

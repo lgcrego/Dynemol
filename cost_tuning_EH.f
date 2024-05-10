@@ -58,13 +58,13 @@ input_mode = Adaptive_GA% mode
 ! MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , {weight} )
 ! {...} terms are optional 
 !-------------------------------------------------------------------------
-eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0 )                                                                                                                                   
-eval(me) = MO_erg_diff( OPT_UNI, 16, 15, 2.81d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 17, 16, 0.29d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 16, 15, 2.81d0 , 0.2 )
 eval(me) = MO_erg_diff( OPT_UNI, 15, 14, 0.06d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 14, 13, 1.08d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 13, 12, 8.76d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 12, 11, 0.21d0 )
-eval(me) = MO_erg_diff( OPT_UNI, 11, 10, 0.28d0 )
+eval(me) = MO_erg_diff( OPT_UNI, 12, 11, 0.21d0 , 10.0)
+eval(me) = MO_erg_diff( OPT_UNI, 11, 10, 0.28d0 , 10.0)
 eval(me) = MO_erg_diff( OPT_UNI, 10, 9 , 1.22d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 9 , 8 , 0.83d0 )
 eval(me) = MO_erg_diff( OPT_UNI, 8 , 7 , 0.13d0 )
@@ -104,8 +104,8 @@ eval(me) = MO_erg_diff( OPT_UNI, 6 , 5 , 0.10d0 )
 
 !5 LUMO ===================
 !eval(me) =  MO_character( OPT_UNI , basis , MO=41 , AO='S')
-eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="Py", EHSymbol = "$$", from_to = real_interval( 0.45 , 0.40 ), adaptive  = input_mode) 
-eval(me) =  localize(OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "$$", from_to = real_interval( 0.23 , 0.30 ), adaptive  = input_mode) 
+eval(me) =  exclude (OPT_UNI, basis,  MO=41, AO="Py", EHSymbol = "$$", from_to = real_interval( 0.42 , 0.40 ), adaptive  = input_mode) 
+eval(me) =  exclude(OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "$$", from_to = real_interval( 0.325 , 0.32 ), adaptive  = input_mode) 
 !eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="S",  EHSymbol = "OW", from_to = real_interval( 0.93 , 0.12 ), adaptive  = input_mode) 
 !eval(me) =  exclude (OPT_UNI, basis,   MO=41, AO="Pz", EHSymbol = "OW", from_to = real_interval( 0.97 , 0.36 ), adaptive  = input_mode) 
 !eval(me) =  Bond_Type( sys , OPT_UNI , MO=41 , atom1=1 , AO1="S" , atom2=2 , AO2="S" , instance="-" ) 
