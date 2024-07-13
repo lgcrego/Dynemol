@@ -63,7 +63,7 @@ CALL Read_Structure
 
 If( master ) CALL checklist
 
-CALL MPI_Bcast( need_MM_stuff , 2 , mpi_logical , 0 , world , err )
+CALL MPI_Bcast( need_MM_stuff , 1 , mpi_logical , 0 , world , err )
 If( need_MM_stuff ) CALL Build_MM_Environment
 
 If( master ) then

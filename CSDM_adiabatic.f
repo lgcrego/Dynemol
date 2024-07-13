@@ -674,10 +674,7 @@ if( triggered == YES ) then
         ! carry on QMMM with trigger ON
     else 
         ! remains in GS dynamics
-!        CALL AdjustNuclearVeloc( Extended_Cell , QM_erg )
-        PST(:)    = UNI % Fermi_state
-!        QM_erg    = d_zero
-!        triggered = NO
+        PST(:) = UNI % Fermi_state
     endif
 endif
 
