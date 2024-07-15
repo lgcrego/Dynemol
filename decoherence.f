@@ -511,9 +511,11 @@ CALL  Global_CSDM_Rate( erg , PST , decay )
 ! because wavefunction tau(wvpckt) = 2.0*tau(rho) ...
 dt = t_rate
 
-If( present(slow_Decoh) .AND. slow_Decoh == T_ ) then
-     decay = decay*HALF
-     endif
+If( present(slow_Decoh) ) then                                                                                                                                                                                  
+     if( slow_Decoh == T_ ) then
+        decay = decay*HALF
+        endif
+endif
 
 summ = d_zero
 do n = 1 , n_part 
