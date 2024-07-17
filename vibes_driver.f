@@ -15,6 +15,7 @@ module good_vibrations_m
     use F_intra_m               , only : ForceIntra
     use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , overweight , chi
     use MM_ERG_class_m          , only : MM_OPT
+    use XS_ERG_class_m          , only : XS_OPT
     use FF_OPT_class_m          , only : FF_OPT , atom0
     use NonlinearCG_m           , only : Fletcher_Reeves_Polak_Ribiere_minimization                              
     use GA_m                    , only : Genetic_Algorithm   !  <== avatar for Genetic_Algorithm_MM
@@ -27,6 +28,7 @@ module good_vibrations_m
     ! module variables ...
     logical      :: done = .false.
     type(MM_OPT) :: MM_erg
+    type(XS_OPT) :: XS_erg
     type(FF_OPT) :: MM_parms
 
 contains
@@ -303,14 +305,26 @@ end If
 ! if (exist(frames.pdb)) ==> erase it
 CALL cleanup
 
-! instantiating MM ...
-MM_erg = MM_OPT( )
+! instantiating XS_erg ...
+XS_erg = XS_OPT( )
 
-dumb =  len(MM_erg% message)
+dumb =  len(XS_erg% message)
 
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
+CALL Fletcher_Reeves_Polak_Ribiere_minimization( XS_erg , XS_erg%N_of_Freedom , local_minimum )
 
-Print 30, MM_erg% message
+Print 30, XS_erg% message
+
+!
+!! instantiating MM ...
+!MM_erg = MM_OPT( )
+!
+!dumb =  len(MM_erg% message)
+!
+!CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
+!
+!Print 30, MM_erg% message
+
+close( unit=32 )
 
 include 'formats.h'
 

@@ -11,7 +11,7 @@ module HuckelForces_m
     use Allocation_m            , only : DeAllocate_Structures    
     use Hamiltonians            , only : X_ij , even_more_extended_Huckel
 
-    public :: HuckelForces
+    public :: HuckelForces , Force
 
     private
 
@@ -19,35 +19,44 @@ module HuckelForces_m
     real*8  :: delta = 1.d-8
 
     !module parameters ...
-    integer , parameter :: xyz_key(3) = [1,2,3]
+    integer , parameter   :: xyz_key(3) = [1,2,3]
+    real*8  , allocatable :: Force(:,:) , aux(:,:)
 
 contains
 !
 !
 !
-!==============================================
- subroutine HuckelForces( system , basis , QM )
-!==============================================
+!==================================================================
+ subroutine HuckelForces( system , basis , QM , approach , eh_PES )
+!==================================================================
  implicit none
- type(structure) , intent(inout) :: system
- type(STO_basis) , intent(in)    :: basis(:)
- type(R_eigen)   , intent(in)    :: QM
+ type(structure) , intent(inout)         :: system
+ type(STO_basis) , intent(in)            :: basis(:)
+ type(R_eigen)   , intent(in)            :: QM
+ character(*)    , optional , intent(in) :: approach
+ integer         , optional , intent(in) :: eh_PES(2)
 
 ! local variables ... 
  integer              :: i , i1 , i2 , n , n_MO , Fermi_level , method , n_eh(2)
- real*8 , allocatable :: bra(:), ket(:), Force(:,:), force_atom(:,:)
+ real*8 , allocatable :: bra(:), ket(:), force_atom(:,:)
+
+ allocate( aux( size(basis) , 9 ) )
 
  n_MO = size(QM%erg)
- allocate( bra  ( size(basis)              ) )
- allocate( ket  ( size(basis)              ) )
- allocate( Force( 3*system% atoms , 0:n_MO ) , source = D_zero )
+ allocate( bra ( size(basis) ) )
+ allocate( ket ( size(basis) ) )
 
- write(*,'(/a)') ' Choose the method : '
- write(*,'(/a)') ' (1) = Hellman-Feynman-Pulay '
- write(*,'(/a)') ' (2) = Numerical derivative of PES '
- write(*,'(/a)') ' (3) = el-hl pair force '
- write(*,'(/a)',advance='no') '>>>   '
- read (*,'(I)') method
+ if( present(approach) ) &
+ then
+     method = 4  ! <== XS geometry optimization
+ else
+     write(*,'(/a)') ' Choose the method : '
+     write(*,'(/a)') ' (1) = Hellman-Feynman-Pulay '
+     write(*,'(/a)') ' (2) = Numerical derivative of PES '
+     write(*,'(/a)') ' (3) = el-hl pair force '
+     write(*,'(/a)',advance='no') '>>>   '
+     read (*,'(I)') method
+ end if
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  select case( method )
@@ -55,6 +64,8 @@ contains
         case( 1 )
                  !=========================================================================
                  ! Hellman-Feynman-Pulay ...
+
+                 allocate( Force( 3*system% atoms , 0:n_MO ) , source = D_zero )
 
                  CALL Overlap_Matrix( system , basis )
 
@@ -81,6 +92,7 @@ contains
                  ! numerical derivative of the PES ...
 
                  verbose = .false.
+                 allocate( Force( 3*system% atoms , 0:n_MO ) , source = D_zero )
                  allocate( force_atom( n_MO , 3 ) )
 
                  do i = 1 , system% atoms
@@ -97,14 +109,15 @@ contains
         case( 3 )
                  !=========================================================================
                  ! el-hl pair force ...
-
+                 
                  write(*,'(/a)') '> enter MOs associated with the electron and hole:'
                  write(*,'(a)',advance='no') 'n_el = '
                  read (*,*) n_eh(1)
                  write(*,'(a)',advance='no') 'n_hl = '
                  read (*,*) n_eh(2)
 
-                 deallocate(force)
+                 ! resetting array dimensions ...
+                 if( allocated(Force) ) deallocate( Force )
                  allocate( Force( 3*system% atoms , 0:2 ) , source = D_zero )
 
                  CALL Overlap_Matrix( system , basis )
@@ -116,7 +129,7 @@ contains
 
                       do i = 1 , system% atoms
 
-                          If( system% QMMM(i) /= "QM" ) cycle
+                          If( system% QMMM(i) /= "QM" .OR. system% flex(i) == .false. ) cycle
 
                           i1 = (i-1)*3 + 1
                           i2 = (i-1)*3 + 3
@@ -126,7 +139,58 @@ contains
                       end do
                  end do
 
+        case( 4 )
+                 !=========================================================================
+                 ! el-hl pair force , used for XS geometry optimization ...
+                 
+                 If( present(eh_PES) ) n_eh = eh_PES
+                 
+                 if( allocated(Force) ) deallocate( Force )
+                 allocate( Force( 3*system% atoms , 2 ) , source = D_zero )
+
+                 select case( approach )
+
+                 case( "HFP" , "hfp" )
+                     ! HFP approach ...
+                     CALL Overlap_Matrix( system , basis )
+                     do n = 1 , 2
+                          bra = QM%L(n_eh(n),:)
+                          ket = bra 
+                          do i = 1 , system% atoms
+                              If( system% QMMM(i) /= "QM" .OR. system% flex(i) == .false. ) cycle
+                              i1 = (i-1)*3 + 1
+                              i2 = (i-1)*3 + 3
+                              Force( i1:i2 ,n ) = Hellman_Feynman_Pulay( system, basis, bra, ket, QM%erg(n_eh(n)), i )
+                          end do
+                          end do
+                     !---------------------------------------------------------------
+
+                 case( "FDM" , "fdm" )
+                     ! Finite Difference approach ...
+                     allocate( force_atom( 2 , 3 ) )
+                     do i = 1 , system% atoms
+                            If( system% QMMM(i) /= "QM" .OR. system% flex(i) == .false. ) cycle
+                            force_atom = grad_E( system, basis, i )
+                            i1 = (i-1)*3 + 1
+                            i2 = (i-1)*3 + 3
+                            forall( n=1:2 ) Force( i1:i2 , n ) = force_atom( n , : )
+                     end do
+                     !---------------------------------------------------------------
+
+                 case default
+                     CALL warning("halting: force method must be HFP or FDM, check XS_ERG_class.f")
+                     stop
+                     !---------------------------------------------------------------
+
+                 end select
+
+                 ! mission accomplished ...
+                 deallocate(aux)
+                 RETURN
+
  end select
+ 
+ deallocate(aux)
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 select case (method)
@@ -187,9 +251,9 @@ end subroutine HuckelForces
 !
 !
 !
-!=================================================================================
-function Hellman_Feynman_Pulay( system, basis, bra, ket, erg, site ) result(Force)
-!=================================================================================
+!=====================================================================================
+function Hellman_Feynman_Pulay( system, basis, bra, ket, erg, site ) result(Force_HFP)
+!=====================================================================================
 use Semi_Empirical_parms , only : atom
 implicit none
 type(structure)  , intent(inout) :: system
@@ -204,12 +268,12 @@ integer :: i , j , k , ik , xyz , DOSk , BPk
 
 ! local arrays ...
 real*8  , allocatable :: S_fwd(:,:) , S_bck(:,:) , grad_S(:,:)
-real*8                :: Force(3) , tmp_coord(3) , delta_b(3) 
+real*8                :: Force_HFP(3) , tmp_coord(3) , delta_b(3) 
 
 verbose = .false.
 If( .NOT. allocated(grad_S) ) allocate( grad_S(size(basis),size(basis)) )
 grad_S = D_zero
-Force  = D_zero
+Force_HFP = D_zero
 
 !force on atom site ...
 k    = site 
@@ -231,18 +295,16 @@ do xyz = 1 , 3
 
        grad_S = (S_fwd - S_bck) / (TWO*delta) 
 
-       do ik = 1 , DOSk  
+       do concurrent ( ik=1:DOSk , j=1:size(basis) )
             i = BPk + ik
-            do j = 1 , size(basis)
-
-                Force(xyz) = Force(xyz) - ( X_ij(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
-
-            end do
+            aux(j,ik) =  - ( X_ij(i,j,basis) - erg ) * grad_S(i,j) * bra(i) * ket(j)
        end do
+
+       Force_HFP(xyz) = sum( aux(:,1:DOSk) )
 
 end do 
 
-Force = two * Force
+Force_HFP = two * Force_HFP
 
 ! recover original system ...
 system% coord (k,:) = tmp_coord
@@ -252,9 +314,9 @@ end function Hellman_Feynman_Pulay
 !
 !
 !
-!====================================================
- function grad_E( system, basis, site ) result(Force)
-!====================================================
+!========================================================
+ function grad_E( system, basis, site ) result(Force_xyz)
+!========================================================
 implicit none
 type(structure)  , intent(inout) :: system
 type(STO_basis)  , intent(in)    :: basis(:)
@@ -263,9 +325,9 @@ integer          , intent(in)    :: site
 ! local variables ...
 integer :: k , xyz 
 real*8  :: delta_b(3) , tmp_coord(3)
-real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force(size(basis),3)
+real*8  :: erg_fwd(size(basis)) , erg_bck(size(basis)) , Force_xyz(size(basis),3)
 
-Force = D_zero
+Force_xyz = D_zero
 
 !force on atom site ...
 k = site 
@@ -285,7 +347,7 @@ tmp_coord = system% coord(k,:)
 
             CALL LocalEigenSystem( system , basis , erg_bck )
 
-            Force(:,xyz) = - (erg_fwd(:) - erg_bck(:)) / (TWO*delta) 
+            Force_xyz(:,xyz) = - (erg_fwd(:) - erg_bck(:)) / (TWO*delta) 
 
     end do 
 
