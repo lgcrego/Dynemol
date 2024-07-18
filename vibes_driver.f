@@ -6,7 +6,7 @@ module good_vibrations_m
     use blas95
     use lapack95
     use parameters_m            , only : PBC 
-    use MM_input                , only : OPT_driver , nmd_window
+    use MM_input                , only : OPT_driver , nmd_window , driver_MM
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
     use MD_dump_m               , only : cleanup
@@ -305,24 +305,29 @@ end If
 ! if (exist(frames.pdb)) ==> erase it
 CALL cleanup
 
-! instantiating XS_erg ...
-XS_erg = XS_OPT( )
+select case (driver_MM)
 
-dumb =  len(XS_erg% message)
+       case("XS_Optimize")
+           ! instantiating XS_erg ...
+           XS_erg = XS_OPT( )
+           
+           dumb =  len(XS_erg% message)
+           
+           CALL Fletcher_Reeves_Polak_Ribiere_minimization( XS_erg , XS_erg%N_of_Freedom , local_minimum )
+           
+           Print 30, XS_erg% message
 
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( XS_erg , XS_erg%N_of_Freedom , local_minimum )
+       case("MM_Optimize")
+           ! instantiating MM ...
+           MM_erg = MM_OPT( )
+           
+           dumb =  len(MM_erg% message)
+           
+           CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
+           
+           Print 30, MM_erg% message
 
-Print 30, XS_erg% message
-
-!
-!! instantiating MM ...
-!MM_erg = MM_OPT( )
-!
-!dumb =  len(MM_erg% message)
-!
-!CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
-!
-!Print 30, MM_erg% message
+end select
 
 close( unit=32 )
 

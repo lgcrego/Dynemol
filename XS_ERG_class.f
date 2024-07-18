@@ -10,15 +10,14 @@ module XS_ERG_class_m
     use F_inter_m           , only : ForceInter
     use for_force           , only : Pot_Total 
     use OPT_Parent_class_m  , only : OPT_Parent
-
     use parameters_m        , only : electron_state , hole_state
     use EH_parms_module     , only : HFP_Forces , verbose
     use QCModel_Huckel      , only : EigenSystem
-    use Structure_Builder   , only : Unit_Cell ,            &
-                                     system => Extended_Cell ,        &
-                                     Generate_Structure ,   &
+    use Structure_Builder   , only : Unit_Cell ,               &
+                                     system => Extended_Cell , &
+                                     Generate_Structure ,      &
                                      Basis_Builder 
-    use HuckelForces_m      , only : HuckelForces ,         &
+    use HuckelForces_m      , only : HuckelForces ,            &
                                      Force_QM => Force
 
     implicit none
@@ -67,7 +66,7 @@ integer :: i
 me % ITMAX       = me % ITMAX_XS
 me % BracketSize = me % BracketSize_XS
 me % profiling   = me % profiling_XS
-me % accuracy    = mid_prec
+me % accuracy    = high_prec!mid_prec
 me % driver      = driver_MM
 me % message     = me % my_message
 
@@ -125,17 +124,19 @@ end do
 If( MM % N_of_molecules == 1 ) &
 then
     CALL ForceIntra
-    Energy = Pot_Intra * mol * micro / MM % N_of_molecules
+    Energy = Pot_Intra * mol * micro * kJmol_2_eV  !<== eV units
 else
     CALL ForceInter
     CALL ForceIntra
-    Energy = Pot_Total
+    Energy = Pot_Total * kJmol_2_eV * MM% N_of_Molecules !<== eV units
 end if
 
 CALL EigenSystem( system , basis , UNI )
+!----------------------------------
 ! approach, type character :
 ! HFP = Hellmann-Feynman-Pulay
 ! FDM = Finite Difference Method
+!----------------------------------
 CALL HuckelForces( system , basis , UNI , approach="HFP" , eh_PES=eh_PES )
 
 Energy = Energy + ( UNI%erg(electron_state) - UNI%erg(hole_state) )

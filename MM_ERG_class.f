@@ -105,13 +105,13 @@ end do
 If( MM % N_of_molecules == 1 ) then
 
     CALL ForceIntra
-    Energy = Pot_Intra * mol * micro / MM % N_of_molecules
+    Energy = Pot_Intra * mol * micro * kJmol_2_eV  !<== eV units
 
 else
 
     CALL ForceInter
     CALL ForceIntra
-    Energy = Pot_Total
+    Energy = Pot_Total * kJmol_2_eV * MM% N_of_Molecules !<== eV units
 
 end if
 

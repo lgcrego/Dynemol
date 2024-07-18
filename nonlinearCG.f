@@ -38,7 +38,7 @@ logical :: NaN
 
 
 ! saving first geometry ...
-if ( this % driver == "MM_Optimize" .and. this % profiling ) call this%output( 0 )
+if ( any(this % driver==[character(11)::"MM_Optimize","XS_Optimize"]) .and. this % profiling ) call this%output( 0 )
 
 ! Preprocess ...
 !----------------------------------------------------------
@@ -73,8 +73,8 @@ do its=1,this % ITMAX                                           ! Loop over iter
 
    If( this% cost() - fp > THIRD ) then
       local_minimum = real_large
-      If(this% driver == "MM_Optimize") &
-         this% message = " >>> FF-Manifold is too steep; try: 1) pre-process by Annealing or 2) decrease BracketSize in MM_ERG_class.f <<<"
+      If(this% driver == "MM_Optimize" .OR. this% driver == "XS_Optimize") &
+         this% message = " >>> FF-Manifold is too steep; try: 1) pre-process by Annealing or 2) decrease BracketSize in {MM,XS}_ERG_class.f <<<"
       goto 100     ! ==> convergence not likely; Exit ...
    ElseIf( NaN ) then
       local_minimum = real_large
@@ -88,7 +88,7 @@ do its=1,this % ITMAX                                           ! Loop over iter
    If( this% profiling ) then
       Print*,     its , local_minimum
       write(32,*) its , local_minimum 
-      if ( any(this% driver == ["Genetic_Alg","MM_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
+      if ( any(this% driver == ["Genetic_Alg","MM_Optimize","XS_Optimize","NormalModes","Parametrize"]) ) call this% output( iter )
    EndIf
 
    ! define relative difference between iterations ...
