@@ -106,9 +106,9 @@ select case ( driver )
                 case ( "Parametrize" )
                     CALL Optimize_Parameters_Driver
 
-                case default
-                    Print*, " >>> Check your driver options <<< :" , driver
-                    stop
+            case default
+                Print*, " >>> Check your card options: {MM_Dynamics,MM_Optimize,NormalModes,Parametrize} <<< " , driver_MM
+                stop
 
             end select
         end if
