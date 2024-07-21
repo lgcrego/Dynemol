@@ -27,8 +27,8 @@ module XS_ERG_class_m
     public :: XS_OPT
 
     type, extends(OPT_Parent)    :: XS_OPT
-        integer                  :: ITMAX_XS = 40000             ! <== 100-300 is a good compromise of accuracy and safety
-        real*8                   :: BracketSize_XS = 1.d-5       ! <== this value may vary between 1.0d-2 and 1.0d-3
+        integer                  :: ITMAX_XS = 50000             ! <== 100-300 is a good compromise of accuracy and safety
+        real*8                   :: BracketSize_XS = 5.d-5       ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_XS = .true.
         character(len=120)       :: my_message
     contains

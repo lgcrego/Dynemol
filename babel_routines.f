@@ -369,6 +369,9 @@ character(len=2)    :: element2
         case( 'CT','YC','CM','C=','CC','CS','CTr','CA' ) 
             a(i)%Symbol = 'C' 
 
+        case( 'NB' ) 
+            a(i)%Symbol = 'N' 
+
         case( 'YN','NTr','Nx' ) 
             a(i)%Symbol = 'N' 
 
@@ -390,7 +393,7 @@ character(len=2)    :: element2
         case( 'Se','SE' ) 
             a(i)%Symbol = 'Se' 
 
-        case( 'Nb','NB' ) 
+        case( 'Nb' ) 
             a(i)%Symbol = 'Nb' 
 
         case( 'Ru' ) 

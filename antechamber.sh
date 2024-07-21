@@ -55,6 +55,12 @@ if [[ "$#" -ne 0 ]]; then
         $DYNEMOLDIR/manipulate/manipulate
         exit 1
         ;;
+      newOPT)
+        arguments="newOPT" 
+        ;;
+      repeat)
+        arguments="repeat" 
+        ;;
       resume)
         arguments="resume" 
         ;;
