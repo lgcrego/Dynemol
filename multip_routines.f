@@ -83,7 +83,7 @@ else
 endif
 
 Rab = dsqrt(xab*xab + yab*yab + zab*zab)
-if (xy .gt. tol) then
+if (Rab .gt. tol) then
     sinbet = xy / Rab
     cosbet = zab / Rab
 else

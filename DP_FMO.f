@@ -363,15 +363,15 @@ lmult = 1 ! <== DIPOLE MOMENT
 
 allocate( FMO_DP_matrix_AO(size(basis),size(basis),3) , source = D_zero )
 
-do ib = 1 , system%atoms
-do ia = 1 , system%atoms  
+ib_loop:do ib = 1 , system%atoms
+ia_loop:do ia = 1 , system%atoms  
 
-    if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle
+    if( (system%QMMM(ib) /= "QM") .OR. (system%QMMM(ia) /= "QM") ) cycle ia_loop
 
     ! calculate rotation matrix for the highest l
     call RotationMultipoles( system , ia , ib , Rab , lmult , rl , rl2 )
 
-    If(Rab > cutoff_Angs) cycle
+    If(Rab > cutoff_Angs) cycle ia_loop
 
     do jb = 1 , atom(system%AtNo(ib))%DOS  ;  b = system%BasisPointer(ib) + jb
     do ja = 1 , atom(system%AtNo(ia))%DOS  ;  a = system%BasisPointer(ia) + ja
@@ -419,8 +419,8 @@ do ia = 1 , system%atoms
 !---------------------------------------------------------------------------------------------------- 
     enddo
     enddo
-end do
-end do
+end do ia_loop
+end do ib_loop
 
 end subroutine Build_DIPOLE_Matrix
 !

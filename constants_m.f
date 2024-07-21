@@ -59,6 +59,7 @@ MODULE constants_m
     real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
     real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
+    real*8  , parameter :: eV_2_Joule  = 1.6021766339d-19           ! converts eV to Joule units 
     real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
     real*8  , parameter :: J_2_cal     = 0.239d0                    ! converts J to cal units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit

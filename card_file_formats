@@ -164,7 +164,7 @@
 !------------------------------------------------------------------------------
 ! 							EXECUTION INFO 
 !
-  driver_MM       =                    ! <== choose from { MM_Dynamics , MM_Optimize , NormalModes , Parametrize }
+  driver_MM       =                    ! <== choose from { MM_Dynamics , {MM,XS}_Optimize , NormalModes , Parametrize }
 
   read_velocities =                    ! <== .TRUE. for reading the initial velocities : T_ , F_ ; default = .TRUE.
 

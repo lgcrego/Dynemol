@@ -80,7 +80,7 @@ select case ( driver )
             case ( "MM_Dynamics" )
                 CALL MMechanics        
 
-            case ( "MM_Optimize" )
+            case ( "MM_Optimize" , "XS_Optimize" )
                 CALL Optimize_Structure
 
             case ( "NormalModes" )
@@ -90,7 +90,7 @@ select case ( driver )
                 CALL Optimize_Parameters_Driver
 
             case default
-                Print*, " >>> Check your driver options <<< :" , driver
+                Print*, " >>> Check your card options: {MM_Dynamics,{MM,XS}_Optimize,NormalModes,Parametrize} <<< " , driver_MM
                 stop
 
         end select

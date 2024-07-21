@@ -123,13 +123,13 @@ SOURCE2 = constants_m.o \
 		  allocation_m.o \
 		  EHT_input.o \
 		  tuning.o \
-                  IdentifyNonBonded.o \
+          IdentifyNonBonded.o \
 		  babel_routines.o \
 		  babel.o \
+		  structure.o \
           checklist.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
-		  structure.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
