@@ -180,6 +180,7 @@ SOURCE2 = constants_m.o \
 		  nonlinearCG.o \
 		  CG_class.o \
 		  MM_ERG_class.o \
+		  XS_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
 		  CG_EH_driver.o \
