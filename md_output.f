@@ -109,7 +109,7 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,'(''Lennard-Jones               :'',F14.4)') evdw      *mol*1.d-6      
     write(10,'(''Coulomb 1-4                 :'',F14.4)') Coul_14   *mol*1.d-6  
     write(10,'(''Coulomb Intra-molecular     :'',F14.4)') Coul_Intra*mol*1.d-6  
-    write(10,'(''Coulomb self-interaction    :'',F14.4)') Vself    *mol*1.d-6    
+    write(10,'(''Coulomb self-interaction    :'',F14.4)') Vself     *mol*1.d-6    
     write(10,'(''Coulomb Inter-molecular     :'',F14.4)') Coul_Inter*mol*1.d-6      
     write(10,'(''Total Coulomb               :'',F14.4)') (Coul_14 + Coul_Intra + Coul_Inter - Vself)*mol*1.d-6  
     write(10,'(''Potential Energy (gmx-like) :'',ES16.7E3)') pot_total

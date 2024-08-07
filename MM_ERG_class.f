@@ -19,7 +19,7 @@ module MM_ERG_class_m
 
     type, extends(OPT_Parent)    :: MM_OPT
         integer                  :: ITMAX_MM = 40000             ! <== 100-300 is a good compromise of accuracy and safety
-        real*8                   :: BracketSize_MM = 1.d-5       ! <== this value may vary between 1.0d-2 and 1.0d-3
+        real*8                   :: BracketSize_MM = 1.d-6       ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_MM = .true.
         character(len=120)       :: my_message
     contains
