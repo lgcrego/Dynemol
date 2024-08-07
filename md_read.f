@@ -195,12 +195,6 @@ do i = 1 , MM % N_of_species
 end do
 !=======================         set-up atom(:) <=> FF(:)    ============================= 
 
-! defining atom % my_intra_id = index within the residue nr ...
-do i = 1 , size(atom)
-!    atom(i) % my_intra_id = i + molecule( atom(i) % nr ) % N_of_atoms - sum( molecule(1:atom(i) % nr) % N_of_atoms )
-    atom(i) % my_intra_id = i - sum( molecule( 1:atom(i)%nr-1 ) % N_of_atoms )
-end do
-
 ! defining molecule % nr from atom % nr ...
 do i = 1 , MM % N_of_atoms
     nresid = atom(i) % nr
@@ -231,6 +225,11 @@ do i = 1 , size(FF)
         atom % buckB = FF(i) % buckB
         atom % buckC = FF(i) % buckC
     end where
+end do
+
+! define the atomic charge ...
+do i = 1 , size(atom)
+    atom(i)% MM_charge = species(atom(i)%my_species) % atom(atom(i)%my_intra_id) % MM_charge
 end do
 
 !=======================         set-up molecule(:)          ============================= 
@@ -696,7 +695,7 @@ DO i = 1 , size(a)
     select case( adjustl( a(i)%MMSymbol) )
         case( 'Ox' , 'OxH' , 'OS' )
             a(i)%Symbol = 'O'
-        case( 'YN' , 'NTr' , 'Nx' , 'N2' , 'N32' , 'N42' , 'N52' )
+        case( 'YN' , 'NTr' , 'Nx' , 'N2' , 'N32' , 'N42' , 'N52' , 'NA' , 'NB' )
             a(i)%Symbol = 'N'
         case( 'Al' )
             a(i)%Symbol = 'Al'
@@ -714,7 +713,7 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'S'
         case( 'Pb' , 'PB' )
             a(i)%Symbol = 'Pb'
-        case( 'Nb' , 'NB' )
+        case( 'Nb' )
             a(i)%Symbol = 'Nb'
         case( 'P' )
             a(i)%Symbol = 'P'

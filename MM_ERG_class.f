@@ -18,10 +18,10 @@ module MM_ERG_class_m
     public :: MM_OPT
 
     type, extends(OPT_Parent)    :: MM_OPT
-        integer                  :: ITMAX_MM = 4000             ! <== 100-300 is a good compromise of accuracy and safety
-        real*8                   :: BracketSize_MM = 1.d-2      ! <== this value may vary between 1.0d-2 and 1.0d-3
+        integer                  :: ITMAX_MM = 40000             ! <== 100-300 is a good compromise of accuracy and safety
+        real*8                   :: BracketSize_MM = 1.d-6       ! <== this value may vary between 1.0d-2 and 1.0d-3
         logical                  :: profiling_MM = .true.
-        character(len=72)        :: my_message
+        character(len=120)       :: my_message
     contains
         procedure :: cost => energy
         procedure :: cost_variation => forces
@@ -105,13 +105,13 @@ end do
 If( MM % N_of_molecules == 1 ) then
 
     CALL ForceIntra
-    Energy = Pot_Intra * mol * micro / MM % N_of_molecules
+    Energy = Pot_Intra * mol * micro * kJmol_2_eV  !<== eV units
 
 else
 
     CALL ForceInter
     CALL ForceIntra
-    Energy = Pot_Total
+    Energy = Pot_Total * kJmol_2_eV * MM% N_of_Molecules !<== eV units
 
 end if
 
