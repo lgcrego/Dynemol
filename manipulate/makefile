@@ -1,9 +1,9 @@
-#
+# makefile for ifx and icx based oneAPI
 
 SUFFIX=.f
 
-FC=ifort
-SAFE = #-g -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+FC=ifx
+SAFE = #-g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
 
 LIB    =  -liomp5

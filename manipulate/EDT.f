@@ -430,6 +430,67 @@ end subroutine Eliminate_Fragment
 !
 !
 !==================================
+subroutine Bring_into_PBCBox(system)
+!==================================
+implicit none
+type(universe) , intent(inout) :: system
+
+!local variables
+integer :: nr , i , j , indx1 , indx2 
+integer :: N_of_solute_atoms = 0
+real*8  :: delta(3) , GeoCenter(3) , nr_CM(3)
+character(4) :: residue_name
+
+! STDIN info ...
+write(*,'(/a)') ' Residue Name of the Solute (use capital letters) ?     '
+write(*,'(/a)',advance='no') '>>>   '
+read (*,'(a)') residue_name
+
+N_of_solute_atoms = count(system%atom(:)%resid==residue_name) 
+if( N_of_solute_atoms == 0 ) stop "No solute with this residue name"
+
+do i=1,3
+   GeoCenter(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==residue_name) / N_of_solute_atoms
+   ! translate coordinates to the geometric center ...
+   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
+end do
+
+do nr = minval(system%atom%nresid) , maxval(system%atom%nresid)
+
+    ! atomic pointers of molecule with nresidue = nr
+    indx1 = minval( [(i , i=1,size(system%atom))] , (system%atom%nresid == nr) )
+    indx2 = maxval( [(i , i=1,size(system%atom))] , (system%atom%nresid == nr) )
+
+    do i = 1 , 3
+
+       nr_CM(i) = sum(system%atom(indx1:indx2)%xyz(i)) / (indx2-indx1+1)
+
+       if( abs(nr_CM(i)) <= system%box(i)*HALF ) cycle 
+
+       if( nr_CM(i) > system%box(i)*HALF ) &
+       then
+           system%atom(indx1:indx2)%xyz(i) = system%atom(indx1:indx2)%xyz(i) - system%box(i)
+       else
+           system%atom(indx1:indx2)%xyz(i) = system%atom(indx1:indx2)%xyz(i) + system%box(i)
+       end if
+
+    end do
+
+end do
+
+! place solute in the center of the PBC box
+do i=1,3
+   GeoCenter(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==residue_name) / N_of_solute_atoms
+   GeoCenter(i) = GeoCenter(i) - system%box(i)*HALF
+   ! translate coordinates to the geometric center ...
+   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
+end do
+
+end subroutine Bring_into_PBCBox
+!
+!
+!
+!==================================
 subroutine ReGroup_Molecule(system)
 !==================================
 implicit none
