@@ -347,7 +347,7 @@ character(len=1)    :: element
     select case( adjustl( a(i)%MMSymbol) )
         case( 'Ox' , 'OxH' ) 
             a(i)%Symbol = 'O' 
-        case( 'YN' , 'NTr' , 'Nx' ) 
+        case( 'YN' , 'NTr' , 'Nx' , 'NA' , 'NB' ) 
             a(i)%Symbol = 'N' 
         case( 'Al' ) 
             a(i)%Symbol = 'Al' 
@@ -365,7 +365,7 @@ character(len=1)    :: element
             a(i)%Symbol = 'Cs' 
         case( 'Pb' , 'PB' ) 
             a(i)%Symbol = 'Pb' 
-        case( 'Nb' , 'NB' ) 
+        case( 'Nb' ) 
             a(i)%Symbol = 'Nb' 
         case( 'HC' ) 
             a(i)%Symbol = 'H'  

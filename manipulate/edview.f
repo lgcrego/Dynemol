@@ -130,7 +130,7 @@ do
     write(*,'(/a)') '10 : Replication '
     write(*,'(/a)') '11 : nonbonding topology '
     write(*,'(/a)') '12 : Images '
-    write(*,'(/a)') '13 : Aminoacid Stuff '
+    write(*,'(/a)') '13 : Bring Solvent into the Bounding Box '
     write(*,'(/a)') '14 : ad_hoc tuning '
     write(*,'(/a)') '15 : DONE '
     write(*,'(/a)',advance='no') '>>>   '
@@ -185,7 +185,7 @@ do
             end if
 
         case ('13')
-            CALL AminoacidStuff( structure )
+            CALL Bring_into_PBCBox( structure )
 
         case ('14')
             CALL ad_hoc_tuning( structure )
