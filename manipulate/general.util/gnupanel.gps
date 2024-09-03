@@ -28,23 +28,51 @@ set yrange [y_min:y_max]
 
 # Loop through each data file
 do for [i=1:nf] {
+
+    # Determine the format string based on nf
+    format_string = (nf < 100) ? "./hl_data-%02d" : "./hl_data-%03d"
+
+    # Use the format string to create the filename
+    filename = sprintf(format_string, i)
+
     # Hide tick marks and labels
     unset xtics
     unset ytics
     unset xlabel
     unset ylabel
-    # Plot the corresponding data file
-    plot sprintf("./hl_data-%02d", i) using 1:2 with lines lc rgb 'blue'  lw 1.2 notitle
+
+    # Check if file exists
+    if (system(sprintf("test -e %s && echo 1 || echo 0", filename)) == "1\n") {
+        # Plot the corresponding data file
+        plot filename using 1:2 with lines lc rgb 'blue' lw 1.2 notitle
+    } else {
+        # Leave the graph blank
+        plot NaN notitle
+    }
 }
 
 do for [i=1:nf] {
+    
+    # Determine the format string based on nf
+    format_string = (nf < 100) ? "./el_data-%02d" : "./el_data-%03d"
+
+    # Use the format string to create the filename
+    filename = sprintf(format_string, i)
+
     # Hide tick marks and labels
     unset xtics
     unset ytics
     unset xlabel
     unset ylabel
-    # Plot the corresponding data file
-    plot sprintf("./el_data-%02d", i) using 1:2 with lines lc rgb 'red' lw 1.2 notitle 
+
+    # Check if file exists
+    if (system(sprintf("test -e %s && echo 1 || echo 0", filename)) == "1\n") {
+        # Plot the corresponding data file
+        plot filename using 1:2 with lines lc rgb 'red' lw 1.2 notitle
+    } else {
+        # Leave the graph blank
+        plot NaN notitle
+    }
 }
 
 

@@ -464,6 +464,8 @@ read_loop: do
 
                              case( "RESIDUE" )
                                  structure%atom(start:finale) % residue = label 
+                             case( "FRAGMENT" )
+                                 structure%atom(start:finale) % fragment = label 
                              case( "NR" )
                                  structure%atom(start:finale) % nr = int_value 
                              case( "V_SHIFT" )
@@ -625,7 +627,7 @@ endif
 
 select case(feature) 
 
-       case( "RESIDUE" , "ATOM" , "QMMM" )
+       case( "RESIDUE" , "ATOM" , "QMMM" , "FRAGMENT" )
        label = trim(string)
 
        case( "V_SHIFT" , "DROPLET" )
