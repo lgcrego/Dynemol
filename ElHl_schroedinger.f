@@ -294,7 +294,7 @@ character(*)  , intent(in)    :: flag
 ! local variable ...
 integer      :: N_of_fragments
 character(1) :: first_in_line
-logical      :: A_flag
+logical      :: D_flag
 
 select case( flag )
 
@@ -314,14 +314,15 @@ select case( flag )
         end if
 
         ! for the sake of having the DONOR or ACCEPTOR survival probability in the first column at output ...
-        A_flag = any(Extended_Cell%list_of_fragments == "A")
+        D_flag = any(Extended_Cell%list_of_fragments == "D")
         first_in_line = Extended_Cell%list_of_fragments(1)
-        If( A_flag ) then
-            where( Extended_Cell%list_of_fragments == "A" ) Extended_Cell%list_of_fragments = first_in_line
-        else
+
+        If( D_flag ) &
+        then
             where( Extended_Cell%list_of_fragments == "D" ) Extended_Cell%list_of_fragments = first_in_line
         end If
-        Extended_Cell%list_of_fragments(1) = merge( "A" , "D" , A_flag )
+        ! if D_flag, "D" exchange places with first_in_line
+        Extended_Cell%list_of_fragments(1) = merge( "D" , first_in_line , D_flag )
 
         ! QDyn%dyn = ( time ; fragments ; all fragments ) ...
         allocate( QDyn%fragments( size(Extended_Cell % list_of_fragments) ) , source = Extended_Cell % list_of_fragments )

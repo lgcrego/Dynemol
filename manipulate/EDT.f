@@ -186,7 +186,8 @@ character(1)    :: axis
 N_of_atoms = size(system%atom)
 
 ! define rotation axis
-write(*,'(a)',advance='no') '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
+write(*,'(a)'             ) '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
+write(*,'(a)',advance='no') '> Alignement with: (4)-x axis , (5)-y axis , (6)-z axis ?   '
 read(*,*) option
 
 select case (option)
@@ -241,6 +242,12 @@ select case (option)
         read (*,*) angle
         write(*,'(\a)',advance='no') '> enter pivot atom  = '
         read (*,*) pivot_atom
+
+   case(4:6) 
+        ! go to alignment subroutine
+        call Alignment(system)
+        ! mission accomplished
+        return
 
 end select
    
@@ -314,6 +321,148 @@ end select
 print*, '>>> rotation done <<<'
 
 end subroutine rotation
+!
+!
+!
+!============================
+subroutine Alignment( system )
+!============================
+implicit none 
+type(universe) , intent(inout) :: system
+
+!	local variables
+type(universe)  :: temp
+real*8          :: R_x(3,3) , R_y(3,3) , R_z(3,3) , R_v(3,3) , pivot(3) , v(3) , angle , norm_v
+integer         :: i , j , N_of_atoms , pivot_atom, option , at1, at2, at3
+character(1)    :: axis 
+
+N_of_atoms = size(system%atom)
+
+! define rotation axis
+write(*,'(a)'             ) '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
+write(*,'(a)',advance='no') '> Alignement with: (4)-x axis , (5)-y axis , (6)-z axis ?   '
+read(*,*) option
+
+! define vector to be aligned
+write(*,'(/a)') '> define vector perpendicular to the plane (this is the vector to be aligned): '
+write(*,'(/a)') '            at1    at3                      '
+write(*,'(a)')  '              \    /                        '
+write(*,'(a)')  '               \  /                         '
+write(*,'(a)')  '                \/                          '
+write(*,'(a)')  '                at2                         '
+write(*,'(/a)',advance='no') 'index of atom 1 = '
+read(*,*) at1
+write(*,'(a)',advance='no') 'index of atom 2 = '
+read(*,*) at2
+write(*,'(a)',advance='no') 'index of atom 3 = '
+read(*,*) at3
+
+! the versor ...
+v = vector_product(system,at1,at2,at3)
+
+norm_v = sqrt(dot_product(v,v))
+print*, norm_v
+stop
+write(*,'(a)',advance='no') '> enter the direction of alignment ("x","y","z")  = '
+read (*,*) axis
+write(*,'(a)',advance='no') '> enter angle for clockwise rotation (degrees)  = '
+read (*,*) angle
+write(*,'(\a)',advance='no') '> enter pivot atom  = '
+read (*,*) pivot_atom
+
+
+allocate( temp%atom(N_of_atoms) )
+
+temp = system
+
+angle = angle * (PI/180.d0)
+pivot = system%atom(pivot_atom)%xyz 
+
+select case (axis)
+
+    case( "x" )
+        !------------------------
+        R_x      =  0.d0
+        R_x(1,1) =  1.d0
+        R_x(2,2) =  dcos(angle)
+        R_x(2,3) = -dsin(angle)
+        R_x(3,2) =  dsin(angle)
+        R_x(3,3) =  dcos(angle)
+        !------------------------
+        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
+            system%atom(i)%xyz(j) = sum( R_x(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
+        end forall
+
+    case( "y" )
+        !------------------------
+        R_y      =  0.d0
+        R_y(2,2) =  1.d0
+        R_y(1,1) =  dcos(angle)
+        R_y(1,3) =  dsin(angle)
+        R_y(3,1) = -dsin(angle)
+        R_y(3,3) =  dcos(angle)
+        !------------------------
+        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
+            system%atom(i)%xyz(j) = sum( R_y(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
+        end forall
+
+    case( "z" )
+        !------------------------
+        R_z      =  0.d0
+        R_z(3,3) =  1.d0
+        R_z(1,1) =  dcos(angle)
+        R_z(1,2) = -dsin(angle)
+        R_z(2,1) =  dsin(angle)
+        R_z(2,2) =  dcos(angle)
+        !------------------------
+        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
+            system%atom(i)%xyz(j) = sum( R_z(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
+        end forall
+
+    case( "v" )
+        !------------------------
+        R_v(1,1) = v(1)**2 + (v(2)**2+v(3)**2)*cos(angle)
+        R_v(1,2) = v(1)*v(2)*(1-cos(angle)) - v(3)*sin(angle)
+        R_v(1,3) = v(1)*v(3)*(1-cos(angle)) + v(2)*sin(angle)
+        R_v(2,1) = v(1)*v(2)*(1-cos(angle)) + v(3)*sin(angle)
+        R_v(2,2) = v(2)**2 + (v(1)**2+v(3)**2)*cos(angle)
+        R_v(2,3) = v(2)*v(3)*(1-cos(angle)) - v(1)*sin(angle)
+        R_v(3,1) = v(1)*v(3)*(1-cos(angle)) - v(2)*sin(angle)
+        R_v(3,2) = v(2)*v(3)*(1-cos(angle)) + v(1)*sin(angle)
+        R_v(3,3) = v(3)**2 + (v(1)**2+v(2)**2)*cos(angle)
+        !------------------------
+        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
+            system%atom(i)%xyz(j) = sum( R_v(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) ) + pivot(j)
+        end forall
+
+end select 
+
+print*, '>>> rotation done <<<'
+
+end subroutine Alignment
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 !
 !
 !

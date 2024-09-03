@@ -12,10 +12,10 @@
 #  >>>  edit paramters  <<<
 #------------------------------------------------------------------
 #number of files , rows and columns of the panel
-nf=50    nrows=10    ncolumns=5
+nf=100    nrows=20    ncolumns=5
 
 #gather the files in the local directory
-for i in `seq -w 01 ${nf}`; do 
+for i in $(seq -f "%0$(($nf < 100 ? 2 : 3))g" 1 ${nf}); do 
       cp ../inpt-"${i}"/dyn.trunk/el_wp_energy.dat el_data-"${i}" 
       cp ../inpt-"${i}"/dyn.trunk/hl_wp_energy.dat hl_data-"${i}"
 done
@@ -26,7 +26,7 @@ declare -a min_vals
 declare -a max_vals
 
 #find the min and max values for plotting the graphs
-for i in $(seq -w 01 ${nf}); do
+for i in $(seq -f "%0$(($nf < 100 ? 2 : 3))g" 1 ${nf}); do
     # Convert padded number to integer
     index=$(echo $i | sed 's/^0*//')
     # Capture the output of the awk command and assign it to the array element
@@ -49,5 +49,5 @@ done
 
 echo "parameters: " "${y_min}" "${y_max}" "${nf}" "${nrows}" "${ncolumns}"
 
-gnuplot -c gnupanel.gps "${y_min}" "${y_max}" "${nf}" "${nrows}" "${ncolumns}"
+gnuplot -c ~/bin/gnupanel.gps "${y_min}" "${y_max}" "${nf}" "${nrows}" "${ncolumns}"
 

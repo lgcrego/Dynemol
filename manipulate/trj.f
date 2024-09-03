@@ -94,7 +94,7 @@ do
 
             sys = trj(frame)
 
-            sys%Surface_Characteristics = trj(1)%Surface_Characteristics
+            sys%System_Characteristics = trj(1)%System_Characteristics
 
             deallocate(trj)
 
@@ -159,7 +159,7 @@ do
 
             sys = trj(frame)
 
-            sys%Surface_Characteristics = trj(1)%Surface_Characteristics
+            sys%System_Characteristics = trj(1)%System_Characteristics
 
             ! allocate array of identical frames ...
             allocate( frozen_trj(n_frames) )
@@ -168,7 +168,7 @@ do
         
                 allocate( frozen_trj(i) % atom(sys%N_of_atoms) )
 
-                frozen_trj(i)%Surface_Characteristics = sys%Surface_Characteristics 
+                frozen_trj(i)%System_Characteristics = sys%System_Characteristics 
 
                 forall(j = 1:3 ) frozen_trj(i) % atom % xyz(j) = sys % atom % xyz(j)
 
@@ -230,12 +230,12 @@ real*8                          :: time_1 , time_2 , delta_t
 character(1)                    :: test
 character(4)                    :: keyword
 character(5)                    :: MMSymbol_char
-character(72)                   :: Surface_Characteristics
+character(72)                   :: System_Characteristics
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) stop " *** Cannot open the file *** "
 
-read( unit = 31 , fmt = 31 ) Surface_Characteristics
+read( unit = 31 , fmt = 31 ) System_Characteristics
 
 ! find the number of model frames ...
 model=0
@@ -346,7 +346,7 @@ do j = 1 , model
 
 end do
 
-trj%Surface_Characteristics = Surface_Characteristics
+trj%System_Characteristics = System_Characteristics
 trj%N_of_Atoms = number_of_atoms
 
 forall(i = 2:model )
@@ -511,7 +511,7 @@ forall(i = 2:model )
     trj(i)%atom%MMSymbol  = trj(1)%atom%Symbol
 end forall
 
-trj(1)%Surface_Characteristics = System_Characteristics
+trj(1)%System_Characteristics = System_Characteristics
 
 ! formats ...
 21 format(a1)
@@ -605,7 +605,7 @@ print*, j
         read(13,*) trj(1)%box(2)
         read(13,*) trj(1)%box(3)
 
-        trj(1) % Surface_Characteristics = System_Characteristics
+        trj(1) % System_Characteristics = System_Characteristics
 
         do i = 1 , atoms
             ! it is more robust by not using tabulation        
@@ -688,7 +688,7 @@ CALL Initialize_System( trj(1) )
 ! read structure characteristics ...
 write(*,'(\a)',advance='no') ' Enter the System Characteristics : '
 read (*,'(\a72)'           )   System_Characteristics
-trj(1) % Surface_Characteristics = System_Characteristics
+trj(1) % System_Characteristics = System_Characteristics
 
 ! start reading coordinate from the frames ...
 rewind 13
@@ -764,7 +764,7 @@ read (*,'(i3.3)'           ) frame_step
 
 OPEN( unit=4 , file='frames-output.pdb' , status='unknown' , action="write" )
 
-write(4,6) trj(1)%Surface_Characteristics
+write(4,6) trj(1)%System_Characteristics
 
 do j = 1 , size(trj) , frame_step
 
@@ -834,7 +834,7 @@ real*8              :: delta_t
 
 OPEN( unit=4 , file='frames-output.pdb' , status='unknown' , action="write" )
 
-write(4,6) trj(1)%Surface_Characteristics
+write(4,6) trj(1)%System_Characteristics
 
 !determine delta_t ...
 delta_t = trj(2)%time - trj(1)%time
@@ -917,7 +917,7 @@ do i = 1 , new_size
 
     allocate( tmp(i) % atom(N_of_atoms) )
 
-    tmp(i)%Surface_Characteristics = trj(1)%Surface_Characteristics
+    tmp(i)%System_Characteristics = trj(1)%System_Characteristics
 
     tmp(i) % atom % MMSymbol = trj(1) % atom % MMSymbol
     tmp(i) % atom % resid    = trj(1) % atom % resid

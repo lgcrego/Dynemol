@@ -85,17 +85,13 @@ where(univ % atom % residue == hole_fragment) univ % atom % Hl = .true.
 !      define %fragment 
 !----------------------------------------------------
 
-! ---------- Table of fragments -------------
+! ---------- Default fragments -------------
 !   Acceptor    =   A       
 !   Donor       =   D 
 !   Molecule    =   M
-!   Solvent     =   S  (default residue = SOL)
-!   Solute      =   R
-!   Cluster     =   C 
-!   Passivator  =   P 
-!   Quantum     =   Q 
-!   ghost       =   #
-!--------------------------------------------
+!   Bridge      =   B
+!   Solvent     =   S  
+!-------------------------------------------
 
 DO i = 1 , size(univ%atom)
 
@@ -235,25 +231,32 @@ If( Survival ) then
 end If
 
 !default: %El => DONOR
-If( any(a% El) ) then      ! <== first priority ...
-    where( a% El ) a% fragment = "D"
+If( any(a% El) ) &
+then      ! <== first priority ...
+    ! fragment = "D" unless specified otherwise by ad_hoc in card.inpt
+    where( a% El ) a% fragment = merge( "D", a% fragment , a%fragment=="X")
+
 else If( any(a% Hl) ) then ! <== second priority, only for cationic systems ...
-    where( a% Hl ) a% fragment = "A"
+    ! fragment = "A" unless specified otherwise by ad_hoc in card.inpt
+    where( a% Hl ) a% fragment = merge( "A", a% fragment , a%fragment=="X")
+
 else If(.NOT. static .AND. electron_state /= 0 ) then
-        CALL warning("execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_?")
-        stop 
+    CALL warning("execution stopped, must define eletron ...%El in ad_hoc_tuning; is ad_hoc = T_?")
+    stop 
 end If
 
 propagate_el = any(a% El) .EQV. (electron_state /= 0)
-If( .not. propagate_el ) then
-        CALL warning("execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f)")
-        stop 
+If( .not. propagate_el ) &
+then
+    CALL warning("execution stopped, ELECTRON wavepacket setup is not consistent: check electron_state (parameters.f) and %El (tuning.f)")
+    stop 
 end If
 
 propagate_hl = any(a% Hl) .EQV. (hole_state /= 0)
-If( .not. propagate_hl ) then
-        CALL warning("execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f)")
-        stop 
+If( .not. propagate_hl ) &
+then
+    CALL warning("execution stopped, HOLE wavepacket setup is not consistent: check hole_state (parameters.f) and %Hl (tuning.f)")
+    stop 
 end If
 
 end subroutine warnings
