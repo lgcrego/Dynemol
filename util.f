@@ -2,7 +2,7 @@ module util_m
 
     use constants_m
 
-    public:: fact , binomial , TO_UPPER_CASE
+    public:: fact , binomial , TO_UPPER_CASE , count_lines
 
 private
 
@@ -69,6 +69,29 @@ DO I = 1,LEN ( STRING )
 END DO
 
 END FUNCTION TO_UPPER_CASE
+!
+!
+!
+!================================================
+ FUNCTION count_lines (f_unit) result(n_of_lines)
+!================================================
+implicit none
+integer          , intent(in) :: f_unit
+
+! Local variables ...
+INTEGER      :: i , ioerr , n_of_lines
+character(1) :: dumb
+
+i = 0
+do 
+    read(f_unit,*,IOSTAT=ioerr) dumb
+    if(ioerr < 0) EXIT
+    i = i + 1
+end do    
+
+n_of_lines = i
+
+end FUNCTION count_lines
 !
 !
 !
