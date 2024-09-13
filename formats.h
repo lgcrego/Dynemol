@@ -70,9 +70,9 @@
 
 74    FORMAT(/,"======================   TDDFT-Casida  Parameters  ==========================")
 
-75    FORMAT(/,"occupied state  |   unoccupied state   |   transition density  ")
+75    FORMAT(/,"occupied state | unoccupied state | transition amplitude")
 
-76    FORMAT(t6,I4,t26,I4,t49,F10.7)
+76    FORMAT(t6,I4,t23,I4,t40,F10.7,t56,a4)
 
 100   FORMAT(I5,A4,F10.5,F10.5,F10.5)
 

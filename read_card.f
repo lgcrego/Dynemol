@@ -205,6 +205,9 @@ read_loop: do
                 read(command(5:n),'(i)') electron_state
                 electron_fragment = to_upper_case(command(1:3))
 
+        case( "LCMO" ) 
+                LCMO = get_logical(line)
+
 !------------------------------------------------------------------------
 !               STRUCTURAL  parameters
 !
@@ -460,8 +463,9 @@ read_loop: do
  
                       select case(feature)
 
-                             case( "ATOM" )
-
+                             case( "EHSYMBOL" )
+                                 ! Mind: EHSymbol is defined via MMSymbol in input.pdb
+                                 structure%atom(start:finale) % MMSymbol = label 
                              case( "RESIDUE" )
                                  structure%atom(start:finale) % residue = label 
                              case( "FRAGMENT" )
@@ -627,7 +631,7 @@ endif
 
 select case(feature) 
 
-       case( "RESIDUE" , "ATOM" , "QMMM" , "FRAGMENT" )
+       case( "RESIDUE" , "ATOM" , "QMMM" , "FRAGMENT" , "EHSYMBOL" )
        label = trim(string)
 
        case( "V_SHIFT" , "DROPLET" )
@@ -848,6 +852,7 @@ step_security = 1000
 t_i = 0.d0
 CT_dump_step = 1
 n_part = 2
+LCMO = .false.
 nnx = 0
 nny = 0 
 PBC = [0 , 0 , 0]
