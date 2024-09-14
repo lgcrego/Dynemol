@@ -1,4 +1,4 @@
-#
+# makefile for ifx and icx based oneAPI
 
 SUFFIX=.f
 
@@ -15,6 +15,7 @@ INCS   =
 
 SOURCE = types_m.o \
  		 constants_m.o \
+         util.o \
 		 diagnosis.o \
 		 parms.o \
 		 tuning.o \

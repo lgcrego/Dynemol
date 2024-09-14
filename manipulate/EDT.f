@@ -1,6 +1,7 @@
 module EDIT_routines
 
 use types_m
+use util_m
 use Read_Parms
 use Constants_m
 use GMX_routines
@@ -78,12 +79,14 @@ integer        , optional   , intent(in)    :: copies(:)
 ! local variables ...
 real*8                         :: T_vector(3) ,T_versor(3) , distance
 integer                        :: i , option , at2 , at1 , rn
+integer          , allocatable :: rn_mask(:) , indx(:)
 character(len=1)               :: choice
 character(len=3)               :: residue
-integer          , allocatable :: rn_mask(:) 
-character(len=3) , allocatable :: residue_mask(:)
+character(len=80)              :: line
+character(len=3) , allocatable :: residue_mask(:) , tokens(:)
 
-
+! reset varible ...
+system% atom(:)% translate = .false.
 
 CALL systemQQ( "clear" )
 
@@ -91,6 +94,7 @@ write(*,'(/a)') ' Choose stuff to Copy : '
 write(*,'(/a)') ' (1) = use ad-hoc tuning '
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
+write(*,'(/a)') ' (4) = atom index '
 write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') choice
 
@@ -113,7 +117,7 @@ select case( choice )
         deallocate( rn_mask )
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the name of the residue to be translated (@ to finish) : "
+        write(*,'(1x,3/a)') "choose the names of the residues to be translated (press ENTER after each residue; use @ to finish) : "
 
         allocate ( residue_mask(system%N_of_atoms) ) 
         residue_mask(:) = system%atom(:)%resid 
@@ -126,10 +130,22 @@ select case( choice )
         end do
         deallocate( residue_mask )
  
+    case( '4' )
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be translated separated by spaces (press ENTER) : "
+        read (*,'(a)') line
+
+        allocate( tokens , source = split_line(line) ) 
+
+        ! convert string to number
+        allocate( indx(size(tokens) ) )
+        do i=1,size(tokens) ; read(tokens(i),*) indx(i) ; end do
+
+        system% atom(indx)% translate = .true.
+
 end select
 
 ! define translation vector
-write(*,'(a)',advance='no') '> Use cartesian axis(1) or ad-hoc vector(2)? : '
+write(*,'(a)',advance='no') '> Use: (1) vector {T_x,T_y,T_z} or (2) define vector: at1 ======> at2? : '
 read(*,*) option
 
 select case (option)
@@ -503,12 +519,13 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !local variables
-integer          :: New_No_of_atoms , rn , begin_of_block
-type(universe)   :: temp
-character(len=1) :: option
-character(len=3) :: residue
-integer          , allocatable :: rn_mask(:) , displace(:)
-character(len=3) , allocatable :: residue_mask(:)
+integer           :: i , New_No_of_atoms , rn , begin_of_block
+type(universe)    :: temp
+integer           , allocatable :: rn_mask(:) , displace(:) , indx(:)
+character(len=1)  :: option
+character(len=3)  :: residue
+character(len=80) :: line
+character(len=3)  , allocatable :: residue_mask(:) , tokens(:)
 
 allocate( displace(system%N_of_atoms) , source = 0 ) 
 
@@ -518,6 +535,7 @@ write(*,'(/a)') ' Choose stuff to Delete : '
 write(*,'(/a)') ' (1) = use ad-hoc tuning '
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
+write(*,'(/a)') ' (4) = atom indices '
 write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') option
 
@@ -558,14 +576,26 @@ select case( option )
            displace(begin_of_block:) = displace(begin_of_block:) + 1
         end do
         deallocate( residue_mask )
- 
+
+    case( '4' )
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be deleted separated by spaces (press ENTER) : "
+        read (*,'(a)') line
+
+        allocate( tokens , source = split_line(line) ) 
+
+        ! convert string to number
+        allocate( indx(size(tokens) ) )
+        do i=1,size(tokens) ; read(tokens(i),*) indx(i) ; end do
+
+        system% atom(indx)% delete = .true.
+
 end select
 
 ! accommodate the residue numbers ...
 system%atom%nresid = system%atom%nresid - displace
 
 New_No_of_atoms = count( .NOT. system%atom%delete )
-allocate( temp%atom( New_No_of_atoms ) , source=system%atom )
+allocate( temp%atom( New_No_of_atoms ) )
 
 temp%atom = pack( system%atom, .NOT. system%atom%delete )
 
