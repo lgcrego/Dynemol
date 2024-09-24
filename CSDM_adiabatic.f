@@ -758,16 +758,27 @@ integer , intent(in) :: frame_final
 real*8  , intent(in) :: t_rate
 
 ! local variables ...
+integer :: err
 logical :: flag(2) !<== [MPI_done,QMMM_done]
 logical :: flag1 , flag2 , flag3
+logical :: job_status(2)
 
 flag1 = frame + frame_step > frame_final
 flag2 = it >= n_t
 flag3 = t  + t_rate >= t_f
 
+if( Unit_Cell% Total_erg /= Unit_Cell% Total_erg) &
+        then
+        ! NaN found
+        Print*, ">>> NaN found, halting execution <<<"
+        job_status = .true.
+        CALL MPI_Bcast( job_status , 2 , mpi_logical , 0 , world , err )
+        STOP "execution terminated here"
+end if
+
 ! if any of these hold, MPI job from workers is done ...
-flag(1) = flag1 .OR. flag2 .OR. flag3  ! <== job_done
-flag(2) = .not. QMMM                   ! <== QMMM_done
+flag(1) = flag1 .OR. flag2 .OR. flag3 ! <== job_done
+flag(2) = .not. QMMM                  ! <== QMMM_done
 
 end  function check
 !
