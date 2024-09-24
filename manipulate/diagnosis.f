@@ -2,6 +2,10 @@ module diagnosis_m
 
 use types_m     , only : universe
 
+public :: diagnosis
+
+private
+
 contains
 !
 !
@@ -9,13 +13,13 @@ contains
 subroutine diagnosis( sys )
 !==========================
 implicit none
-type(universe)  , intent(in)    :: sys
+type(universe)  , intent(in)  :: sys
 
 ! local variables
 integer         :: i , j
 character(2)    :: yn , option
 
-Write(*,'(/a)') sys%Surface_Characteristics
+Write(*,'(/a)') sys%System_Characteristics
 
 write(*,'(/a)',advance='no') ">>> details of the input file ? (y/n) "
 read (*,'(a)') yn
