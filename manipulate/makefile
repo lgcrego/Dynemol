@@ -23,6 +23,7 @@ SOURCE = types_m.o \
          amber.o \
 		 RW.o \
 		 gmx.o \
+         EDT_util.o \
 		 EDT.o \
 		 crystal.o \
 		 solvent.o \

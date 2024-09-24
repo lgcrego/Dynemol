@@ -68,7 +68,7 @@ end if
 
 ! read System Characteristics and list of chemical elements ...
 OPEN(unit=3,file='poscar.dat',form="formatted",access="sequential",status='old',iostat=ioerr,err=10)
-read(3 , '(A72)') system%Surface_Characteristics
+read(3 , '(A72)') system%System_Characteristics
 
 ! read multiplication factor for coordinates ...
 read(3 , *) factor
@@ -205,9 +205,15 @@ read(3,*) system%N_of_atoms
 read(3,*) system%System_Characteristics
 
 ! reads the unit cell vectors for Direct coordinate mode
-read(3,*) system%box(1)
-read(3,*) system%box(2)
-read(3,*) system%box(3)
+read(3,*,iostat=ioerr)  system%box(1)  
+if( ioerr > 0 ) &
+then
+     print*, "no (T_x,T_y,T_z) entries"
+     backspace(3)
+else
+     read(3,*,iostat=ioerr)  system%box(2) ; if( ioerr > 0 ) print*, "no T_y entry"
+     read(3,*,iostat=ioerr)  system%box(3) ; if( ioerr > 0 ) print*, "no T_z entry"
+end if
 
 allocate( system%atom(system%N_of_atoms) )
 CALL Initialize_System( system )
@@ -238,9 +244,8 @@ select case (ASCII)
            do i = 1 , system%N_of_atoms 
            
                read(3,*,iostat=ioerr) system%atom(i)%symbol , (system%atom(i)%xyz(j),j=1,3) 
-           
+
                if(ioerr < 0) EXIT
-               print*,i
            
            end do
 
@@ -281,7 +286,7 @@ real*8  , parameter :: bottom_spacer = 0.0 !(Angs)
 OPEN(unit=9,file='seed.xyz',status='unknown')
 
 write(9,*) size(system%atom)
-write(9,10) system%Surface_Characteristics , (system%box(j),j=1,3)
+write(9,10) system%System_Characteristics , (system%box(j),j=1,3)
 DO i = 1 , size(system%atom)
     write(9,100) system%atom(i)%symbol , (system%atom(i)%xyz(j),j=1,3)
 END DO
@@ -313,7 +318,7 @@ system%atom%xyz(3) = system%atom%xyz(3)-minval(system%atom%xyz(3)) + bottom_spac
 
 OPEN(unit=9,file='seed',status='unknown')
 
-write(9,*) system%Surface_Characteristics
+write(9,*) system%System_Characteristics
 write(9,*) " "
 write(9,*) "Molecular"      
 write(9,*) " "
@@ -389,7 +394,7 @@ CALL diagnosis( system )
 !----------------------------------------------
 OPEN(unit=4,file='poscar.xyz',status='unknown')
 
-write(4,10        ) system%Surface_Characteristics , " # " , type_of_elements , "#  "
+write(4,10        ) system%System_Characteristics , " # " , type_of_elements , "#  "
 write(4,'(A2)'    ) '1.' 
 write(4,'(3F12.5)') system%box(1)     , 0.d0           , 0.d0
 write(4,'(3F12.5)') 0.d0              , system%box(2)  , 0.d0 

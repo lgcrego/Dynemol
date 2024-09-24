@@ -2,7 +2,7 @@ module util_m
 
     use constants_m
 
-    public:: fact , binomial , TO_UPPER_CASE , count_lines , split_line
+    public:: fact , binomial , TO_UPPER_CASE , count_lines , split_line , seq_in_range
 
 private
 
@@ -103,7 +103,7 @@ character(len=*) :: line
 
 ! Local variables ...
 integer :: i , size_line , n_tokens , ioerr
-character(len=3) , allocatable :: tokens(:) , aux(:)
+character(len=9) , allocatable :: tokens(:) , aux(:)
 
 size_line = len(line)
 allocate ( aux(size_line) )                                                                                                                   
@@ -115,6 +115,26 @@ forall(i=1:n_tokens) tokens(i) = trim(aux(i))
 deallocate(aux)
 
 end FUNCTION split_line
+!
+!
+!
+!========================================
+function seq_in_range(string) result(seq)
+!========================================
+implicit none
+character(len=*) :: string
+
+! Local variables ...
+integer               :: i , i1 , i2 , colon
+integer , allocatable :: seq(:)
+
+        colon = index(string,":")
+        read(string(1:colon-1),*) i1
+        read(string(colon+1: ),*) i2
+
+        seq = [ ( i , i=i1,i2 ) ]
+
+end function seq_in_range
 !
 !
 !

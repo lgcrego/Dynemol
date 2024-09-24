@@ -5,6 +5,7 @@ use util_m
 use Read_Parms
 use Constants_m
 use GMX_routines
+use EDT_util_m     , only : on_the_fly_tuning
 
 interface ReGroup
     module procedure ReGroup_Molecule
@@ -73,76 +74,17 @@ end subroutine Copy
 subroutine Translation( system , copies )
 !========================================
 implicit none 
-type(universe)              , intent(inout) :: system
-integer        , optional   , intent(in)    :: copies(:)
+type(universe)            , intent(inout) :: system
+integer        , optional , intent(in)    :: copies(:)
 
 ! local variables ...
-real*8                         :: T_vector(3) ,T_versor(3) , distance
-integer                        :: i , option , at2 , at1 , rn
-integer          , allocatable :: rn_mask(:) , indx(:)
-character(len=1)               :: choice
-character(len=3)               :: residue
-character(len=80)              :: line
-character(len=3) , allocatable :: residue_mask(:) , tokens(:)
+real*8  :: T_vector(3) ,T_versor(3) , distance
+integer :: i , option , at2 , at1 
 
 ! reset varible ...
 system% atom(:)% translate = .false.
 
-CALL systemQQ( "clear" )
-
-write(*,'(/a)') ' Choose stuff to Copy : '
-write(*,'(/a)') ' (1) = use ad-hoc tuning '
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom index '
-write(*,'(/a)',advance='no') '>>>   '
-read (*,'(a)') choice
-
-select case( choice )
-    case( '1' ) 
-        ! do nothing, proceed ...
-
-    case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be translated (0 to finish) : "
-
-        allocate ( rn_mask(system%N_of_atoms) )
-        rn_mask(:) = system%atom(:)%nresid 
-        do
-           read*, rn
-           If( rn == 0 ) exit
-           
-           where( system% atom(:)% nresid == rn ) system% atom(:)% translate = .true.
-
-        end do
-        deallocate( rn_mask )
-
-    case( '3' )
-        write(*,'(1x,3/a)') "choose the names of the residues to be translated (press ENTER after each residue; use @ to finish) : "
-
-        allocate ( residue_mask(system%N_of_atoms) ) 
-        residue_mask(:) = system%atom(:)%resid 
-        do
-           read*, residue
-           If( residue == "@" ) exit
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% translate = .true.
-
-        end do
-        deallocate( residue_mask )
- 
-    case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be translated separated by spaces (press ENTER) : "
-        read (*,'(a)') line
-
-        allocate( tokens , source = split_line(line) ) 
-
-        ! convert string to number
-        allocate( indx(size(tokens) ) )
-        do i=1,size(tokens) ; read(tokens(i),*) indx(i) ; end do
-
-        system% atom(indx)% translate = .true.
-
-end select
+CALL on_the_fly_tuning( system )
 
 ! define translation vector
 write(*,'(a)',advance='no') '> Use: (1) vector {T_x,T_y,T_z} or (2) define vector: at1 ======> at2? : '
@@ -194,16 +136,20 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-type(universe)  :: temp
-real*8          :: R_x(3,3) , R_y(3,3) , R_z(3,3) , R_v(3,3) , pivot(3) , v(3) , angle
-integer         :: i , j , N_of_atoms , pivot_atom, option , at1, at2, at3
-character(1)    :: axis 
+type(universe)    :: temp
+real*8            :: R_x(3,3) , R_y(3,3) , R_z(3,3) , R_v(3,3) , pivot(3) , v(3) , angle
+integer           :: i , j , N_of_atoms , pivot_atom, option , at1, at2, at3 
+character(1)      :: axis
+
+! reset varible ...
+system% atom(:)% rotate = .false.
+
+CALL on_the_fly_tuning( system )
 
 N_of_atoms = size(system%atom)
 
 ! define rotation axis
-write(*,'(a)'             ) '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
-write(*,'(a)',advance='no') '> Alignement with: (4)-x axis , (5)-y axis , (6)-z axis ?   '
+write(*,'(a)') '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
 read(*,*) option
 
 select case (option)
@@ -261,7 +207,7 @@ select case (option)
 
    case(4:6) 
         ! go to alignment subroutine
-        call Alignment(system)
+        !call Alignment(system)
         ! mission accomplished
         return
 
@@ -341,148 +287,6 @@ end subroutine rotation
 !
 !
 !============================
-subroutine Alignment( system )
-!============================
-implicit none 
-type(universe) , intent(inout) :: system
-
-!	local variables
-type(universe)  :: temp
-real*8          :: R_x(3,3) , R_y(3,3) , R_z(3,3) , R_v(3,3) , pivot(3) , v(3) , angle , norm_v
-integer         :: i , j , N_of_atoms , pivot_atom, option , at1, at2, at3
-character(1)    :: axis 
-
-N_of_atoms = size(system%atom)
-
-! define rotation axis
-write(*,'(a)'             ) '> Rotation around: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
-write(*,'(a)',advance='no') '> Alignement with: (4)-x axis , (5)-y axis , (6)-z axis ?   '
-read(*,*) option
-
-! define vector to be aligned
-write(*,'(/a)') '> define vector perpendicular to the plane (this is the vector to be aligned): '
-write(*,'(/a)') '            at1    at3                      '
-write(*,'(a)')  '              \    /                        '
-write(*,'(a)')  '               \  /                         '
-write(*,'(a)')  '                \/                          '
-write(*,'(a)')  '                at2                         '
-write(*,'(/a)',advance='no') 'index of atom 1 = '
-read(*,*) at1
-write(*,'(a)',advance='no') 'index of atom 2 = '
-read(*,*) at2
-write(*,'(a)',advance='no') 'index of atom 3 = '
-read(*,*) at3
-
-! the versor ...
-v = vector_product(system,at1,at2,at3)
-
-norm_v = sqrt(dot_product(v,v))
-print*, norm_v
-stop
-write(*,'(a)',advance='no') '> enter the direction of alignment ("x","y","z")  = '
-read (*,*) axis
-write(*,'(a)',advance='no') '> enter angle for clockwise rotation (degrees)  = '
-read (*,*) angle
-write(*,'(\a)',advance='no') '> enter pivot atom  = '
-read (*,*) pivot_atom
-
-
-allocate( temp%atom(N_of_atoms) )
-
-temp = system
-
-angle = angle * (PI/180.d0)
-pivot = system%atom(pivot_atom)%xyz 
-
-select case (axis)
-
-    case( "x" )
-        !------------------------
-        R_x      =  0.d0
-        R_x(1,1) =  1.d0
-        R_x(2,2) =  dcos(angle)
-        R_x(2,3) = -dsin(angle)
-        R_x(3,2) =  dsin(angle)
-        R_x(3,3) =  dcos(angle)
-        !------------------------
-        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
-            system%atom(i)%xyz(j) = sum( R_x(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
-        end forall
-
-    case( "y" )
-        !------------------------
-        R_y      =  0.d0
-        R_y(2,2) =  1.d0
-        R_y(1,1) =  dcos(angle)
-        R_y(1,3) =  dsin(angle)
-        R_y(3,1) = -dsin(angle)
-        R_y(3,3) =  dcos(angle)
-        !------------------------
-        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
-            system%atom(i)%xyz(j) = sum( R_y(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
-        end forall
-
-    case( "z" )
-        !------------------------
-        R_z      =  0.d0
-        R_z(3,3) =  1.d0
-        R_z(1,1) =  dcos(angle)
-        R_z(1,2) = -dsin(angle)
-        R_z(2,1) =  dsin(angle)
-        R_z(2,2) =  dcos(angle)
-        !------------------------
-        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
-            system%atom(i)%xyz(j) = sum( R_z(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) )  + pivot(j)
-        end forall
-
-    case( "v" )
-        !------------------------
-        R_v(1,1) = v(1)**2 + (v(2)**2+v(3)**2)*cos(angle)
-        R_v(1,2) = v(1)*v(2)*(1-cos(angle)) - v(3)*sin(angle)
-        R_v(1,3) = v(1)*v(3)*(1-cos(angle)) + v(2)*sin(angle)
-        R_v(2,1) = v(1)*v(2)*(1-cos(angle)) + v(3)*sin(angle)
-        R_v(2,2) = v(2)**2 + (v(1)**2+v(3)**2)*cos(angle)
-        R_v(2,3) = v(2)*v(3)*(1-cos(angle)) - v(1)*sin(angle)
-        R_v(3,1) = v(1)*v(3)*(1-cos(angle)) - v(2)*sin(angle)
-        R_v(3,2) = v(2)*v(3)*(1-cos(angle)) + v(1)*sin(angle)
-        R_v(3,3) = v(3)**2 + (v(1)**2+v(2)**2)*cos(angle)
-        !------------------------
-        forall( i=1:N_of_atoms , j=1:3 , system%atom(i)%rotate ) 
-            system%atom(i)%xyz(j) = sum( R_v(j,:) * (temp%atom(i)%xyz(:)-pivot(:)) ) + pivot(j)
-        end forall
-
-end select 
-
-print*, '>>> rotation done <<<'
-
-end subroutine Alignment
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!
-!
-!
-!============================
 subroutine Reflection(system)
 !============================
 implicit none
@@ -519,77 +323,15 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !local variables
-integer           :: i , New_No_of_atoms , rn , begin_of_block
-type(universe)    :: temp
-integer           , allocatable :: rn_mask(:) , displace(:) , indx(:)
-character(len=1)  :: option
-character(len=3)  :: residue
-character(len=80) :: line
-character(len=3)  , allocatable :: residue_mask(:) , tokens(:)
+type(universe) :: temp
+integer        :: New_No_of_atoms
+integer, allocatable :: displace(:)
 
 allocate( displace(system%N_of_atoms) , source = 0 ) 
 
-CALL systemQQ( "clear" )
+system% atom(:)% delete = .false.
 
-write(*,'(/a)') ' Choose stuff to Delete : '
-write(*,'(/a)') ' (1) = use ad-hoc tuning '
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom indices '
-write(*,'(/a)',advance='no') '>>>   '
-read (*,'(a)') option
-
-select case( option )
-    case( '1' ) 
-        ! do nothing, proceed ...
-
-    case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be deleted (0 to finish) : "
-
-        allocate ( rn_mask(system%N_of_atoms) )
-        rn_mask(:) = system%atom(:)%nresid 
-        do
-           read*, rn
-           If( rn == 0 ) exit
-           
-           where( system% atom(:)% nresid == rn ) system% atom(:)% delete = .true.
-
-           begin_of_block = minloc( rn_mask , mask = rn_mask==rn , dim=1 )
-           displace(begin_of_block:) = displace(begin_of_block:) + 1
-        end do
-        deallocate( rn_mask )
-
-    case( '3' )
-        write(*,'(1x,3/a)') "choose the name of the residue to be deleted (@ to finish) : "
-
-        allocate ( residue_mask(system%N_of_atoms) ) 
-        residue_mask(:) = system%atom(:)%resid 
-        do
-           read*, residue
-           If( residue == "@" ) exit
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% delete = .true.
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% nresid = -1
-
-           begin_of_block = minloc( residue_mask , mask = residue_mask==residue , dim=1 )
-           displace(begin_of_block:) = displace(begin_of_block:) + 1
-        end do
-        deallocate( residue_mask )
-
-    case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be deleted separated by spaces (press ENTER) : "
-        read (*,'(a)') line
-
-        allocate( tokens , source = split_line(line) ) 
-
-        ! convert string to number
-        allocate( indx(size(tokens) ) )
-        do i=1,size(tokens) ; read(tokens(i),*) indx(i) ; end do
-
-        system% atom(indx)% delete = .true.
-
-end select
+CALL on_the_fly_tuning( system , displace )
 
 ! accommodate the residue numbers ...
 system%atom%nresid = system%atom%nresid - displace
@@ -615,9 +357,9 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !local variables
-integer :: nr , i , j , indx1 , indx2 
+integer :: nr , i , indx1 , indx2 
 integer :: N_of_solute_atoms = 0
-real*8  :: delta(3) , GeoCenter(3) , nr_CM(3)
+real*8  :: GeoCenter(3) , nr_CM(3)
 character(4) :: residue_name
 
 ! STDIN info ...

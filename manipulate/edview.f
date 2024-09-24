@@ -17,13 +17,14 @@ use Occupation
 use Aminoacids                 
 use Amber_routines
 use RW_driver       
+use EDT_util_m
 
 implicit none
 
 ! local variables
 type(universe)                  :: structure
 type(universe)  , allocatable   :: trajectories(:)
-character(len=1)                :: Reading_Method
+character(len=1)                :: Reading_Method , yn
 character(len=2)                :: Editing_Method 
 character(len=3)                :: resid
 integer                         :: AtNo, N_of_atom_type
@@ -87,7 +88,15 @@ do
             CALL Post_proccess_Occupation
 
         case ('A','a')
-            CALL ad_hoc_tuning( structure )
+            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
+            read (*,'(a)') yn
+
+            if( yn /= "n" ) &
+            then
+                CALL on_the_fly_tuning (structure )
+            else
+                CALL ad_hoc_tuning( structure )
+            end if
 
         case default
             exit
