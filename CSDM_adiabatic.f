@@ -678,11 +678,6 @@ if( triggered == YES ) then
     endif
 endif
 
-!if( triggered == NO ) then
-!    ! carry on with trigger OFF
-!    QM_erg = d_zero
-!end if
-
 ! triggered = NO turns off QMMM ...
 QMMM = triggered
 
@@ -734,6 +729,10 @@ CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra ,
 
 mm = size(ExCell_basis)
 nn = n_part
+
+PointerState = PST
+
+CALL BcastQMArgs( mm , Extended_Cell%atoms )
 
 If( Induced_ ) then
      CALL Build_Induced_DP( instance = "allocate" )
