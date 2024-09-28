@@ -106,6 +106,9 @@ end If
 
 CALL EigenSystem( Extended_Cell , ExCell_basis , UNI_el )
 
+! total number of electrons ...
+Extended_Cell% N_of_electrons = sum( Extended_Cell% Nvalen, Extended_Cell% QMMM == "QM" )
+UNI_el% Fermi_state = Extended_Cell% N_of_Electrons/TWO + mod( Extended_Cell% N_of_Electrons , 2 )
 
 end subroutine Restart_Sys_Eigen
 !
@@ -137,10 +140,16 @@ If( first_time ) then
 
     If( restart ) then
         inquire( file=dynemolworkdir//"Security_copy.dat", EXIST=exist )   
-        If( exist ) stop " <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
+        If( exist ) then
+             print*, ""
+             stop " >> Execution halted; <Security_copy.dat> exists; check restart parameter or move Security_copy.dat to Restart_copy.dat"
+        end if
     else
         inquire( file=dynemolworkdir//"Restart_copy.dat", EXIST=exist )
-        If( exist ) stop " <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
+        If( exist ) then
+             print*, ""
+             stop " >> Execution halted; <Restart_copy.dat> exists; check restart parameter or delete Restart_copy.dat"
+        end if
     end If
 
     ! get rid of Restart_copy.dat for new Security_copy.dat ...
