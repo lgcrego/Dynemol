@@ -713,31 +713,48 @@ type(f_time) , intent(out) :: QDyn
 integer      , intent(out) :: frame_restart
 logical      , intent(out) :: triggered
 
+! local variables ...
+integer :: err
+integer :: mpi_D_R = mpi_double_precision
+logical :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]
+
 CALL DeAllocate_QDyn ( QDyn , flag="alloc" )
 
-CALL Restart_State ( MO_bra        , MO_ket        , &
-                     MO_TDSE_bra   , MO_TDSE_ket   , &
-                     DUAL_bra      , DUAL_ket      , &
-                     DUAL_TDSE_bra , DUAL_TDSE_ket , &
-                     AO_bra        , AO_ket        , &
-                     PST , t , it , frame_restart    &
-                    )
+If( master .OR. KernelCrew ) &
+then
+        CALL Restart_State ( MO_bra        , MO_ket        , &
+                             MO_TDSE_bra   , MO_TDSE_ket   , &
+                             DUAL_bra      , DUAL_ket      , &
+                             DUAL_TDSE_bra , DUAL_TDSE_ket , &
+                             AO_bra        , AO_ket        , &
+                             PST , t , it , frame_restart    &
+                            )
+        
+        allocate( phase(size(MO_bra(:,1))) )
+end if
 
-allocate( phase(size(MO_bra(:,1))) )
+call mpi_barrier( world , err )
 
 CALL Restart_Sys( Extended_Cell , ExCell_basis , Unit_Cell , DUAL_ket , AO_bra , AO_ket , frame_restart , UNI )
 
 mm = size(ExCell_basis)
 nn = n_part
 
-PointerState = PST
+! done for ForceCrew ; ForceCrew dwells in CSDM_workers ...                                                                                 
+If( ForceCrew ) CALL Ehrenfest_workers( Extended_Cell , ExCell_basis )
 
-CALL BcastQMArgs( mm , Extended_Cell%atoms )
+PointerState = PST
 
 If( Induced_ ) then
      CALL Build_Induced_DP( instance = "allocate" )
      CALL DP_stuff ( "Induced_DP" )
 end If
+
+CALL BcastQMArgs( mm , Extended_Cell%atoms )
+
+! ForceCrew is on stand-by for this ...
+CALL MPI_BCAST( Extended_Cell%coord , Extended_Cell%atoms*3 , mpi_D_R , 0 , ForceComm, err )
+CALL MPI_BCAST( job_status , 2 , mpi_logical , 0 , world , err )
 
 ! just setting the variable, to prevent triggered = NAN ...
 triggered = .true.

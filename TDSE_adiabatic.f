@@ -727,6 +727,7 @@ implicit none
 type(f_time)    , intent(out) :: QDyn
 integer         , intent(out) :: frame_restart
 
+! local variables ...
 integer :: err
 integer :: mpi_D_R = mpi_double_precision
 logical :: job_status(2) = [F_,F_]  !<== [MPI_done,QMMM_done]

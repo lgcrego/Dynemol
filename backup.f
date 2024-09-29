@@ -3,7 +3,7 @@ module Backup_m
     use MPI 
     use type_m
     use blas95
-    use MPI_definitions_m    , only : master , EnvCrew
+    use MPI_definitions_m    , only : master , EnvCrew 
     use parameters_m         , only : driver                     , &
                                       QMMM                       , &
                                       nuclear_matter             , &
