@@ -46,7 +46,8 @@ logical     , optional , intent(in)    :: slow_Decoh
 
 ! local variables ...
 integer    :: n , i , ia , a , L , dim_E
-real*8     :: dt , coeff , summ(2)
+real*8     :: dt 
+complex*16 :: coeff , summ(2)
 integer    , allocatable , save :: list(:)
 real*8     , allocatable :: decay(:,:)
 complex*16 , allocatable :: AO_bra(:,:) , AO_ket(:,:) , dual_ket(:,:) , aux(:,:)
@@ -139,7 +140,7 @@ do i = 1 , dim_E
 
 do n = 1 , n_part
      coeff = MO_bra(PST(n),n) * MO_ket(PST(n),n)
-     coeff = (d_one - summ(n)) / coeff
+     coeff = (C_one - summ(n)) / coeff
      coeff = sqrt(coeff)
      MO_bra(PST(n),n) = MO_bra(PST(n),n) * coeff
      MO_ket(PST(n),n) = MO_ket(PST(n),n) * coeff
@@ -502,8 +503,9 @@ real*8               , intent(in)    :: t_rate
 logical   , optional , intent(in)    :: slow_Decoh
 
 ! local variables ...
-integer :: n , i 
-real*8  :: dt , coeff , gauge , summ(2) 
+integer    :: n , i 
+real*8     :: dt 
+complex*16 :: coeff , summ(2) 
 real*8, allocatable :: decay(:,:)
 
 ! J. Chem. Phys. 126, 134114 (2007)
@@ -529,7 +531,7 @@ do i = 1 , size(erg)
 
 do n = 1 , n_part
      coeff = bra(PST(n),n) * ket(PST(n),n)
-     coeff = (d_one - summ(n)) / coeff
+     coeff = (C_one - summ(n)) / coeff
      coeff = sqrt(coeff)
      bra(PST(n),n) = bra(PST(n),n) * coeff
      ket(PST(n),n) = ket(PST(n),n) * coeff
