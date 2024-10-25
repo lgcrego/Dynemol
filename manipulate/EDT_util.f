@@ -6,7 +6,7 @@ use Read_Parms
 use Constants_m
 use GMX_routines
 
-public :: on_the_fly_tuning
+public :: on_the_fly_tuning , parse_this
 
 private
 

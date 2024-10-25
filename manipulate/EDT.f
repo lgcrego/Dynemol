@@ -7,6 +7,19 @@ use Constants_m
 use GMX_routines
 use EDT_util_m     , only : on_the_fly_tuning
 
+private
+
+public::  Copiar &
+       , Translation &
+       , Rotation &
+       , Reflection &
+       , Eliminate_Fragment &
+       , Bring_into_PBCBox &
+       , ReGroup &
+       , Include_Fragment &
+       , Replicate &
+       , Nonbonding_Topology
+
 interface ReGroup
     module procedure ReGroup_Molecule
     module procedure ReGroup_Surface
@@ -17,7 +30,7 @@ contains
 !
 !
 !========================
-subroutine Copy( system )
+subroutine Copiar( system )
 !========================
 implicit none 
 type(universe)  , intent(inout) :: system
@@ -66,7 +79,7 @@ system % N_of_atoms              = New_N_of_atoms
 
 deallocate( copies )
 
-end subroutine Copy
+end subroutine Copiar
 !
 !
 !

@@ -5,6 +5,8 @@ use types_m             , only : universe
 use FUNCTION_routines
 use diagnosis_m    
 
+private
+
 public :: Read_from_Poscar ,        &
           Read_from_XYZ ,           &
           Read_from_MD_Urht ,       &
@@ -14,8 +16,6 @@ public :: Read_from_Poscar ,        &
           save_MD_Urht ,            &
           Sort_Chemical_Elements ,  &
           Initialize_System
-
-private
 
 ! module types ...
 
@@ -191,16 +191,23 @@ end subroutine Read_from_MD_Urht
 !
 !
 !
-!================================
- subroutine Read_from_XYZ(system)
-!================================
+!==============================================
+ subroutine Read_from_XYZ( system , file_name )
+!==============================================
 implicit none
 type(universe) , intent(out) :: system
+character(*)   , optional  , intent(in) :: file_name
 
 !	local variables
 integer :: i , j , ioerr , ASCII
 
-OPEN(unit=3,file='input.xyz',status='old',iostat=ioerr,err=10)
+! finds out what file to read ...
+If( present(file_name) ) then
+    OPEN(unit=3,file=file_name,status='old',iostat=ioerr,err=10)
+else 
+	OPEN(unit=3,file='input.xyz',status='old',iostat=ioerr,err=10)
+end if
+
 read(3,*) system%N_of_atoms
 read(3,*) system%System_Characteristics
 
