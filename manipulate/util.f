@@ -1,8 +1,12 @@
 module util_m
 
     use constants_m
+    use f95_precision
+    use blas95
+    use lapack95
 
-    public:: fact , binomial , TO_UPPER_CASE , count_lines , split_line , seq_in_range
+    public:: fact , binomial , det , Frobenius_norm
+    public:: TO_UPPER_CASE , count_lines , split_line , seq_in_range
 
 private
 
@@ -38,6 +42,59 @@ real*8               :: binomial
 binomial = fact(n)/(fact(k)*fact(n-k))
 
 end function binomial
+!
+!
+!
+!
+!=================================
+function det( A ) result(det_of_A)
+!=================================
+implicit none 
+real*8  , intent(in) :: A(:,:)
+
+!local variables ...
+integer :: i
+real*8  :: det_of_A
+real*8  , allocatable :: aux(:,:)
+
+allocate( aux , source=A )
+CALL getrf(aux)
+
+det_of_A = 1.d0
+do i = 1 , size(aux(:,1))
+    det_of_A = det_of_A * aux(i,i) 
+    end do
+
+deallocate( aux )
+
+end function det
+!
+!
+!
+!==========================================
+function Frobenius_norm( A ) result(F_norm)
+!==========================================
+implicit none 
+real*8  , intent(in) :: A(:,:)
+
+!local variables ...
+integer :: i , m
+real*8  :: F_norm
+real*8  , allocatable :: aux(:,:)
+
+m = size(A(:,1))
+allocate(aux(m,m))
+
+call gemm( A , A , aux , 'N','T')
+
+F_norm = 0.d0
+do i = 1 , m
+   F_norm = F_norm + aux(i,i)
+   end do
+
+deallocate(aux)
+
+end function Frobenius_norm
 !
 !
 !

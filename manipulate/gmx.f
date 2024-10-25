@@ -52,12 +52,12 @@ end subroutine save_GROMACS
 !
 !
 !
-!=================================
-subroutine Dump_pdb( sys , title )
-!=================================
+!=====================================
+subroutine Dump_pdb( sys , file_name )
+!=====================================
 implicit none 
 type(universe)                  , intent(inout) ::  sys
-character(*)        , optional  , intent(in)    :: title
+character(*)        , optional  , intent(in)    :: file_name
 
 ! local variables ...
 integer ::  i , k
@@ -66,13 +66,13 @@ integer ::  i , k
 !     generate pdb file for GROMACS
 !----------------------------------------------
 
-If( present(title) ) then
-    write(4,'(A96)') title
+If( present(file_name) ) then
+    OPEN(unit=4,file=file_name,status='unknown')
 else
     OPEN(unit=4,file='seed.pdb',status='unknown')
-    write(4,6) sys%System_Characteristics
 end if
 
+write(4,6) sys%System_Characteristics
 write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
 
 do i = 1 , sys%N_of_atoms
@@ -439,8 +439,8 @@ else
         read(unit=3,fmt=105,iostat=ioerr) keyword
         if ( keyword == "MASTER" .or. keyword == "CONECT" ) exit
         N_of_atoms = N_of_atoms + 1
-        print*, N_of_atoms
     end do
+    print*, "> # of atoms = " , N_of_atoms
     system%N_of_atoms = N_of_atoms
         
     allocate( system%atom(system%N_of_atoms) )
@@ -464,29 +464,28 @@ else
                 system%atom(i)%MMSymbol = adjustl(MMSymbol_char)
                 system%atom(i)%FFSymbol = adjustl(FFSymbol_char)
                 system%atom(i)%my_intra_id = i 
-                print*, system%atom(i)%MMSymbol 
             end do
         end if
         if ( keyword == "MASTER" .or. keyword == "CONECT" .or. keyword == "END" ) exit
     end do
     backspace(3)
 
-   ! Generating a bond matrix for topology generation ...
-   if ( keyword == "CONECT" ) then 
-        allocate( InputIntegers(2*N_of_atoms,5), source = 0 )
-        i = 0
-        do
-          read(3,103) line
-          if( trim(line(1:6)) == "MASTER" ) exit
-          i = i + 1
-          read(line(7:11) ,'(I5)') InputIntegers(i,1)
-          read(line(12:16),'(I5)') InputIntegers(i,2)
-          read(line(17:21),'(I5)') InputIntegers(i,3)
-          read(line(22:26),'(I5)') InputIntegers(i,4)
-          read(line(27:31),'(I5)') InputIntegers(i,5)
-        end do
-        system%total_conect = i
-   end if 
+    ! Generating a bond matrix for topology generation ...
+    if ( keyword == "CONECT" ) then 
+         allocate( InputIntegers(2*N_of_atoms,5), source = 0 )
+         i = 0
+         do
+           read(3,103) line
+           if( trim(line(1:6)) == "MASTER" ) exit
+           i = i + 1
+           read(line(7:11) ,'(I5)') InputIntegers(i,1)
+           read(line(12:16),'(I5)') InputIntegers(i,2)
+           read(line(17:21),'(I5)') InputIntegers(i,3)
+           read(line(22:26),'(I5)') InputIntegers(i,4)
+           read(line(27:31),'(I5)') InputIntegers(i,5)
+         end do
+         system%total_conect = i
+    end if 
 
     system% atom% resid = adjustl(system% atom% resid)
 !----------------------

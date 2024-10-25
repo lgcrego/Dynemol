@@ -5,7 +5,7 @@ use diagnosis_m
 use RW_routines
 use GMX_routines
 use Read_parms
-use EDIT_routines     
+use EDIT_routines     , only: Copiar , Translation , Rotation , Reflection , Eliminate_Fragment , Bring_into_PBCBox , ReGroup , Replicate , Nonbonding_Topology , Include_fragment
 use SOLVENT_routines
 use FUNCTION_routines
 use Elastic_Band
@@ -18,6 +18,7 @@ use Aminoacids
 use Amber_routines
 use RW_driver       
 use EDT_util_m
+use Alignment_routines
 
 implicit none
 
@@ -51,7 +52,7 @@ do
     write(*,'(/a)') '8  : Read Multiple trajectories '
     write(*,'(/a)') '9  : Read "Occupation.bin" file'
     write(*,'(/a)') 'A  : ad_hoc tuning '
-    write(*,'(/a)') '0  : DONE '
+    write(*,'(/a)') '0  : DONE / ADVANCE'
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(a)') Reading_Method
 
@@ -104,44 +105,48 @@ do
     end select
 end do
 
-! in case N_of_atoms was not defined ...
-structure%N_of_atoms = size(structure%atom)
+If( allocated(structure%atom) ) then
 
-! total number of atoms of given type ...
-do AtNo = 1 , size(atom)
-
-    N_of_atom_type = count(structure%atom%AtNo == AtNo)
-          
-    If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
-
-end do
-
-! check list ...
-if( any(structure%atom%Symbol == "@@") ) stop ">> special atoms not defined ! <<"
+         ! in case N_of_atoms was not defined ...
+         structure%N_of_atoms = size(structure%atom)
+         
+         ! total number of atoms of given type ...
+         do AtNo = 1 , size(atom)
+         
+             N_of_atom_type = count(structure%atom%AtNo == AtNo)
+                   
+             If( N_of_atom_type /= 0 ) Print 121 , atom(AtNo)%symbol , N_of_atom_type
+         
+         end do
+         
+         ! check list ...
+         if( any(structure%atom%Symbol == "@@") ) stop ">> special atoms not defined ! <<"
+         
+         CALL diagnosis( structure )
+         
+end if
 
 !-----------------------------------------------------------
 !       Editing the structure
-
-CALL diagnosis( structure )
-
 do
     write(*,'(/a)') '>>>    Modifying the  input file     <<<'
 
     write(*,'(/a)') '1  : Translation'
     write(*,'(/a)') '2  : Rotation '
     write(*,'(/a)') '3  : Reflection '
-    write(*,'(/a)') '4  : Copy '      
-    write(*,'(/a)') '5  : Delete '
-    write(*,'(/a)') '6  : Sort fragments together '
-    write(*,'(/a)') '7  : Statistics '
-    write(*,'(/a)') '8  : Include fragment '
-    write(*,'(/a)') '9  : Include Solvent '
-    write(*,'(/a)') '10 : Replication '
-    write(*,'(/a)') '11 : nonbonding topology '
-    write(*,'(/a)') '12 : Images '
-    write(*,'(/a)') '13 : Bring Solvent into the Bounding Box '
-    write(*,'(/a)') '14 : ad_hoc tuning '
-    write(*,'(/a)') '15 : DONE '
+    write(*,'(/a)') '4  : Align Structures '
+    write(*,'(/a)') '5  : Copy '      
+    write(*,'(/a)') '6  : Delete '
+    write(*,'(/a)') '7  : Sort fragments together '
+    write(*,'(/a)') '8  : Statistics '
+    write(*,'(/a)') '9  : Include fragment '
+    write(*,'(/a)') '10 : Include Solvent '
+    write(*,'(/a)') '11 : Replication '
+    write(*,'(/a)') '12 : nonbonding topology '
+    write(*,'(/a)') '13 : Images '
+    write(*,'(/a)') '14 : Bring Solvent into the Bounding Box '
+    write(*,'(/a)') '15 : ad_hoc tuning '
+    write(*,'(/a)') '16 : DONE '
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(a2)') Editing_Method
 
@@ -159,31 +164,34 @@ do
             CALL Reflection( structure )
 
         case ('4')
-            CALL Copy( structure )
+            CALL Alignment( )
 
         case ('5')
-            CALL Eliminate_Fragment( structure )
+            CALL Copiar( structure )
 
         case ('6')
-            CALL Sort_Fragments( structure )
+            CALL Eliminate_Fragment( structure )
 
         case ('7')
-            CALL Statistics( trajectories )
+            CALL Sort_Fragments( structure )
 
         case ('8')
+            CALL Statistics( trajectories )
+
+        case ('9')
             CALL Include_Fragment( structure )
             write(*,'(/a)') '>>>  Saving seed.pdb  <<<'
 
-        case ('9')
+        case ('10')
             CALL Include_Solvent( structure )
 
-        case ('10')
+        case ('11')
             CALL Replicate( structure )
 
-        case ('11')
+        case ('12')
             CALL Nonbonding_Topology( structure )
 
-        case ('12')
+        case ('13')
             write(*,'(/a)') "Format of image files :   vasp-1   /   pdb-2"
             read (*,'(i1)') file_type
 
@@ -193,10 +201,10 @@ do
                 CALL Build_Configurations( structure , file_type )
             end if
 
-        case ('13')
+        case ('14')
             CALL Bring_into_PBCBox( structure )
 
-        case ('14')
+        case ('15')
             CALL ad_hoc_tuning( structure )
 
         case default

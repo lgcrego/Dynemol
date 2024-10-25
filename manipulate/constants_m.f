@@ -22,5 +22,6 @@ MODULE constants_m
     REAL*8     , PARAMETER :: u_mass=1.660538782d-24 ! Atomic Mass Unit <== (gram/particle)
     REAL*8     , PARAMETER :: low_prec=1.d-8
     REAL*8     , PARAMETER :: high_prec=1.d-14
+    REAL*8     , PARAMETER :: infty=1.d10
     complex*16 , parameter :: zi=(0.d0,1.d0)
 END MODULE constants_m
