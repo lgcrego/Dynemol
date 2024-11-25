@@ -611,6 +611,7 @@ do i = 1 , MM % N_of_atoms
     atom(i) % vel(1:3) = 0.d0
 end do
 
+! Dynemol units for velocity_MM.inpt = m/s ...
 if( read_velocities ) then
 
     if( restart ) STOP ' Should NOT read velocity_MM.inpt if restart = .true. !'
