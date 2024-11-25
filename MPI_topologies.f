@@ -117,6 +117,8 @@ end subroutine setup_MPI_labor_force
 ! local variables ...
  integer :: err , my_color , my_tune , ForceCrewLimit , xyz , my_rank
  logical :: drafted = .false.
+ character(len=2)  :: min_number_of_procs
+ character(len=74) :: string
 
 ! define sub_groups and new communicators ...
 !------------------------------------------------------------------------
@@ -184,7 +186,16 @@ end subroutine setup_MPI_labor_force
 ! EnvComm group = (0,[EnvProcs]) ; to work in "even_more_extended_huckel" ...
 
  If( EnvField_ ) then
- 
+
+     ! checking minimum number of procs ... 
+     IF( np < (4 + EnvProcs) ) then
+         write(min_number_of_procs,'(i2.2)') (4+EnvProcs)  
+         string = "halting: # of MPI processes must be at least "//min_number_of_procs//" for DRIVER=CSDM + EnvField"
+         if( master ) CALL warning(string)
+         Call mpi_barrier( world , err )
+         stop
+         end if
+
      IF( myid == 0 ) then                    ! <== case(0)
             my_color = 0
             drafted  = .true.
@@ -218,6 +229,8 @@ end subroutine setup_MPI_labor_force
 ! local variables ...
  integer :: err , my_color , ForceCrewLimit
  logical :: drafted = .false.
+ character(len=2)  :: min_number_of_procs
+ character(len=78) :: string
 
 ! define sub_groups and new communicators ...
 !------------------------------------------------------------------------
@@ -265,6 +278,15 @@ end subroutine setup_MPI_labor_force
 
  If( EnvField_ ) then
  
+     ! checking minimum number of procs ... 
+     IF( np < (4 + EnvProcs) ) then
+         write(min_number_of_procs,'(i2.2)') (4+EnvProcs)  
+         string = "halting: # of MPI processes must be at least "//min_number_of_procs//" for DRIVER=slice_AO + EnvField"
+         if( master ) CALL warning(string)
+         Call mpi_barrier( world , err )
+         stop
+         end if
+
      IF( myid == 0 ) then                    ! <== case(0)
             my_color = 0
             drafted  = .true.

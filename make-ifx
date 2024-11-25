@@ -6,7 +6,7 @@ FC = mpiifx -xHost -fpp
 FREE = -free
 
 # use this flag for debugging and coding up
-SAFE = #-g -traceback -check all #-fstack-protector -assume protect_parens -implicitnone -warn all 
+SAFE = #-g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 
 FFLAGS1 = -O2 -align 
 FFLAGS2 = -O2 -align -qopenmp -parallel -no-wrap-margin $(FREE) $(SAFE)
