@@ -1,5 +1,3 @@
-# makefile for ifx and icx based oneAPI
-
 #make manipulate - standard compilation
 #make safe - compilation with safe features
 #make debug - adds flag -g for debugging
@@ -7,13 +5,13 @@
 #make gdb - prepare code to GDB (equivalent to debug + serial) analysis
 #make vtune - prepare code to intel-Vtune analysis
 
-.SUFFIXES: .f .F .for .F90 .o
+SUFFIX=.f
 
 ##########################
 # FORTRAN CONFIGURATIONS #
 ##########################
 # Compiler
-FC = ifx
+FC = ifort
 
 # Applied to all fortran files
 FC_ALL = -xHost -align -no-wrap-margin
@@ -38,11 +36,9 @@ INCLUDES_MKL = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
 LIBS  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCLUDES = $(INCLUDES_MKL)
 
-
 #########################
 # FILES AND DEPENDECIES #
 #########################
-#INCS1   = comun.inc integcoul.inc m2cdat.inc $(INCLUDES)
 
 SOURCE = types_m.o \
  		 constants_m.o \
