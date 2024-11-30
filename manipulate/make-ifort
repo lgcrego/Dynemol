@@ -42,6 +42,7 @@ INCLUDES = $(INCLUDES_MKL)
 
 SOURCE = types_m.o \
  		 constants_m.o \
+         util.o \
 		 diagnosis.o \
 		 parms.o \
 		 tuning.o \
@@ -49,7 +50,9 @@ SOURCE = types_m.o \
          amber.o \
 		 RW.o \
 		 gmx.o \
+         EDT_util.o \
 		 EDT.o \
+         alignment.o \
 		 crystal.o \
 		 solvent.o \
 		 elastic.o \
@@ -62,7 +65,7 @@ SOURCE = types_m.o \
          aminoacids.o \
 		 edview.o
 
-#########                                                                                                                                    
+#########
 # RULES #
 #########
 
@@ -70,9 +73,9 @@ SOURCE = types_m.o \
 all: manipulate
 
 manipulate: $(SOURCE) 
-    rm -f manipulate
-    $(FC) $(FC_ALL) $(INCLUDES) -o manipulate $(SOURCE) $(LIBS)
-    -rm -f *.log
+	rm -f manipulate
+	$(FC) $(FC_ALL) $(INCLUDES) -o manipulate $(SOURCE) $(LIBS)
+	-rm -f *.log
 
 # Program runs very slowly with this
 safe: FC_ALL += -g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
@@ -104,22 +107,22 @@ vtune: f_FLAGS = -O2 $(FC_PARALLEL)
 vtune: debug
 
 .F.o:
-    $(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
 .f.o:
-    $(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) -c $<
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) -c $<
 
 .F90.o:
-    $(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
 clean:
-    -rm -fv manipulate *.o *.mod *__genmod.f90 *.i
+	-rm -fv manipulate *.o *.mod *__genmod.f90 *.i
 
 depend:
-    @echo -en "Searching module dependencies..."
-    @chmod +x ./makedepend.bsh
-    @./makedepend.bsh > dependencies.txt
-    @echo -en " done.\n"
+	@echo -en "Searching module dependencies..."
+	@chmod +x ./makedepend.bsh
+	@./makedepend.bsh > dependencies.txt
+	@echo -en " done.\n"
 
 
 # Dependency list:
