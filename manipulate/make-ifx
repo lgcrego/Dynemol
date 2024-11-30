@@ -1,20 +1,52 @@
-#
+# makefile for ifx and icx based oneAPI
 
-SUFFIX=.f
+#make manipulate - standard compilation
+#make safe - compilation with safe features
+#make debug - adds flag -g for debugging
+#make serial - remove all parallelization flags
+#make gdb - prepare code to GDB (equivalent to debug + serial) analysis
+#make vtune - prepare code to intel-Vtune analysis
 
-FC=ifx
-SAFE = #-g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
-FFLAGS = -xhost -qopenmp -fpp -O3 -free $(SAFE)
+.SUFFIXES: .f .F .for .F90 .o
 
-LIB    =  -liomp5
-INCS   = 
+##########################
+# FORTRAN CONFIGURATIONS #
+##########################
+# Compiler
+FC = ifx
 
-#-----------------------------------------------------------------------
-# general rules
-#-----------------------------------------------------------------------
+# Applied to all fortran files
+FC_ALL = -xHost -align -no-wrap-margin
+
+# Parallelization flags
+FC_PARALLEL = -qopenmp
+f_FLAGS = -O2 -static-intel $(FC_PARALLEL)
+
+############################
+# LIBRARY CONFIGURATIONS #
+############################
+ifndef MKLROOT
+$(error 'MKLROOT not set')
+endif
+# If MKLROOT is not defined, add it's path here
+# MKLROOT =
+LIB_BLAS = -lmkl_blas95_lp64
+LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
+LIB_OMP = -liomp5 -lpthread
+
+INCLUDES_MKL = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
+LIBS  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
+INCLUDES = $(INCLUDES_MKL)
+
+
+#########################
+# FILES AND DEPENDECIES #
+#########################
+#INCS1   = comun.inc integcoul.inc m2cdat.inc $(INCLUDES)
 
 SOURCE = types_m.o \
  		 constants_m.o \
+         util.o \
 		 diagnosis.o \
 		 parms.o \
 		 tuning.o \
@@ -22,7 +54,9 @@ SOURCE = types_m.o \
          amber.o \
 		 RW.o \
 		 gmx.o \
+         EDT_util.o \
 		 EDT.o \
+         alignment.o \
 		 crystal.o \
 		 solvent.o \
 		 elastic.o \
@@ -35,11 +69,66 @@ SOURCE = types_m.o \
          aminoacids.o \
 		 edview.o
 
-manipulate: $(SOURCE)  
+#########
+# RULES #
+#########
+
+# Compile manipulate 
+all: manipulate
+
+manipulate: $(SOURCE) 
 	rm -f manipulate
-	$(FC) $(INCS) -o manipulate $(SOURCE) $(LIB) 
+	$(FC) $(FC_ALL) $(INCLUDES) -o manipulate $(SOURCE) $(LIBS)
 	-rm -f *.log
+
+# Program runs very slowly with this
+safe: FC_ALL += -g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: CC_ALL += -traceback -fstack-protector
+safe: manipulate
+
+# Just adds debug flag to everything
+debug: FC_ALL += -g
+debug: CC_ALL += -g
+debug: manipulate
+
+# Removes parallel flags
+serial: FC_PARALLEL =
+serial: CC_PARALLEL =
+serial: manipulate
+
+# Easiest do debug when there is no threads around
+gdb: F_FLAGS = -O0
+gdb: f_FLAGS = -O0
+gdb: CC_FLAGS = -O0
+gdb: debug
+
+# Adds lots of flags and remove static from f_FLAGS
+# Flags taken from here:
+# https://software.intel.com/en-us/vtune-amplifier-help-compiler-switches-for-performance-analysis-on-linux-targets
+vtune: FC_ALL += -debug inline-debug-info -D_DEBUG -qopenmp-link dynamic -parallel-source-info=2
+vtune: CC_ALL += -debug inline-debug-info -D_DEBUG -qopenmp-link dynamic -parallel-source-info=2
+vtune: f_FLAGS = -O2 $(FC_PARALLEL)
+vtune: debug
+
+.F.o:
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
+
 .f.o:
-	$(FC) $(FFLAGS) $(INCS) -c $*$(SUFFIX)
-clean: 
-	-rm -f *.o *.mod; touch *.f 
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) -c $<
+
+.F90.o:
+	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
+
+clean:
+	-rm -fv manipulate *.o *.mod *__genmod.f90 *.i
+
+depend:
+	@echo -en "Searching module dependencies..."
+	@chmod +x ./makedepend.bsh
+	@./makedepend.bsh > dependencies.txt
+	@echo -en " done.\n"
+
+
+# Dependency list:
+-include dependencies.txt
+
