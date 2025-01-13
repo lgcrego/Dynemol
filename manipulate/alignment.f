@@ -350,7 +350,7 @@ do while( .NOT. done )
      read (*,'(a)') line
      indx_list_Q = parse_this(line)
      
-     ! landmarks for file_1 ...
+     ! landmarks for file_2 ...
      write(*,'(/3a)') 'landmark atoms for  ', trim(file_2),' :  '
      read (*,'(a)') line
      indx_list_P = parse_this(line)

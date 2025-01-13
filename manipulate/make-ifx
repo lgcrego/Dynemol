@@ -42,6 +42,7 @@ INCLUDES = $(INCLUDES_MKL)
 #########################
 # FILES AND DEPENDECIES #
 #########################
+#INCS1   = comun.inc integcoul.inc m2cdat.inc $(INCLUDES)
 
 SOURCE = types_m.o \
  		 constants_m.o \

@@ -59,7 +59,7 @@ end select
 
 ! select frame OR trajectory ...
 do
-    write(*,'(/a)') ' (1)  = edit trajectory with AD-HOC'
+    write(*,'(/a)') ' (1)  = edit trajectory with AD-HOC tuning'
     write(*,'(/a)') ' (2)  = Translation Operation (only on first frame)'
     write(*,'(/a)') ' (3)  = select frame '      
     write(*,'(/a)') ' (4)  = save PDB trajectory '
@@ -78,9 +78,17 @@ do
 
         case( 1 ) 
 
-            do i = 1 , size(trj)
-                CALL ad_hoc_tuning( trj(i) , i )
-            end do
+!            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
+!            read (*,'(a)') yn
+!
+!            if( yn /= "n" ) &
+!            then
+!                 CALL on_the_fly_tuning (structure )
+!            else
+                 do i = 1 , size(trj)
+                     CALL ad_hoc_tuning( trj(i) , i )
+                 end do
+!            end if
 
         case( 2 ) 
 
