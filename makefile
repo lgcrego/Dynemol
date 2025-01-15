@@ -227,7 +227,7 @@ Manipulate:
 	$(MAKE) -C ./manipulate 
 
 # Program runs very slowly with this
-safe: FC_ALL += -g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: FC_ALL += -g -check all,nouninit -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
 safe: dynemol
 
