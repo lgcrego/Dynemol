@@ -195,7 +195,8 @@ if ( calc_occ_pl == 'X' ) then
 
     write(*,*) "Writing to Occup_el(hl).dat ..."
 
-    open(out, file='Occup_el.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+!    open(out, file='Occup_el.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+    open(out, file='Occup_el.dat', status='unknown')! buffered='yes', blocksize=BLK_SIZE)
 
     do it = 1, n_t, it_step
     do iE = indexEi(1), indexEf(1)
@@ -206,7 +207,8 @@ if ( calc_occ_pl == 'X' ) then
     close(out)
 
     if (n_part==2) then
-        open(out, file='Occup_hl.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+!        open(out, file='Occup_hl.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+        open(out, file='Occup_hl.dat', status='unknown')! buffered='yes', blocksize=BLK_SIZE)
 
         do it = 1, n_t, it_step
         do iE = indexEi(2), indexEf(2)
@@ -409,7 +411,8 @@ if ( calc_occ_smear == 'X' ) then
 
     write(*,*) "Calculating and writing to Occup_smear.dat ..."
 
-    open(out, file='Occup_smear.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+!    open(out, file='Occup_smear.dat', status='unknown', buffered='yes', blocksize=BLK_SIZE)
+    open(out, file='Occup_smear.dat', status='unknown')! buffered='yes', blocksize=BLK_SIZE)
 
 #define SOFT(expr) dsqrt(expr)
 ! #define SOFT(expr) (expr)**(1.d0/3.d0)
