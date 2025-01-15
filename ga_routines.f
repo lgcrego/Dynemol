@@ -20,6 +20,7 @@ module GA_m
                                          GA_DP_Analysis ,               &
                                          AlphaPolar ,                   &
                                          Adaptive_GA  
+    use ziggurat                , only : ziggurat_t , ziggurat_rnor
     use cost_EH                 , only : evaluate_cost                                         
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
@@ -83,7 +84,7 @@ If( master ) then
     allocate( Old_Pop (Pop_Size , GeneSize)     )
     allocate( indx    (Pop_Size)                )
 
-    CALL generate_RND_Pop( Pop_start , Pop )       
+    CALL generate_RND_Pop( Pop_start , Pop , distro_type='GAUSS' )       
 
     ! this keeps the input EHT parameters in the population ...
     Pop(1,:) = D_zero
@@ -167,7 +168,7 @@ do generation = 1 , N_generations
         assign 159 to label
     else
         Pop_start = Pop_size/4 + 1
-        CALL generate_RND_Pop( Pop_start , Pop )       
+        CALL generate_RND_Pop( Pop_start , Pop , distro_type='GAUSS' )       
         assign 163 to label
     end If
 
@@ -249,49 +250,84 @@ end subroutine Genetic_Algorithm_EH
 !
 !
 !
-!==============================================
- subroutine generate_RND_Pop( Pop_start , Pop )
-!==============================================
+!
+!============================================================
+ subroutine generate_RND_Pop( Pop_start , Pop , distro_type )
+!============================================================
+use :: ziggurat
 implicit none
 integer               , intent(in)    :: Pop_start
 real*8  , allocatable , intent(inout) :: Pop(:,:) 
+character(len=*)      , intent(in)    :: distro_type
 
 ! local variables ...
 integer               :: i , j , GeneSize
-real*8  , allocatable :: a(:,:) , seed(:,:) , pot(:,:) 
+real                  :: x
+real*8                :: a , seed
+real*8  , allocatable :: pot(:,:) 
+type(ziggurat_t)      :: rng_Zig
 
-GeneSize = size(Pop(1,:))
+! local parameters ...
+integer , parameter   :: iii = 123456789 !< The RNG seed for Ziggurat method. 
+real*8  , parameter   :: mean = 0.d0 , std_dev = 0.3d0
 
 !-----------------------------------------------
 !           SETTING-UP populations
 !-----------------------------------------------
+GeneSize = size(Pop(1,:))
 
-allocate( a    (Pop_Size , GeneSize) )
-allocate( seed (Pop_Size , GeneSize) )
-allocate( pot  (Pop_Size , GeneSize) )
+allocate( pot(Pop_Size , GeneSize) )
 
-CALL random_seed ! <== distribution within the range 0 <= x < 1.
-        
-do i = Pop_start , Pop_size
-    do j = 1 , GeneSize
+select case (distro_type)
 
-        CALL random_number( a   (i,j) )
-        CALL random_number( seed(i,j) )
+       case ('RNG') 
 
-        pot(i,j) = int( 2*seed(i,j) )  ! <== bimodal function (-1)^pot = -1 , +1 
-        Pop(i,j) = ((-1)**pot(i,j)) * a(i,j) * Pop_range
+            ! Generates a UNIFORMLY DISTRIBUTED pseudo-random value in the range [-1,+1]*Pop_range
 
-    end do
-end do
+            CALL random_seed ! <== distribution within the range 0 <= x < 1.
+
+            do i = Pop_start , Pop_size
+                do j = 1 , GeneSize
+            
+                    CALL random_number( a )
+                    CALL random_number( seed )
+            
+                    pot(i,j) = int( 2*seed )  ! <== bimodal function (-1)^pot = -1 , +1 
+                    Pop(i,j) = ((-1)**pot(i,j)) * a * Pop_range
+            
+                end do
+            end do
+
+       case ('GAUSS') 
+
+            ! Generates a UNIFORMLY DISTRIBUTED pseudo-random value in the range [-1,+1]*Pop_range
+
+            ! Seed the RNG.
+             call ziggurat_seed (rng_Zig, iii) 
+
+            do i = Pop_start , Pop_size
+                do j = 1 , GeneSize
+                    ! Generate random numbers ...
+                    x = ziggurat_rnor(rng_Zig)
+                    ! Transform to desired mean and variance ...
+                    x = mean + std_dev * x
+
+                    Pop(i,j) = x * Pop_range
+            
+                end do
+            end do
+
+end select 
 
 ! truncate variations to 1.d-5 ...
 Pop = Pop * 1.d5 ; Pop = int(Pop) ; Pop = Pop * 1.d-5
 
-deallocate( a , seed , pot )
+deallocate( pot )
 
 !-----------------------------------------------
 
 end subroutine generate_RND_Pop
+!
 !
 !
 !
