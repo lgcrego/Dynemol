@@ -203,6 +203,11 @@ module type_m
         real*8 :: fim
     end type real_interval
 
+    type real4_interval
+        real :: inicio 
+        real :: fim
+    end type real4_interval
+
 
     type integer_interval
         integer :: inicio
@@ -253,7 +258,7 @@ module type_m
     type on_the_fly 
         logical :: mode = .false.  ! <== must turn on before use ...
         integer :: gen
-        integer :: Ngen
+        integer :: Ngen = 1        ! <== must be > 0
     end type on_the_fly
 
     type dipoles
@@ -264,6 +269,21 @@ module type_m
         real*8  ,  allocatable  :: hl_DP(:,:)
     end type dipoles
 
+    type GA_features
+        integer                :: entries = 0
+        integer                :: MO , MO_up , MO_down
+        character(len=5)       :: AO , AO1 , AO2
+        character(len=3)       :: residue
+        character(len=2)       :: EHSymbol
+        character(len=2)       :: Symbol
+        character(len=1)       :: pm_sign
+        real                   :: weight 
+        real                   :: ref , dE_ref
+        integer                :: atom_1 , atom_2
+        type(real4_interval)   :: from_to
+        integer ,  allocatable :: atom(:)
+        logical                :: adaptive
+    end type GA_features
 
     interface debug_EH
         module procedure debug_EH_structure
