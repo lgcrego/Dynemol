@@ -2,10 +2,18 @@ module util_m
 
     use constants_m
 
-    public:: fact , binomial
-    public:: TO_UPPER_CASE , count_lines , split_line , seq_in_range , read_CSV_file
+    public:: fact , binomial , Lp_norm , truncate_array , change_single_character_in_string
+    public:: TO_UPPER_CASE , count_lines , split_line , parse_this , seq_in_range , read_CSV_file
 
 private
+
+    interface truncate_array
+        module procedure truncate_integer_array
+        module procedure truncate_single_R_array
+!        module procedure truncate_double_R_array
+        module procedure truncate_string_array
+    end interface
+
 
 contains
 !
@@ -39,6 +47,31 @@ real*8               :: binomial
 binomial = fact(n)/(fact(k)*fact(n-k))
 
 end function binomial
+!
+!
+!
+!---------------------------------------
+ pure function Lp_norm(x,p) result(norm)
+!---------------------------------------
+real*8  , intent(in) :: x(:)
+integer , intent(in) :: p
+
+! local variables ...
+real*8 :: norm
+
+! Lp norm is defined as _(sum_i |x_i|^p)^(1/p)
+
+select case (p)
+
+            case(1)
+            norm = sum( abs(x(:)) )
+
+            case(2)
+            norm = sqrt( sum( x(:)**2 ) )
+
+end select
+
+end function Lp_norm
 !
 !
 !
@@ -121,28 +154,74 @@ end FUNCTION count_columns
 !
 !
 !
-!=========================================
- FUNCTION split_line (line) result(tokens)
-!=========================================
+!======================================================
+ FUNCTION split_line(line,token_length) result(tokens)
+!======================================================
 implicit none
-character(len=*) :: line
+character(len=*) , intent(in) :: line
+integer          , intent(in) :: token_length
 
 ! Local variables ...
 integer :: i , size_line , n_tokens , ioerr
-character(len=3) , allocatable :: tokens(:) , aux(:)
+character(len=:) , allocatable :: tokens(:) , aux(:)
 
-! split line in tokens 
+! split line in tokens
 
 size_line = len(line)
-allocate ( aux(size_line) )                                                                                                                   
+allocate ( character(len=token_length) :: aux(size_line) )
 read(line,*,iostat=ioerr) (aux(i) , i=1,size_line)
 n_tokens = i-1
 
-allocate ( tokens(n_tokens) ) 
+allocate ( character(len=token_length) :: tokens(n_tokens) ) 
 forall(i=1:n_tokens) tokens(i) = trim(aux(i))
 deallocate(aux)
 
 end FUNCTION split_line
+!
+!
+!       
+!=====================================
+function parse_this(line) result(indx)
+!=====================================
+implicit none 
+character(len=*) , intent(inout)  :: line
+
+! local variables ...
+integer                        :: i , num
+character(len=5) , allocatable :: tokens(:)
+integer          , allocatable :: indx(:)
+
+! parse a string containing a list of numbers separated by spaces, ex.: 3 5 7 12 
+! OR
+! returns a sequence of numbers for string = "i1:i2" 
+
+! if necessary, get rid of ";" separators ...
+if( scan(line,";") /= 0 ) &
+then
+    do i = 1, len_trim(line)
+      if (line(i:i) == ";") then
+          line(i:i) = " "
+          end if
+          end do
+end if
+
+allocate( tokens , source = split_line(line,token_length=5) ) 
+
+allocate(indx(0))
+
+do i = 1 , size(tokens)
+    if( scan(tokens(i),":") /= 0 ) &
+    then
+        indx = [ indx , seq_in_range(tokens(i)) ]
+    else
+        read(tokens(i),*) num 
+        indx = [ indx , num ] 
+    end if
+end do
+
+deallocate( tokens )
+
+end function parse_this
 !
 !
 !
@@ -168,39 +247,24 @@ end function seq_in_range
 !
 !
 !       
-!=====================================
-function parse_this(line) result(indx)
-!=====================================
+!=====================================================================
+subroutine change_single_character_in_string( line , remove , insert )
+!=====================================================================
 implicit none 
-character(len=*)        , intent(in)  :: line
+character(len=*) , intent(inout) :: line
+character(len=1) , intent(in)    :: remove
+character(len=1) , intent(in)    :: insert
 
 ! local variables ...
-integer                        :: i , num
-character(len=9) , allocatable :: tokens(:)
-integer          , allocatable :: indx(:)
+integer :: i
 
-! parse a string containing a list of numbers separated by spaces, ex.: 3 5 7 12 
-! OR
-! returns a sequence of numbers for string = "i1:i2" 
+do i = 1, len_trim(line)
+  if( line(i:i) == remove ) then
+      line(i:i) = insert
+      end if
+      end do
 
-allocate( tokens , source = split_line(line) ) 
-
-allocate(indx(0))
-
-do i = 1 , size(tokens)
-    if( scan(tokens(i),":") /= 0 ) &
-    then
-        indx = [ indx , seq_in_range(tokens(i)) ]
-    else
-        read(tokens(i),*) num 
-        indx = [ indx , num ] 
-    end if
-end do
-
-deallocate( tokens )
-
-end function parse_this
-!
+end subroutine change_single_character_in_string
 !
 !
 !
@@ -223,7 +287,7 @@ OPEN( file=f_name , status='old' , action="read" , newunit=f_unit)
 ! find number of records in the row ...
        read( f_unit , '(a)' , IOSTAT=iostat )  line
        backspace(f_unit)
-       tokens = split_line(line)
+       tokens = split_line(line,token_length=3)
        row_length = size(tokens)
        
        ! matrix of strings
@@ -232,7 +296,7 @@ OPEN( file=f_name , status='old' , action="read" , newunit=f_unit)
        do i = 1 , nl
             read( f_unit , '(a)' , IOSTAT=iostat )  line
             if (iostat < 0) stop "Unexpected EoF"
-            dados(i,:) = split_line(line)
+            dados(i,:) = split_line(line,token_length=3)
             end do
        
 close(f_unit)
@@ -241,7 +305,78 @@ end subroutine read_CSV_file
 !
 !
 !
+!========================================================
+subroutine truncate_integer_array( a , n_row , n_column )
+!========================================================
+implicit none
+integer , allocatable , intent(inout) :: a(:,:)
+integer               , intent(in)    :: n_row
+integer               , intent(in)    :: n_column
+
+! local variables ...
+integer , allocatable :: b(:,:)
+
+allocate( b , source=a )
+deallocate(a)
+! allocate new array ...
+allocate( a(n_row,n_column) )
+a(1:n_row,1:n_column) = b
+deallocate(b)
+
+end subroutine truncate_integer_array
+!
+!
+!
+!========================================================
+subroutine truncate_single_R_array( a , n_row , n_column )
+!========================================================
+implicit none
+real    , allocatable , intent(inout) :: a(:,:)
+integer               , intent(in)    :: n_row
+integer               , intent(in)    :: n_column
+
+! local variables ...
+real , allocatable :: b(:,:)
+
+allocate( b , source=a )
+deallocate(a)
+! allocate new array ...
+allocate( a(n_row,n_column) )
+a(1:n_row,1:n_column) = b
+deallocate(b)
+
+end subroutine truncate_single_R_array
+!
+!
+!
+!========================================================
+subroutine truncate_string_array( a , n_row , n_column )
+!========================================================
+implicit none
+character(len=:) , allocatable , intent(inout) :: a(:,:)
+integer                        , intent(in)    :: n_row
+integer                        , intent(in)    :: n_column
+
+! local variables ...
+integer :: length
+character(len=:) , allocatable :: b(:,:)
+
+length = len(a(1,1))
+allocate( b , source=a )
+deallocate(a)
+
+! allocate new array ...
+allocate( character(len=length) :: a(n_row,n_column) )
+a(1:n_row,1:n_column) = b
+deallocate(b)
+
+end subroutine truncate_string_array
+!
+!
+!
 end module util_m
+!
+!
 !!!!!!!!!!!!!!!!!!!!!!!!!  ZIGGURAT  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !    Copyright (C) 2000  George Marsaglia and Wai Wan Tsang
 !    Copyright (C) 2013-2019  Jason M. Wood, Montana State University

@@ -19,7 +19,7 @@ module GA_m
                                          AlphaPolar ,                   &
                                          Adaptive_GA  
     use ziggurat                , only : ziggurat_t , ziggurat_rnor
-    use cost_EH                 , only : evaluate_cost                                         
+    use cost_EH                 , only : evaluate_cost
     use cost_MM                 , only : SetKeys ,                      &
                                          KeyHolder
 
