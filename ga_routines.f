@@ -975,7 +975,7 @@ allocate( indx    (Pop_Size)            )
 CALL random_seed
 
 Pop_start = 1
-CALL generate_RND_Pop( Pop_start , Pop )       
+CALL generate_RND_Pop( Pop_start , Pop , distro_type='RNG' )       
 
 ! the input parameters constitute one of the genes of Pop ...
 Pop(1,:) = D_zero
@@ -1014,7 +1014,7 @@ do generation = 1 , N_generations
 
     else
 
-        CALL generate_RND_Pop( Pop_start , Pop )       
+        CALL generate_RND_Pop( Pop_start , Pop , distro_type='RNG' )       
 
         If( generation < N_generations) forall(i = Pop_Start:Pop_Size) Pop(i,:) = Pop(1,:) - Pop(i,:)
 
