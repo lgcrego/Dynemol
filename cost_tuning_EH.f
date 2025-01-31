@@ -186,54 +186,6 @@ if(allocated(Localize_parms)) then
    print*, MO , size(Localize_parms(i)% atom) ,  AO , EHSymbol , residue , ref , from_to, adaptive
    end do
 end if
-!39 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=39, AO="Pz",  EHSymbol = "NH") - 0.6
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=39, AO="Pz",  EHSymbol = "NB") - 0.35
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "CP") - 0.05
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=39, AO="Pz",  EHSymbol = "CA") - 0.05
-
-!38 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "NH") - 0.6	
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "NB") - 0.35
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "CP") - 0.05
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "CA") - 0.05
-!
-!37 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=37, AO="Py",  EHSymbol = "NB") - 0.4
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=37, AO="Px",  EHSymbol = "NB") - 0.4
-
-!36 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Px",  EHSymbol = "NB") - 0.4
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Py",  EHSymbol = "NB") - 0.2
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Px",  EHSymbol = "NA") - 0.2
-
-!35 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Px",  EHSymbol = "NB") - 0.2
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Py",  EHSymbol = "NB") - 0.4
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Py",  EHSymbol = "NA") - 0.2
-
-
-!!39 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=39, AO="Pz",  EHSymbol = "NH", from_to = real_interval( 0.0 , 0.60 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=39, AO="Pz",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.33 ), adaptive  = input_mode) 
-!
-!!38 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "NH", from_to = real_interval( 0.0 , 0.60 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=38, AO="Pz",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.33 ), adaptive  = input_mode) 
-!!
-!!37 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=37, AO="Py",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.40 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=37, AO="Px",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.40 ), adaptive  = input_mode) 
-!
-!!36 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Px",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.40 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Py",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.20 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=36, AO="Px",  EHSymbol = "NA", from_to = real_interval( 0.0 , 0.20 ), adaptive  = input_mode) 
-!
-!!35 ===================
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Px",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.20 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Py",  EHSymbol = "NB", from_to = real_interval( 0.0 , 0.40 ), adaptive  = input_mode) 
-!eval(me) =  Mulliken(OPT_UNI, basis, MO=35, AO="Py",  EHSymbol = "NA", from_to = real_interval( 0.0 , 0.20 ), adaptive  = input_mode) 
 
 !-------------------------                                                         
 ! Total DIPOLE moment ...
