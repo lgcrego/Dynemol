@@ -244,16 +244,16 @@ end function exclude
  function Localize( GA , basis , MO , atom , AO , EHSymbol , residue , reference , from_to , adaptive )
 !======================================================================================================
 implicit none
-type(R_eigen)                  , intent(in) :: GA
-type(STO_basis)                , intent(in) :: basis(:)
-integer                        , intent(in) :: MO
-integer            , optional  , intent(in) :: atom(:)
-character(len=*)   , optional  , intent(in) :: AO
-character(len=*)   , optional  , intent(in) :: EHSymbol
-character(len=*)   , optional  , intent(in) :: residue
-real               , optional  , intent(in) :: reference
-type(real_interval), optional  , intent(in) :: from_to
-logical            , optional  , intent(in) :: adaptive
+type(R_eigen)        , intent(in) :: GA
+type(STO_basis)      , intent(in) :: basis(:)
+integer              , intent(in) :: MO
+integer              , optional  , intent(in) :: atom(:)
+character(len=*)     , intent(in) :: AO
+character(len=*)     , intent(in) :: EHSymbol
+character(len=*)     , intent(in) :: residue
+real                 , intent(in) :: reference
+type(real4_interval) , intent(in) :: from_to
+logical              , optional  , intent(in) :: adaptive
 
 ! local variables ...
 integer               :: i , l , m
@@ -275,19 +275,19 @@ else
     end do
 end IF
 !====================================================
-IF( .NOT. present(residue) ) then
+IF( trim(residue) == "XXX" ) then
     mask_2 = .true.
 else
     where( basis%residue == residue ) mask_2 = .true.
 end IF
 !====================================================
-IF( .NOT. present(EHSymbol) ) then
+IF( trim(EHSymbol) == "XX" ) then
     mask_3 = .true.
 else
     where( basis%EHSymbol == EHSymbol ) mask_3 = .true.
 end IF
 !====================================================
-IF( .NOT. present(AO) ) then
+IF( trim(AO) == "XX" ) then
     mask_4 = .true.
 else
     select case( AO ) 
@@ -345,24 +345,18 @@ mask = ( mask_1 .AND. mask_2 .AND. mask_3 .AND. mask_4 )
 !population = sqrt( sum( GA%L(MO,:) * GA%R(:,MO) , mask ) )
 population = sum( GA%L(MO,:) * GA%R(:,MO) , mask )
 
-If( .NOT. present(from_to) ) then
-
-       If( present(reference) ) then
+If( from_to%inicio < 0. ) then
+       If( reference > 0. ) then
           x = reference - population 
        else
           ! default value is assumed, 85% of localization ...
           x = 0.85 - population
        end if
-
 ElseIf( adaptive == .true. ) then
-
        LinearFill = (from_to%fim - from_to%inicio) * Adaptive_GA% gen / Adaptive_GA% Ngen + from_to%inicio
        x = LinearFill - population
-
 ElseIf( adaptive == .false. ) then
-
        x = from_to%fim - population  
-
 EndIf
 
 ! (population > reference) ==> no penalty for localize function ...
