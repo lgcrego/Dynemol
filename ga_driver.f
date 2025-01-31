@@ -6,7 +6,7 @@ module GA_driver_m
  use Solvated_m                 , only : DeAllocate_TDOS , DeAllocate_PDOS , DeAllocate_SPEC 
  use GA_m                       , only : Genetic_Algorithm , Dump_OPT_parameters
  use GA_QCModel_m               , only : GA_eigen , Mulliken , GA_DP_Analysis , AlphaPolar 
- use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha 
+ use cost_EH                    , only : evaluate_cost , REF_DP , REF_Alpha , parse_EH_cost_function
  use Semi_Empirical_Parms       , only : EH_atom
  use Multipole_Routines_m       , only : Util_multipoles
  use Structure_Builder          , only : Generate_Structure , Extended_Cell , Unit_Cell , Basis_Builder , ExCell_basis , Cube_Coef , Cube_Zeta
@@ -68,6 +68,9 @@ then
     CALL Util_multipoles
     CALL GA_DP_Analysis( Extended_Cell, ExCell_basis, UNI%L, UNI%R, DP )  
 end if
+
+! parse directives in cost_tuning.inpt ...
+call parse_EH_cost_function
 
 ! calculates the cost on input, for future comparison ...
 first_cost = evaluate_cost(Extended_Cell, UNI, ExCell_basis, DP ) 
