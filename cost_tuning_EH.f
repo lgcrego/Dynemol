@@ -7,6 +7,7 @@ module cost_EH
                               count_lines,        &
                               parse_this,         &
                               truncate_array,     &
+                              TO_UPPER_CASE,      &
                               change_single_character_in_string
     use GA_QCModel_m , only : MO_erg_diff,        &  
                               Mulliken,           &
@@ -22,7 +23,7 @@ module cost_EH
     private 
 
     ! module variables ...
-    real*8  :: REF_DP(3) , REF_Alpha(3)
+    real, allocatable :: REF_DP(:) , REF_Alpha(:)
     type(GA_features) , allocatable :: MO_ERG_DIFF_parms(:) 
     type(GA_features) , allocatable :: MO_CHARACTER_parms(:)
     type(GA_features) , allocatable :: BOND_TYPE_parms(:)
@@ -49,18 +50,18 @@ logical         , optional  , intent(in) :: ShowCost
 real*8                                   :: evaluate_cost
 
 ! local variables ...
-integer  :: i , dumb
-real*8   :: eval(200) = D_zero
-logical  :: adaptive
-
-integer          :: MO_up , MO_down , MO , atom1 , atom2
-integer , allocatable :: atom(:)
-real             :: de_ref , weight , ref
-character(len=1) :: pm
-character(len=2) :: EHSymbol, Symbol
-character(len=3) :: residue
-character(len=5) :: AO , AO1 , AO2
-type(real4_interval) :: from_to
+ integer  :: i , dumb
+ real*8   :: eval(200) = D_zero
+ logical  :: adaptive
+ 
+ integer          :: MO_up , MO_down , MO , atom1 , atom2
+ integer , allocatable :: atom(:)
+ real             :: de_ref , weight , ref
+ character(len=1) :: pm
+ character(len=2) :: EHSymbol, Symbol
+ character(len=3) :: residue
+ character(len=5) :: AO , AO1 , AO2
+ type(real4_interval) :: from_to
 
 adaptive = Adaptive_GA% mode
 
@@ -71,14 +72,12 @@ adaptive = Adaptive_GA% mode
 !-------------------------------------------------------------------------
 if(allocated(MO_ERG_DIFF_parms)) then
    do i = 1 , MO_ERG_DIFF_parms(1)% entries
-   
             MO_up    = MO_ERG_DIFF_parms(i)% MO_up
             MO_down  = MO_ERG_DIFF_parms(i)% MO_down
             dE_ref   = MO_ERG_DIFF_parms(i)% dE_ref
             weight   = MO_ERG_DIFF_parms(i)% weight
    
             eval(me) = MO_erg_diff( OPT_UNI , MO_up , MO_down , dE_ref , weight )
-   print*, i, me, MO_up , MO_down , dE_ref , weight
    end do
 end if
 !----------------------------------------------------------------------------------------------
@@ -87,12 +86,10 @@ end if
 !----------------------------------------------------------------------------------------------
 if(allocated(MO_CHARACTER_parms)) then
    do i = 1 , MO_CHARACTER_parms(1)% entries
-   
             MO = MO_CHARACTER_parms(i)% MO
             AO = MO_CHARACTER_parms(i)% AO
    
             eval(me) = MO_character( OPT_UNI , basis , MO , AO )
-   print*, i, me, MO , AO
    end do
 end if
 !----------------------------------------------------------------------------------------------
@@ -103,7 +100,6 @@ end if
 !----------------------------------------------------------------------------------------------
 if(allocated(BOND_TYPE_parms)) then
    do i = 1 , BOND_TYPE_parms(1)% entries
-   
             MO    = BOND_TYPE_parms(i)% MO
             atom1 = BOND_TYPE_parms(i)% atom_1
             AO1   = BOND_TYPE_parms(i)% AO1
@@ -112,8 +108,6 @@ if(allocated(BOND_TYPE_parms)) then
             pm    = BOND_TYPE_parms(i)% pm_sign
    
             eval(me) = Bond_Type( sys , OPT_UNI , MO , atom1 , AO1 , atom2 , AO2 , pm )
-   
-   print*, i, me, MO , atom1 , AO1 , atom2 , AO2 , pm
    end do
 end if
 !----------------------------------------------------------------------------------------------
@@ -125,7 +119,6 @@ end if
 !----------------------------------------------------------------------------------------------
 if(allocated(Mulliken_parms)) then
    do i = 1 , Mulliken_parms(1)% entries
-   
             MO       = Mulliken_parms(i)% MO
             AO       = Mulliken_parms(i)% AO
             EHSymbol = Mulliken_parms(i)% EHSymbol
@@ -135,8 +128,6 @@ if(allocated(Mulliken_parms)) then
             ref      = Mulliken_parms(i)% ref
    
             eval(me) = Mulliken( OPT_UNI , basis , MO , Mulliken_parms(i)%atom , AO , EHSymbol , Symbol , residue , weight ) - max(ref,0.0)
-   
-   print*, i, me, MO , size(Mulliken_parms(i)% atom) ,  AO , EHSymbol , Symbol , residue , weight , ref
    end do
 end if
 !----------------------------------------------------------------------------------------------
@@ -149,7 +140,6 @@ end if
 !----------------------------------------------------------------------------------------------
 if(allocated(Exclude_parms)) then
    do i = 1 , Exclude_parms(1)% entries
-   
             MO       = Exclude_parms(i)% MO
             AO       = Exclude_parms(i)% AO
             EHSymbol = Exclude_parms(i)% EHSymbol
@@ -159,8 +149,6 @@ if(allocated(Exclude_parms)) then
             adaptive = Exclude_parms(i)% adaptive
    
             eval(me) = Exclude( OPT_UNI, basis, MO, Exclude_parms(i)%atom, AO, EHSymbol, residue, ref, from_to, adaptive )
-   
-   print*, MO , size(Exclude_parms(i)% atom) ,  AO , EHSymbol , residue , ref , from_to, adaptive
    end do
 end if
 !----------------------------------------------------------------------------------------------
@@ -172,7 +160,6 @@ end if
 !----------------------------------------------------------------------------------------------
 if(allocated(Localize_parms)) then
    do i = 1 , Localize_parms(1)% entries
-   
             MO       = Localize_parms(i)% MO
             AO       = Localize_parms(i)% AO
             EHSymbol = Localize_parms(i)% EHSymbol
@@ -182,28 +169,26 @@ if(allocated(Localize_parms)) then
             adaptive = Localize_parms(i)% adaptive
    
             eval(me) = Localize( OPT_UNI, basis, MO, Localize_parms(i)%atom, AO, EHSymbol, residue, ref, from_to, adaptive )
-   
-   print*, MO , size(Localize_parms(i)% atom) ,  AO , EHSymbol , residue , ref , from_to, adaptive
    end do
 end if
-
 !-------------------------                                                         
 ! Total DIPOLE moment ...
 !-------------------------
-!REF_DP = [ 0.0d0 , 0.0d0 , 2.2d0 ]
-!eval(me+1) = DP(1) - REF_DP(1)     
-!eval(me+2) = DP(2) - REF_DP(2)    
-!eval(me+3) = DP(3) - REF_DP(3) 
-!me = me + 3
-
+if( allocated(REF_DP) ) then
+    eval(me+1) = DP(1) - REF_DP(1)     
+    eval(me+2) = DP(2) - REF_DP(2)    
+    eval(me+3) = DP(3) - REF_DP(3) 
+    me = me + 3
+end if
 !-----------------------------------------------------
 ! Polarizability: Alpha tensor diagonal elements  ...
 !-----------------------------------------------------
-!REF_Alpha = [ 9.2d0 , 8.5d0 , 7.8d0 ]
-!eval() = Alpha_ii(1) - REF_Alpha(1)   
-!eval() = Alpha_ii(2) - REF_Alpha(2)  
-!eval() = Alpha_ii(3) - REF_Alpha(3) 
-
+if( allocated(REF_alpha) ) then
+    eval(me+1) = Alpha_ii(1) - REF_Alpha(1)   
+    eval(me+2) = Alpha_ii(2) - REF_Alpha(2)  
+    eval(me+3) = Alpha_ii(3) - REF_Alpha(3) 
+    me = me + 3
+end if
 !......................................................................
 ! at last, show the cost ...
 If( present(ShowCost) ) then
@@ -240,7 +225,6 @@ end function evaluate_cost
 !==========================================================
  subroutine parse_EH_cost_function
 !==========================================================
-use util_m
 implicit none
 
 ! local variables ...
@@ -273,30 +257,37 @@ read_loop: do
 
       keyword = TO_UPPER_CASE( keyword )
 
-      select case ( keyword(1:7) )
-                  case( "MO_ERG_" )
+      select case ( keyword(1:6) )
+                  case( "MO_ERG" )
                          allocate( MO_ERG_DIFF_parms(1) )
                          call Build_GA_Parms( this_parms = MO_ERG_DIFF_parms, in=f_unit )
 
-                  case( "MO_CHAR" )
+                  case( "MO_CHA" )
                          allocate( MO_CHARACTER_parms(1) )
                          call Build_GA_Parms( this_parms = MO_CHARACTER_parms, in=f_unit )
 
-                  case( "BOND_TY" )
+                  case( "BOND_T" )
                          allocate( BOND_TYPE_parms(1) )
                          call Build_GA_Parms( this_parms = BOND_TYPE_parms, in=f_unit )
 
-                  case( "MULLIKE" )
+                  case( "MULLIK" )
                          allocate( Mulliken_parms(1) )
                          call Build_GA_Parms( this_parms = Mulliken_parms, in=f_unit )
 
-                  case( "EXCLUDE" )
+                  case( "EXCLUD" )
                          allocate( Exclude_parms(1) )
                          call Build_GA_Parms( this_parms = Exclude_parms, in=f_unit )
 
-                  case( "LOCALIZ" )
+                  case( "LOCALI" )
                          allocate( Localize_parms(1) )
                          call Build_GA_Parms( this_parms = Localize_parms, in=f_unit )
+
+                  case( "DIPOLE" )
+                         ref_DP = get_dipole( line )                         
+
+                  case( "POLARI" )
+                         ref_ALPHA = get_DP_ALPHA( line )                         
+
       end select
       ! reset keyword ...
       keyword = "XXXXXXX"
@@ -304,6 +295,7 @@ read_loop: do
 end do read_loop
 
 close(f_unit)
+
 
 end subroutine parse_EH_cost_function
 !
@@ -313,7 +305,6 @@ end subroutine parse_EH_cost_function
 !===============================================
  subroutine Build_GA_Parms( this_parms , in )
 !===============================================
-use util_m
 implicit none
 type(GA_features) , allocatable , intent(inout) :: this_parms(:)
 integer                         , intent(in)    :: in
@@ -448,6 +439,70 @@ end do
 this_parms(1)%entries = row
 
 end subroutine Build_GA_Parms
+!
+!
+!
+!
+!==========================================
+ function get_dipole( line ) result(dipole)
+!==========================================
+ implicit none
+ character(len=*) , intent(inout) :: line
+
+! local variables ...
+ integer :: num_len
+ real    :: DP_x, DP_y, DP_z, dipole(3)
+ character(len=:) , allocatable :: tokens(:)
+
+line = TO_UPPER_CASE( line )
+allocate( tokens , source=split_line( line , token_length=15 ) )
+
+! checking input format ...
+if( size(tokens) /= 3 ) then
+     CALL warning('DIPOLE, wrong input format in "cost_tuning.inpt", no blanck spaces allowed ; terminating execution')
+     stop
+end if
+
+read(tokens(1)(9:),*) DP_x
+read(tokens(2)    ,*) DP_y
+num_len = len(tokens(3)) - 1
+read(tokens(3)(:num_len),*) DP_z
+
+dipole = [DP_x,DP_y,DP_z]
+
+end function get_dipole
+!
+!
+!
+!
+!===========================================
+ function get_DP_ALPHA( line ) result(alpha)
+!===========================================
+ implicit none
+ character(len=*) , intent(inout) :: line
+
+! local variables ...
+ integer :: num_len
+ real    :: alpha_x, alpha_y, alpha_z, alpha(3)
+ character(len=:) , allocatable :: tokens(:)
+
+line = TO_UPPER_CASE( line )
+allocate( tokens , source=split_line( line , token_length=25 ) )
+
+! checking input format ...
+if( size(tokens) /= 3 ) then
+     CALL warning('POLARIZABILITY, wrong input format in "cost_tuning.inpt", no blanck spaces allowed ; terminating execution')
+     stop
+end if
+
+read(tokens(1)(18:),*) alpha_x
+read(tokens(2)     ,*) alpha_y
+num_len = len(tokens(3)) - 1
+read(tokens(3)(:num_len),*) alpha_z
+
+alpha = [alpha_x,alpha_y,alpha_z]
+
+end function get_DP_ALPHA
 !
 !
 !
