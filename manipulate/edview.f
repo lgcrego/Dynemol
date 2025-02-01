@@ -38,7 +38,7 @@ CALL get_environment_vars
 
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
-!call dba
+call dba
 !-----------------------------------------------------------
 !       Reading the input file
 do 
