@@ -1,0 +1,92 @@
+!-------------------------------------------------------------------------
+! Energy gaps ...     
+ MO_erg_diff( MO_up , MO_down , dE_ref , {weight} )
+ {...} terms are optional 
+!----------------------------------------------------------------------------------------------
+MO_erg_diff
+MO_up=Int    MO_down=Int    dE_ref=Real    Weight=Real
+.
+.
+.
+end MO_erg_diff
+
+!----------------------------------------------------------------------------------------------
+! ==> MO_character( MO , AO )
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!----------------------------------------------------------------------------------------------
+MO_character
+MO=Int   AO=Char
+.
+.
+.
+end MO_character
+
+!----------------------------------------------------------------------------------------------
+! ==> Bond_Type( MO , atom1 , AO1 , atom2 , AO2 , "+" or "-" )
+! Bond Topolgy analysis ...
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+!  + = Bonding               &         - = Anti_Bonding
+!----------------------------------------------------------------------------------------------
+Bond_Type
+MO=Int   atom1=Int   AO1=Char   atom2=Int   AO2=Char   pm_sign=+/-
+.
+.
+.
+end Bond_Type
+
+!----------------------------------------------------------------------------------------------
+! ==> Mulliken( MO , {atom}=[.,.,.] , {AO} , {EHSymbol} , {Symbol} , {residue} , {weight} , ref )
+! Population analysis ...
+! {...} terms are optional  
+! AO = s , py , pz , px , dxy , dyz , dz2 , dxz , dx2y2
+! weight < 0  ==> does not update "me" when Mulliken is called
+! ref = aimed Mulliken population
+!----------------------------------------------------------------------------------------------
+Mulliken
+MO=Int  atom=[Int1:Int2]    AO=Char    EHSymbol=Char     residue=Char    weight=Real   ref=Real
+.
+MO=Int  atom=[Int1;Int2;...,IntN]  AO=Char   EHSymbol=Char  residue=Char  weight=Real  ref=Real
+.
+.
+end Mulliken
+
+!----------------------------------------------------------------------------------------------
+! ==> Exclude( OPT_UNI , basis , MO , {atom}=[:] , {AO} , {EHSymbol} , {Symbol} , {residue} , {ref} , {from_to} , {adaptive} )
+! NO charge on these atoms ...
+! {...} terms are optional  
+! default reference < 0.001 
+! from_to = real_interval( begin , end ) : no need to use {reference} if {from_to} is used
+! adaptive = {true,false} , logical flag: true for enabling adpative GA method; false locks adaptive feature and sets reference = end
+!----------------------------------------------------------------------------------------------
+Exclude
+MO=Int  atom=[Int1:Int2]    AO=Char    EHSymbol=Char    residue=Char  from_to=(Real:Real)    adaptive=logical 
+.
+MO=Int  atom=[Int1;Int2;...,IntN]  AO=Char  EHSymbol=Char   residue=Char   ref=Real
+.
+.
+end exclude
+
+!----------------------------------------------------------------------------------------------
+! ==> Localize( OPT_UNI , basis , MO , {atom}=[:] , {AO} , {EHSymbol} , {Symbol} , {residue} , {ref} , {from_to} , {adaptive} )
+! {...} terms are optional
+! default criterion (reference=0.85): localized > 85% of total population
+! from_to = real_interval( begin , end ) : no need to use {reference} if {from_to} is used
+! adaptive = {true,false} , logical flag: true for enabling adpative GA method; false locks adaptive feature and sets reference = end
+!----------------------------------------------------------------------------------------------
+Localize
+MO=Int  atom=[Int1:Int2]    AO=Char    EHSymbol=Char    residue=Char  from_to=(Real:Real)    adaptive=logical 
+.
+MO=Int  atom=[Int1;Int2;...,IntN]  AO=Char  EHSymbol=Char   residue=Char   ref=Real
+.
+.
+end Localize
+
+!-------------------------                                                         
+! Total DIPOLE moment ...
+!-------------------------
+dipole=(Real,Real,Real)
+
+!-----------------------------------------------------
+! Polarizability: Alpha tensor diagonal elements  ...
+!-----------------------------------------------------
+polarizability=(Real,Real,Real)
