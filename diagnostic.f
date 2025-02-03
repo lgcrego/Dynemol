@@ -98,13 +98,6 @@ CALL Read_Command_Lines_Arguments( MOnum )
 
  If( HFP_Forces ) CALL HuckelForces( Extended_Cell, ExCell_basis, UNI )
 
-!Print*, " " 
-!Print 10, "dE1 = ",UNI%erg(5) - UNI%erg(4) , "  vs " , 8.91d0 , "  => error = ", ( UNI%erg(5) - UNI%erg(4)) - 8.91d0
-!Print 10, "dE2 = ",UNI%erg(4) - UNI%erg(3) , "  vs " , 1.84d0 , "  => error = ", ( UNI%erg(4) - UNI%erg(3)) - 1.84d0
-!Print 10, "dE3 = ",UNI%erg(3) - UNI%erg(2) , "  vs " , 4.28d0 , "  => error = ", ( UNI%erg(3) - UNI%erg(2)) - 4.28d0
- 
-10 format(A6,F9.5,A5,F9.5,A13,F9.5)
-
  If( GaussianCube .AND. (size(MOnum) > 0) ) then
 
      ! use this to check the orbitals separately ... 
@@ -240,7 +233,7 @@ do i = 1 , size(MOnum)
      do k = 1 , size(list)
           write(18,"(a5)",advance='no') list(k) 
           do j = 1 , 9     
-               pop(j) = Mulliken( UNI , basis , MO=MOnum(i) , AO = AO_orbs(j) , EHSymbol=list(k) )
+               pop(j) = Mulliken( UNI , basis , MO=MOnum(i) , AO = AO_orbs(j) , EHSymbol=list(k) , Symbol="XX" , residue="XXX" )
           end do
      write(18,"(9F10.4)") (pop(j) , j=1,9)
      end do
@@ -369,7 +362,8 @@ select case (token)
            do i = 1 , size(UNI%erg)
                 do j = 1 , 9     
                      do k = 1 , size(list)
-                          PDOS(i,k) = PDOS(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , EHSymbol=list(k) )
+                          PDOS(i,k) = PDOS(i,k) &
+                                    + Mulliken( UNI , basis , MO=i , AO=AO_orbs(j) , EHSymbol=list(k) , Symbol="XX" , residue="XXX" )
                      end do
                 end do
                 !write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(PDOS(i,:)) , PDOS(i,:)
@@ -379,7 +373,8 @@ select case (token)
            do i = 1 , size(UNI%erg)
                 do j = 1 , 9     
                      do k = 1 , size(list)
-                          PDOS(i,k) = PDOS(i,k) + Mulliken( UNI , basis , MO=i , AO = AO_orbs(j) , Symbol=list(k) )
+                          PDOS(i,k) = PDOS(i,k) & 
+                                    + Mulliken( UNI , basis , MO=i , AO=AO_orbs(j) , EHSymbol="XX" , Symbol=list(k) , residue="XXX" )
                      end do
                 end do
                 !write(*,"(t1,i3,t6,F12.4,F10.5,5F10.3)") i , UNI%erg(i) , sum(PDOS(i,:)) , PDOS(i,:)
