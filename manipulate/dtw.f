@@ -4,7 +4,7 @@ use types_m
 use Constants_m
 use util_m      , only : read_general_file , count_lines , read_CSV_file
 
-public :: dtw_driver , dtw_medoid , dba
+public :: dtw_driver , dtw_medoid , dba , dtw_stuff
 
 private
 
@@ -27,20 +27,19 @@ contains
 !
 !
 !========================
-subroutine dba(  )
+subroutine dtw_stuff(  )
 !========================
 implicit none 
 
-
 ! local variables ...
-integer :: i , j , k , i1 , i2 , nl , nseqs , iostat , medoid , anomalous , subsequence_size , f_unit, nrows
-real*8  :: dumb , aux
-real*8    , allocatable :: data_mtx(:,:) , cost_vec(:) , buffer(:)
-type(dtw) , allocatable :: dtw_vec(:)
-character(len=3)  :: string
-character(len=16) :: f_name
-character(len=9) , allocatable :: dados(:,:)
+ integer           :: i , j , k , i2 , nl , nseqs , iostat , f_unit, nrows
+ real*8            , allocatable :: data_mtx(:,:)
+ character(len=9)  , allocatable :: dados(:,:)
+ character(len=3)  :: string
+ character(len=16) :: f_name
 
+!##########################################################3
+! READ DATA FILES
 !##########################################################3
 nseqs = 29 ! <== number of sequences to be analyzed ...
 nl = count_lines("v1.txt")
@@ -84,19 +83,102 @@ end do
 !end do
 !###################################################################
 
-call dtw_medoid( data_mtx(:,1:nseqs), medoid, anomalous, cost_vec, instance="light" )
-data_mtx(:,0) = data_mtx(:,medoid)
-print*, medoid
 
-OPEN(file="selected_seqs.dat",status='unknown',newunit=f_unit)
-      do i = 1 , nl
-         write(f_unit,*) i , data_mtx(i,0)  , data_mtx(i,1) , data_mtx(i,2) , data_mtx(i,3) , data_mtx(i,4)
-      end do
+
+call K_means( data_mtx )
+
+stop
+end subroutine dtw_stuff
+!
+!
+!
+!
+!===========================================================================
+subroutine K_means( data_mtx )
+!===========================================================================
+implicit none 
+real*8 , intent(in) :: data_mtx(:,:) 
+
+! local variables ...
+integer :: i , j , k , nl , nseqs , f_unit
+real*8  :: min_cost, max_cost
+
+!=====================================
+! K-means clustering
+!===================================== 
+
+nl     = size(data_mtx(:,1))
+nseqs  = size(data_mtx(1,:))
+
+! create vector of sequence pairs ...
+allocate( dtw_pair(nseqs,nseqs) )
+
+k=0
+do i = 1 , nseqs
+     do j = i+1 , nseqs
+
+          k = k + 1
+          allocate( dtw_pair(i,j)%seq1(nl) , source=data_mtx(:,i))
+          allocate( dtw_pair(i,j)%seq2(nl) , source=data_mtx(:,j))
+
+          call dynamic_time_warping( dtw_pair(i,j) , instance="light" )
+
+          dtw_pair(j,i)%alignment_cost = dtw_pair(i,j)%alignment_cost
+
+     end do
+     dtw_pair(i,i)%alignment_cost = 0.0
+end do
+
+max_cost = maxval(dtw_pair(:,:)%alignment_cost)
+min_cost = minval(dtw_pair(:,:)%alignment_cost)
+
+print*, min_cost, max_cost
+
+
+
+
+
+stop
+OPEN(file="cost_matrix.dat" , status='unknown' , action="write" , newunit=f_unit )
+do i = 1 , nseqs
+!do j = 1 , nseqs
+     write(f_unit,*) dtw_pair(i,:)%alignment_cost
+!     write(f_unit,'(2i4,f12.4)') i , j , dtw_pair(i,j)%alignment_cost
+!end do;  write(f_unit,*) 
+end do
+
 close(f_unit)
 
+end subroutine K_means
+!
+!
+!
+!
+!=========================
+subroutine dba( data_mtx )
+!=========================
+implicit none 
+real*8   , intent(inout) :: data_mtx(1:,0:) 
+
+! local variables ...
+ integer   :: i, j, k, i1, i2, nseqs, nl, medoid, anomalous, subsequence_size, f_unit
+ real*8    :: aux
+ real*8    , allocatable :: cost_vec(:)
+ type(dtw) , allocatable :: dtw_vec(:)
+
+
+nl    = size(data_mtx(:,1))
+nseqs = size(data_mtx(1,:))
+
+call dtw_medoid( data_mtx(:,1:nseqs), medoid, anomalous, cost_vec, instance="light" )
+data_mtx(:,0) = data_mtx(:,medoid)
+print*, "medoid = ", medoid
+
+!====================================================
+! setup DBA sequence with the ensemble sequences ...
+!====================================================
 allocate( dtw_vec(nseqs) )
 do j = 1 , nseqs
-
      allocate(dtw_vec(j)%seq1(nl))
      allocate(dtw_vec(j)%seq2(nl))
 
@@ -104,7 +186,6 @@ do j = 1 , nseqs
      dtw_vec(j)%seq2 = data_mtx(:,j)
 
      call dynamic_time_warping( dtw_vec(j) , instance="light" )
-
 end do
 
 !================================
@@ -143,16 +224,13 @@ do k = 1 , 10
 end do
 close(f_unit)
 
-
+! save DBA sequence
 OPEN(file="avrg.dat",status='unknown',newunit=f_unit)
       do i = 1 , nl
          write(f_unit,*) i , data_mtx(i,0) 
       end do
 close(f_unit)
 
-!================================
-
-stop
 end subroutine dba
 !
 !

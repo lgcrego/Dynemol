@@ -20,7 +20,7 @@ use RW_driver
 use EDT_util_m
 use Alignment_routines
 
-use dtw_routines , only : dtw_driver , dba
+use dtw_routines , only : dtw_stuff
 
 implicit none
 
@@ -38,7 +38,7 @@ CALL get_environment_vars
 
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
-call dba
+!call dtw_stuff
 !-----------------------------------------------------------
 !       Reading the input file
 do 
