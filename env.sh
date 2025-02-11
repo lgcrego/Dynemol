@@ -25,8 +25,3 @@ then
 	mkdir "$DYNEMOLWORKDIR"/ancillary.trunk/configs
 fi
 
-if [ "x$1" == 'xsave_cost_statement' ]
-then
-	paste "$DYNEMOLWORKDIR"/opt.trunk/view_cost.dat <(grep "eval(me)" "$DYNEMOLDIR"/cost_tuning_EH.f | grep -v \!) > "$DYNEMOLWORKDIR"/opt.trunk/ga_cost.statement
-    rm "$DYNEMOLWORKDIR"/opt.trunk/view_cost.dat
-fi

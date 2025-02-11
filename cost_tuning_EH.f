@@ -24,6 +24,7 @@ module cost_EH
 
     ! module variables ...
     real, allocatable :: REF_DP(:) , REF_Alpha(:)
+    character(len=120), allocatable :: cost_statement(:)
     type(GA_features) , allocatable :: MO_ERG_DIFF_parms(:) 
     type(GA_features) , allocatable :: MO_CHARACTER_parms(:)
     type(GA_features) , allocatable :: BOND_TYPE_parms(:)
@@ -50,18 +51,17 @@ logical         , optional  , intent(in) :: ShowCost
 real*8                                   :: evaluate_cost
 
 ! local variables ...
- integer  :: i , dumb
+ integer  :: i , dumb , f_unit , MO_up , MO_down , MO , atom1 , atom2
+ real     :: de_ref , weight , ref
  real*8   :: eval(200) = D_zero
  logical  :: adaptive
- 
- integer          :: MO_up , MO_down , MO , atom1 , atom2
- integer , allocatable :: atom(:)
- real             :: de_ref , weight , ref
  character(len=1) :: pm
  character(len=2) :: EHSymbol, Symbol
  character(len=3) :: residue
  character(len=5) :: AO , AO1 , AO2
- type(real4_interval) :: from_to
+ integer , allocatable :: atom(:)
+ type(real4_interval)  :: from_to
+
 
 adaptive = Adaptive_GA% mode
 
@@ -193,20 +193,18 @@ end if
 ! at last, show the cost ...
 If( present(ShowCost) ) then
 
-   open( unit=33 , file='opt.trunk/view_cost.dat' , status='unknown' )
-
-   do i = 1 , me
-      write(33,*) i , dabs(eval(i)) 
-   end do 
-
-   CALL system( dynemoldir//"env.sh save_cost_statement " )
-
+   open( file='opt.trunk/ga_cost.statement' , status='unknown' , newunit=f_unit )
+       do i = 1 , me
+          write(f_unit,'(i5,F10.4,2A)') i , dabs(eval(i)) , "   =   " , cost_statement(i)
+          end do 
+   close(f_unit)
+   
    Print 218
 
 end If
 !......................................................................
 
-! evaluate total cost ...
+		! evaluate total cost ...
 evaluate_cost = Lp_norm(eval,p=1)
 
 ! just touching variables ...
@@ -260,26 +258,32 @@ read_loop: do
       select case ( keyword(1:6) )
                   case( "MO_ERG" )
                          allocate( MO_ERG_DIFF_parms(1) )
+                         MO_ERG_DIFF_parms% instance = "MO_ERG_DIFF"
                          call Build_GA_Parms( this_parms = MO_ERG_DIFF_parms, in=f_unit )
 
                   case( "MO_CHA" )
                          allocate( MO_CHARACTER_parms(1) )
+                         MO_CHARACTER_parms% instance = "MO_CHARACTER"
                          call Build_GA_Parms( this_parms = MO_CHARACTER_parms, in=f_unit )
 
                   case( "BOND_T" )
                          allocate( BOND_TYPE_parms(1) )
+                         BOND_TYPE_parms% instance = "BOND_TYPE"
                          call Build_GA_Parms( this_parms = BOND_TYPE_parms, in=f_unit )
 
                   case( "MULLIK" )
                          allocate( Mulliken_parms(1) )
+                         Mulliken_parms% instance = "Mulliken"
                          call Build_GA_Parms( this_parms = Mulliken_parms, in=f_unit )
 
                   case( "EXCLUD" )
                          allocate( Exclude_parms(1) )
+                         Exclude_parms% instance = "Exclude"
                          call Build_GA_Parms( this_parms = Exclude_parms, in=f_unit )
 
                   case( "LOCALI" )
                          allocate( Localize_parms(1) )
+                         Localize_parms% instance = "Localize"
                          call Build_GA_Parms( this_parms = Localize_parms, in=f_unit )
 
                   case( "DIPOLE" )
@@ -295,7 +299,6 @@ read_loop: do
 end do read_loop
 
 close(f_unit)
-
 
 end subroutine parse_EH_cost_function
 !
@@ -313,11 +316,13 @@ integer                         , intent(in)    :: in
  integer :: i, j, row, ioerr, detecting_field
  integer :: bra, ket, field_positions(18), token_positions(18)
  real    :: inicio, fim
- character(len=:) , allocatable :: tokens(:)
+ character(len=:) , allocatable :: tokens(:) , instance(:)
  character(len= 6) :: flag
  character(len=80) :: line
  character(len=17) :: fields(18)=["MO=","MO_UP","MO_DOWN","DE_REF","ATOM1","AO1","ATOM2","AO2","PM_SIGN", &
                       "ATOM","AO","EHSYMBOL","SYMBOL","RESIDUE","WEIGHT","FROM_TO","ADAPTIVE","REF"]
+
+allocate( instance , source=this_parms% instance ) 
 
 row = 0 
 do 
@@ -331,6 +336,8 @@ do
          deallocate(tokens)
          exit
       end if
+
+      call append_cost_statement( tokens, instance(1) )
 
       row = row + 1
 
@@ -439,6 +446,34 @@ end do
 this_parms(1)%entries = row
 
 end subroutine Build_GA_Parms
+!
+!
+!
+!
+!====================================================
+ subroutine append_cost_statement( tokens, instance )
+!====================================================
+ implicit none
+ character(len=*) , intent(in) :: tokens(:) 
+ character(len=*) , intent(in) :: instance 
+
+! local variables ...
+ integer            :: i
+ character(len=120) :: this_cost_item
+
+! concatenate cost items ... 
+write(this_cost_item,*) (" "//trim(tokens(i))//" ,"  ,   i=1,size(tokens)-1)
+write(this_cost_item,*)  trim(this_cost_item)//" "//trim(tokens(size(tokens)))
+this_cost_item = trim(instance)//"(  "//trim(adjustL(this_cost_item))//"  )"
+if( .not. allocated(cost_statement) ) &
+then
+     allocate( cost_statement(1) )
+     cost_statement(1) = this_cost_item
+else
+     cost_statement = [ cost_statement , this_cost_item ]
+end if
+
+end subroutine append_cost_statement
 !
 !
 !
