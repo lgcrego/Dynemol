@@ -270,6 +270,7 @@ module type_m
     end type dipoles
 
     type GA_features
+        character(len=12)      :: instance
         integer                :: entries = 0
         integer                :: MO , MO_up , MO_down
         character(len=5)       :: AO , AO1 , AO2
