@@ -20,7 +20,7 @@ use RW_driver
 use EDT_util_m
 use Alignment_routines
 
-use dtw_routines , only : dtw_stuff
+!use dtw_routines , only : dtw_stuff
 
 implicit none
 
