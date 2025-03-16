@@ -63,7 +63,7 @@
 !
 !
 !==============================================================================
- function even_more_extended_huckel( system , basis , S_matrix , it ) result(h)
+ function even_more_extended_Huckel( system , basis , S_matrix , it ) result(h)
 !==============================================================================
 implicit none
 type(structure)            , intent(in) :: system
@@ -133,7 +133,7 @@ do ib = 1, system%atoms
                 j = system% BasisPointer(ib) + jb
                 i = system% BasisPointer(ia) + ja
 
-                h(i,j) = huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
+                h(i,j) = Huckel_with_FIELDS(i , j , S_matrix(i,j) , basis , DP_4_vector )
 
                 h(j,i) = h(i,j)
 
@@ -146,7 +146,7 @@ end do
 
 forall( i=1:N ) h(i,i) = X_ij( i , i , basis ) 
 
-end function even_more_extended_huckel
+end function even_more_extended_Huckel
 !
 !
 !
@@ -172,7 +172,7 @@ end function even_more_extended_huckel
 
  IF( i == j ) then
 
-      huckel_with_FIELDS = basis(i)%IP + basis(i)%V_shift
+      Huckel_with_FIELDS = basis(i)%IP + basis(i)%V_shift
 
  else
 
@@ -187,7 +187,7 @@ end function even_more_extended_huckel
      
       k_eff = k_WH + c3 + c3 * c3 * (D_one - k_WH)
      
-      huckel_with_FIELDS = (k_eff*c2/two + c4)*S_ij
+      Huckel_with_FIELDS = (k_eff*c2/two + c4)*S_ij
      
       If( abs(S_ij) > low_prec ) then
     
@@ -205,7 +205,7 @@ end function even_more_extended_huckel
           
           If( EnvField_ ) DP = DP + DP_4_vector
           
-          huckel_with_FIELDS = huckel_with_FIELDS - ( S_ij*DP(1) + dot_product(vector(1:3),DP(2:4)) )
+          Huckel_with_FIELDS = Huckel_with_FIELDS - ( S_ij*DP(1) + dot_product(vector(1:3),DP(2:4)) )
 
       end If
       
