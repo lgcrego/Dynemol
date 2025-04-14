@@ -1,7 +1,7 @@
 module EDT_util_m
 
 use types_m
-use util_m
+use util_m        , only: split_line , seq_in_range
 use Read_Parms
 use Constants_m
 use GMX_routines
@@ -11,7 +11,8 @@ public :: on_the_fly_tuning , parse_this
 private
 
         !module variables ...
-        integer          :: nresid
+        integer               :: nresid
+        integer , allocatable :: displace(:) !displace is USED IN THE CALLING ROUTINE to accomodate the residue numbers after delete operations
         character(len=4) :: resid
         character(len=4) :: MMSymbol
         character(len=1) :: fragment
@@ -19,13 +20,12 @@ private
 contains
 
 !
-!===============================================
-subroutine on_the_fly_tuning( system , displace)
-!===============================================
+!=====================================
+subroutine on_the_fly_tuning( system )
+!=====================================
 implicit none
-type(universe)                   , intent(inout) :: system
-integer , allocatable , optional , intent(out)   :: displace(:)
-
+type(universe), intent(inout) :: system
+    
 ! local variables
 integer :: option
 
@@ -43,7 +43,7 @@ select case ( option )
 
     case (3)
         write(*,'(/a)',advance='no') ">>> enter new fragment: "
-        read (*,'(a)') MMSymbol
+        read (*,'(a)') fragment
         CALL change_this( system , instance="fragment" )
 
     case (4)
@@ -60,7 +60,7 @@ select case ( option )
         Write(*,*) "not implemented"
 
     case (7)
-        CALL delete_mask( system , displace )
+        CALL delete_mask( system )
 
     case (8)
         CALL translation_mask( system )
@@ -85,10 +85,10 @@ type(universe)   , intent(inout) :: system
 character(len=*) , intent(in)    :: instance
 
 ! local variables ...
-integer                        :: nr 
-integer          , allocatable :: indx(:)
+integer                        :: i 
+integer          , allocatable :: nr(:) , indx(:)
 character(len=1)               :: choice
-character(len=3)               :: residue
+character(len=3) , allocatable :: residue(:)
 character(len=80)              :: line
 
 ! reset varible ...
@@ -109,37 +109,32 @@ select case( choice )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be changed (0 to finish) : "
-
-        do
-           read*, nr
-           If( nr == 0 ) exit
-           CALL change_nr( system , nr , instance )
+        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        read (*,'(a)') line
+        nr =  parse_this(line)
+        do i = 1 , size(nr)
+           CALL change_via_nr( system , nr(i) , instance )
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the names of the residues to be changed (press ENTER after each residue; use @ to finish) : "
-
-        do
-           read*, residue
-           If( residue == "@" ) exit
-           CALL change_residue( system , residue , instance )
+        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        residue = split_line(line)
+        do i = 1 , size(residue)
+           CALL change_via_residue( system , residue(i) , instance )
         end do
  
     case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed separated by spaces (press ENTER) : "
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
-
         indx =  parse_this(line)
-
-        CALL change_index( system , indx , instance )
+        CALL change_via_index( system , indx , instance )
 
 end select
 
+CALL systemQQ( "clear" )
+
 end subroutine change_this
-!
-!
-!
 !
 !
 !
@@ -150,10 +145,10 @@ implicit none
 type(universe)              , intent(inout) :: system
 
 ! local variables ...
-integer                        :: nr
-integer          , allocatable :: indx(:)
+integer                        :: i
+integer          , allocatable :: nr(:) , indx(:)
 character(len=1)               :: choice
-character(len=3)               :: residue
+character(len=3) , allocatable :: residue(:)
 character(len=80)              :: line
 
 ! reset varible ...
@@ -161,7 +156,7 @@ system% atom(:)% translate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose stuff to Copy : '
+write(*,'(/a)') ' Choose keyword of stuff to TRANSLATE : '
 write(*,'(/a)') ' (1) = tuning already done'
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
@@ -174,32 +169,25 @@ select case( choice )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be translated (0 to finish) : "
-
-        do
-           read*, nr
-           If( nr == 0 ) exit
-           
-           where( system% atom(:)% nresid == nr ) system% atom(:)% translate = .true.
-
+        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        read (*,'(a)') line
+        nr =  parse_this(line)
+        do i = 1 , size(nr)
+           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% translate = .true.
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the names of the residues to be translated (press ENTER after each residue; use @ to finish) : "
-
-        do
-           read*, residue
-           If( residue == "@" ) exit
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% translate = .true.
-
+        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        residue = split_line(line)
+        do i = 1 , size(residue)
+           where( system% atom(:)% resid == residue(i) ) system% atom(:)% translate = .true.
         end do
  
     case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be translated separated by spaces (press ENTER) : "
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
-
-        indx = parse_this(line)
+        indx =  parse_this(line)
 
         system% atom(indx)% translate = .true.
 
@@ -216,10 +204,10 @@ implicit none
 type(universe) , intent(inout) :: system
 
 !	local variables
-integer           :: nr
-integer           , allocatable :: indx(:)
+integer           :: i
+integer          , allocatable :: nr(:) , indx(:)
 character(1)      :: choice
-character(len=3)  :: residue
+character(len=3) , allocatable :: residue(:)
 character(len=80) :: line
 
 ! reset varible ...
@@ -227,7 +215,7 @@ system% atom(:)% rotate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose stuff to Rotate : '
+write(*,'(/a)') ' Choose keyword of stuff to Rotate : '
 write(*,'(/a)') ' (1) = tuning already done'
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
@@ -240,34 +228,25 @@ select case( choice )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be rotated (0 to finish) : "
-
-        do
-           read*, nr
-           If( nr == 0 ) exit
-           
-           where( system% atom(:)% nresid == nr ) system% atom(:)% rotate = .true.
-
+        write(*,'(1x,3/a)') "enter the residue numbers to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        nr =  parse_this(line)
+        do i = 1 , size(nr)
+           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% rotate = .true.
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the names of the residues to be rotated (press ENTER after each residue; use @ to finish) : "
-
-        do
-           read*, residue
-           If( residue == "@" ) exit
-
-           if( .not. any(system% atom(:)% resid == residue) ) Print*, ">> no residue ", residue ," found"
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% rotate = .true.
-
+        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        residue = split_line(line)
+        do i = 1 , size(residue)
+           where( system% atom(:)% resid == residue(i) ) system% atom(:)% rotate = .true.
         end do
  
     case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be rotated separated by spaces (press ENTER) : "
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
-
-        indx = parse_this(line)
+        indx =  parse_this(line)
 
         system% atom(indx)% rotate = .true.
 
@@ -277,27 +256,26 @@ end subroutine rotation_mask
 !
 !
 !
-!==========================================
-subroutine delete_mask( system , displace )
-!==========================================
+!===============================
+subroutine delete_mask( system )
+!===============================
 implicit none
-type(universe)               , intent(inout) :: system
-integer        , allocatable , intent(out)   ::  displace(:)
+type(universe) , intent(inout) :: system
 
 !local variables
-integer           :: nr , begin_of_block
+integer           :: i
 character(len=1)  :: option
-character(len=3)  :: residue
 character(len=80) :: line
-integer           , allocatable :: nr_mask(:) ,indx(:)
-character(len=3)  , allocatable :: residue_mask(:)
+integer           , allocatable :: nr(:), indx(:)
+character(len=1)  , allocatable :: fragment(:)
+character(len=3)  , allocatable :: residue(:)
 
 allocate( displace(system%N_of_atoms) , source = 0 ) 
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose stuff to Delete : '
-write(*,'(/a)') ' (1) = tuning already done'
+write(*,'(/a)') ' Choose keyword of stuff to Delete : '
+write(*,'(/a)') ' (1) = fragment'
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
 write(*,'(/a)') ' (4) = atom indices '
@@ -306,52 +284,39 @@ read (*,'(a)') option
 
 select case( option )
     case( '1' ) 
-        ! do nothing, proceed ...
+        write(*,'(1x,3/a)') "enter the fragment names to be DELETED, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        fragment = split_line(line)
+        do i = 1 , size(fragment)
+             where( system% atom(:)% fragment == fragment(i) ) system% atom(:)% delete = .true.
+        end do
 
     case( '2' )
-        write(*,'(/a)') "choose the residue numbers to be deleted (0 to finish) : "
-
-        allocate ( nr_mask(system%N_of_atoms) )
-        nr_mask(:) = system%atom(:)%nresid 
-        do
-           read*, nr
-           If( nr == 0 ) exit
-           
-           where( system% atom(:)% nresid == nr ) system% atom(:)% delete = .true.
-
-           begin_of_block = minloc( nr_mask , mask = nr_mask==nr , dim=1 )
-           displace(begin_of_block:) = displace(begin_of_block:) + 1
+        write(*,'(1x,3/a)') "enter the residue numbers to be DELETED: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        read (*,'(a)') line
+        nr =  parse_this(line)
+        do i = 1 , size(nr)
+             where( system% atom(:)% nresid == nr(i) ) system% atom(:)% delete = .true.
         end do
-        deallocate( nr_mask )
 
     case( '3' )
-        write(*,'(1x,3/a)') "choose the name of the residue to be deleted (@ to finish) : "
-
-        allocate ( residue_mask(system%N_of_atoms) ) 
-        residue_mask(:) = system%atom(:)%resid 
-        do
-           read*, residue
-           If( residue == "@" ) exit
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% delete = .true.
-
-           where( system% atom(:)% resid == residue ) system% atom(:)% nresid = -1
-
-           begin_of_block = minloc( residue_mask , mask = residue_mask==residue , dim=1 )
-           displace(begin_of_block:) = displace(begin_of_block:) + 1
+        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        residue = split_line(line)
+        do i = 1 , size(residue)
+           where( system% atom(:)% resid == residue(i) ) system% atom(:)% delete = .true.
         end do
-        deallocate( residue_mask )
 
     case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be deleted separated by spaces (press ENTER) : "
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
-
-        indx = parse_this(line)
+        indx =  parse_this(line)
 
         system% atom(indx)% delete = .true.
 
 end select
 
+CALL systemQQ( "clear" )
 
 end subroutine delete_mask
 !
@@ -359,7 +324,7 @@ end subroutine delete_mask
 !
 !
 !============================================
-subroutine change_nr( system , nr , instance)
+subroutine change_via_nr( system , nr , instance)
 !============================================
 implicit none 
 type(universe)   , intent(inout) :: system
@@ -381,13 +346,13 @@ select case( instance )
 
 end select
 
-end subroutine change_nr
+end subroutine change_via_nr
 !
 !
 !
 !
 !======================================================
-subroutine change_residue( system , residue , instance)
+subroutine change_via_residue( system , residue , instance)
 !======================================================
 implicit none 
 type(universe)   , intent(inout) :: system
@@ -409,13 +374,13 @@ select case( instance )
 
 end select
 
-end subroutine change_residue
+end subroutine change_via_residue
 !
 !
 !
 !
 !=================================================
-subroutine change_index( system , indx , instance)
+subroutine change_via_index( system , indx , instance)
 !=================================================
 implicit none 
 type(universe)   , intent(inout) :: system
@@ -437,7 +402,7 @@ select case( instance )
 
 end select
 
-end subroutine change_index
+end subroutine change_via_index
 !
 !
 !
@@ -480,35 +445,38 @@ implicit none
 integer , intent(out) :: option
 
 ! local variables
-character(len=1) :: yn
 
-CALL systemQQ( "clear" )
 
+!character(len=1) :: yn
+
+!CALL systemQQ( "clear" )
+!
 !--------------------------------------------------------------
 ! invoke xterm terminal to call visualization tool ...
-write(*,'(/a)',advance='no') ">>> preview structue ? (y/n)  "
-read(*,'(a)') yn
-if( yn == "y") &
-then
-    CALL systemQQ( "nohup xterm &" )
-end if
+!write(*,'(/a)',advance='no') ">>> preview structue ? (y/n)  "
+!read(*,'(a)') yn
+!if( yn == "y") &
+!then
+!    CALL systemQQ( "nohup xterm &" )
+!end if
 !--------------------------------------------------------------
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)',advance='no') ">>> choose field to EDIT (1..9): "
+write(*,'(/a)',advance='no') ">>> choose keyword for Edition Operation (1..9): "
 print*, ""
-write(*,'(/a)') 'Symbol (1)'
-write(*,'(/a)') 'MMSymbol  (2)'
-write(*,'(/a)') 'Fragment (3)'
-write(*,'(/a)') 'resid (4)'
-write(*,'(/a)') 'nresid (5)'
-write(*,'(/a)') 'copy (6)'
-write(*,'(/a)') 'delete (7)'
-write(*,'(/a)') 'translate (8)'
-write(*,'(/a)') 'rotate (9)'
+write(*,'(/a)') 'Modify Symbol (1)'
+write(*,'(/a)') 'Modify MMSymbol  (2)'
+write(*,'(/a)') 'Modify Fragment (3)'
+write(*,'(/a)') 'Modify residue name (4)'
+write(*,'(/a)') 'residue number (5)'
+write(*,'(/a)') 'COPY stuff (6)'
+write(*,'(/a)') 'DELETE stuff (7)'
+write(*,'(/a)') 'TRANSLATE stuff (8)'
+write(*,'(/a)') 'ROTATE stuff (9)'
 
-read (*,*) option
+write(*,'(/a)',advance='no') '>>>   '                                                                                                                     
+read (*,'(I)') option 
 
 end subroutine display_menu
 !

@@ -1,7 +1,7 @@
 !-------------------------------------------------------------------------
 ! Energy gaps ...     
- MO_erg_diff( MO_up , MO_down , dE_ref , {weight} )
- {...} terms are optional 
+! MO_erg_diff( MO_up , MO_down , dE_ref , {weight} )
+! {...} terms are optional 
 !----------------------------------------------------------------------------------------------
 MO_erg_diff
 MO_up=Int    MO_down=Int    dE_ref=Real    Weight=Real

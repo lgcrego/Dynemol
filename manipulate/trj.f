@@ -2,6 +2,8 @@ module Trajectory_routines
 
 use types_m
 use constants_m
+use util_m              , only : read_file_name
+use EDT_util_m          , only : on_the_fly_tuning
 use RW_driver           , only : WritingRoutines
 use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo , Pack_Residues , Identify_Residues
 use RW_routines         , only : view_XYZ , Initialize_System
@@ -27,6 +29,7 @@ type(universe)                  , intent(out)   :: sys
 
 ! local varibles ...
 character(len=1)                :: file_format , YorN , wait
+character(len=30)               :: f_name
 integer                         :: frame , n_frames , i , j , choice , option
 real*8                          :: delta_t 
 type(universe)  , allocatable   :: frozen_trj(:)
@@ -44,7 +47,8 @@ read (*,'(a)') file_format
 select case( file_format )
 
     case( 'p' ) 
-        CALL Read_PDB_Trajectories(trj) 
+        CALL read_file_name( f_name , file_type="pdb" )
+        CALL Read_PDB_Trajectories( trj , f_name ) 
 
     case( 'v' )
         CALL Read_VASP_Trajectories( trj )
@@ -59,18 +63,21 @@ end select
 
 ! select frame OR trajectory ...
 do
-    write(*,'(/a)') ' (1)  = edit trajectory with AD-HOC tuning'
-    write(*,'(/a)') ' (2)  = Translation Operation (only on first frame)'
+    write(*,'(/a)') '>>>    Modifying the  trajectory  file     <<<'
+
+    write(*,'(/a)') ' (1)  = Ad-doc tuning'
+    write(*,'(/a)') ' (2)  = TRANSLATE stuff'
     write(*,'(/a)') ' (3)  = select frame '      
     write(*,'(/a)') ' (4)  = save PDB trajectory '
     write(*,'(/a)') ' (5)  = re-GROUP molecules ( may need to use AD-HOC & Translation before; first frame must be united )'
-    write(*,'(/a)') ' (6)  = DELETE fragment ( uses AD-HOC )'
+    write(*,'(/a)') ' (6)  = DELETE  stuff'
     write(*,'(/a)') ' (7)  = RMSD of frames'
     write(*,'(/a)') ' (8)  = produce trajectory from single PDB frame'
     write(*,'(/a)') ' (9)  = Interpolate between frames'
     write(*,'(/a)') ' (10) = Reverse time direction in trajectory'
     write(*,'(/a)') ' (11) = Replicate structure'
-    write(*,'(/a)') ' (0)  = DONE                '
+    write(*,'(/a)') ' (12) = DIAGNOSIS: details of the structure'
+    write(*,'(/a)') ' (0)  = DONE  '
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(I)') choice 
 
@@ -78,21 +85,32 @@ do
 
         case( 1 ) 
 
-!            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
-!            read (*,'(a)') yn
-!
-!            if( yn /= "n" ) &
-!            then
-!                 CALL on_the_fly_tuning (structure )
-!            else
-                 do i = 1 , size(trj)
-                     CALL ad_hoc_tuning( trj(i) , i )
-                 end do
-!            end if
+            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
+            read (*,'(a)') YorN
+
+            if( YorN /= "n" ) &
+            then
+                  CALL on_the_fly_tuning( trj(1) )
+                  ! propagate the changes throughtout the trj(:)
+                  do concurrent (i = 1:size(trj))
+                      trj(i) % atom(:) % MMSymbol = trj(1) % atom(:) % MMSymbol
+                      trj(i) % atom(:) % fragment = trj(1) % atom(:) % fragment
+                      trj(i) % atom(:) % resid    = trj(1) % atom(:) % resid
+                      trj(i) % atom(:) % nresid   = trj(1) % atom(:) % nresid
+                      trj(i) % atom(:) % delete   = trj(1) % atom(:) % delete
+                  end do
+            else
+                  do i = 1 , size(trj)
+                      CALL ad_hoc_tuning( trj(i) , i )
+                  end do
+            end if
 
         case( 2 ) 
 
-           call Translation( trj(1) )               
+            do i = 1 , size(trj)
+                trj(i) % atom(:) % translate  = trj(1) % atom(:) % translate
+                call Translation( trj(i) , frame=i)               
+            end do
 
         case( 3 )
 
@@ -144,7 +162,7 @@ do
         case( 6 )
 
             do i = 1 , size(trj)
-                CALL Eliminate_Fragment( trj(i) )
+                CALL Eliminate_Fragment( trj(i) , frame=i )
             end do
 
         case( 7 )
@@ -214,10 +232,16 @@ do
 
             CALL connect( trj(1) )
 
+       case( 12 )
+
+            CALL diagnosis(trj(1))
+
        case default
             exit
 
     end select
+
+    CALL system( "clear" )
 
 end do    
 
@@ -227,10 +251,11 @@ read (*,'(a)') wait
 end subroutine Read_Trajectories
 !
 !
-!=====================================
- subroutine Read_PDB_Trajectories(trj)
-!=====================================
-type(universe)  , allocatable   , intent(out)   :: trj(:)
+!===================================================
+ subroutine Read_PDB_Trajectories( trj , file_name )
+!===================================================
+type(universe)  , allocatable   , intent(out) :: trj(:)
+character(*)    , optional      , intent(in)  :: file_name
 
 ! local variables ...
 integer                         :: openstatus , inputstatus , i , j , k , model , number_of_atoms , dumb_number
@@ -240,7 +265,14 @@ character(4)                    :: keyword
 character(5)                    :: MMSymbol_char
 character(72)                   :: System_Characteristics
 
-open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
+! finds out what file to read ...
+If( present(file_name) ) then
+    OPEN(unit = 31, file = file_name   , status = 'old', action = 'read' ,iostat = openstatus)
+else 
+    OPEN(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
+end if
+
+
 if (openstatus > 0) stop " *** Cannot open the file *** "
 
 read( unit = 31 , fmt = 31 ) System_Characteristics
@@ -256,7 +288,7 @@ end do
 ! return to the top of the file ...
 rewind 31
 
-! read number the atoms and time ...
+! read the number of atoms and time ...
 read(unit = 31, fmt = 35, iostat = inputstatus) keyword
 do
     if ( keyword == 'MODE' ) then
@@ -324,14 +356,15 @@ do j = 1 , model
         do i = 1 , number_of_atoms
             read(unit = 31, fmt = 33, iostat = inputstatus) MMSymbol_char ,             &
                                                             trj(j)%atom(i)%resid ,      &
+                                                            trj(j)%atom(i)%fragment ,   &
                                                             trj(j)%atom(i)%nresid ,     &
                                                             ( trj(j)%atom(i)%xyz(k) , k=1,3 ) 
 
             trj(j)%atom(i)%MMSymbol = adjustl(MMSymbol_char)
-
+            ! if fragment is absent use "X" ...
+            if( len_trim(trj(j)%atom(i)%fragment) == 0 ) trj(j)%atom(i)%fragment = "X"
         end do
         CALL MMSymbol_2_Symbol(trj(j)%atom)
-        CALL Changing_Fragment(trj(j)%atom%resid,trj(j)%atom)
     else
         trj(j)%time = trj(j-1)%time + delta_t
         do
@@ -382,7 +415,7 @@ close(31)
 ! Formats ...
 31 format(a72)
 32 format(5x, i6)
-33  format(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)                
+33  format(t12,a5,t18,a3,t22,a1,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3)                
 35 format(a4)
 36 format(7x, i7)
 37 format(t32, f8.3, t40, f8.3, t48, f8.3)
@@ -527,35 +560,6 @@ trj(1)%System_Characteristics = System_Characteristics
 
 end subroutine Read_VASP_Trajectories
 !
-!
-!==================================
-subroutine Changing_Fragment(FGT,a)
-!==================================
-implicit none
-character(3)    , intent(in)  :: FGT(:)
-type(atomic)    , intent(inout) :: a(:)
-
-! local variables ...
-integer :: i
-
- DO i = 1 , size(a)
-
-    select case(FGT(i))
-        case( 'CCC') 
-            a(i)%fragment = 'C' 
-        case( 'FFF') 
-            a(i)%fragment = 'F' 
-        case( 'ACN') 
-            a(i)%fragment = 'S' 
-        case( 'BLK') 
-            a(i)%fragment = 'B' 
-        case( 'SRF') 
-            a(i)%fragment = 'I' 
-    end select
-
- END DO
-
-end subroutine Changing_Fragment
 !
 !
 !
@@ -761,9 +765,9 @@ end subroutine Read_DICE_Trajectories
 type(universe)  , allocatable   , intent(inout)   :: trj(:)
 
 ! local variables ...
-character(len=1)      :: wait
 integer               :: i , j , k , frame_step
 real*8  , allocatable :: pm(:)
+character(1)          :: YorN
 
 allocate( pm(trj(1)%N_of_atoms) )
 
@@ -824,7 +828,9 @@ deallocate( pm )
 6 FORMAT(a72)
 
 write(*,'(/a)') ' >>> frames-output.pdb : writing done, press any key <<<'
-read (*,'(a)') wait
+write(*,'(/a)') "That's all ? (y/n)"
+read (*,'(a)') YorN
+if( YorN /= "n" ) stop
 
 end subroutine Save_PDB_Trajectories
 !
@@ -836,9 +842,9 @@ end subroutine Save_PDB_Trajectories
 type(universe)  , allocatable   , intent(inout)   :: trj(:)
 
 ! local variables ...
-character(len=1)    :: wait
-integer             :: i , j , k 
-real*8              :: delta_t
+integer      :: i , j , k 
+real*8       :: delta_t
+character(1) :: YorN
 
 OPEN( unit=4 , file='frames-output.pdb' , status='unknown' , action="write" )
 
@@ -892,7 +898,9 @@ close(4)
 6 FORMAT(a72)
 
 write(*,'(/a)') ' >>> frames-output.pdb : done with writing of Time Reversed trajectory, press any key <<<'
-read (*,'(a)') wait
+write(*,'(/a)') "That's all ? (y/n)"
+read (*,'(a)') YorN
+if( YorN /= "n" ) stop
 
 end subroutine Save_TimeReversed_PDB_Trajectories
 !

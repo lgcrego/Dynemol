@@ -6,7 +6,7 @@ module util_m
     use lapack95
 
     public:: fact , binomial , det , Frobenius_norm
-    public:: TO_UPPER_CASE , count_lines , split_line , seq_in_range , read_general_file , read_CSV_file
+    public:: TO_UPPER_CASE, count_lines, split_line, seq_in_range, read_general_file, read_CSV_file, read_file_name, renumber_sequence
 
 private
 
@@ -165,7 +165,7 @@ implicit none
 character(len=*) , intent(in) :: f_name
 
 ! Local variables ...
-INTEGER      :: i , ioerr , n_of_columns
+INTEGER :: n_of_columns
 character(80) :: line
 
 ! counts the number of columns of a file
@@ -352,6 +352,77 @@ end do
 close(3)
 
 end subroutine read_general_file 
+!
+!
+!
+!=============================================
+subroutine read_file_name( f_name , file_type)
+!=============================================
+ implicit none
+ character(len=30)            , intent(out) :: f_name
+ character(len=*) ,  optional , intent(in)  :: file_type
+
+! local variables ...
+logical :: exist
+logical :: done 
+
+CALL system("clear")
+
+if( present(file_type) ) &
+then
+    select case(file_type)
+           case("pdb")
+               write(*,'(/,a)') "ls *.pdb"
+               call system("ls *.pdb") 
+           case("xyz")
+               write(*,'(/,a)') "ls *.xyz"
+               call system("ls *.xyz") 
+    end select
+end if
+
+done = .false.
+do while (.NOT. done) 
+        write(*,'(/,a)',advance='no') 'name of the file:  '
+        read (*,*) f_name
+        
+        inquire(file=f_name, EXIST=exist)
+        if( .NOT. exist ) then
+            print*, ' >>> file  not  found.  Try again !' 
+        else
+            done = .true. 
+        end if
+end do
+
+end subroutine read_file_name
+!
+!
+!
+!=================================================
+function renumber_sequence( seq ) result( new_seq)
+!=================================================
+    implicit none
+    integer, intent(in) :: seq(:)
+
+    ! local variables ...
+    integer, allocatable :: new_seq(:)
+    integer :: i, current_val, group_id, n
+
+    n = size(seq)
+    allocate(new_seq(n))
+
+    group_id = 1
+    new_seq(1) = group_id
+    current_val = seq(1)
+
+    do i = 2, n
+        if (seq(i) /= current_val) then
+            group_id = group_id + 1
+            current_val = seq(i)
+        end if
+        new_seq(i) = group_id
+    end do
+
+end function renumber_sequence
 !
 !
 !
