@@ -53,7 +53,6 @@ SOURCE = types_m.o \
          EDT_util.o \
 		 EDT.o \
          alignment.o \
-         dtw.o \
 		 crystal.o \
 		 solvent.o \
 		 elastic.o \
