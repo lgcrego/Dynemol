@@ -1,11 +1,11 @@
 module EDIT_routines
 
 use types_m
-use util_m
+use util_m        , only: renumber_sequence
 use Read_Parms
 use Constants_m
 use GMX_routines
-use EDT_util_m     , only : on_the_fly_tuning
+use EDT_util_m    , only: on_the_fly_tuning
 
 private
 
@@ -83,52 +83,69 @@ end subroutine Copiar
 !
 !
 !
-!========================================
-subroutine Translation( system , copies )
-!========================================
+!================================================
+subroutine Translation( system , copies , frame )
+!================================================
 implicit none 
 type(universe)            , intent(inout) :: system
 integer        , optional , intent(in)    :: copies(:)
+integer        , optional , intent(in)    :: frame
 
 ! local variables ...
-real*8  :: T_vector(3) ,T_versor(3) , distance
+real*8  :: T_versor(3) , distance
 integer :: i , option , at2 , at1 
+real*8  , save :: T_vector(3)
+logical , save :: done , verbose
 
-! reset varible ...
-system% atom(:)% translate = .false.
+verbose = .true.
+done    = .false.
 
-CALL on_the_fly_tuning( system )
+if( .NOT. present(frame) ) &
+then
+     ! reset varible ...
+     system% atom(:)% translate = .false.
+     CALL on_the_fly_tuning( system )
+else
+    if( frame > 1 ) &
+    then 
+        done = .true.
+        verbose = .false.
+    end if
+end if
 
-! define translation vector
-write(*,'(a)',advance='no') '> Use: (1) vector {T_x,T_y,T_z} or (2) define vector: at1 ======> at2? : '
-read(*,*) option
-
-select case (option)
-
-   case(1)
-        ! use cartesian vectors 
-        write(*,'(/a)') '> enter translation vector (T_x,T_y,T_z) as a Real number:'
-        write(*,'(a)',advance='no') 'T_x = '
-        read (*,*) T_vector(1)
-        write(*,'(a)',advance='no') 'T_y = '
-        read (*,*) T_vector(2)
-        write(*,'(a)',advance='no') 'T_z = '
-        read (*,*) T_vector(3)
-
-   case(2) 
-        ! define translation vector 
-        write(*,'(/a)') '> define vector: at1 ======> at2'
-        write(*,'(a)',advance='no') 'index of atom 1 = '
-        read(*,*) at1
-        write(*,'(a)',advance='no') 'index of atom 2 = '
-        read(*,*) at2
-        write(*,'(/a)') '> translation distance (Real number):'
-        read (*,*) distance
-
-        T_versor = (system% atom(at2)% xyz - system% atom(at1)% xyz) / sqrt(sum( (system% atom(at2)% xyz-system% atom(at1)% xyz)**2) )
-        T_vector = distance * T_versor
-
-end select
+if( .NOT. done ) &
+then
+     ! define translation vector
+     write(*,'(a)',advance='no') '> Use: (1) vector {T_x,T_y,T_z} or (2) define vector: at1 ======> at2? : '
+     read(*,*) option
+     
+     select case (option)
+     
+        case(1)
+             ! use cartesian vectors 
+             write(*,'(/a)') '> enter translation vector (T_x,T_y,T_z) as a Real number:'
+             write(*,'(a)',advance='no') 'T_x = '
+             read (*,*) T_vector(1)
+             write(*,'(a)',advance='no') 'T_y = '
+             read (*,*) T_vector(2)
+             write(*,'(a)',advance='no') 'T_z = '
+             read (*,*) T_vector(3)
+     
+        case(2) 
+             ! define translation vector 
+             write(*,'(/a)') '> define vector: at1 ======> at2'
+             write(*,'(a)',advance='no') 'index of atom 1 = '
+             read(*,*) at1
+             write(*,'(a)',advance='no') 'index of atom 2 = '
+             read(*,*) at2
+             write(*,'(/a)') '> translation distance (Real number):'
+             read (*,*) distance
+     
+             T_versor = (system% atom(at2)% xyz - system% atom(at1)% xyz) / sqrt(sum( (system% atom(at2)% xyz-system% atom(at1)% xyz)**2) )
+             T_vector = distance * T_versor
+     
+     end select
+end if
 
 if( present(copies) ) then
     forall( i=1:size(copies) ) system%atom(copies(i))%xyz = system%atom(copies(i))%xyz + T_vector
@@ -136,7 +153,7 @@ else
     forall( i=1:system%N_of_atoms , system%atom(i)%translate ) system%atom(i)%xyz = system%atom(i)%xyz + T_vector
 end if
 
-print*, '>>> translation done <<<'
+if( verbose ) print*, '>>> translation done <<<'
 
 end subroutine translation
 !
@@ -329,25 +346,22 @@ end subroutine Reflection
 !
 !
 !
-!====================================
-subroutine Eliminate_Fragment(system)
-!====================================
+!==============================================
+subroutine Eliminate_Fragment( system , frame )
+!==============================================
 implicit none
-type(universe) , intent(inout) :: system
+type(universe)            , intent(inout) :: system
+integer        , optional , intent(in)    :: frame
 
 !local variables
 type(universe) :: temp
 integer        :: New_No_of_atoms
-integer, allocatable :: displace(:)
 
-allocate( displace(system%N_of_atoms) , source = 0 ) 
-
-system% atom(:)% delete = .false.
-
-CALL on_the_fly_tuning( system , displace )
-
-! accommodate the residue numbers ...
-system%atom%nresid = system%atom%nresid - displace
+if( .NOT. present(frame) ) &
+then
+    system% atom(:)% delete = .false.
+    CALL on_the_fly_tuning( system )
+end if
 
 New_No_of_atoms = count( .NOT. system%atom%delete )
 allocate( temp%atom( New_No_of_atoms ) )
@@ -357,7 +371,8 @@ temp%atom = pack( system%atom, .NOT. system%atom%delete )
 CALL move_alloc(from=temp%atom,to=system%atom)
 system%N_of_atoms = New_No_of_atoms
 
-deallocate( displace )
+! accommodate the residue numbers ...
+system%atom(:)%nresid = renumber_sequence( system%atom(:)%nresid )
 
 end subroutine Eliminate_Fragment
 !
