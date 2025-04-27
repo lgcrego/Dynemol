@@ -10,7 +10,7 @@
 module VDOS_input
 
 !   Sample length: Nr. of steps in each VACF sample: Nr. of v(0)'s
-    integer :: VDOS_Nsteps_per_sample = 10000   ! 0 -> turn off
+    integer :: VDOS_Nsteps_per_sample = 50000   ! 0 -> turn off
 
 end module VDOS_input
 
@@ -134,9 +134,9 @@ Nsamples = n_t / Lsample             ! VACF will be averaged over "Nsamples" sam
 
 write(*,*)
 write(*,'(a)')    " Velocity Autocorrelation: VDOS_init:"
-write(*,'(a,i6)') "   Total nr. of steps         =", n_t
-write(*,'(a,i6)') "   Sample length (time steps) =", Lsample
-write(*,'(a,i3)') "   Nr. samples                =", Nsamples
+write(*,'(a,i8)') "   Total nr. of steps         =", n_t
+write(*,'(a,i8)') "   Sample length (time steps) =", Lsample
+write(*,'(a,i5)') "   Nr. samples                =", Nsamples
 write(*,'(a,i3)') "   Nr. species                =", Nspc
 write(*,*)
 
