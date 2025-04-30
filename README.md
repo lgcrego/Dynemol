@@ -1,7 +1,7 @@
 
-# Project Title
+# Dynemol
 
-DynEMol: tools for studying Dynamics of Electrons in Molecules
+Tools for studying Dynamics of Electrons in Molecules
 
 DynEMol: Dynamics of Electrons in Molecules DynEMol is an open-source suite for simulating nonadiabatic excited-state dynamics and molecular systems using a hybrid semiempirical approach. It has been in continuous development since 2013 and is actively maintained.
 
