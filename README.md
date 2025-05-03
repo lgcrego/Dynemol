@@ -128,6 +128,10 @@ Outputs will be saved in folders such as dyn.trunk/, dos.trunk/, MO.trunk/, etc.
 
 - [@lgcrego](https://www.github.com/lgcrego)
 
+  Contributors:
+- [@roboliboni](https://github.com/roboliboni)
+- [@albertotrj](https://github.com/albertotrj)
+
 If you have questions or encounter issues, feel free to open an issue on this GitHub repository or contact the maintainer directly at luis.gc.rego [at] gmail.com.
 
 ## Reference this project:
