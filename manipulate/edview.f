@@ -18,7 +18,7 @@ use Occupation
 use Aminoacids                 
 use Amber_routines
 use RW_driver       
-use EDT_util_m
+use EDT_util_m        , only: on_the_fly_tuning 
 use Alignment_routines
 
 !use dtw_routines , only : dtw_stuff
@@ -212,7 +212,7 @@ do
             CALL Bring_into_PBCBox( structure )
 
         case ('15')
-            CALL ad_hoc_tuning( structure )
+            CALL on_the_fly_tuning( structure )
 
         case default
             exit

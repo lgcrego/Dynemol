@@ -67,6 +67,8 @@ integer :: i
             a(i)%AtNo = 8 
         case( 'F' ) 
             a(i)%AtNo = 9 
+        case( 'MG','Mg' ) 
+            a(i)%AtNo = 12 
         case( 'AL','Al' ) 
             a(i)%AtNo = 13 
         case( 'SI','Si' ) 
@@ -135,6 +137,8 @@ DO i = 1 , a%atoms
             a%AtNo(i) = 8 
         case( 'F' ) 
             a%AtNo(i) = 9 
+        case( 'MG','Mg' ) 
+            a%AtNo(i) = 12 
         case( 'AL','Al' ) 
             a%AtNo(i) = 13 
         case( 'SI','Si' ) 
@@ -206,6 +210,8 @@ integer :: i
             a(i)%Symbol = 'O'
         case( 9 ) 
             a(i)%Symbol = 'F'
+        case( 12 ) 
+            a(i)%Symbol = 'Mg'
         case( 13 ) 
             a(i)%Symbol = 'Al'
         case( 14 ) 
@@ -277,6 +283,8 @@ integer :: i
             a%Symbol(i) = 'O'
         case( 9 ) 
             a%Symbol(i) = 'F'
+        case( 12 ) 
+            a%Symbol(i) = 'Mg'
         case( 13 ) 
             a%Symbol(i) = 'Al'
         case( 14 ) 
@@ -380,6 +388,9 @@ character(len=2)    :: element2
 
         case( 'Si','SI' ) 
             a(i)%Symbol = 'Si' 
+
+        case( 'Mg','MG' ) 
+            a(i)%Symbol = 'Mg' 
 
         case( 'Ti','TI' ) 
             a(i)%Symbol = 'Ti' 

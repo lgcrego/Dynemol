@@ -76,7 +76,6 @@ if (MM% N_of_atoms /= unit_cell% atoms) then
 end If
 
 allocate ( atom ( MM % N_of_atoms ) )
-
 k = 1
 do i = 1 , MM % N_of_species
     Total_N_of_atoms_of_species_i = species(i) % N_of_molecules * species(i) % N_of_atoms
@@ -506,6 +505,8 @@ integer :: i
             a(i)%AtNo = 8
         case( 'F')
             a(i)%AtNo = 9
+        case( 'MG','Mg')
+            a(i)%AtNo = 12
         case( 'AL','Al')
             a(i)%AtNo = 13
         case( 'SI','Si')
@@ -704,6 +705,8 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'Ti'
         case( 'Li' , 'LI' )
             a(i)%Symbol = 'Li'
+        case( 'Mg' , 'MG' )
+            a(i)%Symbol = 'Mg'
         case( 'Ru' )
             a(i)%Symbol = 'Ru'
         case( 'HC' , 'HA' )
