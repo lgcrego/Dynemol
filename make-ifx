@@ -9,7 +9,7 @@ FREE = -free
 SAFE = #-g -check all,nouninit -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 
 FFLAGS1 = -O2 -align 
-FFLAGS2 = -O2 -align -qopenmp -parallel -no-wrap-margin $(FREE) $(SAFE)
+FFLAGS2 = -O2 -align -qopenmp -no-wrap-margin $(FREE) $(SAFE)
 
 LDFLAGS = -static-intel
 

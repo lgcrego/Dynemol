@@ -1,6 +1,7 @@
 program edview
 
 use types_m
+use util_m            , only: read_file_name
 use diagnosis_m
 use RW_routines
 use GMX_routines
@@ -17,7 +18,7 @@ use Occupation
 use Aminoacids                 
 use Amber_routines
 use RW_driver       
-use EDT_util_m
+use EDT_util_m        , only: on_the_fly_tuning 
 use Alignment_routines
 
 !use dtw_routines , only : dtw_stuff
@@ -26,10 +27,11 @@ implicit none
 
 ! local variables
 type(universe)                  :: structure
-type(universe)  , allocatable   :: trajectories(:)
+type(universe)   , allocatable  :: trajectories(:)
 character(len=1)                :: Reading_Method , yn
 character(len=2)                :: Editing_Method 
 character(len=3)                :: resid
+character(len=30)               :: f_name
 integer                         :: AtNo, N_of_atom_type
 integer                         :: file_type
 
@@ -39,16 +41,19 @@ CALL get_environment_vars
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
 !call dtw_stuff
+
+CALL system( "clear" )
+
 !-----------------------------------------------------------
 !       Reading the input file
 do 
     write(*,'(/a)') '>>>    Read the input file     <<<'
 
     write(*,'(/a)') '1  : Read "poscar.dat" file (coordinates from vasp-CONTCAR)'
-    write(*,'(/a)') '2  : Read "input.xyz" file '
+    write(*,'(/a)') '2  : Read XYZ file '
     write(*,'(/a)') '3  : Read "solvent.dat" file '
     write(*,'(/a)') '4  : AMBER stuff'
-    write(*,'(/a)') '5  : Read "input.pdb" file '
+    write(*,'(/a)') '5  : Read PDB file '
     write(*,'(/a)') '6  : Build up crystal'
     write(*,'(/a)') '7  : Read trajectories '
     write(*,'(/a)') '8  : Read Multiple trajectories '
@@ -64,7 +69,8 @@ do
             CALL Read_from_poscar( structure )
 
         case ('2')
-            CALL Read_from_XYZ( structure )
+            CALL read_file_name( f_name , file_type="xyz" )
+            CALL Read_from_XYZ( structure , f_name )
             write(*,'(/a)',advance='no') 'Type of main Residue : '
             read (*,'(a)') resid
             structure % atom % resid = resid
@@ -76,7 +82,8 @@ do
             CALL amber_stuff 
 
         case ('5')
-            CALL Read_GROMACS( structure , file_type="pdb")
+            CALL read_file_name( f_name , file_type="pdb" )
+            CALL Read_GROMACS( structure , f_name , file_type="pdb")
 
         case ('6')
             CALL Buildup_Crystal( structure )
@@ -152,8 +159,6 @@ do
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(a2)') Editing_Method
 
-!    CALL system( "clear" )
-
     select case ( Editing_Method )
 
         case ('1')
@@ -207,7 +212,7 @@ do
             CALL Bring_into_PBCBox( structure )
 
         case ('15')
-            CALL ad_hoc_tuning( structure )
+            CALL on_the_fly_tuning( structure )
 
         case default
             exit

@@ -2,7 +2,7 @@
 
 SUFFIX= .f 
 
-FC=ifort
+FC=ifx
 SAFE = -g -traceback
 FFLAGS = -xhost -qopenmp -fpp -O3 -free -qmkl $(SAFE)
 
