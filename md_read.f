@@ -506,6 +506,8 @@ integer :: i
             a(i)%AtNo = 8
         case( 'F')
             a(i)%AtNo = 9
+        case( 'MG','Mg')
+            a(i)%AtNo = 12
         case( 'AL','Al')
             a(i)%AtNo = 13
         case( 'SI','Si')
@@ -704,6 +706,8 @@ DO i = 1 , size(a)
             a(i)%Symbol = 'Ti'
         case( 'Li' , 'LI' )
             a(i)%Symbol = 'Li'
+        case( 'Mg' , 'MG' )
+            a(i)%Symbol = 'Mg'
         case( 'Ru' )
             a(i)%Symbol = 'Ru'
         case( 'HC' , 'HA' )

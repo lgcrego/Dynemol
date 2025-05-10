@@ -125,6 +125,8 @@ integer :: i
             a(i)%AtNo = 8 
         case( 'F') 
             a(i)%AtNo = 9 
+        case( 'Mg','MG') 
+            a(i)%AtNo = 12 
         case( 'AL','Al') 
             a(i)%AtNo = 13 
         case( 'SI','Si') 
@@ -193,6 +195,8 @@ integer :: i
             a(i)%Symbol = 'O'
         case( 9) 
             a(i)%Symbol = 'F'
+        case( 12 ) 
+            a(i)%Symbol = 'Mg'
         case( 13 ) 
             a(i)%Symbol = 'Al'
         case( 14 ) 
@@ -357,6 +361,8 @@ character(len=1)    :: element
             a(i)%Symbol = 'Si' 
         case( 'Li' ) 
             a(i)%Symbol = 'Li' 
+        case( 'Mg','MG' ) 
+            a(i)%Symbol = 'Mg' 
         case( 'Zn' , 'ZN' )
             a(i)%Symbol = 'Zn' 
         case( 'Ru' ) 

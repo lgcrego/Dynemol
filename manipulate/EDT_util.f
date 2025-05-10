@@ -53,7 +53,7 @@ select case ( option )
 
     case (5)
         write(*,'(/a)',advance='no') ">>> enter new residue number: "
-        read (*,'(a)') nresid
+        read (*,*) nresid
         CALL change_this( system , instance="nresid" )
 
     case (6)
@@ -88,7 +88,7 @@ character(len=*) , intent(in)    :: instance
 integer                        :: i 
 integer          , allocatable :: nr(:) , indx(:)
 character(len=1)               :: choice
-character(len=3) , allocatable :: residue(:)
+character(len=3) , allocatable :: residue(:) , MM_name(:)
 character(len=80)              :: line
 
 ! reset varible ...
@@ -101,6 +101,7 @@ write(*,'(/a)') ' (1) = tuning already done'
 write(*,'(/a)') ' (2) = residue number '
 write(*,'(/a)') ' (3) = residue name '
 write(*,'(/a)') ' (4) = atom index '
+write(*,'(/a)') ' (5) = MMSymbol '
 write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') choice
 
@@ -130,6 +131,14 @@ select case( choice )
         indx =  parse_this(line)
         CALL change_via_index( system , indx , instance )
 
+    case( '5' )
+        write(*,'(1x,3/a)') "enter the MMSymbol names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        MM_name = split_line(line)
+        do i = 1 , size(MM_name)
+           CALL change_via_MM_name( system , MM_name(i) , instance )
+        end do
+ 
 end select
 
 CALL systemQQ( "clear" )
@@ -323,9 +332,9 @@ end subroutine delete_mask
 !
 !
 !
-!============================================
+!================================================
 subroutine change_via_nr( system , nr , instance)
-!============================================
+!================================================
 implicit none 
 type(universe)   , intent(inout) :: system
 integer          , intent(in)    :: nr
@@ -351,9 +360,9 @@ end subroutine change_via_nr
 !
 !
 !
-!======================================================
+!==========================================================
 subroutine change_via_residue( system , residue , instance)
-!======================================================
+!==========================================================
 implicit none 
 type(universe)   , intent(inout) :: system
 character(len=*) , intent(in)    :: residue
@@ -375,6 +384,34 @@ select case( instance )
 end select
 
 end subroutine change_via_residue
+!
+!
+!
+!
+!============================================================
+subroutine change_via_MM_name( system , MM_name , instance)
+!============================================================
+implicit none 
+type(universe)   , intent(inout) :: system
+character(len=*) , intent(in)    :: MM_name
+character(len=*) , intent(in)    :: instance
+
+! local variables ...
+
+select case( instance )
+      
+       case("MMSymbol")
+           where( system% atom(:)% MMSymbol == MM_name ) system% atom(:)% MMSymbol = MMSymbol
+       case("Fragment")                                                                   
+           where( system% atom(:)% MMSymbol == MM_name ) system% atom(:)% fragment = fragment
+       case("resid")                                                                      
+           where( system% atom(:)% MMSymbol == MM_name ) system% atom(:)% resid = resid
+       case("nresid")                                                                     
+           where( system% atom(:)% MMSymbol == MM_name ) system% atom(:)% nresid = nresid
+
+end select
+
+end subroutine change_via_MM_name
 !
 !
 !
