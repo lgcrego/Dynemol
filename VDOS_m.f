@@ -10,7 +10,7 @@
 module VDOS_input
 
 !   Sample length: Nr. of steps in each VACF sample: Nr. of v(0)'s
-    integer :: VDOS_Nsteps_per_sample = 50000   ! 0 -> turn off
+    integer :: VDOS_Nsteps_per_sample = 20000   ! 0 -> turn off
 
 end module VDOS_input
 
@@ -136,8 +136,8 @@ write(*,*)
 write(*,'(a)')    " Velocity Autocorrelation: VDOS_init:"
 write(*,'(a,i8)') "   Total nr. of steps         =", n_t
 write(*,'(a,i8)') "   Sample length (time steps) =", Lsample
-write(*,'(a,i5)') "   Nr. samples                =", Nsamples
-write(*,'(a,i3)') "   Nr. species                =", Nspc
+write(*,'(a,i8)') "   Nr. samples                =", Nsamples
+write(*,'(a,i8)') "   Nr. species                =", Nspc
 write(*,*)
 
 allocate(    v0(Natoms), v0_norm   (0:Nspc) )
@@ -227,7 +227,7 @@ auto_corr_mw(0) = sum( auto_corr_mw(1:Nspc) )
 VACF   (frame_in_s,:) = VACF   (frame_in_s,:) + auto_corr   (:) / v0_norm   (:)     ! accumulate normalized VACF
 VACF_mw(frame_in_s,:) = VACF_mw(frame_in_s,:) + auto_corr_mw(:) / v0_norm_mw(:)     ! accumulate normalized MW-VACF
 
-write(out,'(i7)',advance='no') frame_in_s
+write(out,'(i8)',advance='no') frame_in_s
 do i = 0, Nspc
     write(out,'(es15.6)',advance='no') VACF(frame_in_s,i)/isample
 end do
