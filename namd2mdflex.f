@@ -1131,8 +1131,14 @@ do a = 1 , MM % N_of_species
         do i = 1   , species(a)% N_of_Atoms - 1
         do j = i+1 , species(a)% N_of_Atoms
 
-             flag1 = species(a)%atom(i)% LJ   .AND. species(a)%atom(j)% LJ    .AND. (species(a)%atom(i)% eps   /= 0.0)
-             flag2 = species(a)%atom(i)% BUCK .AND. species(a)%atom(j)% BUCK  .AND. (species(a)%atom(i)% buckA /= 0.0)
+             flag1  =   species(a)%atom(i)% LJ   &
+                  .AND. species(a)%atom(j)% LJ   &
+                  .AND. (species(a)%atom(i)%eps + species(a)%atom(j)%eps /= 0.0)
+
+             flag2  =   species(a)%atom(i)% BUCK &
+                  .AND. species(a)%atom(j)% BUCK &
+                  .AND. (species(a)%atom(i)%buckA + species(a)%atom(j)%buckA /= 0.0)
+
              flag3 = species(a)%atom(i)% MM_charge * species(a)%atom(j)% MM_charge /= 0.0 
 
              if( flag1 ) &
