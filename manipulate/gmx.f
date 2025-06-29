@@ -437,7 +437,7 @@ else
     N_of_atoms = 0
     do
         read(unit=3,fmt=105,iostat=ioerr) keyword
-        if ( keyword == "MASTER" .or. keyword == "CONECT" ) exit
+        if ( any(["MASTER","CONECT","END"] == keyword) ) exit
         N_of_atoms = N_of_atoms + 1
     end do
     print*, "> # of atoms = " , N_of_atoms
@@ -466,7 +466,7 @@ else
                 system%atom(i)%my_intra_id = i 
             end do
         end if
-        if ( keyword == "MASTER" .or. keyword == "CONECT" .or. keyword == "END" ) exit
+        if ( any(["MASTER","CONECT","END"] == keyword) ) exit
     end do
     backspace(3)
 

@@ -5,7 +5,7 @@ use blas95
 use lapack95
 use types_m
 use Constants_m
-use util_m         , only : det , Frobenius_norm
+use util_m         , only : det , Frobenius_norm 
 use RW_routines    , only : Read_from_XYZ
 use GMX_routines   , only : Read_GROMACS , Dump_pdb
 use EDT_util_m     , only : parse_this
@@ -37,15 +37,15 @@ CALL Read_Structures( sys_Q , sys_P )
 
 ! assign landmarks ...
 write(*,'(/a)',advance='no') 'need to assign landmarks? (y,n=default):  '
-read (*,*) y_or_n
+read (*,'(a1)') y_or_n
 Print *, ""
 
-if( y_or_n == "y" ) &
-then
-    CALL Iteractive_Closest_Point( sys_Q , sys_P )
-else
-    CALL Procrustes_Analysis( sys_Q , sys_P )
-end if
+select case( y_or_n )
+       case("y")
+           CALL Iteractive_Closest_Point( sys_Q , sys_P )
+       case default
+           CALL Procrustes_Analysis( sys_Q , sys_P )
+       end select
 
 end subroutine Alignment
 !
@@ -387,7 +387,7 @@ type(universe) , intent(out) :: sys_Q
 type(universe) , intent(out) :: sys_P
 
 ! local variables ...
-integer           :: option
+integer           :: option , i
 character(len=30) :: f_name 
 
 ! read structures to align ...
@@ -395,25 +395,29 @@ write(*,'(a)',advance='no') '> format of the input files to be aligned: (1) pdb 
 read(*,*) option
 
 ! read file_1 ...
-write(*,'(a)',advance='no') 'name of first file (without extension):  '
-read (*,*) f_name
-file_1 = merge( adjustr(trim(f_name))//".pdb" , adjustr(trim(f_name))//".xyz" , option==1 )
+write(*,'(a)') 'name of FIRST file:  '
 select case (option)
    case(1) ! <== pdb format
-            CALL Read_GROMACS( sys_Q , file_name=file_1)
+            CALL read_file_name( f_name , file_type="pdb" )                                                                     
+            CALL Read_GROMACS( sys_Q , f_name , file_type="pdb")
+print*, "done"
    case(2) ! <== xyz format
-            CALL Read_from_XYZ( sys_Q , file_name=file_1)
+            CALL read_file_name( f_name , file_type="xyz" )
+            CALL Read_from_XYZ( sys_Q , f_name )
 end select
 
+do i=1,4; print *;enddo
+
 ! read file_2 ...
-write(*,'(a)',advance='no') 'name of second file (without extension):  '
-read (*,*) f_name
-file_2 = merge( adjustr(trim(f_name))//".pdb" , adjustr(trim(f_name))//".xyz" , option==1 )
+write(*,'(a)') 'name of SECOND file:  '
 select case (option)
    case(1) ! <== pdb format
-            CALL Read_GROMACS( sys_P , file_name=file_2)
+            CALL read_file_name( f_name , file_type="pdb" )                                                                     
+            CALL Read_GROMACS( sys_P , f_name , file_type="pdb")
+print*, "done"
    case(2) ! <== xyz format
-            CALL Read_from_XYZ( sys_P , file_name=file_2)
+            CALL read_file_name( f_name , file_type="xyz" )
+            CALL Read_from_XYZ( sys_P , f_name )
 end select
 
 end subroutine Read_Structures
@@ -467,6 +471,46 @@ do i = 1 , 3
 
 end function get_centroid
 !
+!
+!
+!
+!=============================================
+subroutine read_file_name( f_name , file_type)
+!=============================================
+ implicit none
+ character(len=30)            , intent(out) :: f_name
+ character(len=*) ,  optional , intent(in)  :: file_type
+
+! local variables ...
+logical :: exist
+logical :: done                                                                                                                                               
+
+if( present(file_type) ) &
+then
+    select case(file_type)
+           case("pdb")
+               write(*,'(/,a)') "ls *.pdb"
+               call system("ls *.pdb") 
+           case("xyz")
+               write(*,'(/,a)') "ls *.xyz"
+               call system("ls *.xyz") 
+    end select
+end if
+
+done = .false.
+do while (.NOT. done) 
+        write(*,'(/,a)',advance='no') 'name of the file:  '
+        read (*,*) f_name
+        
+        inquire(file=f_name, EXIST=exist)
+        if( .NOT. exist ) then
+            print*, ' >>> file  not  found.  Try again !' 
+        else
+            done = .true. 
+        end if
+end do
+
+end subroutine read_file_name
 !
 !
 !

@@ -172,8 +172,8 @@ select case ( MM_input_format )
         end do
 
     case default
-         Print*, " >>> Check your MM_input_format option in parameters_MM.f <<< :" , MM_input_format
-         stop
+         CALL warning(" If you got here, you need to provide input about the MM model; check your card.inpt ! ")
+         STOP 
 
 end select 
 
