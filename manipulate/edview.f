@@ -21,8 +21,6 @@ use RW_driver
 use EDT_util_m        , only: on_the_fly_tuning 
 use Alignment_routines
 
-!use dtw_routines , only : dtw_stuff
-
 implicit none
 
 ! local variables
@@ -40,7 +38,6 @@ CALL get_environment_vars
 
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
-!call dtw_stuff
 
 CALL system( "clear" )
 

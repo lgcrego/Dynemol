@@ -40,6 +40,8 @@ integer                         :: i , indx , nresid , N_copies , New_N_of_atoms
 integer         , allocatable   :: copies(:)
 type(universe)                  :: temp
 
+CALL on_the_fly_tuning( system )
+
 N_copies = count( system%atom%copy )    
 allocate( copies(N_copies) )
 
@@ -61,11 +63,11 @@ forall( indx=1:N_copies ) temp%atom( indx + Old_N_of_atoms ) = system%atom( copi
 
 ! finish copy ...
 CALL move_alloc( from=temp%atom , to=system%atom )
-
-print*, '>>> copy done <<<'
+!>>> copy done <<<
 
 ! translate copy ...
 copies = [( i , i = Old_N_of_atoms+1 , New_N_of_atoms )]
+
 CALL Translation( system , copies )
 
 ! input information ...
@@ -74,7 +76,7 @@ read(*,*) nresid
 
 ! finalize copy ...
 system % atom(copies) % fragment = "Z"
-system % atom(copies) % nresid   = nresid
+system % atom(copies) % nresid   = nresid+1
 system % N_of_atoms              = New_N_of_atoms
 
 deallocate( copies )
@@ -93,19 +95,22 @@ integer        , optional , intent(in)    :: frame
 
 ! local variables ...
 real*8  :: T_versor(3) , distance
-integer :: i , option , at2 , at1 
+integer :: i , option , at1 , at2 , at3
 real*8  , save :: T_vector(3)
 logical , save :: done , verbose
 
 verbose = .true.
 done    = .false.
 
-if( .NOT. present(frame) ) &
+if( .NOT. (present(frame).OR.present(copies)) ) &
 then
      ! reset varible ...
      system% atom(:)% translate = .false.
      CALL on_the_fly_tuning( system )
-else
+end if
+
+if( present(frame) ) &
+then
     if( frame > 1 ) &
     then 
         done = .true.
@@ -116,7 +121,7 @@ end if
 if( .NOT. done ) &
 then
      ! define translation vector
-     write(*,'(a)',advance='no') '> Use: (1) vector {T_x,T_y,T_z} or (2) define vector: at1 ======> at2? : '
+     write(*,'(a)') '> Use: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
      read(*,*) option
      
      select case (option)
@@ -144,7 +149,28 @@ then
              T_versor = (system% atom(at2)% xyz - system% atom(at1)% xyz) / sqrt(sum( (system% atom(at2)% xyz-system% atom(at1)% xyz)**2) )
              T_vector = distance * T_versor
      
-     end select
+        case(3) 
+             ! define rotation vector 
+             write(*,'(/a)') '> define vector perpendicular to the plane: '
+             write(*,'(/a)') '            at1    at3                      '
+             write(*,'(a)')  '              \    /                        '
+             write(*,'(a)')  '               \  /                         '
+             write(*,'(a)')  '                \/                          '
+             write(*,'(a)')  '                at2                         '
+             write(*,'(/a)',advance='no') 'index of atom 1 = '
+             read(*,*) at1
+             write(*,'(a)',advance='no') 'index of atom 2 = '
+             read(*,*) at2
+             write(*,'(a)',advance='no') 'index of atom 3 = '
+             read(*,*) at3
+             write(*,'(/a)') '> translation distance (Real number):'
+             read (*,*) distance
+
+             ! the versor ...
+             T_versor = vector_product(system,at1,at2,at3)
+             T_vector = distance * T_versor
+
+        end select
 end if
 
 if( present(copies) ) then

@@ -57,7 +57,7 @@ select case ( option )
         CALL change_this( system , instance="nresid" )
 
     case (6)
-        Write(*,*) "not implemented"
+        CALL copy_mask( system )
 
     case (7)
         CALL delete_mask( system )
@@ -74,6 +74,65 @@ select case ( option )
 end select
 
 end subroutine on_the_fly_tuning
+!
+!
+!
+!====================================
+subroutine copy_mask( system )
+!====================================
+implicit none 
+type(universe)              , intent(inout) :: system
+
+! local variables ...
+integer                        :: i
+integer          , allocatable :: nr(:) , indx(:)
+character(len=1)               :: choice
+character(len=3) , allocatable :: residue(:)
+character(len=80)              :: line
+
+! reset varible ...
+system% atom(:)% translate = .false.
+
+CALL systemQQ( "clear" )
+
+write(*,'(/a)') ' Choose keyword of stuff to TRANSLATE : '
+write(*,'(/a)') ' (1) = tuning already done'
+write(*,'(/a)') ' (2) = residue number '
+write(*,'(/a)') ' (3) = residue name '
+write(*,'(/a)') ' (4) = atom index '
+write(*,'(/a)',advance='no') '>>>   '
+read (*,'(a)') choice
+
+select case( choice )
+    case( '1' ) 
+        ! do nothing, proceed ...
+
+    case( '2' )
+        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        read (*,'(a)') line
+        nr =  parse_this(line)
+        do i = 1 , size(nr)
+           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% copy = .true.
+        end do
+
+    case( '3' )
+        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        residue = split_line(line)
+        do i = 1 , size(residue)
+           where( system% atom(:)% resid == residue(i) ) system% atom(:)% copy = .true.
+        end do
+ 
+    case( '4' )
+        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        read (*,'(a)') line
+        indx =  parse_this(line)
+
+        system% atom(indx)% copy = .true.
+
+end select
+
+end subroutine copy_mask
 !
 !
 !

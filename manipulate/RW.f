@@ -215,7 +215,8 @@ read(3,*) system%System_Characteristics
 read(3,*,iostat=ioerr)  system%box(1)  
 if( ioerr > 0 ) &
 then
-     print*, "no (T_x,T_y,T_z) entries"
+     print*, "no (T_x,T_y,T_z) entries; using (50,50,50) bounding-box"
+     system%box(:) = 50.0 
      backspace(3)
 else
      read(3,*,iostat=ioerr)  system%box(2) ; if( ioerr > 0 ) print*, "no T_y entry"
