@@ -49,10 +49,16 @@ public :: MMOPT_Control, Logicalkey
         logical                             :: Buck
     end type MM_atomic
 
+    type interval
+         integer                            :: inicio
+         integer                            :: fim
+    end type interval
+
     type MM_molecular
         type(MM_atomic)     , allocatable   :: atom(:)
         integer                             :: my_species
         integer                             :: N_of_atoms
+        type(interval)                      :: span
         integer                             :: N_of_molecules
         real*8                              :: cm(3)
         real*8                              :: mass

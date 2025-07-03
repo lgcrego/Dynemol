@@ -361,7 +361,8 @@ end module MM_tuning_routines
 !
 !
 module syst
-real*8 :: bath_T, press, talt, talp, Initial_density
+real*8  :: bath_T, press, talt, talp, Initial_density
+logical :: using_barostat
 end module syst
 !
 !

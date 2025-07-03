@@ -7,7 +7,7 @@ module MD_read_m
     use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
-    use syst                    , only : bath_T, press, talt, talp, initial_density 
+    use syst                    , only : bath_T, press, talt, talp, initial_density, using_barostat
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
     use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs, MorsePairs
@@ -46,6 +46,9 @@ talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
+
+! if talp = infty, barostat is turned off ... 
+using_barostat = (talp < real_large)
 
 If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
@@ -200,6 +203,8 @@ do i = 1 , MM % N_of_atoms
     nresid = atom(i) % nr
     molecule(nresid) % nr = nresid
 end do
+! the atomic indices of molecule(i) ...
+call get_atoms_in_molecule
 
 ! MMSymbol:  FF --> atom ...
 i1 = 1
@@ -385,7 +390,7 @@ endif
 !========================================================================================= 
 
 ! use this to debug: { atom , molecule , species , FF } ...
-!call debug_MM( molecule )
+!call debug_MM( atom )
 
 If( master ) CALL MM_diagnosis( )
 
@@ -422,6 +427,27 @@ do i = 1 , N
 end do
 
 end subroutine allocate_molecule
+!
+!
+!
+!================================
+subroutine get_atoms_in_molecule
+!================================
+implicit none
+
+! local variables ...
+integer :: i , nresid
+
+! the atomic indices of molecule(i) ...
+do i = 1 , MM % N_of_molecules
+
+     nresid = molecule(i) % nr
+     molecule(i) % span % inicio = sum(molecule(1:nresid-1) % N_of_atoms) + 1
+     molecule(i) % span % fim    = sum(molecule(1:nresid)   % N_of_atoms)
+
+end do
+
+end subroutine get_atoms_in_molecule
 !
 !
 !

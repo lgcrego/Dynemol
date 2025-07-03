@@ -51,14 +51,15 @@ MODULE constants_m
 !   Molecular dynamics constants ...
     real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
     real*8  , parameter :: rsqPI       = 0.56418958354d0            ! sqrt(pi)
-    real*8  , parameter :: mol         = 6.02214129d26              ! mol X 1000
-    real*8  , parameter :: imol        = 0.166057788d-26            ! 1/(mol x 1000)
+    real*8  , parameter :: mol         = 6.02214076d26              ! mol X 1000 , from NIST
+    real*8  , parameter :: imol        = 0.166053906d-26            ! 1/(mol x 1000)
     real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
     real*8  , parameter :: coulomb     = 230.7113d0                 ! e^2/(4.pi.epsilon_0) x 1.E+20 N.m^2
     real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
     real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
+    real*8  , parameter :: eV_2_Joule  = 1.6021766339d-19           ! converts eV to Joule units 
     real*8  , parameter :: cal_2_J     = 4.184d0                    ! converts cal to J units 
     real*8  , parameter :: J_2_cal     = 0.239d0                    ! converts J to cal units 
     real*8  , parameter :: milli       = 1.0d-3                     ! milli unit
