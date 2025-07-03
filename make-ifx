@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
+          barostat.o \
 		  pbc.o \
 		  overlap_D.o \
 		  STO.o \
@@ -177,6 +178,7 @@ SOURCE2 = constants_m.o \
 		  nonlinearCG.o \
 		  CG_class.o \
 		  MM_ERG_class.o \
+		  XS_ERG_class.o \
 		  nonlinear-sidekick.o \
 		  FF_OPT_class.o \
 		  CG_EH_driver.o \

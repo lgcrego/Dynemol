@@ -20,6 +20,9 @@ module NVE_m
         module procedure  constructor
     end interface
 
+    ! module parameters ...
+    real*8 , parameter :: inv_kilo_mol = imol
+
 contains
 !
 !
@@ -47,8 +50,8 @@ class(NVE) , intent(inout) :: me
 real*8     , intent(in)    :: dt
 
 ! local variables ...
-real*8  :: ai(3)
-real*8  :: massa , dt_HALF , dt2_HALF
+real*8  :: accelerate(3)
+real*8  :: dt_HALF , dt2_HALF
 integer :: i
 
 dt_HALF  = dt / two
@@ -57,10 +60,9 @@ dt2_HALF = dt_HALF * dt
 ! VV1 ... 
 do i = 1 , MM % N_of_atoms
     if( atom(i) % flex ) then
-        massa = mol / atom(i) % mass 
-        ai = atom(i) % ftotal * massa
-        atom(i) % xyz = atom(i) % xyz + ( atom(i) % vel*dt + dt2_HALF*ai ) * mts_2_Angs
-        atom(i) % vel = atom(i) % vel + dt_HALF*ai
+        accelerate = atom(i)% ftotal / (atom(i)%mass * inv_kilo_mol)
+        atom(i) % xyz = atom(i) % xyz + ( atom(i) % vel*dt + dt2_HALF*accelerate ) * mts_2_Angs
+        atom(i) % vel = atom(i) % vel + dt_HALF*accelerate
     end if
 end do
 
@@ -76,13 +78,13 @@ class(NVE) , intent(inout) :: me
 real*8     , intent(in)    :: dt
 
 ! local variables ...
-real*8  :: tmp(3) , V_CM(3) , V_atomic(3)
-real*8  :: massa , factor , sumtemp , dt_half 
-integer :: i , j , j1 , j2 , nresid 
+real*8  :: E_kinetic , dt_half 
+real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , accelerate(3)
+integer :: i , j
 
 dt_half = dt / two
 
-sumtemp = D_zero
+E_kinetic = D_zero
 
 ! VV2 ... 
 select case (me % thermostat_type)
@@ -90,35 +92,28 @@ select case (me % thermostat_type)
     case (0:1) ! <== molecular ...
 
         do i = 1 , MM % N_of_molecules
-            tmp = D_zero
-            nresid = molecule(i) % nr
-            j1 = sum(molecule(1:nresid-1) % N_of_atoms) + 1
-            j2 = sum(molecule(1:nresid) % N_of_atoms)
-            do j = j1 , j2
+            total_Momentum = D_zero
+            do j = molecule(i)%span % inicio , molecule(i)%span % fim
                 if ( atom(j) % flex ) then
-                    massa = mol / atom(j) % mass
-                    atom(j) % vel = atom(j) % vel + ( dt_half * atom(j) % ftotal ) * massa
+                    accelerate = atom(j)% ftotal / (atom(j)% mass * inv_kilo_mol)
+                    atom(j) % vel = atom(j) % vel + accelerate*dt_half
 
-                    tmp = tmp + atom(j) % vel / massa
-
+                    total_Momentum = total_Momentum + (atom(j)% mass * atom(j)%vel) * inv_kilo_mol
                 end if
             end do
-            V_CM    = tmp / molecule(i) % mass
-            sumtemp = sumtemp + molecule(i) % mass *  sum( V_CM * V_CM )    ! <== Joule ...
+            V_CM = total_Momentum / molecule(i) % mass
+            E_kinetic = E_kinetic + molecule(i) % mass * sum(V_CM*V_CM)    ! <== Joule ...
         end do
 
     case (2:) ! <== atomic ...
-
         V_atomic = D_zero
         do i = 1 , MM % N_of_atoms
             if( atom(i) % flex ) then
-                massa = mol / atom(i) % mass
-                atom(i) % vel = atom(i) % vel + ( dt_half * atom(i) % ftotal ) * massa
+                accelerate = atom(i)%ftotal / (atom(i)%mass * inv_kilo_mol)
+                atom(i) % vel = atom(i) % vel + accelerate*dt_half
 
                 V_atomic = atom(i) % vel 
-                factor   = imol * atom(i) % mass
-                sumtemp  = sumtemp + factor * sum( V_atomic * V_atomic )    ! <== Joule ...
-
+                E_kinetic = E_kinetic + atom(i)%mass * sum(V_atomic*V_atomic) * inv_kilo_mol    ! <== Joule ...
             end if
         end do
 
@@ -127,16 +122,16 @@ end select
 ! instantaneous temperature of the system after contact with thermostat ...
 select case (me % thermostat_type)
     case (0:1) ! <== molecular ...
-    me % Temperature =  sumtemp * iboltz / real( count(molecule%flex) ) 
+    me % Temperature =  E_kinetic * iboltz / real( count(molecule%flex) ) 
 
     case (2:)  ! <atomic ...
-    me % Temperature =  sumtemp * iboltz / real( count(atom%flex) ) 
+    me % Temperature =  E_kinetic * iboltz / real( count(atom%flex) ) 
 end select
 
 ! calculation of the kinetic energy ...
 me % kinetic = D_zero
 do i = 1 , MM % N_of_atoms
-    me % kinetic = me % kinetic + ( atom(i) % mass ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half   ! <== J/kmol
+    me% kinetic = me% kinetic + ( atom(i)% mass ) * sum(atom(i)% vel(:) * atom(i)% vel(:)) * half   ! <== J/kmol
 end do
 me % kinetic = me % kinetic * micro / MM % N_of_Molecules   ! <== kJ/mol
 

@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
+          barostat.o \
 		  pbc.o \
 		  overlap_D.o \
 		  STO.o \

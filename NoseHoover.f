@@ -4,7 +4,6 @@ module Nose_Hoover_m
     use syst         ! using all syst
     use MD_read_m    , only: MM , atom , molecule , species
     use VV_Parent    , only: VV
-    use Berendsen_m  , only: Barostat
 
     public :: Nose_Hoover
 

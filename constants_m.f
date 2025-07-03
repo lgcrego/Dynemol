@@ -51,8 +51,8 @@ MODULE constants_m
 !   Molecular dynamics constants ...
     real*8  , parameter :: ee          = 1.60219d-19                ! in Coulomb
     real*8  , parameter :: rsqPI       = 0.56418958354d0            ! sqrt(pi)
-    real*8  , parameter :: mol         = 6.02214129d26              ! mol X 1000
-    real*8  , parameter :: imol        = 0.166057788d-26            ! 1/(mol x 1000)
+    real*8  , parameter :: mol         = 6.02214076d26              ! mol X 1000 , from NIST
+    real*8  , parameter :: imol        = 0.166053906d-26            ! 1/(mol x 1000)
     real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
     real*8  , parameter :: coulomb     = 230.7113d0                 ! e^2/(4.pi.epsilon_0) x 1.E+20 N.m^2
