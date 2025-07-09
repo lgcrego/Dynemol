@@ -73,6 +73,8 @@
   DensityMatrix     =        ! <== .TRUE. for generating data for postprocessing with manipulate program
   AutoCorrelation   =        ! <== .TRUE. for generating data for postprocessing with manipulate program
   VDOS_             =        ! <== .TRUE. velocity DOS data for postprocessing with manipulate program
+  Nsteps_per_sample =        ! <== integer: Sample length: Nr. of steps in each VACF sample  
+  VDOS_projection   =        ! <== 1=atomic Symbol , 2=residue , 3=MMSymbol  (default=1)
 !--------------------------------------------------------------------
 !           POTENTIALS
 !

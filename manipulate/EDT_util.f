@@ -336,6 +336,7 @@ character(len=1)  :: option
 character(len=80) :: line
 integer           , allocatable :: nr(:), indx(:)
 character(len=1)  , allocatable :: fragment(:)
+character(len=2)  , allocatable :: MMSymbol(:)
 character(len=3)  , allocatable :: residue(:)
 
 allocate( displace(system%N_of_atoms) , source = 0 ) 
@@ -343,15 +344,24 @@ allocate( displace(system%N_of_atoms) , source = 0 )
 CALL systemQQ( "clear" )
 
 write(*,'(/a)') ' Choose keyword of stuff to Delete : '
-write(*,'(/a)') ' (1) = fragment'
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom indices '
+write(*,'(/a)') ' (1) = MMSymbol'
+write(*,'(/a)') ' (2) = fragment'
+write(*,'(/a)') ' (3) = residue number '
+write(*,'(/a)') ' (4) = residue name '
+write(*,'(/a)') ' (5) = atom indices '
 write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') option
 
 select case( option )
     case( '1' ) 
+        write(*,'(1x,3/a)') "enter the MMSymbol names to be DELETED, separated by spaces (press ENTER to send) : "
+        read (*,'(a)') line
+        MMSymbol = split_line(line)
+        do i = 1 , size(MMSymbol)
+             where( system% atom(:)% MMSymbol == MMSymbol(i) ) system% atom(:)% delete = .true.
+        end do
+
+    case( '2' ) 
         write(*,'(1x,3/a)') "enter the fragment names to be DELETED, separated by spaces (press ENTER to send) : "
         read (*,'(a)') line
         fragment = split_line(line)
@@ -359,7 +369,7 @@ select case( option )
              where( system% atom(:)% fragment == fragment(i) ) system% atom(:)% delete = .true.
         end do
 
-    case( '2' )
+    case( '3' )
         write(*,'(1x,3/a)') "enter the residue numbers to be DELETED: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
         nr =  parse_this(line)
@@ -367,7 +377,7 @@ select case( option )
              where( system% atom(:)% nresid == nr(i) ) system% atom(:)% delete = .true.
         end do
 
-    case( '3' )
+    case( '4' )
         write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
         read (*,'(a)') line
         residue = split_line(line)
@@ -375,7 +385,7 @@ select case( option )
            where( system% atom(:)% resid == residue(i) ) system% atom(:)% delete = .true.
         end do
 
-    case( '4' )
+    case( '5' )
         write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
         read (*,'(a)') line
         indx =  parse_this(line)

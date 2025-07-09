@@ -238,7 +238,10 @@ else
 
 endif
 
-If( VDOS_ ) CALL VDOS_init
+If( VDOS_ ) then
+    CALL tuning_Projected_VDOS
+    CALL VDOS_init
+end if
 
 if( spawn ) CALL system("echo ancillary.trunk/configs | xargs -n 1 cp log.trunk/driver_parms_and_tuning.log ")
 
@@ -286,6 +289,46 @@ select case( instance )
 end select
 
 end subroutine Saving_MM_Backup
+!
+!
+!
+!================================
+ subroutine tuning_Projected_VDOS
+!================================
+use VDOS_tuning
+implicit none
+
+! local variables ...
+integer :: i , atoms_found
+
+!  list of symbols of given type ...
+allocate( my_symbols(0) )
+my_symbols = [ my_symbols , Unit_Cell%symbol(1) ]
+do i = 1 , Unit_Cell% atoms
+    atoms_found = count( my_symbols == Unit_Cell% Symbol(i) )
+    If( atoms_found == 0 ) then  ! <== include new element in the list
+         my_symbols = [ my_symbols , Unit_Cell% Symbol(i) ]
+    end if
+end do
+
+!  list of MMSymbols of given type ...
+allocate( my_MMSymbols(0) )
+my_MMSymbols = [ my_MMSymbols , Unit_Cell%MMSymbol(1) ]
+do i = 1 , Unit_Cell% atoms
+    atoms_found = count( my_MMSymbols == Unit_Cell% MMSymbol(i) )
+    If( atoms_found == 0 ) then  ! <== include new element in the list
+         my_MMSymbols = [ my_MMSymbols , Unit_Cell% MMSymbol(i) ]
+    end if
+end do
+
+! list of residues ...
+ allocate( my_residues , source = Unit_Cell % list_of_residues )
+
+! list of fragments ...
+ allocate( my_fragments , source = Unit_Cell % list_of_fragments )
+
+end  subroutine tuning_Projected_VDOS
+!
 !
 !
 !
