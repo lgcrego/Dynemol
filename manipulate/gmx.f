@@ -377,52 +377,14 @@ else
         select case(file_type)
             case('pdb')
             OPEN(unit=3,file='input.pdb',status='old',iostat=ioerr,err=11)
-
-            case('gro')
-            OPEN(unit=3,file='input.gro',status='old',iostat=ioerr,err=12)
         end select
 
-        end if
+    end if
 end if
 
-! whether .gro or .pdb files ...
-If( (verify("gro",file_name)==0) .OR. (verify("gro",file_type)==0) ) then
-
-!---------------
-! .gro files 
-!---------------
-
-    read(3,*) system%System_Characteristics
-    read(3,*) system%N_of_atoms
-
-    allocate( system%atom(system%N_of_atoms) )
-    CALL Initialize_System( system )
-
-!   reads the data ...
-    do i = 1 , system%N_of_atoms 
-
-        read(3,30,iostat=ioerr) system%atom(i)%nresid   ,   &
-                                system%atom(i)%resid    ,   &
-                                system%atom(i)%MMSymbol ,   &
-                                useless ,                   &
-                                (system%atom(i)%xyz(j),j=1,3) 
-
-    end do
-
-!   reads the unit cell vectors for Direct coordinate mode
-    read(3,*) system%box(1) , system%box(2) , system%box(3)
-
-!   nm --> Angs  ...
-    system%box = system%box * 10.d0
-    do i = 1 , system%N_of_atoms  
-        system%atom(i)%xyz(:) = system%atom(i)%xyz(:) * 10.d0
-    end do
-
-else
 !---------------
 ! .pdb files 
 !---------------
-
     read(3,99) system%System_Characteristics
     
 !   reads the unit cell vectors for Direct coordinate mode ...
@@ -491,8 +453,6 @@ else
 !----------------------
 ! finished reading ...
 !----------------------
-end if
-
 close(3)
 
 ! get Chemical symbol ...
@@ -519,7 +479,6 @@ end do
 
 10 if( ioerr > 0 ) stop "file_name file not found; terminating execution"
 11 if( ioerr > 0 ) stop "input.pdb file not found; terminating execution"
-12 if( ioerr > 0 ) stop "input.gro file not found; terminating execution"
 
 30  format(I5,A3,A7,I5,3F8.4)
 99  format(a72)
@@ -531,56 +490,6 @@ end do
 
 
 end subroutine read_GROMACS
-!
-!
-!
-!========================
-subroutine gro_2_pdb(sys)
-!========================
-implicit none 
-type(universe) , intent(inout) ::  sys
-
-! local variables ...
-integer ::  i , k
-
-!----------------------------------------------
-!     generate pdb file from gro file
-!----------------------------------------------
-
-OPEN(unit=4,file="seed.pdb",status="unknown")
-
-write(4,6) 'COMPND' , '"',sys%System_Characteristics,'"'
-write(4,1) 'CRYST1' , sys%box(1) , sys%box(2) , sys%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-
-do i = 1 , sys%N_of_atoms
-    write(4,2)  'HETATM'                        ,  &    ! <== non-standard atom
-                i                               ,  &    ! <== global number
-                sys%atom(i)%MMSymbol            ,  &    ! <== atom type
-                ' '                             ,  &    ! <== alternate location indicator
-                sys%atom(i)%resid               ,  &    ! <== residue name
-                ' '                             ,  &    ! <== chain identifier
-                sys%atom(i)%nresid              ,  &    ! <== residue sequence number
-                ' '                             ,  &    ! <== code for insertion of residues
-                ( sys%atom(i)%xyz(k) , k=1,3 )  ,  &    ! <== xyz coordinates 
-                1.00                            ,  &    ! <== occupancy
-                0.00                            ,  &    ! <== temperature factor
-                ' '                             ,  &    ! <== segment identifier
-                ' '                             ,  &    ! <== here only for tabulation purposes
-                sys%atom(i)%symbol              ,  &    ! <== chemical element symbol
-                ' '                                     ! <== charge on the atom
-end do
-
-write(4,3) 'MASTER', 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , sys%N_of_atoms , 0 , sys%N_of_atoms , 0
-write(4,*) 'END'
-
-close(4)
-
-1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
-2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,a2)
-3 FORMAT(a6,i9,11i5)
-6 FORMAT(a6,3x,a,a72,a)
-
-end subroutine gro_2_pdb
 !
 !
 !

@@ -1,6 +1,7 @@
 MODULE setup_checklist
 
  use type_m
+ use omp_lib
  use MM_input        
  use parameters_m 
  use util_m            , only: to_upper_case
@@ -75,7 +76,7 @@ implicit none
 character(len=3) :: month(12)=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
  
 ! local variables ... 
- integer           :: ioerr , date_time(8)
+ integer           :: ioerr , date_time(8) , numthr
  character(len=3)  :: tag , EH_MM
  character(len=12) :: number_string , keyword
  character(len=80) :: line
@@ -86,7 +87,9 @@ call date_and_time(values=date_time)
 
 write(10,29) month(date_time(2)),date_time(3),date_time(1),date_time(5),date_time(6)
 
-write(10,'(a/)') " Powered   by   SingleNode"
+numthr = OMP_get_max_threads()
+
+write(10, '(a, i0, a, /)') " Powered   by   SingleNode ; using ", numthr, " threads"
 
 write(10,'(''<======  ###############  ==>'')')
 write(10,'(''<====    PARAMETERS     ====>'')')

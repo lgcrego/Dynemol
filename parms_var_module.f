@@ -41,3 +41,13 @@ type(MM_system)        :: MM
 type(MM_molecular) , allocatable :: species(:) 
 
 end module MM_parms_module
+
+
+module VDOS_tuning                                                                                                                                            
+integer :: Nsteps_per_sample , projection_rule
+character(2) , allocatable ::my_symbols(:)
+character(3) , allocatable ::my_residues(:)
+character(1) , allocatable ::my_fragments(:)
+character(2) , allocatable ::my_MMSymbols(:)
+end module VDOS_tuning
+

@@ -3,6 +3,7 @@ MODULE card_reading
 use type_m
 use EH_parms_module
 use MM_parms_module
+use VDOS_tuning
 
 private
 
@@ -128,8 +129,16 @@ read_loop: do
         case( "AUTOCORRELATION" ) 
                 AutoCorrelation = get_logical(line)
 
-        case( "VDOS_" , "VDOS" , "vdos_" , "vdos") 
+        case( "VDOS_" , "VDOS" , "vdos_" , "vdos" ) 
                 VDOS_ = get_logical(line)
+
+        case( "NSTEPS_PER_SAMPLE" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') Nsteps_per_sample
+
+        case( "VDOS_PROJECTION" ) 
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                read(command,'(i)') projection_rule
 
 !------------------------------------------------------------------------
 !               POTENTIALS
