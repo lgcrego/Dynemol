@@ -52,7 +52,7 @@ Coul_inter = D_zero
 
 ! vself part of the Coulomb calculation
 total_chrg = sum(atom(:)% charge)
-vself = (HALF*vrecut + rsqPI*KAPPA*coulomb) * total_chrg**2
+vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_chrg**2
 vself = vself*factor3
 
 if( MM % N_of_molecules > 1 ) &
@@ -319,7 +319,7 @@ expar = EXP(-KRIJ**2)
 !Force
 Fcoul = coulomb * chrgk * chrgl * (ir2/r_kl)
 ! damped Fcoul
-Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*r_kl*expar )
+Fcoul = Fcoul * ( ERFC(KRIJ) + TWO*irsqPI*KAPPA*r_kl*expar )
 ! shifted force: F_sf(R) = F(R) - F(Rc) ...
 Fcoul = Fcoul - (frecut * chrgk * chrgl / r_kl)
 

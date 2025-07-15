@@ -88,7 +88,7 @@ contains
  KRIJ   = KAPPA * rcut
  vrecut = coulomb * ERFC(KRIJ) / rcut
  expar  = exp(-KRIJ**2)
- frecut = coulomb * ( ERFC(KRIJ) + TWO*rsqPI*KAPPA*rcut*expar ) / rcutsq
+ frecut = coulomb * ( ERFC(KRIJ) + TWO*irsqPI*KAPPA*rcut*expar ) / rcutsq
 
 
 end subroutine SETUP
