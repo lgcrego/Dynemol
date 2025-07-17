@@ -159,9 +159,15 @@ deallocate( tmp_force )
 
 !====================================================================
 ! Angle - bending potential ...
+!             J     K
+!              \   /
+!               \ / 
+!                I 
+!
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Nangs
 
+        ! MIND: the atomic sequence is JIK, with ATOM I IN THE VERTEX
         atj = molecule(i) % angs(j,1)
         ati = molecule(i) % angs(j,2)
         atk = molecule(i) % angs(j,3)
