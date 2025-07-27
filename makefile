@@ -128,12 +128,12 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
+          ReaxFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
-          barostat.o \
 		  pbc.o \
 		  overlap_D.o \
 		  STO.o \
@@ -162,6 +162,7 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \
+          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
