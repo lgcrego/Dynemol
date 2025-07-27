@@ -3,7 +3,7 @@ module Berendsen_m
     use constants_m
     use syst                  ! using all syst
     use MD_read_m             , only: MM , atom , molecule, species
-    use Berendsen_barostat    , only: Virial , barostat
+    use Berendsen_barostat    , only: Ek_tensor , barostat
     use VV_Parent             , only: VV
 
     public :: Berendsen 
@@ -80,7 +80,7 @@ integer :: i , j
 real*8  :: E_kinetic , temperature , lambda , dt_half 
 real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , accelerate(3)
 
-if( using_barostat ) CALL Virial( me % thermostat_type )
+if( using_barostat ) CALL Ek_tensor( me % thermostat_type )
 
 E_kinetic= kinetic_erg( me % thermostat_type ) 
 !######################################################

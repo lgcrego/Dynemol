@@ -99,7 +99,6 @@ SOURCE2 = constants_m.o \
 		  md_read.o	\
 		  md_setup.o \
 		  md_output.o \
-          barostat.o \
 		  pbc.o \
 		  overlap_D.o \
 		  STO.o \
@@ -128,7 +127,8 @@ SOURCE2 = constants_m.o \
 		  f_inter.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
-                  backup_MM.o \
+          backup_MM.o \
+          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \

@@ -10,11 +10,15 @@ module F_inter_m
     use setup_m             , only : offset
     use Data_Output         , only : Net_Charge
     use gmx2mdflex          , only : SpecialPairs
-    use Berendsen_barostat  , only : InitializeStressMatrix , BuildStressMatrix , ConcludeStressMatrix
     use for_force           , only : rcut , vrecut , frecut , rcutsq , pot_INTER , Coul_inter , &
                                      Vself , evdw , vscut , fscut , KAPPA
 
-    public :: FORCEINTER
+    public :: FORCEINTER, virial_tensor
+
+    private
+
+    ! module variables ...
+    real*8 , save :: virial_tensor(3,3)
     
 contains
 !
@@ -30,7 +34,7 @@ real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:)
 integer , allocatable :: species_offset(:)
 real*8                :: rkl(3) , cm_kl(3)
 real*8                :: total_chrg , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
-integer               :: i , k , l , atk , atl
+integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
 CALL offset( species_offset )
@@ -57,12 +61,12 @@ vself = vself*factor3
 
 if( MM % N_of_molecules > 1 ) &
 then
-     !##############################################################################
-     ! INTER-MOLECULAR vdW and Coulomb calculations ...
-     !$OMP parallel DO &
-     !$OMP default (shared) &
-     !$OMP private (k, l, atk, atl, rkl2, cm_kl, rkl, fs, vsr, Ecoul_damped, Fcoul, nresidk, nresidl, ithr)  &
-     !$OMP reduction (+: Coul_inter, evdw) 
+!##############################################################################
+! INTER-MOLECULAR vdW and Coulomb calculations ...
+!$OMP parallel DO &
+!$OMP default (shared) &
+!$OMP private (i, j, k, l, atk, atl, rkl2, cm_kl, rkl, fs, vsr, Ecoul_damped, Fcoul, nresidk, nresidl, ithr)  &
+!$OMP reduction (+: Coul_inter, evdw, virial_tensor) 
                         
      do k = 1 , MM % N_of_atoms - 1
          do l = k+1 , MM % N_of_atoms
@@ -113,21 +117,24 @@ then
                          evdw       = evdw + vsr
                          Coul_inter = Coul_inter + Ecoul_damped
               
+                        !-------------------------------------------------------------------------------
                          if( using_barostat ) &
                          then
                                nresidk = atom(k)% nr
                                nresidl = atom(l)% nr
                                cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
                                cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                               call BuildStressMatrix( fs , Fcoul , cm_kl , rkl )
+                               do i=1,3 ; do j=i,3
+                                  virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
+                               end do; end do
                          end if
                  !-------------------------------------------------------------------------------------
                  end if
              end if
          end do
      end do
-     !$OMP end parallel do
-     !##############################################################################
+!$OMP end parallel do
+!##############################################################################
 end if
 
 evdw       = evdw * factor3
@@ -330,6 +337,37 @@ Ecoul_damped = Ecoul_damped - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( r_kl-
 
 end subroutine Electrostatic
 !
+!
+!
+!
+!=================================
+ subroutine InitializeStressMatrix
+!=================================
+  implicit none
+  !--------------------------------------------------------------
+  ! initializing variables for this integration step ...
+  !--------------------------------------------------------------
+  virial_tensor(:,:)   = D_zero
+  !--------------------------------------------------------------
+end subroutine InitializeStressMatrix
+!
+!===============================
+ subroutine ConcludeStressMatrix
+!===============================
+  implicit none
+
+  ! local variables
+  integer :: i,j
+  !--------------------------------------------------------------
+  ! symmetrizing the tensors ...
+  !--------------------------------------------------------------
+  virial_tensor   = virial_tensor * factor3
+
+  do concurrent (i = 1:2, j = 1:3, j>i)
+    virial_tensor(j,i)   = virial_tensor(i,j) 
+  end do
+  !--------------------------------------------------------------
+end subroutine ConcludeStressMatrix
 !
 !
 !
