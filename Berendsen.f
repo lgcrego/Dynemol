@@ -80,7 +80,7 @@ integer :: i , j
 real*8  :: E_kinetic , temperature , lambda , dt_half 
 real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , accelerate(3)
 
-if( using_barostat ) CALL Ek_tensor( me % thermostat_type )
+if(using_barostat% anyone) CALL Ek_tensor( me % thermostat_type )
 
 E_kinetic= kinetic_erg( me % thermostat_type ) 
 !######################################################
@@ -168,7 +168,7 @@ me % Kinetic = me % Kinetic * micro / MM % N_of_Molecules
 me % density = get_density()
 
 ! calculation of pressure ...
-if(using_barostat) CALL barostat( me % pressure , dt )
+if(using_barostat% anyone) CALL barostat( me % pressure , dt )
 
 end subroutine VV2
 !

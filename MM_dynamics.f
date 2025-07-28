@@ -6,6 +6,7 @@ module MM_dynamics_m
     use MD_read_m           , only : atom , MM
     use setup_m             , only : setup, move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame , GenerateConfigs
+    use syst                , only : using_barostat
     use f_inter_m           , only : ForceINTER
     use f_intra_m           , only : ForceINTRA , ForceQMMM
     use QMMM_m              , only : QMMM_FORCE
@@ -92,7 +93,7 @@ integer            , intent(in)    :: frame
 
 ! local variables ...
 real*8  :: dt , Temperature , pressure , density , Kinetic
-integer :: i 
+integer :: i , f_unit
 
 ! time units are PICOseconds in EHT - seconds in MM ; converts picosecond to second ...
 dt = t_rate * pico_2_sec
@@ -140,22 +141,23 @@ if( mod(frame,MM_log_step) == 0   ) then
     CALL output( Temperature , frame , dt )
 
     open( unit = 13 , file = "ancillary.trunk/nuclear_dyn.dat" , status = "unknown", action = "write" , position = "append" )
+        select case (Units_MM)
 
-    select case (Units_MM)
+            case( "eV" )    
+            write(*,10) frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
+            write(13,'(I8,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
 
-        case( "eV" )    
-        write(*,10) frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
-        write(13,'(I8,4F15.5)') frame, Temperature, Unit_Cell% MD_Kin, Unit_Cell% MD_Pot, Unit_Cell% MD_Kin + Unit_Cell% MD_Pot 
+            case( "kj-mol" )
+            write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
 
-        case( "kj-mol" )
-        write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
-
-        case default
-        write(*,10) frame , Temperature , density , pressure , Kinetic , pot_total , Kinetic + pot_total
-
-    end select
-
+        end select
     close(13)
+
+    if(using_barostat% anyone) then
+        open( file = "ancillary.trunk/termodynamics.dat" , status = "unknown", action = "write" , position = "append" ,  newunit=f_unit )
+            write(f_unit,'(I8,4F15.5)') frame , Temperature , density , pressure , Unit_Cell% MD_Kin + Unit_Cell% MD_Pot
+        close(f_unit)
+    endif
 
 end if
 

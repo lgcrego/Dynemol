@@ -34,7 +34,7 @@ subroutine Build_MM_Environment
 implicit none
 
 ! local variables ...
-integer :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr 
+integer :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr, rounded_avg_atoms
 logical :: flag1 , flag2
 
 !=======================  setting up system  ============================= 
@@ -46,9 +46,6 @@ talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
-
-! if talp = infty, barostat is turned off ... 
-using_barostat = (talp < real_large)
 
 If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
@@ -388,6 +385,15 @@ If( allocated(SpecialPairs) ) then
 endif
 
 !========================================================================================= 
+
+!---------------------------------------------
+! define barostat use ... 
+! if talp = infty, barostat is turned off ... 
+rounded_avg_atoms = nint(real(maxval(molecule%N_of_atoms)) / real(MM%N_of_molecules))
+using_barostat% inter = (talp < real_large) .and. (rounded_avg_atoms <= 1)
+using_barostat% intra = (talp < real_large) .and. (rounded_avg_atoms > 1)
+using_barostat% anyone = (talp < real_large)
+!---------------------------------------------
 
 ! use this to debug: { atom , molecule , species , FF } ...
 !call debug_MM( atom )

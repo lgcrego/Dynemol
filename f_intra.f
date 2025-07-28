@@ -6,6 +6,8 @@ module F_intra_m
     use MM_input          , only: MM_input_format
     use parameters_m      , only: PBC , QMMM , driver , n_part
     use Allocation_m      , only: Allocate_Structures
+    use syst              , only: using_barostat
+    use F_inter_m         , only: virial_tensor
     use setup_m           , only: offset
     use for_force         , only: rcut, vrecut, frecut, pot_INTER, bdpot, angpot, dihpot, Morspot,      &
                                   vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, &    
@@ -25,7 +27,6 @@ module F_intra_m
 
     ! module variables ...
     real*8                 :: rijkj , rjkkl , gamma , pterm , rtwopi , rsinphi , phi , pot_INTRA
-    integer                :: i , j , n  
     integer , allocatable  :: species_offset(:)
     logical                :: there_are_NB_SpecialPairs   = .false.
     logical                :: there_are_NB_SpecialPairs14 = .false.
@@ -48,7 +49,6 @@ module F_intra_m
 contains
 !
 !
-!
 !====================
 subroutine ForceINTRA
 !====================
@@ -60,7 +60,7 @@ real*8 , dimension (3):: rij, rjk, rkl, rik, rijk, rjkl, rijkl
 real*8  :: rij2, rijq, rjkq, rijsq, rjksq, fxyz, riju, riku, rijkj2, rjkkl2, rijkl2, rjksq2, rijkll, rikq, riksq
 real*8  :: f1x, f1y, f1z, f2x, f2y, f2z, f3x, f3y, f3z, f4x, f4y, f4z, MorsA, MorsB, MorsC, dij
 real*8  :: fs, Fcoul, E_vdw, E_coul, cosphi, sinphi, coephi, coephi0,  qterm, qterm0, rterm, rterm0
-integer :: k, l, ithr, numthr, ati, atj, atk, atl, loop  
+integer :: i, j, k, l, n, ithr, numthr, ati, atj, atk, atl, loop  
 logical :: flag1 , flag2
 
 rtwopi = 1.d0/twopi
@@ -382,6 +382,8 @@ end do
 ! Non-bonding intramolecular interactions ...
 ! Van der Walls , Buckingham , Electrostatic
 
+if( using_barostat% intra ) call InitializeStressMatrix
+
 allocate( tmp_vdw (MM%N_of_atoms,3,numthr) , source = D_zero )
 allocate( tmp_ele (MM%N_of_atoms,3,numthr) , source = D_zero )
 
@@ -394,7 +396,7 @@ do i = 1 , MM % N_of_molecules
      !$OMP parallel DO &
      !$OMP default (shared) &
      !$OMP private (j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
-     !$OMP reduction (+: LJ_intra , Coul_intra)
+     !$OMP reduction (+: LJ_intra, Coul_intra, virial_tensor)
      do j = 1 , molecule(i) % NintraIJ
 
          ithr = OMP_get_thread_num() + 1
@@ -438,6 +440,15 @@ do i = 1 , MM % N_of_molecules
 
                   Coul_intra = Coul_intra + E_coul*factor3 ! <== Coulomb energy
 
+                  !-------------------------------------------------------------------------------
+                  if( using_barostat% intra ) &
+                  then
+                       do k=1,3 ; do l=k,3
+                          virial_tensor(k,l) = virial_tensor(k,l) + rij(k) * (fs+Fcoul) * rij(l)
+                       end do; end do
+                  end if
+                  !---------------------------------------------------------------------------------
+
              end if
          end if
      end do
@@ -446,12 +457,16 @@ do i = 1 , MM % N_of_molecules
 end do
 
 ! force units = J/mts = Newtons ...    
+! manual reduction (+: fnonbd , fnonch) ...
 do i = 1, MM % N_of_atoms
     do k=1,numthr              
-        atom(i)% fnonbd(1:3) = atom(i)% fnonbd(1:3) + tmp_vdw(i,1:3,k)                                                                                                                              
-        atom(i)% fnonch(1:3) = atom(i)% fnonch(1:3) + tmp_ele(i,1:3,k)                                                                                                                              
+        atom(i)% fnonbd(1:3) = atom(i)% fnonbd(1:3) + tmp_vdw(i,1:3,k)
+        atom(i)% fnonch(1:3) = atom(i)% fnonch(1:3) + tmp_ele(i,1:3,k)
     enddo
 end do    
+
+if( using_barostat% intra ) call ConcludeStressMatrix
+
 deallocate( tmp_vdw , tmp_ele )
 
 !====================================================================
@@ -831,6 +846,7 @@ end subroutine Buckingham
 implicit none
 
 ! local variables ...
+integer :: i, j
 real*8  :: psi, cos_Psi, dtheta
 real*8  :: term, term1, term2, term3, term4 
 
@@ -918,6 +934,7 @@ end subroutine gmx
 implicit none
 
 ! local variables ...
+integer:: i, j
 real*8 :: eme, dphi
 real*8 :: A0, A1, A2, A3, C0, C1, C2, C3, C4, C5 
 real*8 :: term, term1, term2, term3, term4 !, dphi1, dphi2 
@@ -1006,7 +1023,36 @@ select case( adjustl(molecule(i) % Dihedral_Type(j)) )
 end select
 
 end subroutine not_gmx
+!                         
+!                            
+!=================================
+ subroutine InitializeStressMatrix
+!=================================
+  implicit none
+  !-----------------------------------------------------
+  ! initializing variables for this integration step ...
+  !-----------------------------------------------------
+  virial_tensor(:,:)   = D_zero
+  !-----------------------------------------------------
+end subroutine InitializeStressMatrix  
 !
+!===============================
+ subroutine ConcludeStressMatrix
+!===============================
+  implicit none
+
+  ! local variables
+  integer :: i,j
+  !-------------------------------------------------
+  ! symmetrizing the tensors ...
+  !-------------------------------------------------
+  virial_tensor   = virial_tensor * factor3
+
+  do concurrent (i = 1:2, j = 1:3, j>i)
+    virial_tensor(j,i)   = virial_tensor(i,j) 
+  end do
+  !-------------------------------------------------
+end subroutine ConcludeStressMatrix
 !
 !
 !===================

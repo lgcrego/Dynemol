@@ -39,7 +39,7 @@ integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
 CALL offset( species_offset )
 
-if( using_barostat ) call InitializeStressMatrix
+if( using_barostat% inter ) call InitializeStressMatrix
 
 numthr = OMP_get_max_threads()
 
@@ -71,66 +71,66 @@ then
      do k = 1 , MM % N_of_atoms - 1
          do l = k+1 , MM % N_of_atoms
      
-            ! for different molecules ...
-             if ( atom(k)% nr /= atom(l)% nr ) then
+            ! for different molecules only ...
+            if ( atom(k)% nr == atom(l)% nr ) cycle
      
-                 rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
-                 rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+            rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
+            rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
      
-                 rkl2 = sum( rkl(:)**2 )
+            rkl2 = sum( rkl(:)**2 )
      
-                 if( rkl2 < rcutsq ) then
-                 !-------------------------------------------------------------------------------------
-                         atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
-                         atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
+            if( rkl2 < rcutsq ) &
+            then
+                    !-------------------------------------------------------------------------------------
+                    atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
+                    atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
      
-                         select case ( special_pair_mtx(k,l) )
+                    select case ( special_pair_mtx(k,l) )
      
-                                case(0) ! <== not a SpecialPair
-                                        if( atom(k)%LJ .AND. atom(l)%LJ ) then
+                           case(0) ! <== not a SpecialPair
+                                   if( atom(k)%LJ .AND. atom(l)%LJ ) then
      
-                                            call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+                                       call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
      
-                                        elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
+                                   elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
      
-                                            call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+                                       call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
      
-                                        endif
-                                case(1) 
-                                        call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
-                                case(2)
-                                        call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
-                         end select
+                                   endif
+                           case(1) 
+                                   call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+                           case(2)
+                                   call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+                    end select
      
-                         ithr = OMP_get_thread_num() + 1
+                    ithr = OMP_get_thread_num() + 1
      
-                         tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
-                         tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
-                         
-                         ! Coulomb Interaction
-                         call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
+                    tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
+                    tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
+                    
+                    ! Coulomb Interaction
+                    call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
      
-                         tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
-                         tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
+                    tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
+                    tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
      
-                         !Energy
-                         evdw       = evdw + vsr
-                         Coul_inter = Coul_inter + Ecoul_damped
-              
-                        !-------------------------------------------------------------------------------
-                         if( using_barostat ) &
-                         then
-                               nresidk = atom(k)% nr
-                               nresidl = atom(l)% nr
-                               cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                               cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                               do i=1,3 ; do j=i,3
-                                  virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
-                               end do; end do
-                         end if
-                 !-------------------------------------------------------------------------------------
-                 end if
-             end if
+                    !Energy
+                    evdw       = evdw + vsr
+                    Coul_inter = Coul_inter + Ecoul_damped
+            
+                    !-------------------------------------------------------------------------------
+                    if( using_barostat% inter ) &
+                    then
+                          nresidk = atom(k)% nr
+                          nresidl = atom(l)% nr
+                          cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+                          cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+                          do i=1,3 ; do j=i,3
+                             virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
+                          end do; end do
+                    end if
+                    !---------------------------------------------------------------------------------
+            end if
          end do
      end do
 !$OMP end parallel do
@@ -151,7 +151,7 @@ do i = 1, MM % N_of_atoms
     atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
-if( using_barostat ) call ConcludeStressMatrix
+if( using_barostat% inter ) call ConcludeStressMatrix
 
 deallocate ( tmp_fsr , tmp_fch )
 
@@ -339,16 +339,15 @@ end subroutine Electrostatic
 !
 !
 !
-!
 !=================================
  subroutine InitializeStressMatrix
 !=================================
   implicit none
-  !--------------------------------------------------------------
+  !------------------------------------------------------
   ! initializing variables for this integration step ...
-  !--------------------------------------------------------------
+  !------------------------------------------------------
   virial_tensor(:,:)   = D_zero
-  !--------------------------------------------------------------
+  !------------------------------------------------------
 end subroutine InitializeStressMatrix
 !
 !===============================
@@ -358,17 +357,16 @@ end subroutine InitializeStressMatrix
 
   ! local variables
   integer :: i,j
-  !--------------------------------------------------------------
+  !-----------------------------------------------------
   ! symmetrizing the tensors ...
-  !--------------------------------------------------------------
+  !-----------------------------------------------------
   virial_tensor   = virial_tensor * factor3
 
   do concurrent (i = 1:2, j = 1:3, j>i)
     virial_tensor(j,i)   = virial_tensor(i,j) 
   end do
-  !--------------------------------------------------------------
+  !-----------------------------------------------------
 end subroutine ConcludeStressMatrix
-!
 !
 !
 !===================
