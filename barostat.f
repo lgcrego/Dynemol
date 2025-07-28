@@ -18,9 +18,9 @@ module Berendsen_Barostat
  
     contains
 
-!====================================
+!=======================================
  subroutine Ek_Tensor( thermostat_type )
-!====================================
+!=======================================
 implicit none
 integer , intent(in) :: thermostat_type
 

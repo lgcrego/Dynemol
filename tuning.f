@@ -360,13 +360,23 @@ end module MM_tuning_routines
 !
 !
 module syst
+implicit none
 real*8  :: bath_T, press, talt, talp, Initial_density
-logical :: using_barostat
+
+type kind_of_ensemble
+     logical :: inter = .false.
+     logical :: intra = .false.
+     logical :: anyone = .false.
+end  type kind_of_ensemble
+
+type(kind_of_ensemble) :: using_barostat
+
 end module syst
 !
 !
 !
 module for_force
+ implicit none
  integer                               :: forcefield
  real*8, dimension(:,:)  , allocatable :: vscut, fscut
  real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
@@ -381,6 +391,7 @@ end module for_force
 !
 !
 module atomicmass
+implicit none
     real*8 , parameter  , dimension(1:107)  :: Atomic_mass = (/                                 &
     1.00795d0,   4.00260d0,   6.94122d0,   9.01218d0,  10.81172d0,  12.01078d0,  14.00672d0,    &
    15.99943d0,  18.99840d0,  20.17976d0,  22.98970d0,  24.30506d0,  26.98153d0,  28.08553d0,    &
