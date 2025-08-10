@@ -1,5 +1,4 @@
 #
-.SUFFIXES:
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
 FC = mpiifx -xHost -fpp
