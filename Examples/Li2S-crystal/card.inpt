@@ -1,0 +1,66 @@
+!--------------------------------------------------------------------
+! ACTION	flags
+ 
+  DRIVER = MM_Dynamics
+
+  VDOS = false
+  vdos_projection = 1                     ! <== 1=atomic Symbol , 2=residue , 3=MMSymbol  (default=1) 
+  nsteps_per_sample = 14000               ! <== integer: Sample length: Nr. of steps in each VACF sample
+
+ 			
+  file_type      = structure              ! <== structure or trajectory
+  file_format    = pdb                    ! <== xyz , pdb or vasp
+
+  t_i  = 0.d0                             ! <== default = 0.d0
+  t_f  = 28.d0                            ! <== final time in PICOseconds (Real)
+  n_t  = 140000                           ! <== number of time steps (Integer)
+  step_security = 100000                  ! <== step for saving backup files
+
+  PBC = [ 1 , 1 , 1 ]                     ! Periodic Boundary Conditions on {x,y,z} directions
+
+!------------------------------------------------------------------------------
+! SYSTEM  INFO
+
+  N_of_species   = 1                      ! <== total number of species
+  N_of_molecules = 1                      ! <== total number of molecules
+
+!------------------------------------------------------------------------------
+! repeat the following information filling for all the different species ...
+
+  species(1) % residue         = LiS      ! <== Residue label for species 1
+  species(1) % N_of_molecules  = 1        ! <== Number of molecules of species 1
+  species(1) % N_of_atoms      = 2592     ! <== Number of atoms comprising a single molecule of species 1
+  species(1) % flex            = true     ! <== Flexible : true , false
+
+!------------------------------------------------------------------------------
+! AD-HOC settings
+
+  ad_hoc = .false.
+
+!------------------------------------------------------------------------------
+! ENVIRONMENT parameters ...
+!
+
+  thermostat                = Berendsen   ! <== Berendsen, Nose_Hoover, Microcanonical
+
+  temperature               = 300.d0      ! <== Bath Temperature (K)
+  thermal_relaxation_time   = 1.0d0       ! <== Temperature coupling term with the bath
+
+  pressure = 1.d0                         ! <== Pressure in atm , (Real) ; default = 1
+  pressure_relaxation_time = 2.d-1
+
+  cutoff_radius             = 13.d0       ! <== Cut off radius (Angs.) for electrostatic and LJ interactions
+  damping_Wolf              = 0.005       ! <== damping parameter (Angs.^-1) ; reasonable values: R_c*Wolf ~ ....
+                                          ! <== Wolf's method damping parameter (length^{-1}) ; (J. Chem. Phys. 1999; 110(17):8254)
+!------------------------------------------------------------------------------
+! GENERAL INFO ...
+!
+  driver_MM              = MM_Dynamics    ! <== MM_Dynamics , MM_Optimize , NormalModes , Parametrize
+
+  read_velocities        = true           ! <== reads the initial velocities : T_ , F_
+
+  MM_input_format        = GAFF           ! <== GMX, NAMD, GAFF
+
+  MM_log_step            =  500           ! <== step for saving MM results & parameters
+
+  MM_frame_step          =  1000          ! <== step for saving MM results & parameters
