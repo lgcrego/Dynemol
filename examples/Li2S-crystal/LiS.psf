@@ -1,6 +1,6 @@
-REMARKS  5x5x5 Li2S
+REMARKS  6x6x6 Li2S
 
-        1500 !NATOM
+        2592 !NATOM
          1 SYS      1        LiS       S         S       -2.000000      32.06552
          1 SYS      1        LiS       S         S       -2.000000      32.06552
          1 SYS      1        LiS       S         S       -2.000000      32.06552
