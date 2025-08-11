@@ -154,7 +154,7 @@ if( mod(frame,MM_log_step) == 0   ) then
     close(13)
 
     if(using_barostat% anyone) then
-        open( file = "ancillary.trunk/termodynamics.dat" , status = "unknown", action = "write" , position = "append" ,  newunit=f_unit )
+        open( file = "ancillary.trunk/thermodynamics.dat" , status = "unknown", action = "write" , position = "append" ,  newunit=f_unit )
             write(f_unit,'(I8,4F15.5)') frame , Temperature , density , pressure , Unit_Cell% MD_Kin + Unit_Cell% MD_Pot
         close(f_unit)
     endif
