@@ -128,7 +128,6 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
-          ReaxFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
