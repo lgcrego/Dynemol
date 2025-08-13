@@ -958,7 +958,7 @@ character(len=:) , allocatable  :: string(:)
  write(51, *) " "
  write(51,"(A)") "[ bondtypes ]"               
 
- write(51,'(t12,A4,t25,A5,t36,A13,t56,A5,t67,A16)')        "type" , "r0(A)" , "k(kJ/mol/A^2)" , "------" , "V = k/2*(r-r0)^2"
+ write(51,'(t12,A4,t25,A5,t36,A13,t56,A5,t67,A16)') "type" , "r0(A)" , "k(kJ/mol/A^2)" , "------" , "V = k/2*(r-r0)^2"
  write(51,'(t12,A4,t25,A5,t34,A13,t55,A6,t67,A26)') "type" , "r0(A)" , "D(kJ/mol)"     , "a(1/A)" , "V = D*(1-exp(-a*(r-r0)))^2"
 
  prototype = 1
