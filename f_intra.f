@@ -127,7 +127,6 @@ do i = 1 , MM % N_of_molecules
 
                 case ( "Mors" )
                 ! Morse potential ...
-
                 MorsA = molecule(i)% kbond0(j,1)
                 MorsB = molecule(i)% kbond0(j,2)
                 MorsC = molecule(i)% kbond0(j,3)
