@@ -127,7 +127,6 @@ do i = 1 , MM % N_of_molecules
 
                 case ( "Mors" )
                 ! Morse potential ...
-
                 MorsA = molecule(i)% kbond0(j,1)
                 MorsB = molecule(i)% kbond0(j,2)
                 MorsC = molecule(i)% kbond0(j,3)
@@ -301,9 +300,9 @@ do i = 1 , MM % N_of_molecules
       
             ! selection of potential energy function type
             if( MM_input_format == "GMX" ) then
-                CALL gmx
+                CALL gmx(i,j)
             else
-                CALL not_gmx
+                CALL not_gmx(i,j)
             end if
 
             ! Calculate atomic forces ...
@@ -840,17 +839,18 @@ end subroutine Buckingham
 !
 !
 !
-!==============
- subroutine gmx
-!==============
+!===================
+ subroutine gmx(i,j)
+!===================
 implicit none
+integer , intent(in) :: i, j
 
 ! local variables ...
-integer :: i, j
 real*8  :: psi, cos_Psi, dtheta
 real*8  :: term, term1, term2, term3, term4 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
+
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] 
                     ! Eq. 4.60 (GMX 5.0.5 manual)
         
@@ -928,18 +928,19 @@ end subroutine gmx
 !
 !
 !
-!==================
- subroutine not_gmx
-!==================
+!=======================
+ subroutine not_gmx(i,j)
+!=======================
 implicit none
+integer , intent(in) :: i, j
 
 ! local variables ...
-integer:: i, j
 real*8 :: eme, dphi
 real*8 :: A0, A1, A2, A3, C0, C1, C2, C3, C4, C5 
 real*8 :: term, term1, term2, term3, term4 !, dphi1, dphi2 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
+
     case ('cos') ! V = k[1 + cos(n.phi - theta)]
         term  = int(molecule(i) % kdihed0(j,3)) * phi - molecule(i) % kdihed0(j,1)
         pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )
