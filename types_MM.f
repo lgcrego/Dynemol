@@ -13,8 +13,8 @@ public :: MMOPT_Control, Logicalkey
         integer                             :: nr
         character(3)                        :: residue
         character(2)                        :: Symbol
-        character(4)                        :: MMSymbol
-        character(4)                        :: EHSymbol
+        character(2)                        :: MMSymbol
+        character(2)                        :: EHSymbol
         real*8                              :: xyz(3)
         real*8                              :: vel(3)
         real*8                              :: fbond(3)
