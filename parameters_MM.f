@@ -45,6 +45,9 @@ do i = 1 , N
     species(i) % Nharm          = 0
     species(i) % Nbonds14       = 0
     species(i) % NintraIJ       = 0
+    species(i) % LJ             = .false.
+    species(i) % Buck           = .false.
+    species(i) % DWFF           = .false.
 end do
 
 end subroutine allocate_species

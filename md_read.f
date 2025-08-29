@@ -125,7 +125,6 @@ CALL allocate_FF( atmax )
 select case ( MM_input_format )
 
     case( "GMX" )  ! <== reads FF data in GMX format ... 
-     
          If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
 
          CALL itp2mdflex( MM , atom , species , FF)
@@ -148,11 +147,10 @@ select case ( MM_input_format )
          end do
 
     case( "NAMD" , "GAFF" )  ! <== reads FF data in NAMD format ... 
-
          If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
   
          CALL psf2mdflex( MM , atom , species , FF)
- 
+
          CALL prm2mdflex( MM , species , FF)
 
          do i = 1 , size(species)
@@ -191,6 +189,7 @@ do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % Ndiheds    = species(i) % Ndiheds
     where( molecule % my_species == i ) molecule % Nbonds14   = species(i) % Nbonds14
     where( molecule % my_species == i ) molecule % NintraIJ   = species(i) % NintraIJ
+    where( molecule % my_species == i ) molecule % DWFF       = species(i) % DWFF
 end do
 !=======================         set-up atom(:) <=> FF(:)    ============================= 
 
@@ -234,36 +233,46 @@ do i = 1 , size(atom)
 end do
 
 !=======================         set-up molecule(:)          ============================= 
+
+do i = 1 , MM % N_of_species
+    k = count( molecule % my_species == species(i) % my_species )
+    where( molecule % my_species == i ) 
+        molecule % N_of_molecules = k
+        molecule % residue        = species(i) % residue
+        molecule % flex           = species(i) % flex
+    end where
+end do
+
 do i = 1 , MM % N_of_molecules
 
     k = size( species(molecule(i) % my_species) % kdihed0(1,:) )
 
     If( molecule(i)%Nbonds14 > 0 ) & 
-    allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
+        allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
 
     If( molecule(i)%Nbonds > 0 ) then
-    allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
-    allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
-    allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
-    allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
+        allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
+        allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
+        allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
+        allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
     End If
 
     If( molecule(i)%Nangs > 0 ) then
-    allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
-    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 4 ) )
-    allocate( molecule(i) % angle_type    ( molecule(i) % Nangs        ) )
-    allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
+        allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
+        allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 4 ) )
+        allocate( molecule(i) % angle_type    ( molecule(i) % Nangs        ) )
+        allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
     End If
 
     If( molecule(i)%Ndiheds > 0 ) then
-    allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
-    allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , k ) )
-    allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
-    allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
+        allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
+        allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , k ) )
+        allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
+        allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
     End If
 
     If( molecule(i)%NintraIJ > 0 ) & 
-    allocate( molecule(i) % IntraIJ       ( molecule(i) % NintraIJ , 3 ) )
+        allocate( molecule(i) % IntraIJ       ( molecule(i) % NintraIJ , 3 ) )
 
 end do
 
@@ -273,45 +282,36 @@ do i = 1 , MM % N_of_molecules
 !   offset the pair indices by k to match the atom array ...
 
     If( molecule(i)%Nbonds14 > 0 ) & 
-    molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
+        molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
 
     If( molecule(i)%Nbonds > 0 ) then
-    molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
-    molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
-    molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
-    molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
+        molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
+        molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
+        molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
+        molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
     End If
 
     If( molecule(i)%Nangs > 0 ) then
-    molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
-    molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
-    molecule(i) % angle_type    = species(molecule(i) % my_species) % angle_type
-    molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
+        molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
+        molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
+        molecule(i) % angle_type    = species(molecule(i) % my_species) % angle_type
+        molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
     End If
 
     If( molecule(i)%Ndiheds > 0 ) then
-    molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
-    molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
-    molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
-    molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
+        molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
+        molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
+        molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
+        molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
     End If
 
     If( molecule(i)%NintraIJ > 0 ) then 
-    molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
-    molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
+        molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
+        molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
     End if 
 
     k = k + molecule(i) % N_of_atoms
 
-end do
-
-do i = 1 , MM % N_of_species
-    k = count( molecule % my_species == species(i) % my_species )
-    where( molecule % my_species == i ) 
-        molecule % N_of_molecules = k
-        molecule % residue        = species(i) % residue
-        molecule % flex           = species(i) % flex
-    end where
 end do
 
 !========================================================================================= 
@@ -423,6 +423,7 @@ do i = 1 , N
     molecule(i) % flex           = .false.
     molecule(i) % LJ             = .false.
     molecule(i) % Buck           = .false.
+    molecule(i) % DWFF           = .false.
     molecule(i) % residue        = "XXX"
     molecule(i) % nr             = 0
     molecule(i) % Nbonds         = 0
@@ -957,7 +958,7 @@ character(len=:) , allocatable  :: string(:)
  write(51, *) " "
  write(51,"(A)") "[ bondtypes ]"               
 
- write(51,'(t12,A4,t25,A5,t36,A13,t56,A5,t67,A16)')        "type" , "r0(A)" , "k(kJ/mol/A^2)" , "------" , "V = k/2*(r-r0)^2"
+ write(51,'(t12,A4,t25,A5,t36,A13,t56,A5,t67,A16)') "type" , "r0(A)" , "k(kJ/mol/A^2)" , "------" , "V = k/2*(r-r0)^2"
  write(51,'(t12,A4,t25,A5,t34,A13,t55,A6,t67,A26)') "type" , "r0(A)" , "D(kJ/mol)"     , "a(1/A)" , "V = D*(1-exp(-a*(r-r0)))^2"
 
  prototype = 1
@@ -1048,6 +1049,9 @@ character(len=:) , allocatable  :: string(:)
                                            molecule(m)%kang0(i,4) / nano_2_angs , &
                                            molecule(m)%kang0(i,3) / factor_2    , &
                                            arrow
+
+               case('diss')
+                   ! do nothing 
 
                case default
 

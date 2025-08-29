@@ -300,9 +300,9 @@ do i = 1 , MM % N_of_molecules
       
             ! selection of potential energy function type
             if( MM_input_format == "GMX" ) then
-                CALL gmx
+                CALL gmx(i,j)
             else
-                CALL not_gmx
+                CALL not_gmx(i,j)
             end if
 
             ! Calculate atomic forces ...
@@ -390,12 +390,13 @@ If( allocated(SpecialPairs) ) there_are_NB_SpecialPairs = .true.
 
 do i = 1 , MM % N_of_molecules
 
-     if ( molecule(i) % NintraIJ == 0 ) cycle
+     if ( molecule(i)% NintraIJ==0 .or. molecule(i)% DWFF ) cycle
 
      !$OMP parallel DO &
      !$OMP default (shared) &
      !$OMP private (j , ithr , ati , atj , rij , rij2 , fs , Fcoul , E_vdw , E_coul)  &
      !$OMP reduction (+: LJ_intra, Coul_intra, virial_tensor)
+
      do j = 1 , molecule(i) % NintraIJ
 
          ithr = OMP_get_thread_num() + 1
@@ -455,6 +456,21 @@ do i = 1 , MM % N_of_molecules
 
 end do
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+stop
 ! force units = J/mts = Newtons ...    
 ! manual reduction (+: fnonbd , fnonch) ...
 do i = 1, MM % N_of_atoms
@@ -839,17 +855,18 @@ end subroutine Buckingham
 !
 !
 !
-!==============
- subroutine gmx
-!==============
+!===================
+ subroutine gmx(i,j)
+!===================
 implicit none
+integer , intent(in) :: i, j
 
 ! local variables ...
-integer :: i, j
 real*8  :: psi, cos_Psi, dtheta
 real*8  :: term, term1, term2, term3, term4 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
+
     case ('cos')    ! V = k_phi * [ 1 + cos( n * phi - phi_s ) ] 
                     ! Eq. 4.60 (GMX 5.0.5 manual)
         
@@ -927,18 +944,19 @@ end subroutine gmx
 !
 !
 !
-!==================
- subroutine not_gmx
-!==================
+!=======================
+ subroutine not_gmx(i,j)
+!=======================
 implicit none
+integer , intent(in) :: i, j
 
 ! local variables ...
-integer:: i, j
 real*8 :: eme, dphi
 real*8 :: A0, A1, A2, A3, C0, C1, C2, C3, C4, C5 
 real*8 :: term, term1, term2, term3, term4 !, dphi1, dphi2 
 
 select case( adjustl(molecule(i) % Dihedral_Type(j)) )
+
     case ('cos') ! V = k[1 + cos(n.phi - theta)]
         term  = int(molecule(i) % kdihed0(j,3)) * phi - molecule(i) % kdihed0(j,1)
         pterm = molecule(i) % kdihed0(j,2) * ( 1.d0 + cos(term) )

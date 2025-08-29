@@ -3,7 +3,7 @@ module MM_types
 use constants_m
 
 public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , debug_MM
-public :: MMOPT_Control, Logicalkey
+public :: MMOPT_Control, Logicalkey, Dissociative
 
     type MM_atomic
         integer                             :: AtNo
@@ -13,8 +13,8 @@ public :: MMOPT_Control, Logicalkey
         integer                             :: nr
         character(3)                        :: residue
         character(2)                        :: Symbol
-        character(4)                        :: MMSymbol
-        character(4)                        :: EHSymbol
+        character(2)                        :: MMSymbol
+        character(2)                        :: EHSymbol
         real*8                              :: xyz(3)
         real*8                              :: vel(3)
         real*8                              :: fbond(3)
@@ -47,6 +47,7 @@ public :: MMOPT_Control, Logicalkey
         logical                             :: flex
         logical                             :: LJ
         logical                             :: Buck
+        logical                             :: DWFF
     end type MM_atomic
 
     type interval
@@ -91,6 +92,7 @@ public :: MMOPT_Control, Logicalkey
         integer             , allocatable   :: IntraBuck(:,:)
         logical                             :: LJ
         logical                             :: Buck
+        logical                             :: DWFF
     end type MM_molecular
 
     type MM_system
@@ -122,6 +124,13 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: Parms(3)
         character(4)                        :: model
     end type DefinePairs
+
+    type Dissociative
+        character(2)         , allocatable  :: PairSymbols(:,:)
+        real*8               , allocatable  :: SR(:,:)        
+        real*8               , allocatable  :: Coul(:,:)        
+        real*8               , allocatable  :: Angle(:,:)        
+    end type Dissociative
 
     type LogicalKey
         logical       :: bonds(3)    = .false.
