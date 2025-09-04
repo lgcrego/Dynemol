@@ -13,8 +13,7 @@ use NonBondPairs           , only : Identify_NonBondPairs
 use Babel_routines_m       , only : TO_UPPER_CASE
 use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
 use setup_checklist        , only : Checking_Topology
-
-use BuildReaxWAT , only : get_REAX_Parameters
+use BuildReaxWAT           , only : include_DWFF_parameters
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -22,7 +21,6 @@ private
  
     ! module variables ...
     integer :: GAFF_order(4) = [3,2,1,4] 
-    logical :: use_REAX = .false.
 
 contains
 !
@@ -848,7 +846,10 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
     end if
 
-99 close(33)   ! <== FINISHED READING INPUT.PRM PARAMETERS
+99 close(33)   ! <== FINISHED READING PARAMETERS from INPUT.PRM 
+
+! get Dissociative Water Force Field (DWFF) parameners ... 
+if( any(species%DWFF) ) call include_DWFF_parameters
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )
@@ -1219,38 +1220,6 @@ if( allocated(Dihed_Type)          ) deallocate( Dihed_Type          )
 120 format(4a5,t22,I2,t26,6f14.4)
  
 end subroutine prm2mdflex
-!
-!
-!
-!!===================================
-! subroutine define_pair_of_kind( a )
-!!===================================
-!implicit none
-!type(MM_molecular) , intent(inout) :: a
-!
-!! local variables
-!integer :: i
-!character(len=2) :: type1 , type2
-!
-!! exclusive for HOH dissociative FF
-!allocate( a% pair_of_kind(a%Nbonds) )
-!
-!do i = 1, a%Nbonds
-!    ! Store the atom types for this bond
-!    type1 = a%atom(a%bonds(i,1))% MMSymbol
-!    type2 = a%atom(a%bonds(i,2))% MMSymbol
-!
-!    select case (trim(type1)//'-'//trim(type2))
-!    case ('HX-HX')
-!        a%pair_of_kind(i) = 3
-!    case ('OX-OX')
-!        a%pair_of_kind(i) = 2
-!    case ('HX-OX', 'OX-HX')
-!        a%pair_of_kind(i) = 1
-!    end select
-!end do
-!
-!end  subroutine define_pair_of_kind
 !
 !
 !

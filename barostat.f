@@ -87,10 +87,12 @@ stress_tensor = kinetic_tensor + virial_tensor
 ! scalar pressure, for isotropic systems
 pressure = ( stress_tensor(1,1) + stress_tensor(2,2) + stress_tensor(3,3) ) * third
 
-mip = dt * ( 107.0d-6 / (talp * pico_2_sec) ) * ( pressure - press )
+!mip = dt * ( 107.0d-6 / (talp * pico_2_sec) ) * ( pressure - press )
+mip = dt * ( 10.70d-6 / (talp * pico_2_sec) ) * ( pressure - press )
 mip = (D_one + mip)**third
 
-MM % box = MM % box * mip
+MM% box  = MM% box * mip
+MM% ibox = 1.d0 / MM% box
  
 do i = 1 , MM % N_of_molecules
     do j = molecule(i)%span % inicio , molecule(i)%span % fim

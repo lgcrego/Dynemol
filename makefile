@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+          Reax_Forces.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -158,6 +159,11 @@ SOURCE2 = constants_m.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
 		  f_inter.o \
+          MM_forces/f_bond.o \
+          MM_forces/f_angle.o \
+          MM_forces/f_dihed.o \
+          MM_forces/f_Morse.o \
+          MM_forces/f_intra_nonbonding.o \
 		  f_intra.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
@@ -260,8 +266,8 @@ vtune: debug
 .F.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
-.f.o:
-	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+%.o : %.f
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $< -o $@
 
 .F90.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
@@ -272,9 +278,13 @@ vtune: debug
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
 
-
 clean:
-	-rm -fv dynemol *.o *.mod *__genmod.f90 *.i
+	-rm -fv dynemol
+	-find . -name '*.o' -delete
+	-find . -name '*.mod' -delete
+	-find . -name '__genmod.f90' -delete
+	-find . -name '*.i' -delete
+
 
 depend:
 	@echo -en "Searching module dependencies..."
