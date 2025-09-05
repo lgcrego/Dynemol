@@ -1163,14 +1163,7 @@ do a = 1 , MM % N_of_species
                        flag2 = .false.
                        end if 
 
-             if( flag0 ) &
-                  then
-                      k = k + 1
-                      dummy_array_I(k,1) = i
-                      dummy_array_I(k,2) = j
-                      dummy_array_I(k,3) = 0    ! <== only Electrostatic
-
-             elseif( flag1 ) &
+             if( flag1 ) &
                   then
                       k = k + 1
                       dummy_array_I(k,1) = i
@@ -1178,7 +1171,7 @@ do a = 1 , MM % N_of_species
                       dummy_array_I(k,3) = 1    ! <== Lennard-Jones
 
              elseif( flag2 ) &
-                  then
+                  then 
                       k = k + 1
                       dummy_array_I(k,1) = i
                       dummy_array_I(k,2) = j
@@ -1190,6 +1183,13 @@ do a = 1 , MM % N_of_species
                       dummy_array_I(k,1) = i
                       dummy_array_I(k,2) = j
                       dummy_array_I(k,3) = 3    ! <== DWFF
+
+             elseif( flag0 ) &
+                  then
+                      k = k + 1
+                      dummy_array_I(k,1) = i
+                      dummy_array_I(k,2) = j
+                      dummy_array_I(k,3) = 0    ! <== only Electrostatic
               end if
 
         end do
