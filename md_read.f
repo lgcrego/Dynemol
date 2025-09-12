@@ -33,7 +33,7 @@ subroutine Build_MM_Environment
 implicit none
 
 ! local variables ...
-integer :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr, rounded_avg_atoms
+integer :: i , j , k , atmax , nresid , i1, i2, i3, sp, nr, rounded_avg_atoms
 logical :: flag1 , flag2
 
 !=======================  setting up system  ============================= 
@@ -45,60 +45,25 @@ talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
+! =====================================================================================
 
 If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
-! =====================================================================================
-! types of molecules ...
-CALL allocate_molecule( MM % N_of_molecules )
-
-! just checking ...
-if (MM % N_of_molecules /= sum(species % N_of_molecules)) then
-    CALL warning(" inconsistency in total # of molecules : check card_inpt and input.pdb ")
-    STOP 
-end If
-
-MM % N_of_atoms = 0
-l = 1
-do i = 1 , MM % N_of_species
-    Total_N_of_atoms_of_species_i = species(i) % N_of_molecules * species(i) % N_of_atoms
-    do j = 1 , species(i) % N_of_molecules
-        molecule(l) % my_species = i
-        l = l + 1
-    end do
-    MM % N_of_atoms = MM % N_of_atoms + Total_N_of_atoms_of_species_i 
-end do
-
-! just checking ...
-if (MM% N_of_atoms /= unit_cell% atoms) then
-    CALL warning(" inconsistency in total # of atoms : check card_inpt and input.pdb ")
-    STOP 
-end If
-
-allocate ( atom ( MM % N_of_atoms ) )
-k = 1
-do i = 1 , MM % N_of_species
-    Total_N_of_atoms_of_species_i = species(i) % N_of_molecules * species(i) % N_of_atoms
-    do j = 1 , Total_N_of_atoms_of_species_i
-        atom(k) % my_species = i
-        k = k + 1
-    end do
-end do
-
-! pass information from structure to molecular dynamics ...
+! fetch information from structure to molecular dynamics ...
 CALL Structure_2_MD
-
-!----------------------
-! finished reading ...
-!----------------------
-
 ! get Atomic Number (AtNo) ...
 CALL Symbol_2_AtNo( atom )
-
 ! Define atomic mass ...
 atom % mass = Atomic_mass( atom % AtNo )
 
 If( Selective_Dynamics ) CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+
+! just checking ...
+CALL checklist
+
+!----------------------
+! finished preprocessing ...
+!----------------------
 
 do i = 1 , MM % N_of_species
     species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
@@ -581,13 +546,14 @@ integer :: i
 implicit none
 
 ! local variables ...
-logical :: exist
 integer :: i , j , nr , indx
 
 MM % box  = Unit_Cell % T_xyz
 MM % ibox =  D_one / MM % box
 
-do j = 1 , MM % N_of_atoms
+allocate ( atom ( Unit_Cell% atoms ) )
+
+do j = 1 , Unit_Cell% atoms
 
     i = QMMM_key(j)
 
@@ -598,6 +564,8 @@ do j = 1 , MM % N_of_atoms
     atom(i) % Symbol       = adjustl(Unit_Cell % Symbol(j))
     atom(i) % EHSymbol     = adjustl(Unit_Cell % MMSymbol(j))
     atom(i) % xyz(:)       = Unit_Cell % coord(j,:)
+    atom(i) % flex         = Unit_Cell % flex(i)
+    atom(i) % my_species   = 0
     atom(i) % vel(:)       = 0.d0
     atom(i) % fbond(:)     = 0.d0
     atom(i) % fang(:)      = 0.d0
@@ -624,26 +592,39 @@ do j = 1 , MM % N_of_atoms
     atom(i) % BuckC        = 0.0d0
     atom(i) % LJ           = .false.
     atom(i) % Buck         = .false.
-    atom(i) % flex         = Unit_Cell % flex(i)
 end do
 
-! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
+! this is assumed a priori, but can be changed otherwise if required by the Force Field ...
 atom % MMSymbol = atom % EHSymbol  
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+! get intra_id for each molecule ...
 indx = 1
-do nr = 1 , atom( MM % N_of_atoms ) % nr
-    do i = 1 , count( atom%nr == nr ) 
-        atom(indx) % my_intra_id = i
+do nr = 1 , maxval(atom%nr)
+    do i = 1 , count(atom%nr==nr) 
+        atom(indx)% my_intra_id = i
         indx = indx + 1
     end do
 end do
 
 ! setting up initial velocities ...
-do i = 1 , MM % N_of_atoms
+do i = 1 , size(atom)
     atom(i) % vel(1:3) = 0.d0
 end do
+
+end subroutine Structure_2_MD
+!
+!
+!
+!====================
+ subroutine checklist
+!====================
+implicit none
+
+! local variables ...
+logical :: exist
+integer :: i, j, k, l, nr, Total_N_of_atoms_of_species_i
 
 ! Dynemol units for velocity_MM.inpt = m/s ...
 if( read_velocities ) then
@@ -678,13 +659,37 @@ elseif( resume ) then
 end if
 
 ! check list of input data ...
+if (MM % N_of_molecules /= sum(species % N_of_molecules)) then
+    CALL warning(" inconsistency in total # of molecules : check card_inpt and input.pdb ")
+    STOP 
+end If
+
+CALL allocate_molecule( MM % N_of_molecules )
+
+MM% N_of_atoms = 0
+l = 1 ; k = 1
+do i = 1 , MM % N_of_species
+    do j = 1 , species(i)% N_of_molecules
+        molecule(l)% my_species = i
+        l = l + 1
+        end do
+
+    Total_N_of_atoms_of_species_i = species(i)% N_of_molecules * species(i)% N_of_atoms
+    do j = 1 , Total_N_of_atoms_of_species_i
+        atom(k)% my_species = i
+        k = k + 1
+        end do
+
+    MM% N_of_atoms = MM% N_of_atoms + Total_N_of_atoms_of_species_i 
+end do
+
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
     CALL warning("error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms")
     STOP 
 end If
 
 If( Unit_Cell%atoms /= MM% N_of_atoms ) then
-    CALL warning("error: Unit_Cell%atoms /= MM% N_of_atoms")
+    CALL warning("inconsistency in total # of atoms: Unit_Cell%atoms /= MM% N_of_atoms; check card_inpt and input.pdb")
     STOP 
 end If
 
@@ -693,7 +698,7 @@ If( maxval(atom%nr) < MM%N_of_species ) then
     STOP 
 end If
 
-end subroutine Structure_2_MD
+end subroutine checklist
 !
 !
 !

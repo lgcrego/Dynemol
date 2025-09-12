@@ -5,7 +5,9 @@ module F_intra_m
     use constants_m
     use parameters_m      , only: QMMM , driver , n_part
     use Allocation_m      , only: Allocate_Structures
-    use for_force         , only: pot_INTER, bdpot, angpot, dihpot, Morspot, LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, Vself
+    use for_force         , only: pot_INTER, bdpot, angpot, dihpot, &
+                                  Morspot, LJ_14, LJ_intra, Coul_14,&
+                                  DWFF_intra, Coul_intra, pot_total, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use Ehrenfest_CSDM    , only: Ehrenfest 
     use Ehrenfest_Builder , only: EhrenfestForce 
@@ -81,7 +83,7 @@ endif
 !====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot
+pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot + DWFF_intra
 pot_total = pot_INTER + pot_INTRA - Vself
 pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 
@@ -111,7 +113,8 @@ do i = 1 , MM % N_of_atoms
                                            atom(i) % fnonch14(:) +  &
                                            atom(i) % fnonbd(:)   +  & 
                                            atom(i) % fMorse(:)   +  & 
-                                           atom(i) % fnonch(:)      &
+                                           atom(i) % fnonch(:)   +  &
+                                           atom(i) % f_DWFF(:)      &
                                           ) * Angs_2_mts
 
     atom(i)% ftotal(:) = atom(i)% f_MM(:) 
@@ -162,8 +165,8 @@ basis  = vec
 system = sys
 PST    = PSE
 
-MO_bra      = mtx1
-MO_ket      = mtx2
+MO_bra = mtx1
+MO_ket = mtx2
 
 QM% erg = Eigen% erg
 QM% L   = Eigen% L

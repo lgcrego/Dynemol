@@ -384,6 +384,7 @@ module for_force
  real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
  real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, imp_dih
  real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
+ real*8                                :: DWFF_intra
  real*8                                :: pot_INTER, pot_total
  character(4)                          :: Dihedral_Potential_Type
 end module for_force

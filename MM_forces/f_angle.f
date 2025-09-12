@@ -42,14 +42,14 @@ angpot = D_zero
 do i = 1 , MM % N_of_molecules
     do j = 1 , molecule(i) % Nangs
 
-        ! MIND: the atomic sequence is JIK, with ATOM I IN THE VERTEX
+        ! MIND: the atomic sequence is JIK, with ATOM I AT THE VERTEX
         atj = molecule(i) % angs(j,1)
         ati = molecule(i) % angs(j,2)
         atk = molecule(i) % angs(j,3)
 
         if( atom(atj) % flex .OR. atom(ati) % flex .OR. atom(atk) % flex ) then
 
-            ! MIND: the atomic sequence is JIK, with ATOM I IN THE VERTEX
+            ! MIND: the atomic sequence is JIK, with ATOM I AT THE VERTEX
             ! rij = r_j - r_i
             rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
             rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
@@ -119,21 +119,23 @@ do i = 1 , MM % N_of_molecules
 end do
 
 end subroutine f_angle
-!                                                                                                                                                                                   
-!                                                                                                                                                                                   
-!                                                                                                                                                                                   
-!====================                                                                                                                                                               
- function DEL ( X,Y )                                                                                                                                                               
-!====================                                                                                                                                                               
- real*8  :: DEL                                                                                                                                                                     
- integer :: X, Y                                                                                                                                                                    
-                                                                                                                                                                                    
- if (X == Y) then                                                                                                                                                                   
-   DEL = 1.                                                                                                                                                                         
- else if (X /= Y) then                                                                                                                                                              
-   DEL = 0.                                                                                                                                                                         
- end if                                                                                                                                                                             
-                                                                                                                                                                                    
+!
+!
+!
+!====================
+ function DEL ( X,Y )
+!====================
+implicit none
+
+real*8  :: DEL
+integer :: X, Y
+              
+if (X == Y) then
+  DEL = 1.d0
+else if (X /= Y) then
+  DEL = 0.d0
+end if
+      
 end function DEL   
 !
 !

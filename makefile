@@ -128,12 +128,12 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
-          ReaxFF_Build.o \
+          MM_forces/ReaxFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
-          Reax_Forces.o \
+          MM_forces/Reax_Forces.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
