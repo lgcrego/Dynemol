@@ -77,6 +77,8 @@ contains
                         call Lennard_Jones( i , j )
                 case(2)
                         call Buckingham( i , j )
+                case(3)
+                        ! something about DWFF here
                 case default
                         CALL warning("unknown non-bonding special pair code in FF_SP_mtx")
                         STOP

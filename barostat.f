@@ -1,10 +1,10 @@
 module Berendsen_Barostat
 
     use constants_m
-    use syst                  ! using all syst
-    use parameters_m          , only: PBC 
-    use MD_read_m             , only: MM , atom , molecule
-    use F_inter_m             , only: virial_tensor
+    use syst            ! using all syst
+    use parameters_m    , only: PBC 
+    use MD_read_m       , only: MM , atom , molecule
+    use F_inter_nonbond , only: virial_tensor
 
     public :: Ek_tensor , barostat 
 

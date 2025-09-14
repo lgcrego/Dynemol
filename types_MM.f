@@ -121,7 +121,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
     end type DefineAngles
 
     type DefinePairs
-        character(4)                        :: MMSymbols(2)
+        character(2)                        :: MMSymbols(2)
         real*8                              :: Parms(3)
         character(4)                        :: model
     end type DefinePairs

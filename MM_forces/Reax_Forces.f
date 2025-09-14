@@ -13,12 +13,10 @@ module Reax_F_intra
     private
 
     ! module variables
-    logical :: done = .false.
-    real*8  :: A, B, C
-    real*8 , allocatable :: f_ang(:,:)
-
-    ! module parameters ...
-    real, parameter :: c1 = 1.1283791671d0  ! <== 2/sqrt(PI)
+    logical              :: done = .false.
+    real*8 , save        :: A, B, C
+    real*8               :: bond_erg, ang_erg
+    real*8 , allocatable :: f_bond(:,:), f_ang(:,:)
 
 contains
 !
@@ -26,39 +24,55 @@ contains
 !========================
  subroutine DW_f_intra ()
 !========================
+ implicit none
+
+ !local variables
+ integer :: i, j
+ 
+ if( .not. done ) call set_local_parameters
+
+ do j = 1 , MM % N_of_atoms
+     atom(j)% f_DWFF(:) = D_zero  
+ end do
+
+ call intra_2body_DWFF
+ 
+ call intra_3body_DWFF
+ 
+ ! local force units = J/Angs ...
+ do i = 1, MM % N_of_atoms
+    atom(i)% f_DWFF(:) = atom(i)% f_DWFF(:) + f_bond(i,:) + f_ang(i,:)
+ end do
+
+ ! energy 
+ DWFF_intra = (bond_erg + ang_erg)*factor3 
+
+ deallocate( f_bond , f_ang )
+
+end subroutine DW_f_intra
+!
+!
+!
+!==============================
+ subroutine intra_2body_DWFF ()
+!==============================
 implicit none
 
 ! local variables
-real*8 , allocatable  :: tmp_force(:,:,:)
 real*8  :: rkl(3)
-real*8  :: rkl2, force, erg, DWFF_intra
-integer :: i, j, atk, atl, pair_of_kind, ithr, numthr
+real*8  :: rkl2, force, erg
+integer :: i, j, atk, atl, pair_of_kind
 character(len=2) :: type1, type2
 
-if( .not. done ) call set_local_parameters
+allocate( f_bond (MM%N_of_atoms,3) , source = D_zero )
 
-
-
-call  evaluate_3body_DWFF
-
-
-
-
-do j = 1 , MM % N_of_atoms
-    atom(j)% f_DWFF(:) = D_zero  
-end do
-DWFF_intra = D_zero
-
-numthr = OMP_get_max_threads()
-allocate( tmp_force (MM%N_of_atoms,3,numthr) , source = D_zero )
+bond_erg = D_zero
 
 do i = 1 , MM % N_of_molecules
 
      if ( .not. molecule(i)% DWFF ) cycle
 
      do j = 1 , molecule(i) % NintraIJ
-
-        ithr = OMP_get_thread_num() + 1
 
         atk  = molecule(i) % IntraIJ(j,1) 
         atl  = molecule(i) % IntraIJ(j,2) 
@@ -86,95 +100,23 @@ do i = 1 , MM % N_of_molecules
 
                 call evaluate_2body_DWFF( pair_of_kind , rkl2 , force , erg )
 
-                tmp_force(atk,1:3,ithr) = tmp_force(atk,1:3,ithr) + force * rkl(:)
-                tmp_force(atl,1:3,ithr) = tmp_force(atl,1:3,ithr) - force * rkl(:)
+                f_bond(atk,1:3) = f_bond(atk,1:3) + force * rkl(:)
+                f_bond(atl,1:3) = f_bond(atl,1:3) - force * rkl(:)
 
-                DWFF_intra = DWFF_intra + erg*factor3 
+                bond_erg = bond_erg + erg
 
             end if
          end if
      end do
 end do
 
-! force units = J/mts = Newtons ...
-! manual reduction (+: fnonbd , fnonch) ...
-do i = 1, MM % N_of_atoms
-    do j=1,numthr
-        atom(i)% f_DWFF(1:3) = atom(i)% f_DWFF(1:3) + tmp_force(i,1:3,j)
-    enddo
-    atom(i)% f_DWFF(:) = atom(i)% f_DWFF(:) + f_ang(i,:)
-end do
-
-deallocate( tmp_force , f_ang )
-
-end subroutine DW_F_intra
+end subroutine intra_2body_DWFF
 !
 !
 !
-!==============================================================
- subroutine evaluate_2body_DWFF( k , rkl2 , DW_force , DW_erg )
-!==============================================================
-implicit none
-integer , intent(in)  :: k
-real*8  , intent(in)  :: rkl2 
-real*8  , intent(out) :: DW_force
-real*8  , intent(out) :: DW_erg
-
-! local variables ...
-real*8 :: irkl , ir2 , ir6 , ir8 , rkl
-real*8 :: zeta , erfc_zeta , arg , exp_arg2
-real*8 :: c2, c3, U0 , Ecoul , Fcoul , f_sr , E_sr
-
-rkl  = SQRT(rkl2)
-irkl = D_one / rkl
-
-!----------------------------------------------------
-! SR (short-range) applies only to O-H pair ...
-!----------------------------------------------------
-zeta = rkl * B
-erfc_zeta = erfc(zeta) / zeta
-
-ir2 = D_one / rkl2
-ir6 = ir2 * ir2 * ir2
-ir8 = ir6 * ir2
-
-! SR Energy
-E_sr = A*erfc_zeta - C*ir6
-! SR Force
-f_sr = A*( erfc_zeta + c1*exp(-zeta**2) )*ir2 - SIX*C*ir8
-
-!----------------------------------------------------
-! Coulomb applies to O-H and H-H pairs
-! O-H ==> k = 1
-! H-H ==> k = 3
-!----------------------------------------------------
-
-c2  = irsqPI * HOH% Coul(k,4)   
-arg = rkl * HOH%Coul(k,4)
-exp_arg2 = EXP(-arg**2)
-
-! Energy
-U0 = HOH%Coul(k,1) + HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
-Ecoul = coulomb * U0 * irkl
-
-! Force
-! Fcoul (not damped)
-c3 = c2 * ( HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3) * exp_arg2 )
-Fcoul = coulomb * (U0*ir2*irkl - c3*exp_arg2*ir2)
-
-!----------------------------------------------------
-! total 
-!----------------------------------------------------
-DW_erg   = E_sr + Ecoul
-DW_force = f_sr + Fcoul
-
-end subroutine evaluate_2body_DWFF
-!
-!
-!
-!==============================================================
- subroutine evaluate_3body_DWFF( )
-!==============================================================
+!==============================
+ subroutine intra_3body_DWFF( )
+!==============================
 implicit none
 
 ! local parameter ...
@@ -184,7 +126,7 @@ real*8 :: r0 = 1.6
 real*8 , dimension (3):: rij, rik 
 real*8  :: rijq, rijsq, rikq, riksq, fxyz
 real*8  :: cos_theta, U3, U03, exp_arg, exponential
-real*8  :: c1, c2, c3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
+real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
 integer :: i, j, k, l, n, ati, atj, atk 
 
 !================================
@@ -195,7 +137,9 @@ integer :: i, j, k, l, n, ati, atj, atk
 !                I 
 !================================
 
-allocate( f_ang(MM% N_of_atoms,3) , source = D_zero )
+allocate( f_ang (MM% N_of_atoms,3) , source = D_zero )
+
+ang_erg = D_zero
 
 do i = 1 , MM % N_of_molecules
 
@@ -231,24 +175,90 @@ do i = 1 , MM % N_of_molecules
             U03 = HOH%Angle(1,1) * (cos_theta - HOH%Angle(1,4)) * exponential
             U3  = U03 * (cos_theta - HOH%Angle(1,4))
 
-            c1 = U3*HOH%Angle(1,3)    
-            c2 = two*U03
-            c3 = c2*cos_theta
-             
-            f_ij = c1*inv_delta_0ij**2 + c3/rijsq
-            f_ik = c2/rijsq
+            ! energy of the triplet
+            ang_erg = ang_erg + U3
+
+            a1 = U3*HOH%Angle(1,3)    
+            a2 = two*U03
+            a3 = a2*cos_theta
+            
+            ! forces on each atom of the triplet 
+            f_ij = a1*inv_delta_0ij**2 + a3/rijsq
+            f_ik = a2/rijsq
             f_ang(atj,:) = f_ij*rij(:)/rijsq - f_ik*rik(:)/riksq
 
-            f_ik = c1*inv_delta_0ik**2 + c3/riksq
-            f_ij = c2/riksq
+            f_ik = a1*inv_delta_0ik**2 + a3/riksq
+            f_ij = a2/riksq
             f_ang(atk,:) = f_ik*rik(:)/riksq - f_ij*rij(:)/rijsq
 
             f_ang(ati,:) = -f_ang(atj,:) -f_ang(atk,:)
-
 end do
 
+end subroutine intra_3body_DWFF
+!
+!
+!
+!==============================================================
+ subroutine evaluate_2body_DWFF( k , rkl2 , DW_force , DW_erg )
+!==============================================================
+implicit none
+integer , intent(in)  :: k
+real*8  , intent(in)  :: rkl2 
+real*8  , intent(out) :: DW_force
+real*8  , intent(out) :: DW_erg
 
-end subroutine evaluate_3body_DWFF
+! local parameters ...
+real*8, parameter :: a1 = 1.1283791671d0  ! <== 2/sqrt(PI)
+
+! local variables ...
+real*8 :: irkl , ir2 , ir6 , ir8 , rkl
+real*8 :: zeta , erfc_zeta , arg , exp_arg2
+real*8 :: a2, a3, U0 , Ecoul , Fcoul , f_sr , E_sr
+
+rkl  = SQRT(rkl2)
+irkl = D_one / rkl
+
+!----------------------------------------------------
+! SR (short-range) applies only to O-H pair ...
+!----------------------------------------------------
+zeta = rkl * B
+erfc_zeta = erfc(zeta) / zeta
+
+ir2 = D_one / rkl2
+ir6 = ir2 * ir2 * ir2
+ir8 = ir6 * ir2
+
+! SR Energy
+E_sr = A*erfc_zeta - C*ir6
+! SR Force
+f_sr = A*( erfc_zeta + a1*exp(-zeta**2) )*ir2 - SIX*C*ir8
+
+!----------------------------------------------------
+! Coulomb applies to O-H and H-H pairs
+! O-H ==> k = 1
+! H-H ==> k = 3
+!----------------------------------------------------
+
+a2  = irsqPI * HOH% Coul(k,4)   
+arg = rkl * HOH%Coul(k,4)
+exp_arg2 = EXP(-arg**2)
+
+! Energy
+U0 = HOH%Coul(k,1) + HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
+Ecoul = coulomb * U0 * irkl
+
+! Force
+! Fcoul (not damped)
+a3 = a2 * ( HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3) * exp_arg2 )
+Fcoul = coulomb * (U0*ir2*irkl - a3*exp_arg2*ir2)
+
+!----------------------------------------------------
+! total 
+!----------------------------------------------------
+DW_erg   = E_sr + Ecoul
+DW_force = f_sr + Fcoul
+
+end subroutine evaluate_2body_DWFF
 !
 !
 !
@@ -289,16 +299,6 @@ end subroutine evaluate_3body_DWFF
  end associate
 
 end subroutine get_bond_triplet
-
-
-
-
-
-
-
-
-!
-!
 !
 !
 !
@@ -325,17 +325,17 @@ end function ERFC
 !================================
 subroutine set_local_parameters()
 !================================
-implicit none
-
-!local variables
-real*8 :: chrg_decay
-
-A = HOH% SR(1,1)
-B = HOH% SR(1,2)
-C = HOH% SR(1,3)
-
-done = .true.
-
+ implicit none
+ 
+ !local variables
+ real*8 :: chrg_decay
+ 
+ A = HOH% SR(1,1)
+ B = HOH% SR(1,2)
+ C = HOH% SR(1,3)
+ 
+ done = .true.
+ 
 end subroutine set_local_parameters
 !
 !

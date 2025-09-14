@@ -158,13 +158,14 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
-		  f_inter.o \
+          MM_forces/f_inter_nonbonding.o \
+		  MM_forces/f_inter.o \
           MM_forces/f_bond.o \
           MM_forces/f_angle.o \
           MM_forces/f_dihed.o \
           MM_forces/f_Morse.o \
           MM_forces/f_intra_nonbonding.o \
-		  f_intra.o \
+		  MM_forces/f_intra.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \

@@ -1,19 +1,17 @@
-module F_inter_m
+module F_inter_nonbond
 
     use constants_m
     use omp_lib
-    use syst                , only : using_barostat
-    use type_m              , only : warning
-    use parameters_m        , only : PBC , QMMM
-    use md_read_m           , only : atom , MM , molecule , special_pair_mtx
-    use MM_types            , only : MM_system , MM_molecular , MM_atomic , debug_MM
-    use setup_m             , only : offset
-    use Data_Output         , only : Net_Charge
-    use gmx2mdflex          , only : SpecialPairs
-    use for_force           , only : rcut , vrecut , frecut , rcutsq , pot_INTER , Coul_inter , &
-                                     Vself , evdw , vscut , fscut , KAPPA
+    use syst         , only : using_barostat
+    use type_m       , only : warning
+    use parameters_m , only : PBC, QMMM
+    use md_read_m    , only : atom, MM, molecule, special_pair_mtx
+    use setup_m      , only : offset
+    use Data_Output  , only : Net_Charge
+    use gmx2mdflex   , only : SpecialPairs
+    use for_force    , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, vself, evdw, vscut, fscut, KAPPA
 
-    public :: FORCEINTER, virial_tensor
+    public :: f_inter_nonbonding , virial_tensor
 
     private
 
@@ -24,9 +22,9 @@ contains
 !
 !
 !
-!=====================
- subroutine FORCEINTER
-!=====================
+!==============================
+ subroutine f_inter_nonbonding
+!==============================
 implicit none
 
 !local variables ...
@@ -38,8 +36,6 @@ integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
 CALL offset( species_offset )
-
-if( using_barostat% inter ) call InitializeStressMatrix
 
 numthr = OMP_get_max_threads()
 
@@ -69,69 +65,79 @@ then
 !$OMP reduction (+: Coul_inter, evdw, virial_tensor) 
                         
      do k = 1 , MM % N_of_atoms - 1
-         do l = k+1 , MM % N_of_atoms
+     do l = k+1 , MM % N_of_atoms
+
+          ! DWFF special pairs are treated elsewhere ...
+          if ( special_pair_mtx(k,l) == 3 ) cycle
      
-            ! for different molecules only ...
-            if ( atom(k)% nr == atom(l)% nr ) cycle
+          ! for different molecules only ...
+          if ( atom(k)% nr == atom(l)% nr ) cycle
+
+          rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
+          rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
      
-            rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
-            rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+          rkl2 = sum( rkl(:)**2 )
      
-            rkl2 = sum( rkl(:)**2 )
+          if( rkl2 > rcutsq ) cycle
+    
+          !-------------------------------------------------------------------------------------
+          atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
+          atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
+
+          select case ( special_pair_mtx(k,l) )
      
-            if( rkl2 < rcutsq ) &
-            then
-                    !-------------------------------------------------------------------------------------
-                    atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
-                    atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
+                 case(0) ! <== this is a general pair (most common)
+                         ! selecting case
+                         if( atom(k)%LJ .AND. atom(l)%LJ ) then
      
-                    select case ( special_pair_mtx(k,l) )
+                             call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
      
-                           case(0) ! <== not a SpecialPair
-                                   if( atom(k)%LJ .AND. atom(l)%LJ ) then
+                         elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
      
-                                       call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+                             call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
      
-                                   elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
+                         endif
+
+                 case(1) !  <== this is a LJ special-pair
+                         call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+
+                 case(2) !  <== this is a BUCK special-pair
+                         call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+
+                 case(3) !  <== this is a DWFF special-pair
+                         CALL warning("f_inter.f: DWFF molecule reached forbidden kernel")
+                         stop 
+                         
+          end select
      
-                                       call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+          ithr = OMP_get_thread_num() + 1
      
-                                   endif
-                           case(1) 
-                                   call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
-                           case(2)
-                                   call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
-                    end select
+          tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
+          tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
+          
+          ! Coulomb Interaction
+          call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
      
-                    ithr = OMP_get_thread_num() + 1
+          tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
+          tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
      
-                    tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
-                    tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
-                    
-                    ! Coulomb Interaction
-                    call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
-     
-                    tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
-                    tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
-     
-                    !Energy
-                    evdw       = evdw + vsr
-                    Coul_inter = Coul_inter + Ecoul_damped
-            
-                    !-------------------------------------------------------------------------------
-                    if( using_barostat% inter ) &
-                    then
-                          nresidk = atom(k)% nr
-                          nresidl = atom(l)% nr
-                          cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                          cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                          do i=1,3 ; do j=i,3
-                             virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
-                          end do; end do
-                    end if
-                    !---------------------------------------------------------------------------------
-            end if
-         end do
+          !Energy
+          evdw       = evdw + vsr
+          Coul_inter = Coul_inter + Ecoul_damped
+          
+          !-------------------------------------------------------------------------------
+          if( using_barostat% inter ) &
+          then
+                nresidk = atom(k)% nr
+                nresidl = atom(l)% nr
+                cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+                cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+                do i=1,3 ; do j=i,3
+                   virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
+                end do; end do
+          end if
+          !---------------------------------------------------------------------------------
+     end do
      end do
 !$OMP end parallel do
 !##############################################################################
@@ -151,12 +157,9 @@ do i = 1, MM % N_of_atoms
     atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
 end do
 
-if( using_barostat% inter ) call ConcludeStressMatrix
-
 deallocate ( tmp_fsr , tmp_fch )
 
-end subroutine FORCEINTER
-!
+end subroutine f_inter_nonbonding
 !
 !
 !
@@ -180,8 +183,8 @@ logical :: flag1 , flag2
 ! Lennard Jones ...
 
 if( special_pair_mtx(k,l) == 0 ) then 
+
       select case ( MM % CombinationRule )
-      
           case (2) 
               ! AMBER FF :: GMX COMB-RULE 2
               sr2 = (atom(k)%sig + atom(l)%sig)**2 / rkl2
@@ -189,7 +192,6 @@ if( special_pair_mtx(k,l) == 0 ) then
           case (3)
               ! OPLS  FF :: GMX COMB-RULE 3
               sr2 = (atom(k)%sig * atom(l)%sig )**2 / rkl2
-      
       end select
       eps = atom(k)%eps * atom(l)%eps
 
@@ -224,7 +226,6 @@ vsr = 4.d0 * eps * ( sr12 - sr6 )
 vsr = vsr - vscut(atk,atl) + fscut(atk,atl)*( r_kl - rcut )
 
 end subroutine Lennard_Jones
-!
 !
 !
 !
@@ -292,7 +293,6 @@ end subroutine Buckingham
 !
 !
 !
-!
 !===============================================================
  subroutine Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
 !===============================================================
@@ -338,54 +338,4 @@ Ecoul_damped = Ecoul_damped - (vrecut*chrgk*chrgl) + (frecut*chrgk*chrgl*( r_kl-
 end subroutine Electrostatic
 !
 !
-!
-!=================================
- subroutine InitializeStressMatrix
-!=================================
-  implicit none
-  !------------------------------------------------------
-  ! initializing variables for this integration step ...
-  !------------------------------------------------------
-  virial_tensor(:,:)   = D_zero
-  !------------------------------------------------------
-end subroutine InitializeStressMatrix
-!
-!===============================
- subroutine ConcludeStressMatrix
-!===============================
-  implicit none
-
-  ! local variables
-  integer :: i,j
-  !-----------------------------------------------------
-  ! symmetrizing the tensors ...
-  !-----------------------------------------------------
-  virial_tensor   = virial_tensor * factor3
-
-  do concurrent (i = 1:2, j = 1:3, j>i)
-    virial_tensor(j,i)   = virial_tensor(i,j) 
-  end do
-  !-----------------------------------------------------
-end subroutine ConcludeStressMatrix
-!
-!
-!===================
- function ERFC ( X )
-!===================
-! ERFC = (1 - ERF), complementary error function ...
- implicit none
- real*8 :: ERFC
- real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
- parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 
- parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
- parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
-
- T    = d_one / ( d_one + P * X )
- XSQ  = X * X
- TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
- ERFC = TP * EXP ( -XSQ )
-
-end function ERFC
-!
-!
-end module F_inter_m
+end module F_inter_nonbond

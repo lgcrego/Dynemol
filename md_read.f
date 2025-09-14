@@ -307,6 +307,9 @@ If( allocated(SpecialPairs) ) then
                                   case("BUCK")
                                   special_pair_mtx(i,j) = 2
 
+                                  case("DWFF")
+                                  special_pair_mtx(i,j) = 3
+
                            end select
                            exit SP_loop
                       end if                            ! <== (I,J) is NOT a Special Pair ...  
@@ -336,6 +339,9 @@ If( allocated(SpecialPairs) ) then
 
                                   case("BUCK")
                                   FF_SP_mtx(i,j) = 2
+
+                                  case("DWFF")
+                                  FF_SP_mtx(i,j) = 3
 
                            end select
                            exit FFSP_loop

@@ -3,13 +3,13 @@ module FF_intra_nonbond
     use type_m   
     use omp_lib
     use constants_m
-    use parameters_m , only: PBC
-    use syst         , only: using_barostat
-    use F_inter_m    , only: virial_tensor
-    use setup_m      , only: offset
-    use for_force    , only: rcut, vrecut, frecut, vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, rcutsq
-    use MD_read_m    , only: atom, molecule, MM 
-    use gmx2mdflex   , only: SpecialPairs, SpecialPairs14
+    use parameters_m    , only: PBC
+    use syst            , only: using_barostat
+    use F_inter_nonbond , only: virial_tensor
+    use setup_m         , only: offset
+    use for_force       , only: rcut, vrecut, frecut, vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, rcutsq
+    use MD_read_m       , only: atom, molecule, MM 
+    use gmx2mdflex      , only: SpecialPairs, SpecialPairs14
 
     private
 
