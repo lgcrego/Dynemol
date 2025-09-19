@@ -1,10 +1,10 @@
-module BuildReaxWAT
+module Build_DWFF
 
 use iso_fortran_env
 use constants_m
-use MM_types     , only: Dissociative
+use MM_types     , only: Dissociative, MM_molecular
 
-    public :: include_DWFF_parameters , HOH_diss_parms , kind_of_pair
+    public :: include_DWFF_parameters , HOH_diss_parms
 
     private
 
@@ -18,9 +18,8 @@ use MM_types     , only: Dissociative
     real*8 :: lambda, r0, gama, theta_0
 
     ! module parameters ...
-    real*8          :: temperature = 300.0d0
-    real*8          :: pressure    = 1.0d0
-    integer, target :: kind_of_pair(4) = [1,2,3,4]
+    real*8 :: temperature = 300.0d0
+    real*8 :: pressure    = 1.0d0
 
     ! module variables ...
     real*8 :: mtxA(0:3,0:5) 
@@ -28,23 +27,26 @@ use MM_types     , only: Dissociative
 contains
 !
 !
-!==================================
- subroutine include_DWFF_parameters
-!==================================
+!===========================================
+ subroutine include_DWFF_parameters(species)
+!===========================================
 implicit none
+type(MM_molecular), intent(in):: species(:)
 
-call ReaxWAT_Model_Parameters
+call DWFF_Parameters
 
-call get_REAX_Parameters
+call get_DWFF_Parameters
+
+call set_H_pointers(species)
 
 end subroutine include_DWFF_parameters
 !
 !
 !
 !
-!===================================
- subroutine ReaxWAT_Model_Parameters 
-!===================================
+!===========================
+ subroutine DWFF_Parameters 
+!===========================
 implicit none
 !-------------------------------------------------------------
 !                PARAMETERS FROM THE ARTICLE
@@ -105,7 +107,7 @@ HH_C6_dsprsion = HH_C6_dsprsion / factor3
 lambda  = lambda / factor3
 theta_0 = theta_0 * deg_2_rad   
 
-end subroutine ReaxWAT_Model_Parameters 
+end subroutine DWFF_Parameters 
 !
 !
 !
@@ -168,8 +170,36 @@ end subroutine define_mtxA
 !
 !
 !
+!==================================
+ subroutine set_H_pointers(species)
+!==================================
+implicit none
+type(MM_molecular), intent(in):: species(:)
+
+! local variables
+integer :: HOH
+
+! find HOH species 
+do HOH = 1 , size(species)
+   if ( species(HOH)%DWFF ) exit
+end do
+
+associate( MMSymbol => species(HOH)% atom(:)% MMSymbol )
+    if( MMSymbol(1) == "OX" ) then
+        HOH_diss_parms% H_ptr(:) = [2,3]
+    elseif ( MMSymbol(2) == "OX" ) then
+        HOH_diss_parms% H_ptr(:) = [1,3]
+    elseif ( MMSymbol(3) == "OX" ) then
+        HOH_diss_parms% H_ptr(:) = [1,2]
+    endif
+end associate
+
+end  subroutine set_H_pointers
+!
+!
+!
 !===============================
- subroutine  get_REAX_Parameters
+ subroutine  get_DWFF_Parameters
 !===============================
 implicit none
 
@@ -215,7 +245,7 @@ HOH_diss_parms% Angle(1,2) = r0
 HOH_diss_parms% Angle(1,3) = gama
 HOH_diss_parms% Angle(1,4) = cos(theta_0)
 
-end subroutine get_REAX_Parameters
+end subroutine get_DWFF_Parameters
 !
 !
-end module BuildReaxWAT
+end module Build_DWFF

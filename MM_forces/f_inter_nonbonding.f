@@ -29,13 +29,13 @@ implicit none
 
 !local variables ...
 real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
-integer , allocatable :: species_offset(:)
+integer , allocatable :: species_PTR(:)
 real*8                :: rkl(3) , cm_kl(3)
 real*8                :: total_chrg , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
 integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
-CALL offset( species_offset )
+CALL offset( species_PTR )
 
 numthr = OMP_get_max_threads()
 
@@ -55,93 +55,89 @@ total_chrg = sum(atom(:)% charge)
 vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_chrg**2
 vself = vself*factor3
 
-if( MM % N_of_molecules > 1 ) &
-then
 !##############################################################################
-! INTER-MOLECULAR vdW and Coulomb calculations ...
+! INTER-MOLECULAR vdW and Coulomb forces ...
 !$OMP parallel DO &
 !$OMP default (shared) &
 !$OMP private (i, j, k, l, atk, atl, rkl2, cm_kl, rkl, fs, vsr, Ecoul_damped, Fcoul, nresidk, nresidl, ithr)  &
 !$OMP reduction (+: Coul_inter, evdw, virial_tensor) 
-                        
-     do k = 1 , MM % N_of_atoms - 1
-     do l = k+1 , MM % N_of_atoms
+do k = 1 , MM % N_of_atoms - 1
+do l = k+1 , MM % N_of_atoms
 
-          ! DWFF special pairs are treated elsewhere ...
-          if ( special_pair_mtx(k,l) == 3 ) cycle
-     
-          ! for different molecules only ...
-          if ( atom(k)% nr == atom(l)% nr ) cycle
+     ! DWFF special pairs are treated elsewhere ...
+     if ( special_pair_mtx(k,l) == 3 ) cycle
 
-          rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
-          rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
-     
-          rkl2 = sum( rkl(:)**2 )
-     
-          if( rkl2 > rcutsq ) cycle
-    
-          !-------------------------------------------------------------------------------------
-          atk = atom(k)% my_intra_id + species_offset(atom(k)% my_species)
-          atl = atom(l)% my_intra_id + species_offset(atom(l)% my_species)
+     ! for different molecules only ...
+     if ( atom(k)% nr == atom(l)% nr ) cycle
 
-          select case ( special_pair_mtx(k,l) )
-     
-                 case(0) ! <== this is a general pair (most common)
-                         ! selecting case
-                         if( atom(k)%LJ .AND. atom(l)%LJ ) then
-     
-                             call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
-     
-                         elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
-     
-                             call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
-     
-                         endif
+     rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
+     rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
 
-                 case(1) !  <== this is a LJ special-pair
-                         call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+     rkl2 = sum( rkl(:)**2 )
 
-                 case(2) !  <== this is a BUCK special-pair
-                         call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+     if( rkl2 > rcutsq ) cycle
 
-                 case(3) !  <== this is a DWFF special-pair
-                         CALL warning("f_inter.f: DWFF molecule reached forbidden kernel")
-                         stop 
-                         
-          end select
+     !-------------------------------------------------------------
+     atk = atom(k)% my_intra_id + species_PTR(atom(k)% my_species)
+     atl = atom(l)% my_intra_id + species_PTR(atom(l)% my_species)
+
+     select case ( special_pair_mtx(k,l) )
+
+            case(0) ! <== this is a general pair (most common)
+                    ! selecting case
+                    if( atom(k)%LJ .AND. atom(l)%LJ ) then
+
+                        call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+
+                    elseif( atom(k)%Buck .AND. atom(l)%Buck ) then
+
+                        call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+
+                    endif
+
+            case(1) !  <== this is a LJ special-pair
+                    call Lennard_Jones( k , l , atk , atl , rkl2 , fs , vsr )
+
+            case(2) !  <== this is a BUCK special-pair
+                    call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
+
+            case(3) !  <== this is a DWFF special-pair
+                    CALL warning("f_inter.f: DWFF molecule reached forbidden kernel")
+                    stop 
+                    
+     end select
+
+     ithr = OMP_get_thread_num() + 1
+
+     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
+     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
      
-          ithr = OMP_get_thread_num() + 1
+     ! Coulomb Interaction
+     call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
+
+     tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
+     tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
+
+     !Energy
+     evdw       = evdw + vsr
+     Coul_inter = Coul_inter + Ecoul_damped
      
-          tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
-          tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
-          
-          ! Coulomb Interaction
-          call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
-     
-          tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
-          tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
-     
-          !Energy
-          evdw       = evdw + vsr
-          Coul_inter = Coul_inter + Ecoul_damped
-          
-          !-------------------------------------------------------------------------------
-          if( using_barostat% inter ) &
-          then
-                nresidk = atom(k)% nr
-                nresidl = atom(l)% nr
-                cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                do i=1,3 ; do j=i,3
-                   virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
-                end do; end do
-          end if
-          !---------------------------------------------------------------------------------
-     end do
-     end do
+     !-------------------------------------------------------------------------------
+     if( using_barostat% inter ) &
+     then
+           nresidk = atom(k)% nr
+           nresidl = atom(l)% nr
+           cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+           cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+           do i=1,3 ; do j=i,3
+              virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
+           end do; end do
+     end if
+     !---------------------------------------------------------------------------------
+end do
+end do
 !$OMP end parallel do
 !##############################################################################
-end if
 
 evdw       = evdw * factor3
 Coul_inter = Coul_inter * factor3

@@ -128,12 +128,12 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
-          MM_forces/ReaxFF_Build.o \
+          MM_forces/DWFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
-          MM_forces/Reax_Forces.o \
+          MM_forces/f_intra_DWFF.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -158,6 +158,7 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
+          MM_forces/f_inter_DWFF.o \
           MM_forces/f_inter_nonbonding.o \
 		  MM_forces/f_inter.o \
           MM_forces/f_bond.o \

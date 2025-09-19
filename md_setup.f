@@ -214,19 +214,23 @@ end subroutine Buckingham
 !
 !
 !
-!======================
- subroutine offset( a )
-!======================
-implicit none
-integer , allocatable , intent(out) :: a(:)
+subroutine offset(a)
+    !! Compute offsets for atom indexing by species.
+    !!
+    !! Relies on the assumption that atoms of the same species
+    !! appear in contiguous blocks in the input.
 
-! local variables ...
-integer :: i
+    implicit none
+    integer, allocatable, intent(out) :: a(:)
 
-allocate( a(size(species)) )
+    ! local variables
+    integer :: i
 
-a = [ (sum( species(1:i-1)%N_of_atoms ) , i=1,size(species)) ]
+    ! allocate result: one offset per species
+    allocate(a(size(species)))
 
+    ! fill with cumulative sums of atoms up to species i-1
+    a = [(sum(species(1:i-1)%N_of_atoms), i=1, size(species))]
 end subroutine offset
 !
 !

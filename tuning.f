@@ -376,17 +376,35 @@ end module syst
 !
 !
 module for_force
- implicit none
- integer                               :: forcefield
- real*8, dimension(:,:)  , allocatable :: vscut, fscut
- real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
- real*8                                :: Coul_inter, Vself, evdw
- real*8                                :: bdpot, harm_bond, morse_bond, Morspot, angpot
- real*8                                :: dihpot, proper_dih, ryck_dih, harm_dih, imp_dih
- real*8                                :: LJ_14, LJ_intra, Coul_14, Coul_intra
- real*8                                :: DWFF_intra
- real*8                                :: pot_INTER, pot_total
- character(4)                          :: Dihedral_Potential_Type
+    implicit none
+
+    integer                               :: forcefield
+    real*8, dimension(:,:)  , allocatable :: vscut, fscut
+    real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
+    character(4)                          :: Dihedral_Potential_Type
+ 
+    real*8 :: Coul_inter = 0.d0 
+    real*8 :: Vself      = 0.d0
+    real*8 :: evdw       = 0.d0
+    real*8 :: bdpot      = 0.d0
+    real*8 :: harm_bond  = 0.d0
+    real*8 :: morse_bond = 0.d0
+    real*8 :: Morspot    = 0.d0
+    real*8 :: angpot     = 0.d0
+    real*8 :: dihpot     = 0.d0
+    real*8 :: proper_dih = 0.d0
+    real*8 :: ryck_dih   = 0.d0
+    real*8 :: harm_dih   = 0.d0
+    real*8 :: imp_dih    = 0.d0
+    real*8 :: LJ_14      = 0.d0
+    real*8 :: LJ_intra   = 0.d0
+    real*8 :: Coul_14    = 0.d0
+    real*8 :: Coul_intra = 0.d0
+    real*8 :: DWFF_intra = 0.d0
+    real*8 :: DWFF_inter = 0.d0
+    real*8 :: pot_INTER  = 0.d0
+    real*8 :: pot_total  = 0.d0
+
 end module for_force
 !
 !

@@ -5,9 +5,10 @@ module F_intra_m
     use constants_m
     use parameters_m      , only: QMMM , driver , n_part
     use Allocation_m      , only: Allocate_Structures
-    use for_force         , only: pot_INTER, bdpot, angpot, dihpot, &
-                                  Morspot, LJ_14, LJ_intra, Coul_14,&
-                                  DWFF_intra, Coul_intra, pot_total, Vself
+    use for_force         , only: pot_INTER, bdpot, angpot, dihpot,  &
+                                  Morspot, LJ_14, LJ_intra, Coul_14, &
+                                  DWFF_intra, DWFF_inter, Coul_intra,&
+                                  pot_total, Vself
     use MD_read_m         , only: atom , molecule , MM 
     use Ehrenfest_CSDM    , only: Ehrenfest 
     use Ehrenfest_Builder , only: EhrenfestForce 
@@ -17,9 +18,8 @@ module F_intra_m
     use FF_angles         , only: f_angle
     use FF_diheds         , only: f_dihed
     use FF_Morse          , only: f_Morse
+    use F_intra_DWFF      , only: DW_f_intra
     use FF_intra_nonbond  , only: f_intra_nonbonding
-
-    use Reax_F_intra      , only: DW_f_intra
 
     private
 
@@ -68,22 +68,15 @@ call f_Morse()
 ! IntraMolecular Nonbonding Potentials ... 
 call f_intra_nonbonding()
 
-
-!====================================================================
 ! dissociative forces
-
-if( any(molecule%DWFF) ) then
-
-    call DW_f_intra ()
-
+if (any(molecule%DWFF)) then
+   call DW_f_intra()
 endif
 
-
-!
 !====================================================================
 ! factor used to compensate the factor1 and factor2 factors ...
 ! factor3 = 1.0d-20
-pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot + DWFF_intra
+pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot + DWFF_intra + DWFF_inter
 pot_total = pot_INTER + pot_INTRA - Vself
 pot_total = pot_total * (mol*micro/MM % N_of_molecules)
 
@@ -106,15 +99,16 @@ endif
 ! Get total MM force; force units = J/mts = Newtons ...
 do i = 1 , MM % N_of_atoms
     
-    atom(i)% f_MM(:) = atom(i)% f_MM(:) + (atom(i) % fbond(:)    +  &
-                                           atom(i) % fang(:)     +  &
-                                           atom(i) % fdihed(:)   +  &
-                                           atom(i) % fnonbd14(:) +  & 
-                                           atom(i) % fnonch14(:) +  &
-                                           atom(i) % fnonbd(:)   +  & 
-                                           atom(i) % fMorse(:)   +  & 
-                                           atom(i) % fnonch(:)   +  &
-                                           atom(i) % f_DWFF(:)      &
+    atom(i)% f_MM(:) = atom(i)% f_MM(:) + (atom(i) % fbond(:)        +  &
+                                           atom(i) % fang(:)         +  &
+                                           atom(i) % fdihed(:)       +  &
+                                           atom(i) % fnonbd14(:)     +  & 
+                                           atom(i) % fnonch14(:)     +  &
+                                           atom(i) % fnonbd(:)       +  & 
+                                           atom(i) % fMorse(:)       +  & 
+                                           atom(i) % fnonch(:)       +  &
+                                           atom(i) % f_intra_DWFF(:) +  &
+                                           atom(i) % f_inter_DWFF(:)    &
                                           ) * Angs_2_mts
 
     atom(i)% ftotal(:) = atom(i)% f_MM(:) 

@@ -1,11 +1,11 @@
-module Reax_F_intra
+module F_intra_DWFF
 
     use constants_m
     use omp_lib
     use parameters_m , only: PBC 
     use for_force    , only: DWFF_intra, rcutsq
     use MD_read_m    , only: atom , molecule , MM 
-    use BuildReaxWAT , only: HOH => HOH_diss_parms
+    use Build_DWFF   , only: HOH => HOH_diss_parms
                                 
 
     public :: DW_f_intra 
@@ -32,7 +32,7 @@ contains
  if( .not. done ) call set_local_parameters
 
  do j = 1 , MM % N_of_atoms
-     atom(j)% f_DWFF(:) = D_zero  
+     atom(j)% f_intra_DWFF(:) = D_zero  
  end do
 
  call intra_2body_DWFF
@@ -41,7 +41,7 @@ contains
  
  ! local force units = J/Angs ...
  do i = 1, MM % N_of_atoms
-    atom(i)% f_DWFF(:) = atom(i)% f_DWFF(:) + f_bond(i,:) + f_ang(i,:)
+    atom(i)% f_intra_DWFF(:) = f_bond(i,:) + f_ang(i,:)
  end do
 
  ! energy 
@@ -238,7 +238,6 @@ f_sr = A*( erfc_zeta + a1*exp(-zeta**2) )*ir2 - SIX*C*ir8
 ! O-H ==> k = 1
 ! H-H ==> k = 3
 !----------------------------------------------------
-
 a2  = irsqPI * HOH% Coul(k,4)   
 arg = rkl * HOH%Coul(k,4)
 exp_arg2 = EXP(-arg**2)
@@ -340,4 +339,4 @@ end subroutine set_local_parameters
 !
 !
 !
-end module Reax_F_intra
+end module F_intra_DWFF

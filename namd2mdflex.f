@@ -3,17 +3,17 @@
 module namd2mdflex
 
 use iso_fortran_env
-use type_m                 , only : dynemolworkdir , warning
-use MM_input               , only : MM_input_format
+use type_m             , only : dynemolworkdir , warning
+use MM_input           , only : MM_input_format
 use constants_m
 use for_force
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
-use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
-use NonBondPairs           , only : Identify_NonBondPairs
-use Babel_routines_m       , only : TO_UPPER_CASE
-use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
-use setup_checklist        , only : Checking_Topology
-use BuildReaxWAT           , only : include_DWFF_parameters
+use MM_types           , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
+use MM_tuning_routines , only : SpecialBonds, SpecialAngs
+use NonBondPairs       , only : Identify_NonBondPairs
+use Babel_routines_m   , only : TO_UPPER_CASE
+use gmx2mdflex         , only : SpecialPairs , SpecialPairs14
+use setup_checklist    , only : Checking_Topology
+use Build_DWFF         , only : include_DWFF_parameters
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -849,7 +849,7 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 99 close(33)   ! <== FINISHED READING PARAMETERS from INPUT.PRM 
 
 ! get Dissociative Water Force Field (DWFF) parameners ... 
-if( any(species%DWFF) ) call include_DWFF_parameters
+if ( any(species%DWFF) ) call include_DWFF_parameters(species)
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )
