@@ -26,7 +26,7 @@ contains
 use for_force   , only: rcut, KAPPA, Coul_inter, Vself, evdw, bdpot, angpot, dihpot,    &
                         LJ_14, LJ_intra, Coul_14, Coul_intra, pot_total, forcefield,    &
                         ryck_dih, proper_dih, harm_dih, imp_dih, harm_bond, morse_bond, &
-                        Morspot, DWFF_intra
+                        Morspot, DWFF_intra, DWFF_inter
 implicit none
 real*8  , intent(in)    :: Ttrans
 integer , intent(in)    :: frame 
@@ -104,7 +104,8 @@ open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
     write(10,'(''Harmonic Dihedral           :'',F14.4)') harm_dih  *mol*factor3*1.d-6
     write(10,'(''Improper Dihedral (cos)     :'',F14.4)') imp_dih   *mol*factor3*1.d-6
     write(10,'(''Morse Potential             :'',F14.4)') (morse_bond*factor3+Morspot)*mol*1.d-6    
-    write(10,'(''DWFF Potential              :'',F14.4)') DWFF_intra*mol*1.d-6    
+    write(10,'(''DWFF Intra Potential        :'',F14.4)') DWFF_intra*mol*1.d-6    
+    write(10,'(''DWFF Inter Potential        :'',F14.4)') DWFF_inter*mol*1.d-6    
     write(10,'(''Lennard-Jones 1-4           :'',F14.4)') LJ_14     *mol*1.d-6  
     write(10,'(''Lennard-Jones Intra         :'',F14.4)') LJ_Intra  *mol*1.d-6  
     write(10,'(''Lennard-Jones               :'',F14.4)') evdw      *mol*1.d-6      

@@ -35,7 +35,7 @@ module setup_m
     use type_m       , only : warning
     use MD_read_m    , only : MM , atom , molecule , species , FF , FF_SP_mtx 
     use gmx2mdflex   , only : SpecialPairs
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA
+    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, vself
 
     public :: setup , Molecular_CM , move_to_box_CM , offset
 
@@ -53,7 +53,7 @@ contains
  
 ! local variables
  integer :: i, j, atmax
- real*8  :: expar, ERFC, KRIJ
+ real*8  :: expar, ERFC, KRIJ, total_q2
 
  rcutsq = rcut**2
 
@@ -92,6 +92,10 @@ contains
  expar  = exp(-KRIJ**2)
  frecut = coulomb * ( ERFC(KRIJ) + TWO*irsqPI*KAPPA*rcut*expar ) / rcutsq
 
+ ! vself part of the Coulomb calculation
+ total_q2 = sum( atom(:)%charge**2 )
+ vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_q2
+ vself = vself*factor3
 
 end subroutine SETUP
 !

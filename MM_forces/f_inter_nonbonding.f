@@ -9,7 +9,7 @@ module F_inter_nonbond
     use setup_m      , only : offset
     use Data_Output  , only : Net_Charge
     use gmx2mdflex   , only : SpecialPairs
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, vself, evdw, vscut, fscut, KAPPA
+    use for_force    , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
 
     public :: f_inter_nonbonding , virial_tensor
 
@@ -31,7 +31,7 @@ implicit none
 real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
 integer , allocatable :: species_PTR(:)
 real*8                :: rkl(3) , cm_kl(3)
-real*8                :: total_chrg , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
+real*8                :: Ecoul_damped , Fcoul , fs , vsr  , rkl2 
 integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
@@ -49,11 +49,6 @@ end do
 
 evdw = D_zero
 Coul_inter = D_zero
-
-! vself part of the Coulomb calculation
-total_chrg = sum(atom(:)% charge)
-vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_chrg**2
-vself = vself*factor3
 
 !##############################################################################
 ! INTER-MOLECULAR vdW and Coulomb forces ...
@@ -150,7 +145,7 @@ do i = 1, MM % N_of_atoms
         atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
         atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
     end do
-    atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
+    atom(i) % f_inter_nonbond(1:3) = atom(i)%fsr(1:3) + atom(i)%fch(1:3)
 end do
 
 deallocate ( tmp_fsr , tmp_fch )

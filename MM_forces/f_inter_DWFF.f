@@ -6,7 +6,7 @@ module F_inter_DWFF
     use parameters_m , only : PBC
     use md_read_m    , only : atom, MM, molecule, special_pair_mtx
     use Data_Output  , only : Net_Charge
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, vself, vscut, fscut, KAPPA, DWFF_inter
+    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, DWFF_inter
     use Build_DWFF   , only : HOH => HOH_diss_parms
 
     public :: f_DWFF_inter , virial_tensor
@@ -26,7 +26,7 @@ contains
 !=========================
     implicit none
    
-    !local variables
+    ! local variables
     integer :: i, j
     
     do j = 1 , MM % N_of_atoms
@@ -44,7 +44,7 @@ contains
     DWFF_inter = (bond_erg + ang_erg)*factor3 
    
     deallocate( f_bond , f_ang )
-  stop 
+
 end subroutine f_DWFF_inter
 !
 !
@@ -56,7 +56,7 @@ end subroutine f_DWFF_inter
     
     !local variables ...
     real*8  :: rkl(3) , cm_kl(3)
-    real*8  :: total_chrg , rkl2 , force , erg
+    real*8  :: rkl2 , force , erg
     integer :: i , j , k , l , pair_of_kind
     integer :: nresidl , nresidk
     logical :: DWFF_special_pair
@@ -67,11 +67,6 @@ end subroutine f_DWFF_inter
     ang_erg  = D_zero
     allocate( f_bond (MM%N_of_atoms,3)  , source = D_zero )
     allocate( f_ang  (MM% N_of_atoms,3) , source = D_zero )
-    
-    ! vself part of the Coulomb calculation
-    !total_chrg = sum(atom(:)% charge)
-    !vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_chrg**2
-    !vself = vself*factor3
     
     !##############################################################################
     ! INTER-MOLECULAR DWFF calculations ...
@@ -143,25 +138,7 @@ end subroutine f_DWFF_inter
 
          end do
          end do
-    stop
-    !##############################################################################
-    
-    !evdw       = evdw * factor3
-    !Coul_inter = Coul_inter * factor3
-    !pot_INTER  = evdw + Coul_inter
-    !
-    !! force units = J/mts = Newtons ...
-    !! manual reduction (+: fsr , fch) ...
-    !do i = 1, MM % N_of_atoms
-    !    do k = 1 , numthr
-    !        atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + f_bond(i,1:3,k)
-    !        atom(i) % fch(1:3) = atom(i) % fch(1:3) + f_angle(i,1:3,k)
-    !    end do
-    !    atom(i) % f_MM(1:3) = ( atom(i) % fsr(1:3) + atom(i) % fch(1:3) ) * Angs_2_mts
-    !end do
-    
-    !deallocate ( f_bond , f_angle )
-    
+
 end subroutine inter_DWFF
 !
 !
