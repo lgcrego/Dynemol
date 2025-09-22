@@ -65,7 +65,7 @@ end subroutine f_DWFF_inter
 
     bond_erg = D_zero
     ang_erg  = D_zero
-    allocate( f_bond (MM%N_of_atoms,3)  , source = D_zero )
+    allocate( f_bond (MM% N_of_atoms,3) , source = D_zero )
     allocate( f_ang  (MM% N_of_atoms,3) , source = D_zero )
     
     !##############################################################################
@@ -78,7 +78,7 @@ end subroutine f_DWFF_inter
               DWFF_special_pair = (special_pair_mtx(k,l) == 3)
               if ( .not. DWFF_special_pair ) cycle
          
-              ! only for different molecules only ...
+              ! only for different molecules ...
               if ( atom(k)% nr == atom(l)% nr ) cycle
     
               rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
@@ -210,7 +210,7 @@ end subroutine inter_DWFF
      f_ij = a2/riksq
      f_ang(atk,:) = f_ang(atk,:) + f_ik*rik(:)/riksq - f_ij*rij(:)/rijsq
     
-     f_ang(ati,:) = f_ang(ati,:) - (f_ang(atj,:)+f_ang(atk,:))
+     f_ang(ati,:) = f_ang(ati,:) - (f_ang(atj,:) + f_ang(atk,:))
     
 end subroutine inter_3body_DWFF
 !
@@ -243,26 +243,29 @@ end subroutine inter_3body_DWFF
     ! O-O ==> k = 2
     !----------------------------
     if ( any( k == [1,2]) ) then
-       A = HOH% SR(k,1)
-       B = HOH% SR(k,2)
-       C = HOH% SR(k,3)
-       
-       zeta = rkl * B
-       erfc_zeta = erfc(zeta) / zeta
-       
-       ir6 = ir2 * ir2 * ir2
-       ir8 = ir6 * ir2
-       
-       ! SR Energy
-       E_sr = A*erfc_zeta - C*ir6
-       ! SR Force
-       f_sr = A*( erfc_zeta + a1*exp(-zeta**2) )*ir2 - SIX*C*ir8
+        A = HOH% SR(k,1)
+        B = HOH% SR(k,2)
+        C = HOH% SR(k,3)
+        
+        zeta = rkl * B
+        erfc_zeta = erfc(zeta) / zeta
+        
+        ir6 = ir2 * ir2 * ir2
+        ir8 = ir6 * ir2
+        
+        ! SR Energy
+        E_sr = A*erfc_zeta - C*ir6
+        ! SR Force
+        f_sr = A*( erfc_zeta + a1*exp(-zeta**2) )*ir2 - SIX*C*ir8
+    else
+        E_sr = 0.d0
+        f_sr = 0.d0 
     end if
     
     !-----------------------------
     ! Coulomb electrostatic
     !-----------------------------
-    a2  = irsqPI * HOH% Coul(k,4)   
+    a2  = irsqPI * (two * HOH% Coul(k,4))   
     arg = rkl * HOH%Coul(k,4)
     exp_arg2 = EXP(-arg**2)
     
