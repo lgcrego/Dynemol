@@ -6,7 +6,6 @@ module FF_intra_nonbond
     use parameters_m    , only: PBC
     use syst            , only: using_barostat
     use F_inter_nonbond , only: virial_tensor
-    use setup_m         , only: offset
     use for_force       , only: rcut, vrecut, frecut, vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, rcutsq
     use MD_read_m       , only: atom, molecule, MM 
     use gmx2mdflex      , only: SpecialPairs, SpecialPairs14
@@ -16,9 +15,8 @@ module FF_intra_nonbond
     public :: f_intra_nonbonding
 
     ! module variables ...
-    integer , allocatable :: species_offset(:)
-    logical               :: there_are_NB_SpecialPairs   = .false.
-    logical               :: there_are_NB_SpecialPairs14 = .false.
+    logical :: there_are_NB_SpecialPairs   = .false.
+    logical :: there_are_NB_SpecialPairs14 = .false.
 
 contains
 !
@@ -49,8 +47,6 @@ Coul_intra = D_zero
 
 numthr = OMP_get_max_threads()
 
-CALL offset( species_offset )
- 
 !====================================================================
 ! Nonbonding Interactions
 ! parameters:
@@ -322,10 +318,11 @@ sr12 = sr6 * sr6
 
 !Forces
 fs = 24.d0 * eps * ( TWO * sr12 - sr6 )
-! including cut-off ...
-ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
-atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
+
 ! shifted force: F_sf(R) = F(R) - F(Rc) ...
+ati1 = atom(ati) % my_intra_species_id
+atj1 = atom(atj) % my_intra_species_id 
+
 fs = fs/rij2 - fscut(ati1,atj1)/dij     
 
 !Energy
@@ -456,10 +453,10 @@ ir8 = ir2 * ir2 * ir2 * ir2
 !Force
 fs = Aij*Bij*exp(-Bij*dij) / dij - SIX*Cij*ir8
 
-ati1 = atom(ati) % my_intra_id + species_offset( atom(ati)%my_species )
-atj1 = atom(atj) % my_intra_id + species_offset( atom(atj)%my_species ) 
-
 ! shifted force: F_sf(R) = F(R) - F(Rc) ...
+ati1 = atom(ati) % my_intra_species_id
+atj1 = atom(atj) % my_intra_species_id 
+
 fs = fs - fscut(ati1,atj1)/dij     
 
 !Energy

@@ -141,6 +141,8 @@ end select
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+call get_intra_species_id
+
 ! feedback from ad_hoc up to Unit_Cell ...
 Unit_Cell% flex(:) = atom(:)% flex
 
@@ -628,6 +630,33 @@ do i = 1 , size(atom)
 end do
 
 end subroutine Structure_2_MD
+!
+!
+!
+subroutine get_intra_species_id
+    !! Compute offsets for atom indexing by species.
+    !!
+    !! Relies on the assumption that atoms of the same species
+    !! appear in contiguous blocks in the input.
+
+    implicit none
+
+    ! local variables
+    integer :: i , j
+    integer, allocatable:: species_PTR(:)
+
+    ! allocate result: one offset per species
+    allocate( species_PTR(size(species)) )
+
+    ! fill with cumulative sums of atoms up to species i-1
+    species_PTR = [(sum(species(1:i-1)%N_of_atoms), i=1, size(species))]
+
+    associate( a => atom )
+        do j = 1 , MM % N_of_atoms
+             a(j)% my_intra_species_id = species_PTR(a(j)% my_species) + a(j)% my_intra_id
+        end do
+    end associate
+end subroutine get_intra_species_id 
 !
 !
 !

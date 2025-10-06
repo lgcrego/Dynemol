@@ -9,6 +9,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         integer                             :: AtNo
         integer                             :: my_id
         integer                             :: my_intra_id
+        integer                             :: my_intra_species_id
         integer                             :: my_species
         integer                             :: nr
         character(3)                        :: residue

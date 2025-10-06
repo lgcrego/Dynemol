@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+		  MM_forces/FF_cutoff.o \
           MM_forces/f_intra_DWFF.o \
 		  md_output.o \
 		  pbc.o \

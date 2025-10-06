@@ -32,7 +32,7 @@ contains
     do j = 1 , MM % N_of_atoms
         atom(j)% f_inter_DWFF(:) = D_zero  
     end do
-   
+
     call inter_DWFF
     
     ! local force units = J/Angs ...
@@ -42,7 +42,7 @@ contains
    
     ! energy 
     DWFF_inter = (bond_erg + ang_erg)*factor3 
-   
+ 
     deallocate( f_bond , f_ang )
 
 end subroutine f_DWFF_inter
@@ -91,7 +91,7 @@ end subroutine f_DWFF_inter
     
               type1 = atom(k)% MMSymbol
               type2 = atom(l)% MMSymbol
-    
+   
               select case (trim(type1)//'-'//trim(type2))
               case ('HX-HX')
                   pair_of_kind = 3
@@ -116,7 +116,7 @@ end subroutine f_DWFF_inter
      
               end select
     
-              call evaluate_2body_inter_DWFF ( pair_of_kind , rkl2 , force , erg )
+              call evaluate_2body_inter_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
          
               f_bond(k,1:3) = f_bond(k,:) + force * rkl(:)
               f_bond(l,1:3) = f_bond(l,:) - force * rkl(:)
@@ -135,7 +135,6 @@ end subroutine f_DWFF_inter
                     end do; end do
               end if
               !---------------------------------------------------------------------------------
-
          end do
          end do
 
@@ -175,14 +174,14 @@ end subroutine inter_DWFF
      rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
      rijsq  = SQRT(rijq)
      if ( (rijsq+milli) > r0 ) return
-    
+
      ! rik = r_k - r_i 
      rik(:) = atom(atk) % xyz(:) - atom(ati) % xyz(:)
      rik(:) = rik(:) - MM % box(:)*DNINT( rik(:) * MM % ibox(:) ) * PBC(:)
      rikq   = rik(1)*rik(1) + rik(2)*rik(2) + rik(3)*rik(3)
      riksq  = SQRT(rikq)
      if ( (riksq+milli) > r0) return
-    
+
      cos_theta = (rij(1)*rik(1) + rij(2)*rik(2) + rij(3)*rik(3)) / ( rijsq * riksq )
     
      inv_delta_0ij = 1.d0/(r0-rijsq)
@@ -193,7 +192,7 @@ end subroutine inter_DWFF
     
      U03 = HOH%Angle(1,1) * (cos_theta - HOH%Angle(1,4)) * exponential
      U3  = U03 * (cos_theta - HOH%Angle(1,4))
-    
+
      ! energy of the triplet
      ang_erg = ang_erg + U3
     
@@ -215,11 +214,11 @@ end subroutine inter_DWFF
 end subroutine inter_3body_DWFF
 !
 !
-!==============================================================
- subroutine evaluate_2body_inter_DWFF( k , rkl2 , force , erg )
-!==============================================================
+!======================================================================
+ subroutine evaluate_2body_inter_DWFF( k , l , m , rkl2 , force , erg )
+!======================================================================
     implicit none
-    integer , intent(in)  :: k
+    integer , intent(in)  :: k , l , m
     real*8  , intent(in)  :: rkl2 
     real*8  , intent(out) :: force
     real*8  , intent(out) :: erg
@@ -228,6 +227,7 @@ end subroutine inter_3body_DWFF
     real*8, parameter :: a1 = 1.1283791671d0  ! <== 2/sqrt(PI)
     
     ! local variables ...
+    integer :: atk , atl
     real*8 :: irkl , ir2 , ir6 , ir8 , rkl
     real*8 :: zeta , erfc_zeta , arg , exp_arg2
     real*8 :: a2, a3, U0 , Ecoul , Fcoul , f_sr , E_sr
@@ -239,13 +239,13 @@ end subroutine inter_3body_DWFF
     
     !----------------------------
     ! SR (short-range) only for:
-    ! O-H ==> k = 1
-    ! O-O ==> k = 2
+    ! O-H ==> m = 1
+    ! O-O ==> m = 2
     !----------------------------
-    if ( any( k == [1,2]) ) then
-        A = HOH% SR(k,1)
-        B = HOH% SR(k,2)
-        C = HOH% SR(k,3)
+    if ( any( m == [1,2]) ) then
+        A = HOH% SR(m,1)
+        B = HOH% SR(m,2)
+        C = HOH% SR(m,3)
         
         zeta = rkl * B
         erfc_zeta = erfc(zeta) / zeta
@@ -261,28 +261,31 @@ end subroutine inter_3body_DWFF
         E_sr = 0.d0
         f_sr = 0.d0 
     end if
-    
+
     !-----------------------------
     ! Coulomb electrostatic
     !-----------------------------
-    a2  = irsqPI * (two * HOH% Coul(k,4))   
-    arg = rkl * HOH%Coul(k,4)
+    a2  = irsqPI * (two * HOH% Coul(m,4))   
+    arg = rkl * HOH%Coul(m,4)
     exp_arg2 = EXP(-arg**2)
     
     ! Energy
-    U0 = HOH%Coul(k,1) + HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
+    U0 = HOH%Coul(m,1) + HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)* erf(arg*sqrt2)
     Ecoul = coulomb * U0 * irkl
     
     ! Force
     ! Fcoul (not damped)
-    a3 = a2 * ( HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3) * exp_arg2 )
+    a3 = a2 * ( HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3) * exp_arg2 )
     Fcoul = coulomb * (U0*ir2*irkl - a3*exp_arg2*ir2)
     
     !----------------------------------------------------
     ! total: intent(out)
     !----------------------------------------------------
-    erg   = E_sr + Ecoul
-    force = f_sr + Fcoul
+    atk = atom(k)% my_intra_species_id
+    atl = atom(l)% my_intra_species_id
+
+    erg   = E_sr + Ecoul - vscut(atk,atl) + fscut(atk,atl)*( rkl - rcut )
+    force = f_sr + Fcoul - fscut(atk,atl)*irkl
 
 end subroutine evaluate_2body_inter_DWFF
 !

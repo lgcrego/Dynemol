@@ -55,7 +55,7 @@ contains
 !===================================
  function constructor() result( me )
 !===================================
-use setup_m, only : setup
+use FF_cutoff , only : FF_cutoff_sphere
 implicit none
 type(XS_OPT) :: me 
 
@@ -75,7 +75,7 @@ If( driver_MM == "Parametrize" ) me % profiling = .false.
 open( unit=32, file='opt.trunk/XS_ERG.dat', status='unknown' )
 
 ! setup cutoff parameters for LJ and Coulomb interactions ...
-CALL setup
+CALL FF_cutoff_sphere
 
 !-----------------------------------------------------
 ! setup QM environment for XS calculations ...

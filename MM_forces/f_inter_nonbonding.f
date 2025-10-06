@@ -6,7 +6,6 @@ module F_inter_nonbond
     use type_m       , only : warning
     use parameters_m , only : PBC, QMMM
     use md_read_m    , only : atom, MM, molecule, special_pair_mtx
-    use setup_m      , only : offset
     use Data_Output  , only : Net_Charge
     use gmx2mdflex   , only : SpecialPairs
     use for_force    , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
@@ -29,13 +28,10 @@ implicit none
 
 !local variables ...
 real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
-integer , allocatable :: species_PTR(:)
 real*8                :: rkl(3) , cm_kl(3)
 real*8                :: Ecoul_damped , Fcoul , fs , vsr  , rkl2 
 integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
-
-CALL offset( species_PTR )
 
 numthr = OMP_get_max_threads()
 
@@ -73,8 +69,8 @@ do l = k+1 , MM % N_of_atoms
      if( rkl2 > rcutsq ) cycle
 
      !-------------------------------------------------------------
-     atk = atom(k)% my_intra_id + species_PTR(atom(k)% my_species)
-     atl = atom(l)% my_intra_id + species_PTR(atom(l)% my_species)
+     atk = atom(k)% my_intra_species_id
+     atl = atom(l)% my_intra_species_id
 
      select case ( special_pair_mtx(k,l) )
 

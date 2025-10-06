@@ -215,7 +215,7 @@ do
     if ( keyword == "MASTER" ) exit
     N_of_atoms = N_of_atoms + 1
     if ( N_of_atoms > 20000 ) then
-       TorF = systemQQ("sed '11i *** reading of input.pdb halted forcibly ; ckeck input.pdb file format ***  ' .warning.signal |cat")
+       TorF = systemQQ("sed '11i *** reading of input.pdb halted; ckeck input.pdb file format ***  ' .warning.signal |cat")
        STOP 
     end if
 end do

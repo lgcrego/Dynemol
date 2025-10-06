@@ -3,7 +3,7 @@ module F_intra_DWFF
     use constants_m
     use omp_lib
     use parameters_m , only: PBC 
-    use for_force    , only: DWFF_intra, rcutsq
+    use for_force    , only: DWFF_intra
     use MD_read_m    , only: atom , molecule , MM 
     use Build_DWFF   , only: HOH => HOH_diss_parms
                                 
@@ -43,7 +43,7 @@ contains
     do i = 1, MM % N_of_atoms
        atom(i)% f_intra_DWFF(:) = f_bond(i,:) + f_ang(i,:)
     end do
-    
+
     ! energy 
     DWFF_intra = (bond_erg + ang_erg)*factor3 
     
@@ -74,43 +74,39 @@ end subroutine DW_f_intra
     
          do j = 1 , molecule(i) % NintraIJ
     
-            atk  = molecule(i) % IntraIJ(j,1) 
-            atl  = molecule(i) % IntraIJ(j,2) 
+              atk  = molecule(i) % IntraIJ(j,1) 
+              atl  = molecule(i) % IntraIJ(j,2) 
+
+              if (.not. any([atom(atk)%flex, atom(atl)%flex]) ) cycle
     
-            if ( any([atom(atk)%flex, atom(atl)%flex]) ) then
+              rkl(:) = atom(atk) % xyz(:) - atom(atl) % xyz(:)
+              rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
     
-                rkl(:) = atom(atk) % xyz(:) - atom(atl) % xyz(:)
-                rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+              rkl2 = sum( rkl(:)**2 )
     
-                rkl2 = sum( rkl(:)**2 )
+              type1 = atom(atk)% MMSymbol
+              type2 = atom(atl)% MMSymbol
     
-                if ( rkl2 < rcutsq ) then
+              select case (trim(type1)//'-'//trim(type2))
+              case ('HX-HX')
+                  pair_of_kind = 3
+              case ('OX-OX')
+                  pair_of_kind = 2  !<== not for intra_DWFF
+                  cycle
+              case ('HX-OX' , 'OX-HX')
+                  pair_of_kind = 1
+              end select
     
-                    type1 = atom(atk)% MMSymbol
-                    type2 = atom(atl)% MMSymbol
+              call evaluate_2body_DWFF( pair_of_kind , rkl2 , force , erg )
     
-                    select case (trim(type1)//'-'//trim(type2))
-                    case ('HX-HX')
-                        pair_of_kind = 3
-                    case ('OX-OX')
-                        pair_of_kind = 2  !<== not for intra_DWFF
-                        cycle
-                    case ('HX-OX' , 'OX-HX')
-                        pair_of_kind = 1
-                    end select
+              f_bond(atk,1:3) = f_bond(atk,1:3) + force * rkl(:)
+              f_bond(atl,1:3) = f_bond(atl,1:3) - force * rkl(:)
     
-                    call evaluate_2body_DWFF( pair_of_kind , rkl2 , force , erg )
+              bond_erg = bond_erg + erg
     
-                    f_bond(atk,1:3) = f_bond(atk,1:3) + force * rkl(:)
-                    f_bond(atl,1:3) = f_bond(atl,1:3) - force * rkl(:)
-    
-                    bond_erg = bond_erg + erg
-    
-                end if
-             end if
          end do
     end do
-    
+
 end subroutine intra_2body_DWFF
 !
 !
@@ -134,7 +130,7 @@ end subroutine intra_2body_DWFF
     
     rkl  = SQRT(rkl2)
     irkl = D_one / rkl
-    ir2 = D_one / rkl2
+    ir2  = D_one / rkl2
     
     !----------------------------------------------------
     ! SR (short-range) applies only to O-H pair ...

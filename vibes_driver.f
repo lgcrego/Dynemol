@@ -10,7 +10,7 @@ module good_vibrations_m
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
     use MD_dump_m               , only : cleanup
-    use setup_m                 , only : Setup
+    use FF_cutoff               , only : FF_cutoff_sphere
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
     use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , overweight , chi
@@ -296,7 +296,7 @@ real*8  :: local_minimum
 ! setting up the MM system ...
 If( .not. done ) then
 
-    If( MM%N_of_molecules > I_one ) CALL Setup
+    If( MM%N_of_molecules > I_one ) CALL FF_cutoff_sphere
     atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
     done = .true. 
 

@@ -43,7 +43,7 @@ contains
 !===================================
  function constructor() result( me )
 !===================================
-use setup_m, only : setup
+use FF_cutoff , only : FF_cutoff_sphere
 implicit none
 type(MM_OPT) :: me 
 
@@ -61,7 +61,7 @@ me % message     = me % my_message
 If( driver_MM == "Parametrize" ) me % profiling = .false.
 
 ! setup cutoff parameters for LJ and Coulomb interactions ...
-CALL setup
+CALL FF_cutoff_sphere
 
 ! number of degrees of freedom allowed to relax ...
 N_of_free = count( atom % flex )
