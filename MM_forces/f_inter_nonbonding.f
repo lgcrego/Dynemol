@@ -93,7 +93,7 @@ do l = k+1 , MM % N_of_atoms
                     call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
 
             case(3) !  <== this is a DWFF special-pair
-                    CALL warning("f_inter.f: DWFF molecule reached forbidden kernel")
+                    CALL warning("f_inter.f: DWFF molecule reached a forbidden kernel")
                     stop 
                     
      end select

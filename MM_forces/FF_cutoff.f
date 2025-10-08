@@ -20,7 +20,7 @@ contains
     
     ! local variables
     integer :: i, j, atmax
-    real*8  :: expar, ERFC, KRIJ, total_q2
+    real*8  :: expar, arg_Wolf, total_q2
    
     rcutsq = rcut**2
    
@@ -54,15 +54,15 @@ contains
     end do
     end do 
    
-    KRIJ   = KAPPA * rcut
-    vrecut = coulomb * ERFC(KRIJ) / rcut
-    expar  = exp(-KRIJ**2)
-    frecut = coulomb * ( ERFC(KRIJ) + TWO*irsqPI*KAPPA*rcut*expar ) / rcutsq
+    arg_Wolf = KAPPA * rcut
+    vrecut   = coulomb * ERFC(arg_Wolf) / rcut
+    expar    = exp(-arg_Wolf**2)
+    frecut   = coulomb * ( ERFC(arg_Wolf) + TWO*irsqPI*KAPPA*rcut*expar ) / rcutsq
    
     ! vself part of the Coulomb calculation
     total_q2 = sum( atom(:)%charge**2 )
-    vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_q2
-    vself = vself*factor3
+    vself    = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_q2
+    vself    = vself*factor3
 
 end subroutine FF_cutoff_sphere
 !
@@ -197,8 +197,9 @@ end subroutine Buckingham
     ! local variables ...
     real*8 :: k , irkl , ir2 , ir6 , ir7 , rkl
     real*8 :: zeta , erfc_zeta , arg , exp_arg2
-    real*8 :: a2, a3, U0 , Ecoul , Fcoul , f_sr , E_sr
-    real*8 :: A, B, C
+    real*8 :: arg_Wolf , decay_Wolf , exp_Wolf
+    real*8 :: Ecoul , Fcoul , f_sr , E_sr
+    real*8 :: A, B, C, a2 , a3 , a4 , U0  
     character(len=2) :: type1, type2
    
     !--------------------------------------------
@@ -215,7 +216,7 @@ end subroutine Buckingham
     end select
     !--------------------------------------------
  
-    rkl  = rcut
+    rkl  = rcut   ! <==== mind this line, it replicates for all length parameters
     irkl = D_one / rcut
     ir2  = D_one / rcutsq
     
@@ -250,15 +251,20 @@ end subroutine Buckingham
     a2  = irsqPI * (two * HOH% Coul(k,4))   
     arg = rkl * HOH%Coul(k,4)
     exp_arg2 = EXP(-arg**2)
+
+    arg_Wolf   = KAPPA * rkl
+    decay_Wolf = erfc(arg_Wolf)
+    exp_Wolf   = EXP(-arg_Wolf**2)
     
     ! Energy
     U0 = HOH%Coul(k,1) + HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
-    Ecoul = coulomb * U0 * irkl
+    Ecoul = coulomb * U0 * decay_Wolf * irkl
     
     ! Force
-    ! Fcoul (not damped)
+    ! Fcoul (damped)
     a3 = a2 * ( HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3) * exp_arg2 )
-    Fcoul = coulomb * (U0*ir2 - a3*exp_arg2*irkl)
+    a4 = decay_Wolf + TWO*irsqPI*KAPPA*rkl*exp_Wolf
+    Fcoul = coulomb * (U0*a4*ir2 - a3*exp_arg2*decay_Wolf*irkl)
     
     !----------------------------------------------------
     ! total: intent(out)
