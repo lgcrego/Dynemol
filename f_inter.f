@@ -33,7 +33,7 @@ implicit none
 real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
 integer , allocatable :: species_offset(:)
 real*8                :: rkl(3) , cm_kl(3)
-real*8                :: total_chrg , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
+real*8                :: total_q2 , Ecoul_damped , Fcoul , fs , vsr  , rkl2 
 integer               :: i , j , k , l , atk , atl
 integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
 
@@ -55,8 +55,8 @@ evdw = D_zero
 Coul_inter = D_zero
 
 ! vself part of the Coulomb calculation
-total_chrg = sum(atom(:)% charge)
-vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_chrg**2
+total_q2 = sum(atom(:)% charge**2)
+vself = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_q2
 vself = vself*factor3
 
 if( MM % N_of_molecules > 1 ) &
