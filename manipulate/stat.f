@@ -16,13 +16,14 @@ contains
 !===========================
 subroutine Statistics( trj )
 !===========================
-type(universe)  , allocatable   , intent(inout) :: trj(:)
+type(universe), allocatable, intent(inout):: trj(:)
 
 ! local varibles ...
 integer      :: step
-character(1) :: operation
+character(1) :: operation, answer
 character(2) :: atom
 character(3) :: atom_A , atom_B , residue
+logical      :: done
 
 CALL system( "clear" )
 
@@ -47,19 +48,34 @@ select case( operation )
         CALL Bond_Torsion(trj)
 
     case( 'r' )
-        write(*, '(1x,a)'               ) "MMSymbol of the first atom (A): "
-        write(*, '(a10)', advance = 'no') 'atom A = '
-        read*, atom_A
-        atom_A = adjustr(atom_A)
-        write(*, '(1x,a)'               ) "MMSymbol of the second atom (B): "
-        write(*, '(a10)', advance = 'no') 'atom B = '
-        read*, atom_B
-        atom_B = adjustr(atom_B)
-        write(*, '(1x,a)'               ) "Frame step: "
-        write(*, '(a10)', advance = 'no') 'step = '
-        read*, step
+        done = .false.
+        do while (.NOT. done)
+               write(*, '(1x,a)'               ) "MMSymbol of the first atom (A): "
+               write(*, '(a10)', advance = 'no') 'atom A = '
+               read*, atom_A
+               atom_A = adjustr(atom_A)
+               write(*, '(1x,a)'               ) "MMSymbol of the second atom (B): "
+               write(*, '(a10)', advance = 'no') 'atom B = '
+               read*, atom_B
+               atom_B = adjustr(atom_B)
+               write(*, '(1x,a)'               ) "Frame step: "
+               write(*, '(a10)', advance = 'no') 'step = '
+               read*, step
 
-        CALL Radial_Function( trj , atom_A , atom_B , step )
+               CALL Radial_Function( trj , atom_A , atom_B , step )
+
+               write(*,*)
+               write(*, '(a28)', advance = 'no') 'repeat the operation? (y,n) '
+               read*, answer
+
+               select case (answer)
+                   case('y','Y')
+                   ! not done yet
+
+                   case default
+                    done = .true.  
+                end select
+        end do
 
     case( 'z' )
         write(*, '(1x,a  )'                ) "MMSymbol of the atom: "
@@ -285,6 +301,7 @@ real*8                                         :: side(3) , radius_max , delta_R
 integer                                        :: i , j , n , N_A , N_B , frame , sampling_number , PBC_sys_size
 integer         , dimension(:)   , allocatable :: resid_A , resid_B , index_max 
 logical         , dimension(:,:) , allocatable :: mask
+character(len=13) :: f_name
 
 ! local parameters ...
 integer                          , parameter   :: N_interval = 500
@@ -370,7 +387,8 @@ do frame = 1 , size(trj) , step
 end do
 
 ! dump RDF ...
-open(unit = 20, file = "data.dat", status = "unknown", action = "write")
+f_name = "RDF-"//trim(adjustL(atom_A))//"-"//trim(adjustL(atom_B))//".dat" 
+open(unit = 20, file = f_name, status = "unknown", action = "write")
     do n = 1 , N_interval-1
         write(20,500)  x(n) , g_AB_total(n)
     end do
