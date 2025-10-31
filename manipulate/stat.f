@@ -159,7 +159,6 @@ read*, indx_C
 allocate( angle_ABC(size(trj)) )
 
 ! calculates the bond angle ...
-! calculates the bond angle ...
 do i = 1 , size(trj)
     d2_AB = sum((trj(i)%atom(indx_A)%xyz - trj(i)%atom(indx_B)%xyz)**2)
     d2_AC = sum((trj(i)%atom(indx_A)%xyz - trj(i)%atom(indx_C)%xyz)**2)

@@ -2,18 +2,16 @@ module F_inter_m
 
     use constants_m
     use omp_lib
-    use syst            , only : using_barostat
-    use md_read_m       , only : MM, molecule
-    use F_inter_nonbond , only : f_inter_nonbonding, virial_tensor 
-    use F_inter_DWFF    , only : f_DWFF_inter
+    use syst               , only : using_barostat
+    use md_read_m          , only : MM, molecule
+    use F_inter_nonbond    , only : f_inter_nonbonding
+    use F_inter_DWFF       , only : f_DWFF_inter
+    use Berendsen_Barostat , only : virial_tensor
 
     public :: FORCEINTER
 
     private
 
-    ! module variables ...
-    real*8 , save :: virial_tensor(3,3)
-    
 contains
 !
 !
@@ -48,7 +46,7 @@ end subroutine FORCEINTER
     implicit none
     
     ! initializing variables for this integration step ...
-    virial_tensor(:,:)   = D_zero
+    virial_tensor(:,:) = D_zero
     
 end subroutine InitializeStressMatrix
 !
@@ -61,10 +59,10 @@ end subroutine InitializeStressMatrix
     integer :: i,j
     
     ! symmetrizing the tensors ...
-    virial_tensor   = virial_tensor * factor3
+    virial_tensor = virial_tensor * factor3
     
     do concurrent (i = 1:2, j = 1:3, j>i)
-      virial_tensor(j,i)   = virial_tensor(i,j) 
+      virial_tensor(j,i) = virial_tensor(i,j) 
     end do
 
 end subroutine ConcludeStressMatrix

@@ -2,21 +2,19 @@ module F_inter_nonbond
 
     use constants_m
     use omp_lib
-    use syst         , only : using_barostat
-    use type_m       , only : warning
-    use parameters_m , only : PBC, QMMM
-    use md_read_m    , only : atom, MM, molecule, special_pair_mtx
-    use Data_Output  , only : Net_Charge
-    use gmx2mdflex   , only : SpecialPairs
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
+    use syst               , only : using_barostat
+    use type_m             , only : warning
+    use parameters_m       , only : PBC, QMMM
+    use md_read_m          , only : atom, MM, molecule, special_pair_mtx
+    use Data_Output        , only : Net_Charge
+    use gmx2mdflex         , only : SpecialPairs
+    use Berendsen_Barostat , only : virial_tensor
+    use for_force          , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
 
-    public :: f_inter_nonbonding , virial_tensor
+    public :: f_inter_nonbonding
 
     private
 
-    ! module variables ...
-    real*8 , save :: virial_tensor(3,3)
-    
 contains
 !
 !

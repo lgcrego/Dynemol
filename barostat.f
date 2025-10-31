@@ -1,12 +1,11 @@
 module Berendsen_Barostat
 
     use constants_m
-    use syst            ! using all syst
-    use parameters_m    , only: PBC 
-    use MD_read_m       , only: MM , atom , molecule
-    use F_inter_nonbond , only: virial_tensor
+    use syst          ! using all syst
+    use parameters_m  , only: PBC 
+    use MD_read_m     , only: MM , atom , molecule
 
-    public :: Ek_tensor , barostat 
+    public :: Ek_tensor , virial_tensor , barostat 
 
     private
 
@@ -15,6 +14,7 @@ module Berendsen_Barostat
 
     ! module variables ...
     real*8 , save :: kinetic_tensor(3,3)
+    real*8 , save :: virial_tensor(3,3)
  
     contains
 

@@ -159,6 +159,7 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
+          barostat.o \
           MM_forces/f_inter_DWFF.o \
           MM_forces/f_inter_nonbonding.o \
 		  MM_forces/f_inter.o \
@@ -171,7 +172,6 @@ SOURCE2 = constants_m.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \
-          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \

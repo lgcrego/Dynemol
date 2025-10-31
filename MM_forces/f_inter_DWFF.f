@@ -2,20 +2,20 @@ module F_inter_DWFF
 
     use constants_m
     use omp_lib
-    use syst         , only : using_barostat
-    use parameters_m , only : PBC
-    use md_read_m    , only : atom, MM, molecule, special_pair_mtx
-    use Data_Output  , only : Net_Charge
-    use for_force    , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, DWFF_inter
-    use Build_DWFF   , only : HOH => HOH_diss_parms
+    use syst               , only : using_barostat
+    use parameters_m       , only : PBC
+    use md_read_m          , only : atom, MM, molecule, special_pair_mtx
+    use Data_Output        , only : Net_Charge
+    use Berendsen_Barostat , only : virial_tensor
+    use for_force          , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, DWFF_inter
+    use Build_DWFF         , only : HOH => HOH_diss_parms
 
-    public :: f_DWFF_inter , virial_tensor
+    public :: f_DWFF_inter
 
     private
 
     ! module variables ...
     real*8 , allocatable :: f_bond(:,:), f_ang(:,:)
-    real*8 , save        :: virial_tensor(3,3)
     real*8               :: bond_erg, ang_erg, f_angle
     
 contains
