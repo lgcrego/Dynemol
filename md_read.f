@@ -53,10 +53,13 @@ If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM speci
 CALL Structure_2_MD
 ! get Atomic Number (AtNo) ...
 CALL Symbol_2_AtNo( atom )
-! Define atomic mass ...
-atom % mass = Atomic_mass( atom % AtNo )
 
-If( Selective_Dynamics ) CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+! Define atomic mass ...
+If( Selective_Dynamics ) then
+    CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+else
+    atom % mass = Atomic_mass( atom % AtNo )
+end if
 
 ! just checking ...
 CALL checklist
@@ -380,7 +383,7 @@ end subroutine Build_MM_Environment
 subroutine allocate_molecule( N )
 !================================
 implicit none
-integer , intent(in)    :: N
+integer , intent(in) :: N
 
 ! local variables ...
 integer :: i
