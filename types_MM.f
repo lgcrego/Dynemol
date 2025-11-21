@@ -31,8 +31,6 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         real*8                              :: f_MM(3)
         real*8                              :: f_QM(3)
         real*8                              :: ftotal(3)
-        real*8                              :: fch(3)
-        real*8                              :: fsr(3)
         real*8                              :: fMorse(3)
         real*8                              :: f_inter_nonbond(3)
         real*8                              :: f_intra_DWFF(3)
