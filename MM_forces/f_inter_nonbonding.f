@@ -25,22 +25,12 @@ contains
 implicit none
 
 !local variables ...
-real*8  , allocatable :: tmp_fsr(:,:,:) , tmp_fch(:,:,:) 
-real*8                :: rkl(3) , cm_kl(3)
-real*8                :: Ecoul_damped , Fcoul , fs , vsr  , rkl2 
-integer               :: i , j , k , l , atk , atl
-integer               :: OMP_get_thread_num , ithr , numthr , nresidl , nresidk
+real*8 , allocatable :: tmp_f_inter(:,:)
+real*8               :: rkl(3) , cm_kl(3)
+real*8               :: Ecoul_damped , Fcoul , fs , vsr  , rkl2 
+integer              :: i , j , k , l , atk , atl, nresidk, nresidl
 
-numthr = OMP_get_max_threads()
-
-allocate( tmp_fsr ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
-allocate( tmp_fch ( MM % N_of_atoms , 3 , numthr ) , source = D_zero )
-
-do i = 1, MM % N_of_atoms 
-    atom(i) % fsr(:) = D_zero
-    atom(i) % fch(:) = D_zero
-end do
-
+allocate( tmp_f_inter (MM % N_of_atoms, 3), source = D_zero )
 evdw = D_zero
 Coul_inter = D_zero
 
@@ -48,8 +38,8 @@ Coul_inter = D_zero
 ! INTER-MOLECULAR vdW and Coulomb forces ...
 !$OMP parallel DO &
 !$OMP default (shared) &
-!$OMP private (i, j, k, l, atk, atl, rkl2, cm_kl, rkl, fs, vsr, Ecoul_damped, Fcoul, nresidk, nresidl, ithr)  &
-!$OMP reduction (+: Coul_inter, evdw, virial_tensor) 
+!$OMP private (k, l, atk, atl, rkl, rkl2, fs, vsr, Ecoul_damped, Fcoul, i, j, nresidk, nresidl, cm_kl)  &
+!$OMP reduction (+: tmp_f_inter, Coul_inter, evdw, virial_tensor) 
 do k = 1 , MM % N_of_atoms - 1
 do l = k+1 , MM % N_of_atoms
 
@@ -96,53 +86,45 @@ do l = k+1 , MM % N_of_atoms
                     
      end select
 
-     ithr = OMP_get_thread_num() + 1
-
-     tmp_fsr(k,1:3,ithr) = tmp_fsr(k,1:3,ithr) + fs * rkl(1:3)
-     tmp_fsr(l,1:3,ithr) = tmp_fsr(l,1:3,ithr) - fs * rkl(1:3)
-     
      ! Coulomb Interaction
      call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
 
-     tmp_fch(k,1:3,ithr) = tmp_fch(k,1:3,ithr) + Fcoul * rkl(1:3)
-     tmp_fch(l,1:3,ithr) = tmp_fch(l,1:3,ithr) - Fcoul * rkl(1:3)
+     ! attention: calculation subject to non-associative floating-point arithemtic
+     tmp_f_inter(k,:) = tmp_f_inter(k,:) + (fs + Fcoul) * rkl(:)
+     tmp_f_inter(l,:) = tmp_f_inter(l,:) - (fs + Fcoul) * rkl(:)
 
      !Energy
      evdw       = evdw + vsr
      Coul_inter = Coul_inter + Ecoul_damped
      
-     !-------------------------------------------------------------------------------
+     !-------------------------------------------------------------------------------                                                                    
      if( using_barostat% inter ) &
      then
            nresidk = atom(k)% nr
            nresidl = atom(l)% nr
-           cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+           cm_kl(:) = molecule(nresidk)% cm(:) - molecule(nresidl) % cm(:)
            cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
            do i=1,3 ; do j=i,3
-              virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * (fs+Fcoul) * rkl(j)
+              virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i)*(fs + Fcoul)*rkl(j)
            end do; end do
      end if
      !---------------------------------------------------------------------------------
+
 end do
 end do
 !$OMP end parallel do
-!##############################################################################
 
+!##############################################################################
 evdw       = evdw * factor3
 Coul_inter = Coul_inter * factor3
 pot_INTER  = evdw + Coul_inter
 
 ! force units = J/mts = Newtons ...
-! manual reduction (+: fsr , fch) ...
 do i = 1, MM % N_of_atoms
-    do k = 1 , numthr
-        atom(i) % fsr(1:3) = atom(i) % fsr(1:3) + tmp_fsr(i,1:3,k)
-        atom(i) % fch(1:3) = atom(i) % fch(1:3) + tmp_fch(i,1:3,k)
-    end do
-    atom(i) % f_inter_nonbond(1:3) = atom(i)%fsr(1:3) + atom(i)%fch(1:3)
+    atom(i) % f_inter_nonbond(:) = tmp_f_inter(i,:)
 end do
 
-deallocate ( tmp_fsr , tmp_fch )
+deallocate ( tmp_f_inter )
 
 end subroutine f_inter_nonbonding
 !

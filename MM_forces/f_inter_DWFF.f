@@ -15,8 +15,8 @@ module F_inter_DWFF
     private
 
     ! module variables ...
-    real*8 , allocatable :: f_bond(:,:), f_ang(:,:)
-    real*8               :: bond_erg, ang_erg, f_angle
+    real*8 , allocatable :: f_bond_aux(:,:,:), f_ang_aux(:,:,:), ang_erg(:)
+    real*8               :: bond_erg
     
 contains
 !
@@ -29,21 +29,24 @@ contains
     ! local variables
     integer :: i, j
     
-    do j = 1 , MM % N_of_atoms
-        atom(j)% f_inter_DWFF(:) = D_zero  
+    do i = 1 , MM % N_of_atoms
+        atom(i)% f_inter_DWFF(:) = D_zero  
     end do
 
     call inter_DWFF
-    
-    ! local force units = J/Angs ...
+
+    ! force units = J/Angs ...
+    ! manual reduction (+: f_bond , f_ang) ...
     do i = 1, MM % N_of_atoms
-       atom(i)% f_inter_DWFF(:) = f_bond(i,:) + f_ang(i,:)
+        do j = 1,3
+            atom(i) % f_inter_DWFF(j) = sum(f_bond_aux(i,j,:)) + sum(f_ang_aux(i,j,:))
+        end do
     end do
    
     ! energy 
-    DWFF_inter = (bond_erg + ang_erg)*factor3 
+    DWFF_inter = ( bond_erg + sum(ang_erg) )*factor3 
  
-    deallocate( f_bond , f_ang )
+    deallocate( f_bond_aux , f_ang_aux , ang_erg )
 
 end subroutine f_DWFF_inter
 !
@@ -57,99 +60,119 @@ end subroutine f_DWFF_inter
     !local variables ...
     real*8  :: rkl(3) , cm_kl(3)
     real*8  :: rkl2 , force , erg
-    integer :: i , j , k , l , pair_of_kind
-    integer :: nresidl , nresidk
+     real*8 :: virial_private(3,3)
+    integer :: i, j, k, l, pair_of_kind
+    integer :: nresidl, nresidk, OMP_get_thread_num, ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
     
+    numthr = OMP_get_max_threads() 
+
+    allocate( f_bond_aux ( MM % N_of_atoms , 3 , numthr) , source = D_zero )
+    allocate( f_ang_aux  ( MM % N_of_atoms , 3 , numthr) , source = D_zero )
 
     bond_erg = D_zero
-    ang_erg  = D_zero
-    allocate( f_bond (MM% N_of_atoms,3) , source = D_zero )
-    allocate( f_ang  (MM% N_of_atoms,3) , source = D_zero )
+    allocate( ang_erg( numthr) , source = D_zero )
     
     !##############################################################################
     ! INTER-MOLECULAR DWFF calculations ...
-                            
-         do k = 1 , MM % N_of_atoms - 1
-         do l = k+1 , MM % N_of_atoms
-    
-              ! only for DWFF special pairs ...
-              DWFF_special_pair = (special_pair_mtx(k,l) == 3)
-              if ( .not. DWFF_special_pair ) cycle
-         
-              ! only for different molecules ...
-              if ( atom(k)% nr == atom(l)% nr ) cycle
-    
-              rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
-              rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
-         
-              rkl2 = sum( rkl(:)**2 )
-        
-              ! only inside cutoff radius ... 
-              if( rkl2 > rcutsq ) cycle
-    
-              type1 = atom(k)% MMSymbol
-              type2 = atom(l)% MMSymbol
+
+!$OMP parallel default (shared) &
+!$OMP private (i, j, k, l, rkl, rkl2, cm_kl, force, erg, nresidk, nresidl, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
+!$OMP reduction (+: bond_erg)
+                           
+    ! initialize thread-local variables
+    ithr = OMP_get_thread_num() + 1
+    virial_private = D_zero
+
+    !$OMP do schedule(dynamic,4)
+    do k = 1 , MM % N_of_atoms - 1
+       do l = k+1 , MM % N_of_atoms
+       
+            ! only for DWFF special pairs ...
+            DWFF_special_pair = (special_pair_mtx(k,l) == 3)
+            if ( .not. DWFF_special_pair ) cycle
+       
+            ! only for different molecules ...
+            if ( atom(k)% nr == atom(l)% nr ) cycle
+       
+            rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
+            rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
+       
+            rkl2 = sum( rkl(:)**2 )
+       
+            ! only inside cutoff radius ... 
+            if( rkl2 > rcutsq ) cycle
+       
+            type1 = atom(k)% MMSymbol
+            type2 = atom(l)% MMSymbol
    
-              select case (trim(type1)//'-'//trim(type2))
-              case ('HX-HX')
-                  pair_of_kind = 3
-                  ! 3body does not apply 
-    
-              case ('OX-OX')
-                  pair_of_kind = 2
-                  ! 3body does not apply 
-    
-              case ('HX-OX' , 'OX-HX')
-                  pair_of_kind = 1
-                  !------------------------------------------------------
-                  ! 3body calculations
-                  if ( atom(k)% MMSymbol == 'HX' ) then
-                       call inter_3body_DWFF ( k , l , HOH%H_ptr(1) )
-                       call inter_3body_DWFF ( k , l , HOH%H_ptr(2) )
-                  else
-                       call inter_3body_DWFF ( l , k , HOH%H_ptr(1) )
-                       call inter_3body_DWFF ( l , k , HOH%H_ptr(2) )
-                  end if
-                  !------------------------------------------------------
-     
-              end select
-    
-              call evaluate_2body_inter_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
-         
-              f_bond(k,1:3) = f_bond(k,:) + force * rkl(:)
-              f_bond(l,1:3) = f_bond(l,:) - force * rkl(:)
-              
-              bond_erg = bond_erg + erg
-              
-              !-------------------------------------------------------------------------------
-              if( using_barostat% inter ) &
-              then
-                    nresidk = atom(k)% nr
-                    nresidl = atom(l)% nr
-                    cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                    cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                    do i=1,3 ; do j=i,3
-                       virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i) * force * rkl(j)
-                    end do; end do
-              end if
-              !---------------------------------------------------------------------------------
-         end do
-         end do
+            select case (trim(type1)//'-'//trim(type2))
+            case ('HX-HX')
+                pair_of_kind = 3
+                ! 3body does not apply 
+       
+            case ('OX-OX')
+                pair_of_kind = 2
+                ! 3body does not apply 
+       
+            case ('HX-OX' , 'OX-HX')
+                pair_of_kind = 1
+                !---------------------------------------------------------
+                ! 3body calculations
+                ! (pass ithr so 3body can write into per-thread arrays)
+                if ( atom(k)% MMSymbol == 'HX' ) then
+                     call inter_3body_DWFF ( k , l , HOH%H_ptr(1) , ithr )
+                     call inter_3body_DWFF ( k , l , HOH%H_ptr(2) , ithr )
+                else
+                     call inter_3body_DWFF ( l , k , HOH%H_ptr(1) , ithr )
+                     call inter_3body_DWFF ( l , k , HOH%H_ptr(2) , ithr )
+                end if
+                !---------------------------------------------------------
+            end select
+
+            ! evaluate 2-body interaction (force and energy)
+            call evaluate_2body_inter_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
+       
+            f_bond_aux(k,1:3,ithr) = f_bond_aux(k,1:3,ithr) + force * rkl(1:3)
+            f_bond_aux(l,1:3,ithr) = f_bond_aux(l,1:3,ithr) - force * rkl(1:3)
+            
+            bond_erg = bond_erg + erg
+            
+            !-------------------------------------------------------------------------------
+            if( using_barostat% inter ) &
+            then
+                  nresidk = atom(k)% nr
+                  nresidl = atom(l)% nr
+                  cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
+                  cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+                  do i=1,3 ; do j=i,3
+                     virial_private(i,j) = virial_private(i,j) + cm_kl(i) * force * rkl(j)
+                  end do; end do
+            end if
+            !---------------------------------------------------------------------------------
+       end do
+    end do
+    !$OMP end do
+    ! reduce thread-local virial into the shared virial_tensor safely
+    !$OMP critical
+       virial_tensor = virial_tensor + virial_private
+    !$OMP end critical    
+    !$OMP end parallel 
+    !##############################################################################
 
 end subroutine inter_DWFF
 !
 !
 !
-!==============================================
- subroutine inter_3body_DWFF( atj , ati , atk )
-!==============================================
+!=====================================================
+ subroutine inter_3body_DWFF( atj , ati , atk , ithr )
+!=====================================================
     implicit none
-    integer , intent(in) :: atj , ati , atk
+    integer , intent(in) :: atj , ati , atk , ithr
     
     ! local parameter ...
-    real*8 :: r0 = 1.6
+    real*8 :: r0 = 1.6d0
     
     ! local_variables ...
     real*8 , dimension (3):: rij, rik 
@@ -194,7 +217,7 @@ end subroutine inter_DWFF
      U3  = U03 * (cos_theta - HOH%Angle(1,4))
 
      ! energy of the triplet
-     ang_erg = ang_erg + U3
+     ang_erg(ithr) = ang_erg(ithr) + U3
     
      a1 = U3*HOH%Angle(1,3)    
      a2 = two*U03
@@ -203,13 +226,13 @@ end subroutine inter_DWFF
      ! forces on each atom of the triplet 
      f_ij = a1*inv_delta_0ij**2 + a3/rijsq
      f_ik = a2/rijsq
-     f_ang(atj,:) = f_ang(atj,:) + f_ij*rij(:)/rijsq - f_ik*rik(:)/riksq
+     f_ang_aux(atj,:,ithr) = f_ang_aux(atj,:,ithr) + f_ij*rij(:)/rijsq - f_ik*rik(:)/riksq
     
      f_ik = a1*inv_delta_0ik**2 + a3/riksq
      f_ij = a2/riksq
-     f_ang(atk,:) = f_ang(atk,:) + f_ik*rik(:)/riksq - f_ij*rij(:)/rijsq
+     f_ang_aux(atk,:,ithr) = f_ang_aux(atk,:,ithr) + f_ik*rik(:)/riksq - f_ij*rij(:)/rijsq
     
-     f_ang(ati,:) = f_ang(ati,:) - (f_ang(atj,:) + f_ang(atk,:))
+     f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_ang_aux(atj,:,ithr) + f_ang_aux(atk,:,ithr))
     
 end subroutine inter_3body_DWFF
 !

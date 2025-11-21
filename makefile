@@ -16,11 +16,11 @@
 FC = ifx
 
 # Applied to all fortran files
-FC_ALL = -xHost -align -no-wrap-margin
+FC_ALL = -align -xHost -fp-model=precise -no-wrap-margin
 
 # Parallelization flags
-FC_PARALLEL = -qopenmp
-f_FLAGS = -O2 -static-intel $(FC_PARALLEL)
+FC_PARALLEL = -qopenmp 
+f_FLAGS = -O3  $(FC_PARALLEL)
 
 # applied to .F files
 F_FLAGS =  -O2
