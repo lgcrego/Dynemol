@@ -10,7 +10,6 @@ private
     interface truncate_array
         module procedure truncate_integer_array
         module procedure truncate_single_R_array
-!        module procedure truncate_double_R_array
         module procedure truncate_string_array
     end interface
 

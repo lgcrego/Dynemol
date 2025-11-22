@@ -10,7 +10,7 @@ use RW_routines         , only : view_XYZ , Initialize_System
 use Function_routines   , only : ad_hoc_tuning
 use diagnosis_m         , only : diagnosis
 use EDIT_routines       , only : Eliminate_Fragment , ReGroup , Replicate , Translation
-use Statistics_routines , only : Most_Representative_Configuration
+use Statistics_routines , only : Most_Representative_Configuration , Statistics
 use Topology_routines   , only : connect , dump_topol
 
 public :: Read_Trajectories
@@ -77,6 +77,7 @@ do
     write(*,'(/a)') ' (10) = Reverse time direction in trajectory'
     write(*,'(/a)') ' (11) = Replicate structure'
     write(*,'(/a)') ' (12) = DIAGNOSIS: details of the structure'
+    write(*,'(/a)') ' (13)  = Statistics'
     write(*,'(/a)') ' (0)  = DONE  '
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(I)') choice 
@@ -235,6 +236,10 @@ do
        case( 12 )
 
             CALL diagnosis(trj(1))
+
+       case( 13 )
+
+            CALL statistics(trj)
 
        case default
             exit

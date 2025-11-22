@@ -1,20 +1,23 @@
-#
+# makefile for ifx and icx based oneAPI
+
+#make dynemol - standard compilation
+#make safe - compilation with safe features
+#make debug - adds flag -g for debugging
+#make serial - remove all parallelization flags
+#make gdb - prepare code to GDB (equivalent to debug + serial) analysis
+
 .SUFFIXES: .f .F .for .cpp .F90 .cu .o 
 
-FC = mpiifx -xHost -fpp
-FREE = -free
+FC = mpiifx
 
-# use this flag for debugging and coding up
-SAFE = #-g -check all,nouninit -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+FC_ALL = -align -xHost -fp-model=precise -no-wrap-margin
+FC_PARALLEL = -qopenmp
 
-FFLAGS1 = -O2 -align 
-FFLAGS2 = -O2 -align -qopenmp -no-wrap-margin $(FREE) $(SAFE)
-
-LDFLAGS = -static-intel
+FFLAGS1 = -O2 -align $(FC_ALL) 
+FFLAGS2 = -O2 $(FC_ALL) $(FC_PARALLEL)
 
 CXX = icpx -std=c++11
-SAFE_CXX = #-g -traceback
-CFLAGS = -O2 -align -xHost -ip -qopenmp -fno-exceptions -restrict $(SAFE_CXX)
+CFLAGS = -O2 -align -xHost -ip -fno-exceptions -restrict $(FC_PARALLEL)
 
 # MKLROOT  = If MKLROOT is not defined in your environment, edit and uncomment this line
 LIB_BLAS   = -lmkl_blas95_lp64
@@ -93,10 +96,13 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
 		  checklist.o \
+          MM_forces/DWFF_Build.o \
 		  gmx2mdflex.o \
           namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+		  MM_forces/FF_cutoff.o \
+          MM_forces/f_intra_DWFF.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -108,30 +114,37 @@ SOURCE2 = constants_m.o \
 		  td_dp.o \
 		  DP_FMO.o \
 		  dipole_phi.o \
-                  EnvField.o \
+          EnvField.o \
 		  polarizability.o \
 		  hamiltonians.o \
-                  CSDM_master.o \
-                  decoherence.o \
+          CSDM_master.o \
+          decoherence.o \
 		  QCModel_Huckel.o \
 		  diabatic-Ehren.o \
 		  HuckelForces.o \
 		  Ehrenfest.o \
 		  FMO.o \
-                  CSDM_workers.o \
-                  FSSH.o \
+          CSDM_workers.o \
+          FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
-		  f_inter.o \
-		  f_intra.o \
+          barostat.o \
+          MM_forces/f_inter_DWFF.o \
+          MM_forces/f_inter_nonbonding.o \
+		  MM_forces/f_inter.o \
+          MM_forces/f_bond.o \
+          MM_forces/f_angle.o \
+          MM_forces/f_dihed.o \
+          MM_forces/f_Morse.o \
+          MM_forces/f_intra_nonbonding.o \
+		  MM_forces/f_intra.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \
-          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
-                  NVE.o \
+          NVE.o \
 		  VDOS_m.o \
 		  MM_dynamics.o \
 		  MM_driver.o \
@@ -157,11 +170,11 @@ SOURCE2 = constants_m.o \
 		  ElHl_schroedinger.o \
 		  diagnostic.o \
 		  qdynamics.o \
-                  Taylor.o \
+          Taylor.o \
 		  ElHl_Chebyshev.o \
-                  ElHl_Chebyshev_GPU.o \
+          ElHl_Chebyshev_GPU.o \
 		  TDSE_adiabatic.o \
-                  CSDM_adiabatic.o \
+          CSDM_adiabatic.o \
 		  Chebyshev_driver.o \
 		  eigen_driver.o \
 		  ga_driver.o \
@@ -186,19 +199,39 @@ all: dynemol Manipulate
 
 dynemol: $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA)
 	rm -f dynemol
-	$(FC) $(INCS) $(LDFLAGS) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
+	$(FC) $(INCS) -o dynemol $(SOURCE1) $(SOURCE2) $(SOURCE_GPU) $(SOURCE_CUDA) $(LIB) 
 
 Manipulate: 
 	$(MAKE) -C ./manipulate 
 
+# Program runs very slowly with this
+safe: FC_ALL += -g -check all,nouninit -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: CFLAGS += -traceback -fstack-protector
+safe: dynemol
+
+# Just adds debug flag to everything
+debug: FC_ALL += -g
+debug: CFLAGS += -g
+debug: dynemol
+
+# Removes parallel flags
+serial: FC_PARALLEL =
+serial: dynemol
+
+# Easiert do debug when there is no threads around
+gdb: FFLAGS2 = -O0
+gdb: FFLAGS2 = -O0
+gdb: CFLAGS = -O0
+gdb: debug
+
 .F.o:
-	$(FC) $(FFLAGS1) $(INCS) -c $<
+	$(FC) -fpp $(FFLAGS1) $(INCS) -c $<
 
 .f.o:
-	$(FC) $(FFLAGS2) $(INCS) $(GPU_DEFS) -c $<
-
-.F90.o:
-	$(FC) $(FFLAGS1) $(INCS) $(GPU_DEFS) -c $<
+	$(FC) -fpp -free $(FFLAGS2) $(INCS) $(GPU_DEFS) -c $< -o $@   
+                                                  
+.F90.o:                                           
+	$(FC) -fpp $(FFLAGS1) $(INCS) $(GPU_DEFS) -c $<    
 
 .cpp.o:
 	$(CXX) $(CFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
@@ -208,7 +241,11 @@ Manipulate:
 
 
 clean: 
-	-rm -f dynemol *.o *.mod; touch *.f
+	-rm -fv dynemol
+	-find . -name '*.o' -delete
+	-find . -name '*.mod' -delete
+	-find . -name '__genmod.f90' -delete
+	-find . -name '*.i' -delete 
 
 depend:
 	@echo -en "Searching module dependencies..."

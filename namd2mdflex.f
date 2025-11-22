@@ -3,26 +3,25 @@
 module namd2mdflex
 
 use iso_fortran_env
-use type_m                 , only : dynemolworkdir , warning
-use MM_input               , only : MM_input_format
+use type_m             , only : dynemolworkdir , warning
+use MM_input           , only : MM_input_format
 use constants_m
 use for_force
-use MPI_definitions_m      , only : master
-use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
-use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
-use NonBondPairs           , only : Identify_NonBondPairs
-use Babel_routines_m       , only : TO_UPPER_CASE
-use gmx2mdflex             , only : SpecialPairs , SpecialPairs14
-use setup_checklist        , only : Checking_Topology
+use MPI_definitions_m  , only : master
+use MM_types           , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
+use MM_tuning_routines , only : SpecialBonds, SpecialAngs
+use NonBondPairs       , only : Identify_NonBondPairs
+use Babel_routines_m   , only : TO_UPPER_CASE
+use gmx2mdflex         , only : SpecialPairs , SpecialPairs14
+use setup_checklist    , only : Checking_Topology
+use Build_DWFF         , only : include_DWFF_parameters
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
 private
  
     ! module variables ...
-    character(4)      , allocatable  , save  :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
-    real*8            , allocatable  , save  :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
-    integer                                  :: GAFF_order(4) = [3,2,1,4] 
+    integer :: GAFF_order(4) = [3,2,1,4] 
 
 contains
 !
@@ -34,8 +33,8 @@ contains
 implicit none
 type(MM_system)     , intent(in)    :: MM
 type(MM_atomic)     , intent(inout) :: atom(:)
-type(MM_atomic)     , intent(inout) :: FF(:)
 type(MM_molecular)  , intent(inout) :: species(:)
+type(MM_atomic)     , intent(inout) :: FF(:)
 
 ! local variables ...
 character(15)   , allocatable   :: InputChars(:,:)
@@ -60,10 +59,10 @@ do a = 1 , MM % N_of_species
 
     string = species(a) % residue // '.psf'
 
-    If( master ) then
+    If( master ) then 
         ! cloning the psf files into log.trunk ...
         call systemQQ("cp "//string//" log.trunk/.")
-    End If
+    EndIf
 
     open(33, file=dynemolworkdir//string, status='old',iostat=ioerr,err=101)
 
@@ -77,8 +76,17 @@ do a = 1 , MM % N_of_species
         do
             read(33,'(A)',iostat=ioerr) line
             line = to_upper_case(line)
-            if( verify( "!NATOM" , line ) == 0 ) exit
+            ! checking the number of atoms declared in psf file ...
+            if( verify( "!NATOM" , line ) == 0 ) then
+                      read(line,*,iostat=ioerr) dummy_int 
+                      exit
+            end if
         end do
+
+        If( species(a) % N_of_atoms /= dummy_int ) then
+            CALL warning("N_of_atoms conflict; check card_inpt and psf files (!NATOM field)")
+            stop
+        End If
 
         allocate( species(a) % atom ( species(a) % N_of_atoms ) )
 
@@ -121,6 +129,9 @@ do a = 1 , MM % N_of_species
         ! convert residues to upper case ...
         forall( i=1:N_of_atoms ) species(a)% atom(i)% residue = TO_UPPER_CASE( species(a)% atom(i)% residue )
 
+        ! set dissociative water force-field for HOH residues ...
+        if( species(a)% residue == "HOH" ) species(a)% DWFF = .true.
+
         i = 1
         do
             if( i > size(atom) ) exit
@@ -158,12 +169,13 @@ do a = 1 , MM % N_of_species
 
         forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
 
-        species(a) % funct_bond(:Nbonds) = "1"
-        
-        species(a) % bond_type(:) = "harm" 
+        select case (species(a)% atom(1)% residue)
+               case default
+                    species(a) % funct_bond(:Nbonds) = "1"
+                    species(a) % bond_type(:) = "harm" 
+        end select
         
         rewind 33
-
 !==============================================================================================
         ! Angle parameters :: reading ...
         do
@@ -189,11 +201,13 @@ do a = 1 , MM % N_of_species
 
         forall(i=1:3) species(a) % angs(:Nangs,i) = InputIntegers(:Nangs,i)
 
-        species(a) % funct_angle(:Nangs) = "1"
-        species(a) % angle_type (:Nangs) = "harm"
+        select case (species(a)% atom(1)% residue)
+               case default
+                    species(a) % funct_angle(:Nangs) = "1"
+                    species(a) % angle_type (:Nangs) = "harm" 
+        end select
 
         rewind 33
-
 !==============================================================================================
         ! Dihedral parameters :: reading ...
 
@@ -283,7 +297,7 @@ do a = 1 , MM % N_of_species
                 CALL warning("error detected in Topology, 1) check log.trunk/Topology.test.log  OR 2) use  <dynemol -f> ")
                 stop
             End If
-        End If
+        EndIf
 !----------------------------------------------------------------------------------------------
         rewind 33
 
@@ -329,10 +343,9 @@ do a = 1 , MM % N_of_species
         end select
 
 !==============================================================================================
-
 11      close(33)
 
-    If( master ) write(*,'(a9)') " << done "
+        If( master ) write(*,'(a9)') " << done "
 
 end do  ! <== loop(a=1:MM%N_of_species)
 
@@ -350,24 +363,26 @@ end subroutine psf2mdflex
  subroutine prm2mdflex( MM , species , FF )
 !==========================================
 implicit none 
-type(MM_molecular)                  , intent(inout) :: species(:)
-type(MM_system)                     , intent(inout) :: MM
-type(MM_atomic)     , allocatable   , intent(inout) :: FF(:)
+type(MM_molecular)            , intent(inout) :: species(:)
+type(MM_system)               , intent(inout) :: MM
+type(MM_atomic) , allocatable , intent(inout) :: FF(:)
  
 ! local variables ...
-character(4)    , allocatable   :: InputChars(:,:) , Input2Chars(:,:)
-character(4)    , allocatable   :: funct_bond(:) , funct_angle(:)
-real*8          , allocatable   :: InputReals(:,:) , Input2Reals(:,:)
-integer         , allocatable   :: InputIntegers(:,:)
-integer         , allocatable   :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
-integer                         :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes , n_pairs
-integer                         :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms, SpecialNBParms
-real*8                          :: SCEE , SCNB
-character(3)                    :: dummy_char
-character(4)                    :: dummy
-character(18)                   :: keyword
-character(200)                  :: line
-logical                         :: flag1 , flag2 , flag3 , flag4 , flag5 , flag6 
+character(4) , allocatable :: BondPairsSymbols(:,:), AngleSymbols(:,:), DihedSymbols(:,:)
+character(4) , allocatable :: InputChars(:,:) , Input2Chars(:,:)
+character(4) , allocatable :: funct_bond(:) , funct_angle(:)
+real*8       , allocatable :: BondPairsParameters(:,:), AngleParameters(:,:), DihedParameters(:,:)
+real*8       , allocatable :: InputReals(:,:) , Input2Reals(:,:)
+integer      , allocatable :: InputIntegers(:,:)
+integer      , allocatable :: Dihed_Type(:) , Bond_Type(:) , Angle_Type(:)
+integer                    :: a , n , i , j , k , l , l1 , j1 , dummy_int , ioerr , N_of_AtomTypes , n_pairs
+integer                    :: NbondsTypes , NangsTypes , NdihedTypes , NTorsionTypes , NImproperTypes, NBondParms, SpecialNBParms
+real*8                     :: SCEE , SCNB
+character(3)               :: dummy_char
+character(4)               :: dummy
+character(18)              :: keyword
+character(200)             :: line
+logical                    :: flag0, flag1 , flag2 , flag3 , flag4 , flag5 , flag6 , invalid
 
 allocate( InputChars    ( 10000 , 10 )                   )
 allocate( Input2Chars   ( 10000 , 10 )                   )
@@ -377,11 +392,11 @@ allocate( InputIntegers ( 10000 , 10 ) , source = I_zero )
 
 ! NAMD FF definitions ... 
 forcefield = 1   ! <== 1 = Lennard-Jones ; 2 = Buckingham 
-  
+
 If( master ) then
   ! cloning the input.prm file into log.trunk ...
   call systemQQ("cp input.prm log.trunk/.") 
-End If  
+EndIf
 
 open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
@@ -432,7 +447,7 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     MM % N_of_AtomTypes = i - 1
 
 !=====================================================================================
-!  reads BONDS ...
+!  read BOND parameters from input.prm ...
     do
         read(33,100) keyword
         if( trim(keyword) == "BONDS" ) exit
@@ -457,7 +472,8 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
     allocate( BondPairsSymbols    ( NbondsTypes , 2 ) )
     allocate( BondPairsParameters ( NbondsTypes , 3 ) , source = D_zero )
-    allocate( funct_bond    ( NbondsTypes ) )
+    allocate( Bond_Type           ( NbondsTypes     ) )
+    allocate( funct_bond          ( NbondsTypes     ) )
 
     forall(i=1:2) BondPairsSymbols(:NbondsTypes,i)    = adjustl(InputChars(:NbondsTypes,i))
     forall(i=1:2) BondPairsParameters(:NbondsTypes,i) = InputReals(:NbondsTypes,i)
@@ -465,14 +481,16 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     ! ATTENTION: the following values are being converted to Dynemol internal units ...
     ! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
 
+    ! default pair potential
     funct_bond( :NbondsTypes ) = "harm" 
+    Bond_type ( :NbondsTypes ) = 1 
     do i = 1 , NbondsTypes 
          BondPairsParameters(i,1) = InputReals(i,1) * TWO * factor1 * imol * cal_2_J 
          BondPairsParameters(i,2) = InputReals(i,2) 
     end do
 
 !=====================================================================================
-!  reads ANGLES ...
+!  read ANGLE parameters from input.prm ...
     do
         read(33,100) keyword
         if( trim(keyword) == "ANGLES" ) exit
@@ -657,7 +675,6 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
                case("BUCK")
                    read(line,*, iostat=ioerr) dummy , dummy , (InputReals(i,j) , j=1,3)
                end select
-        
         i = i + 1
     end do read_loop5
     backspace(33)
@@ -685,15 +702,15 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     backspace(33)
 
     ! every atom must have a nonbonding character ...
-    if( master ) &
-    then
-         do i = 1 , size(FF)
-              if( (FF(i)% LJ == .false.) .AND. (FF(i)% Buck == .false.) ) then
-                 CALL warning(" atom type  "//FF(i)%MMSymbol//" is neither LJ nor BUCK, if necessary use 0.0 for the FF parameters ")
-                 stop
-              endif
-         end do
-    end if
+    If( master ) then
+        do i = 1, size(FF)
+           invalid = .not. (FF(i)%LJ .or. FF(i)%Buck)
+           if (invalid) then
+              call warning("Atom type "//FF(i)%MMSymbol//" is neither [LJ, BUCK]; use 0.0 for FF parameters if necessary.")
+              stop
+           end if
+        end do
+    EndIf
 
     FF % eps14 = FF % eps
     FF % sig14 = FF % sig
@@ -735,13 +752,14 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     FF % BuckB = FF % BuckB * HALF
     FF % BuckC = sqrt( FF % BuckC * factor1 * imol * cal_2_J )
 
+    ! this is a helper used below to define the IntraIJ array 
     do k = 1 , size(FF)
        i = FF(k)% my_id
        j = FF(k)% my_species
-       species(j)%atom(i)%lj   = FF(k)%lj
-       species(j)%atom(i)%buck = FF(k)%buck
-       if(FF(k)%lj)   species(j)%atom(i)%eps   = FF(k)%eps
-       if(FF(k)%buck) species(j)%atom(i)%buckA = FF(k)%buckA
+       species(j)% atom(i)% LJ   = FF(k)% LJ
+       species(j)% atom(i)% BUCK = FF(k)% BUCK
+       if(FF(k)% LJ)   species(j)% atom(i)% eps   = FF(k)% eps
+       if(FF(k)% BUCK) species(j)% atom(i)% buckA = FF(k)% buckA
     end do
 
 !=====================================================================================
@@ -751,7 +769,6 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
         if(ioerr == iostat_end) goto 99     ! <== end of file 
         if( trim(keyword(1:7)) == "SPECIAL" ) exit
     end do
-
 
     InputReals = D_zero
     i = 1
@@ -773,6 +790,8 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
                    read(line,*, iostat=ioerr) dummy , dummy , dummy , (InputReals(i,j) , j=1,4)
                case("BUCK")
                    read(line,*, iostat=ioerr) dummy , dummy , dummy , (InputReals(i,j) , j=1,3)
+               case("DWFF")
+                   read(line,*, iostat=ioerr) dummy , dummy , dummy 
         end select
         
         i = i + 1
@@ -814,6 +833,11 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
                         SpecialPairs(i)% Parms(1) = InputReals(i,1) * factor1 * imol * cal_2_J 
                         SpecialPairs(i)% Parms(2) = d_one / InputReals(i,2)
                         SpecialPairs(i)% Parms(3) = InputReals(i,3) * factor1 * imol * cal_2_J 
+
+                    case("DWFF")
+
+                        SpecialPairs(i)% model = InputChars(i,3)
+
              end select 
 
         end do
@@ -829,20 +853,21 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
         SpecialPairs14(:SpecialNBParms) % Parms(1) = SpecialPairs14(:SpecialNBParms) % Parms(1) * 2**(5.d0/6.d0) 
         SpecialPairs14(:SpecialNBParms) % Parms(2) = SpecialPairs14(:SpecialNBParms) % Parms(2) * factor1 * imol * cal_2_J 
 
-    endIf
+    end if
 
-!=====================================================================================
-!
-99 close(33)
+99 close(33)   ! <== FINISHED READING PARAMETERS from INPUT.PRM 
+
+! get Dissociative Water Force Field (DWFF) parameners ... 
+if ( any(species%DWFF) ) call include_DWFF_parameters(species)
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )
 !=====================================================================================
 
+! ASSIGN THE INPUT.PRM PARAMETERS TO THE CORRESPONDING ATOMS ...
 do a = 1 , MM % N_of_species
 
-!   Assigning to each specie the corresponding parameter ...
-
+    !=============================================================================
     ! Bond parameters ...
     allocate( species(a) % kbond0( species(a) % Nbonds , 3 ) , source = D_zero )
 
@@ -1117,19 +1142,20 @@ do a = 1 , MM % N_of_species
         ! identify 14-pairs and long-range pairs; Nbonds14 and NintraIJ ...
         ! for LJ only ...
         CALL Identify_NonBondPairs( species , a )
-    else 
-        ! only NonBonding interactions for species(a) ...
-        ! for LJ, and Buckingham potentials if necessary ...
 
+    else 
+        ! species(a) has ONLY NonBonding interactions ...
+        
         ! npairs = all pairs ... 
         n_pairs = species(a)%N_of_Atoms * (species(a)%N_of_Atoms - 1) / 2
 
         allocate( dummy_array_I ( n_pairs , 3 ) , source = I_zero )
 
         k = 0
- 
         do i = 1   , species(a)% N_of_Atoms - 1
         do j = i+1 , species(a)% N_of_Atoms
+
+             flag0  = species(a)%atom(i)% MM_charge * species(a)%atom(j)% MM_charge /= 0.0 
 
              flag1  =   species(a)%atom(i)% LJ   &
                   .AND. species(a)%atom(j)% LJ   &
@@ -1139,28 +1165,40 @@ do a = 1 , MM % N_of_species
                   .AND. species(a)%atom(j)% BUCK &
                   .AND. (species(a)%atom(i)%buckA + species(a)%atom(j)%buckA /= 0.0)
 
-             flag3 = species(a)%atom(i)% MM_charge * species(a)%atom(j)% MM_charge /= 0.0 
+             flag3  =   (species(a)%atom(i)%MMSymbol == "HX") .or. (species(a)%atom(i)%MMSymbol == "OX") &
+                  .AND. (species(a)%atom(j)%MMSymbol == "HX") .or. (species(a)%atom(j)%MMSymbol == "OX")
+             if(flag3) then
+                       flag1 = .false.
+                       flag2 = .false.
+                       end if 
 
              if( flag1 ) &
                   then
                       k = k + 1
                       dummy_array_I(k,1) = i
                       dummy_array_I(k,2) = j
-                      dummy_array_I(k,3) = 1
+                      dummy_array_I(k,3) = 1    ! <== Lennard-Jones
 
              elseif( flag2 ) &
-                  then
+                  then 
                       k = k + 1
                       dummy_array_I(k,1) = i
                       dummy_array_I(k,2) = j
-                      dummy_array_I(k,3) = 2
+                      dummy_array_I(k,3) = 2    ! <== Buckingham
 
              elseif( flag3 ) &
                   then
                       k = k + 1
                       dummy_array_I(k,1) = i
                       dummy_array_I(k,2) = j
-                      dummy_array_I(k,3) = 0  ! <== only Electrostatic
+                      dummy_array_I(k,3) = 3    ! <== DWFF
+
+             elseif( flag0 ) &
+                  then
+                      k = k + 1
+                      dummy_array_I(k,1) = i
+                      dummy_array_I(k,2) = j
+                      dummy_array_I(k,3) = 0    ! <== only Electrostatic
               end if
 
         end do
@@ -1169,11 +1207,11 @@ do a = 1 , MM % N_of_species
         if( k > 0 ) allocate( species(a)% IntraIJ , source = dummy_array_I(1:k,:) )
 
         deallocate( dummy_array_I)
-        
     end if
 
 !==============================================================================================
 end do ! <== loop(a=1:MM % N_of_species)
+! DONE with assigning the input.prm parameters to the corresponding atoms ...
 
 if( allocated(BondPairsParameters) ) deallocate( BondPairsParameters )
 if( allocated(BondPairsSymbols)    ) deallocate( BondPairsSymbols    )

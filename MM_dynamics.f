@@ -4,9 +4,10 @@ module MM_dynamics_m
     use parameters_m        , only : driver , restart , step_security , QMMM , VDOS_ , n_t
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat , spawn , spawn_step
     use MD_read_m           , only : atom , MM
-    use setup_m             , only : setup, move_to_box_CM, Molecular_CM
+    use setup_m             , only : move_to_box_CM, Molecular_CM
     use MD_dump_m           , only : output , cleanup , saving_MM_frame , GenerateConfigs
     use syst                , only : using_barostat
+    use FF_cutoff           , only : FF_cutoff_sphere
     use f_inter_m           , only : ForceINTER
     use f_intra_m           , only : ForceINTRA , ForceQMMM
     use QMMM_m              , only : QMMM_FORCE
@@ -203,7 +204,7 @@ end select
 ! setting up ...
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
-CALL Setup
+CALL FF_cutoff_sphere
 If( .not. done ) CALL move_to_box_CM
 CALL Molecular_CM
 

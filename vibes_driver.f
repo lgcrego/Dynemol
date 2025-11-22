@@ -6,10 +6,11 @@ module good_vibrations_m
     use blas95
     use lapack95
     use parameters_m            , only : PBC 
-    use MM_input                , only : OPT_driver , nmd_window
+    use MM_input                , only : OPT_driver , nmd_window , driver_MM
     use MD_read_m               , only : atom , MM , molecule
     use MM_types                , only : MM_atomic , LogicalKey
-    use setup_m                 , only : Setup
+    use MD_dump_m               , only : cleanup
+    use FF_cutoff               , only : FF_cutoff_sphere
     use Babel_m                 , only : QMMM_key
     use F_intra_m               , only : ForceIntra
     use cost_MM                 , only : nmd_REF_erg , nmd_NOPT_erg , KeyHolder , overweight , chi
@@ -287,23 +288,48 @@ end subroutine normal_modes
 implicit none
 
 ! local variables ...
+integer :: dumb
 real*8  :: local_minimum 
 
 ! setting up the MM system ...
 If( .not. done ) then
 
-    If( MM%N_of_molecules > I_one ) CALL Setup
+    If( MM%N_of_molecules > I_one ) CALL FF_cutoff_sphere
     atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
     done = .true. 
 
 end If
 
-! instantiating MM ...
-MM_erg = MM_OPT( )
+! if (exist(frames.pdb)) ==> erase it
+CALL cleanup
 
-CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
+select case (driver_MM)
 
-Print 30, MM_erg% message
+       case("XS_Optimize")
+           ! not implemented in master, use SingleNode
+
+           ! instantiating XS_erg ...
+           !XS_erg = XS_OPT( )
+           !
+           !dumb =  len(XS_erg% message)
+           !
+           !CALL Fletcher_Reeves_Polak_Ribiere_minimization( XS_erg , XS_erg%N_of_Freedom , local_minimum )
+           !
+           !Print 30, XS_erg% message
+
+       case("MM_Optimize")
+           ! instantiating MM ...
+           MM_erg = MM_OPT( )
+           
+           dumb =  len(MM_erg% message)
+           
+           CALL Fletcher_Reeves_Polak_Ribiere_minimization( MM_erg , MM_erg%N_of_Freedom , local_minimum )
+           
+           Print 30, MM_erg% message
+
+end select
+
+close( unit=32 )
 
 include 'formats.h'
 
