@@ -33,7 +33,7 @@ subroutine Build_MM_Environment
 implicit none
 
 ! local variables ...
-integer :: i , j , k , l , atmax , Total_N_of_atoms_of_species_i , nresid , i1, i2, i3, sp, nr, rounded_avg_atoms
+integer :: i , j , k , atmax , nresid , i1, i2, i3, sp, nr, rounded_avg_atoms
 logical :: flag1 , flag2
 
 !=======================  setting up system  ============================= 
@@ -45,60 +45,28 @@ talt          = thermal_relaxation_time         !  Temperature coupling
 talp          = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
+! =====================================================================================
 
 If( any( species % N_of_atoms == 0 ) ) stop ' >> you forgot to define a MM species ; check MM input parms << '
 
-! =====================================================================================
-! types of molecules ...
-CALL allocate_molecule( MM % N_of_molecules )
-
-! just checking ...
-if (MM % N_of_molecules /= sum(species % N_of_molecules)) then
-    CALL warning(" inconsistency in total # of molecules : check card_inpt and input.pdb ")
-    STOP 
-end If
-
-MM % N_of_atoms = 0
-l = 1
-do i = 1 , MM % N_of_species
-    Total_N_of_atoms_of_species_i = species(i) % N_of_molecules * species(i) % N_of_atoms
-    do j = 1 , species(i) % N_of_molecules
-        molecule(l) % my_species = i
-        l = l + 1
-    end do
-    MM % N_of_atoms = MM % N_of_atoms + Total_N_of_atoms_of_species_i 
-end do
-
-! just checking ...
-if (MM% N_of_atoms /= unit_cell% atoms) then
-    CALL warning(" inconsistency in total # of atoms : check card_inpt and input.pdb ")
-    STOP 
-end If
-
-allocate ( atom ( MM % N_of_atoms ) )
-k = 1
-do i = 1 , MM % N_of_species
-    Total_N_of_atoms_of_species_i = species(i) % N_of_molecules * species(i) % N_of_atoms
-    do j = 1 , Total_N_of_atoms_of_species_i
-        atom(k) % my_species = i
-        k = k + 1
-    end do
-end do
-
-! pass information from structure to molecular dynamics ...
+! fetch information from structure to molecular dynamics ...
 CALL Structure_2_MD
-
-!----------------------
-! finished reading ...
-!----------------------
-
 ! get Atomic Number (AtNo) ...
 CALL Symbol_2_AtNo( atom )
 
 ! Define atomic mass ...
-atom % mass = Atomic_mass( atom % AtNo )
+If( Selective_Dynamics ) then
+    CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+else
+    atom % mass = Atomic_mass( atom % AtNo )
+end if
 
-If( Selective_Dynamics ) CALL ad_hoc_MM_tuning( atom , instance="MegaMass")
+! just checking ...
+CALL checklist
+
+!----------------------
+! finished preprocessing ...
+!----------------------
 
 do i = 1 , MM % N_of_species
     species(i) % mass = sum( atom % mass , atom % my_species == i ) / species(i) % N_of_molecules
@@ -125,7 +93,6 @@ CALL allocate_FF( atmax )
 select case ( MM_input_format )
 
     case( "GMX" )  ! <== reads FF data in GMX format ... 
-     
          If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
 
          CALL itp2mdflex( MM , atom , species , FF)
@@ -148,11 +115,10 @@ select case ( MM_input_format )
          end do
 
     case( "NAMD" , "GAFF" )  ! <== reads FF data in NAMD format ... 
-
          If( ad_hoc ) CALL ad_hoc_MM_tuning(instance="SpecialBonds")
   
          CALL psf2mdflex( MM , atom , species , FF)
- 
+
          CALL prm2mdflex( MM , species , FF)
 
          do i = 1 , size(species)
@@ -178,6 +144,8 @@ end select
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+call get_intra_species_id
+
 ! feedback from ad_hoc up to Unit_Cell ...
 Unit_Cell% flex(:) = atom(:)% flex
 
@@ -191,6 +159,7 @@ do i = 1 , MM % N_of_species
     where( molecule % my_species == i ) molecule % Ndiheds    = species(i) % Ndiheds
     where( molecule % my_species == i ) molecule % Nbonds14   = species(i) % Nbonds14
     where( molecule % my_species == i ) molecule % NintraIJ   = species(i) % NintraIJ
+    where( molecule % my_species == i ) molecule % DWFF       = species(i) % DWFF
 end do
 !=======================         set-up atom(:) <=> FF(:)    ============================= 
 
@@ -234,36 +203,46 @@ do i = 1 , size(atom)
 end do
 
 !=======================         set-up molecule(:)          ============================= 
+
+do i = 1 , MM % N_of_species
+    k = count( molecule % my_species == species(i) % my_species )
+    where( molecule % my_species == i ) 
+        molecule % N_of_molecules = k
+        molecule % residue        = species(i) % residue
+        molecule % flex           = species(i) % flex
+    end where
+end do
+
 do i = 1 , MM % N_of_molecules
 
     k = size( species(molecule(i) % my_species) % kdihed0(1,:) )
 
     If( molecule(i)%Nbonds14 > 0 ) & 
-    allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
+        allocate( molecule(i) % bonds14       ( molecule(i) % Nbonds14 , 2 ) )
 
     If( molecule(i)%Nbonds > 0 ) then
-    allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
-    allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
-    allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
-    allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
+        allocate( molecule(i) % bonds         ( molecule(i) % Nbonds   , 2 ) )
+        allocate( molecule(i) % kbond0        ( molecule(i) % Nbonds   , 3 ) )
+        allocate( molecule(i) % bond_type     ( molecule(i) % Nbonds       ) )
+        allocate( molecule(i) % funct_bond    ( molecule(i) % Nbonds       ) )
     End If
 
     If( molecule(i)%Nangs > 0 ) then
-    allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
-    allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 4 ) )
-    allocate( molecule(i) % angle_type    ( molecule(i) % Nangs        ) )
-    allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
+        allocate( molecule(i) % angs          ( molecule(i) % Nangs    , 3 ) )
+        allocate( molecule(i) % kang0         ( molecule(i) % Nangs    , 4 ) )
+        allocate( molecule(i) % angle_type    ( molecule(i) % Nangs        ) )
+        allocate( molecule(i) % funct_angle   ( molecule(i) % Nangs        ) )
     End If
 
     If( molecule(i)%Ndiheds > 0 ) then
-    allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
-    allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , k ) )
-    allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
-    allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
+        allocate( molecule(i) % diheds        ( molecule(i) % Ndiheds  , 4 ) )
+        allocate( molecule(i) % kdihed0       ( molecule(i) % Ndiheds  , k ) )
+        allocate( molecule(i) % Dihedral_Type ( molecule(i) % Ndiheds      ) )
+        allocate( molecule(i) % funct_dihed   ( molecule(i) % Ndiheds      ) )
     End If
 
     If( molecule(i)%NintraIJ > 0 ) & 
-    allocate( molecule(i) % IntraIJ       ( molecule(i) % NintraIJ , 3 ) )
+        allocate( molecule(i) % IntraIJ       ( molecule(i) % NintraIJ , 3 ) )
 
 end do
 
@@ -273,45 +252,36 @@ do i = 1 , MM % N_of_molecules
 !   offset the pair indices by k to match the atom array ...
 
     If( molecule(i)%Nbonds14 > 0 ) & 
-    molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
+        molecule(i) % bonds14       = species(molecule(i) % my_species) % bonds14 + k
 
     If( molecule(i)%Nbonds > 0 ) then
-    molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
-    molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
-    molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
-    molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
+        molecule(i) % kbond0        = species(molecule(i) % my_species) % kbond0
+        molecule(i) % bonds         = species(molecule(i) % my_species) % bonds + k 
+        molecule(i) % bond_type     = species(molecule(i) % my_species) % bond_type
+        molecule(i) % funct_bond    = species(molecule(i) % my_species) % funct_bond
     End If
 
     If( molecule(i)%Nangs > 0 ) then
-    molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
-    molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
-    molecule(i) % angle_type    = species(molecule(i) % my_species) % angle_type
-    molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
+        molecule(i) % kang0         = species(molecule(i) % my_species) % kang0
+        molecule(i) % angs          = species(molecule(i) % my_species) % angs + k
+        molecule(i) % angle_type    = species(molecule(i) % my_species) % angle_type
+        molecule(i) % funct_angle   = species(molecule(i) % my_species) % funct_angle
     End If
 
     If( molecule(i)%Ndiheds > 0 ) then
-    molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
-    molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
-    molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
-    molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
+        molecule(i) % kdihed0       = species(molecule(i) % my_species) % kdihed0
+        molecule(i) % diheds        = species(molecule(i) % my_species) % diheds + k
+        molecule(i) % Dihedral_Type = species(molecule(i) % my_species) % Dihedral_Type
+        molecule(i) % funct_dihed   = species(molecule(i) % my_species) % funct_dihed
     End If
 
     If( molecule(i)%NintraIJ > 0 ) then 
-    molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
-    molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
+        molecule(i) % IntraIJ(:,1:2) = species(molecule(i) % my_species) % IntraIJ(:,1:2) + k
+        molecule(i) % IntraIJ(:,3)   = species(molecule(i) % my_species) % IntraIJ(:,3) 
     End if 
 
     k = k + molecule(i) % N_of_atoms
 
-end do
-
-do i = 1 , MM % N_of_species
-    k = count( molecule % my_species == species(i) % my_species )
-    where( molecule % my_species == i ) 
-        molecule % N_of_molecules = k
-        molecule % residue        = species(i) % residue
-        molecule % flex           = species(i) % flex
-    end where
 end do
 
 !========================================================================================= 
@@ -342,6 +312,9 @@ If( allocated(SpecialPairs) ) then
                                   case("BUCK")
                                   special_pair_mtx(i,j) = 2
 
+                                  case("DWFF")
+                                  special_pair_mtx(i,j) = 3
+
                            end select
                            exit SP_loop
                       end if                            ! <== (I,J) is NOT a Special Pair ...  
@@ -371,6 +344,9 @@ If( allocated(SpecialPairs) ) then
 
                                   case("BUCK")
                                   FF_SP_mtx(i,j) = 2
+
+                                  case("DWFF")
+                                  FF_SP_mtx(i,j) = 3
 
                            end select
                            exit FFSP_loop
@@ -407,7 +383,7 @@ end subroutine Build_MM_Environment
 subroutine allocate_molecule( N )
 !================================
 implicit none
-integer , intent(in)    :: N
+integer , intent(in) :: N
 
 ! local variables ...
 integer :: i
@@ -423,6 +399,7 @@ do i = 1 , N
     molecule(i) % flex           = .false.
     molecule(i) % LJ             = .false.
     molecule(i) % Buck           = .false.
+    molecule(i) % DWFF           = .false.
     molecule(i) % residue        = "XXX"
     molecule(i) % nr             = 0
     molecule(i) % Nbonds         = 0
@@ -488,8 +465,10 @@ do i = 1 , N
     FF(i) % f_CSDM(:)    = 0.0d0
     FF(i) % Ehrenfest(:) = 0.0d0
     FF(i) % ftotal(:)    = 0.0d0
-    FF(i) % fch(:)       = 0.0d0
-    FF(i) % fsr(:)       = 0.0d0
+    FF(i) % fMorse(:)    = 0.0d0
+    FF(i) % f_inter_nonbond(:) = 0.0d0
+    FF(i) % f_intra_DWFF(:)    = 0.0d0
+    FF(i) % f_inter_DWFF(:)    = 0.0d0
     FF(i) % mass         = 0.0d0
     FF(i) % kinetic      = 0.0d0
     FF(i) % charge       = 0.0d0
@@ -580,13 +559,14 @@ integer :: i
 implicit none
 
 ! local variables ...
-logical :: exist
 integer :: i , j , nr , indx
 
 MM % box  = Unit_Cell % T_xyz
 MM % ibox =  D_one / MM % box
 
-do j = 1 , MM % N_of_atoms
+allocate ( atom ( Unit_Cell% atoms ) )
+
+do j = 1 , Unit_Cell% atoms
 
     i = QMMM_key(j)
 
@@ -597,6 +577,8 @@ do j = 1 , MM % N_of_atoms
     atom(i) % Symbol       = adjustl(Unit_Cell % Symbol(j))
     atom(i) % EHSymbol     = adjustl(Unit_Cell % MMSymbol(j))
     atom(i) % xyz(:)       = Unit_Cell % coord(j,:)
+    atom(i) % flex         = Unit_Cell % flex(i)
+    atom(i) % my_species   = 0
     atom(i) % vel(:)       = 0.d0
     atom(i) % fbond(:)     = 0.d0
     atom(i) % fang(:)      = 0.d0
@@ -608,8 +590,10 @@ do j = 1 , MM % N_of_atoms
     atom(i) % f_CSDM(:)    = 0.d0
     atom(i) % Ehrenfest(:) = 0.d0
     atom(i) % ftotal(:)    = 0.d0
-    atom(i) % fch(:)       = 0.d0
-    atom(i) % fsr(:)       = 0.d0
+    atom(i) % fMorse(:)    = 0.0d0
+    atom(i) % f_inter_nonbond(:) = 0.0d0
+    atom(i) % f_intra_DWFF(:)    = 0.0d0
+    atom(i) % f_inter_DWFF(:)    = 0.0d0
     atom(i) % mass         = 0.d0
     atom(i) % kinetic      = 0.d0
     atom(i) % charge       = 0.d0
@@ -623,26 +607,66 @@ do j = 1 , MM % N_of_atoms
     atom(i) % BuckC        = 0.0d0
     atom(i) % LJ           = .false.
     atom(i) % Buck         = .false.
-    atom(i) % flex         = Unit_Cell % flex(i)
 end do
 
-! this is assumed a priori , but can be changed otherwise if required by the Force Field ...
+! this is assumed a priori, but can be changed otherwise if required by the Force Field ...
 atom % MMSymbol = atom % EHSymbol  
 
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
+! get intra_id for each molecule ...
 indx = 1
-do nr = 1 , atom( MM % N_of_atoms ) % nr
-    do i = 1 , count( atom%nr == nr ) 
-        atom(indx) % my_intra_id = i
+do nr = 1 , maxval(atom%nr)
+    do i = 1 , count(atom%nr==nr) 
+        atom(indx)% my_intra_id = i
         indx = indx + 1
     end do
 end do
 
 ! setting up initial velocities ...
-do i = 1 , MM % N_of_atoms
+do i = 1 , size(atom)
     atom(i) % vel(1:3) = 0.d0
 end do
+
+end subroutine Structure_2_MD
+!
+!
+!
+subroutine get_intra_species_id
+    !! Compute offsets for atom indexing by species.
+    !!
+    !! Relies on the assumption that atoms of the same species
+    !! appear in contiguous blocks in the input.
+
+    implicit none
+
+    ! local variables
+    integer :: i , j
+    integer, allocatable:: species_PTR(:)
+
+    ! allocate result: one offset per species
+    allocate( species_PTR(size(species)) )
+
+    ! fill with cumulative sums of atoms up to species i-1
+    species_PTR = [(sum(species(1:i-1)%N_of_atoms), i=1, size(species))]
+
+    associate( a => atom )
+        do j = 1 , MM % N_of_atoms
+             a(j)% my_intra_species_id = species_PTR(a(j)% my_species) + a(j)% my_intra_id
+        end do
+    end associate
+end subroutine get_intra_species_id 
+!
+!
+!
+!====================
+ subroutine checklist
+!====================
+implicit none
+
+! local variables ...
+logical :: exist
+integer :: i, j, k, l, nr, Total_N_of_atoms_of_species_i
 
 ! Dynemol units for velocity_MM.inpt = m/s ...
 if( read_velocities ) then
@@ -677,13 +701,37 @@ elseif( resume ) then
 end if
 
 ! check list of input data ...
+if (MM % N_of_molecules /= sum(species % N_of_molecules)) then
+    CALL warning(" inconsistency in total # of molecules : check card_inpt and input.pdb ")
+    STOP 
+end If
+
+CALL allocate_molecule( MM % N_of_molecules )
+
+MM% N_of_atoms = 0
+l = 1 ; k = 1
+do i = 1 , MM % N_of_species
+    do j = 1 , species(i)% N_of_molecules
+        molecule(l)% my_species = i
+        l = l + 1
+        end do
+
+    Total_N_of_atoms_of_species_i = species(i)% N_of_molecules * species(i)% N_of_atoms
+    do j = 1 , Total_N_of_atoms_of_species_i
+        atom(k)% my_species = i
+        k = k + 1
+        end do
+
+    MM% N_of_atoms = MM% N_of_atoms + Total_N_of_atoms_of_species_i 
+end do
+
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
     CALL warning("error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms")
     STOP 
 end If
 
 If( Unit_Cell%atoms /= MM% N_of_atoms ) then
-    CALL warning("error: Unit_Cell%atoms /= MM% N_of_atoms")
+    CALL warning("inconsistency in total # of atoms: Unit_Cell%atoms /= MM% N_of_atoms; check card_inpt and input.pdb")
     STOP 
 end If
 
@@ -692,7 +740,7 @@ If( maxval(atom%nr) < MM%N_of_species ) then
     STOP 
 end If
 
-end subroutine Structure_2_MD
+end subroutine checklist
 !
 !
 !
@@ -1048,6 +1096,9 @@ character(len=:) , allocatable  :: string(:)
                                            molecule(m)%kang0(i,4) / nano_2_angs , &
                                            molecule(m)%kang0(i,3) / factor_2    , &
                                            arrow
+
+               case('diss')
+                   ! do nothing 
 
                case default
 

@@ -16,11 +16,11 @@
 FC = ifx
 
 # Applied to all fortran files
-FC_ALL = -xHost -align -no-wrap-margin
+FC_ALL = -align -xHost -fp-model=precise -no-wrap-margin
 
 # Parallelization flags
-FC_PARALLEL = -qopenmp
-f_FLAGS = -O2 -static-intel $(FC_PARALLEL)
+FC_PARALLEL = -qopenmp 
+f_FLAGS = -O3  $(FC_PARALLEL)
 
 # applied to .F files
 F_FLAGS =  -O2
@@ -128,10 +128,13 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
+          MM_forces/DWFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+		  MM_forces/FF_cutoff.o \
+          MM_forces/f_intra_DWFF.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -156,12 +159,19 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
-		  f_inter.o \
-		  f_intra.o \
+          barostat.o \
+          MM_forces/f_inter_DWFF.o \
+          MM_forces/f_inter_nonbonding.o \
+		  MM_forces/f_inter.o \
+          MM_forces/f_bond.o \
+          MM_forces/f_angle.o \
+          MM_forces/f_dihed.o \
+          MM_forces/f_Morse.o \
+          MM_forces/f_intra_nonbonding.o \
+		  MM_forces/f_intra.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \
-          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
@@ -228,7 +238,7 @@ Manipulate:
 	$(MAKE) -C ./manipulate 
 
 # Program runs very slowly with this
-safe: FC_ALL += -g -check all,nouninit -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: FC_ALL += -g -check all,nouninit -traceback #-fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
 safe: dynemol
 
@@ -259,8 +269,8 @@ vtune: debug
 .F.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
-.f.o:
-	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+%.o : %.f
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $< -o $@
 
 .F90.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
@@ -271,9 +281,13 @@ vtune: debug
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
 
-
 clean:
-	-rm -fv dynemol *.o *.mod *__genmod.f90 *.i
+	-rm -fv dynemol
+	-find . -name '*.o' -delete
+	-find . -name '*.mod' -delete
+	-find . -name '__genmod.f90' -delete
+	-find . -name '*.i' -delete
+
 
 depend:
 	@echo -en "Searching module dependencies..."

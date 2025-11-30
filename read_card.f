@@ -509,6 +509,9 @@ read_loop: do
                                  atom(start:finale) % residue = label 
                              case( "NR" )
                                  atom(start:finale) % nr = int_value 
+                             case( "QUENCH" )
+                                 atom(start:finale) % mass = -1.0
+                                 Selective_Dynamics = .true.
                              end select
                              endif
 

@@ -1,4 +1,4 @@
-.SUFFIXES: .f .F .for .cpp .F90 .cu .o
+# makefile for ifx and icx based oneAPI
 
 #make dynemol - standard compilation
 #make safe - compilation with safe features
@@ -7,6 +7,7 @@
 #make gdb - prepare code to GDB (equivalent to debug + serial) analysis
 #make vtune - prepare code to intel-Vtune analysis
 
+.SUFFIXES: .f .F .for .cpp .F90 .cu .o
 
 ##########################
 # FORTRAN CONFIGURATIONS #
@@ -15,16 +16,15 @@
 FC = ifort
 
 # Applied to all fortran files
-FC_ALL = -xHost -ip -align -no-wrap-margin
+FC_ALL = -align -xHost -fp-model=precise -no-wrap-margin
 
 # Parallelization flags
 FC_PARALLEL = -qopenmp -parallel
+f_FLAGS = -O3  $(FC_PARALLEL)
 
-# Others flags for each file type *.f, *.F and *.F90
-F_FLAGS =  -O3
+# applied to .F files
+F_FLAGS =  -O2
 F90_FLAGS = $(F_FLAGS)
-f_FLAGS = -O2 -static $(FC_PARALLEL)
-
 
 ######################
 # CPP CONFIGURATIONS #
@@ -33,7 +33,7 @@ f_FLAGS = -O2 -static $(FC_PARALLEL)
 CC = icpc -std=c++11
 
 # Applied to all cpp files
-CC_ALL = -xHost -ip
+CC_ALL = -xHost 
 
 # Parallelization flags
 CC_PARALLEL = -qopenmp
@@ -80,7 +80,6 @@ LIB_GPU   = $(LIB_MAGMA) $(LIB_CUDA) -lstdc++
 INCS_GPU  = -I$(CUDADIR)/include -I$(MAGMADIR)/include
 endif
 
-
 ############################
 # LIBARRIES CONFIGURATIONS #
 ############################
@@ -94,8 +93,6 @@ LIB_LAPACK = -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core
 LIB_OMP = -liomp5 -lpthread
 
 INCLUDES_MKL = -I$(MKLROOT)/include/intel64/lp64 -I$(MKLROOT)/include/fftw
-
-
 LIBS  = $(LIB_GPU) $(LIB_BLAS) $(LIB_LAPACK) $(LIB_OMP) -lrt
 INCLUDES = $(INCLUDES_MKL)
 
@@ -131,10 +128,13 @@ SOURCE2 = constants_m.o \
 		  babel.o \
 		  structure.o \
           checklist.o \
+          MM_forces/DWFF_Build.o \
 		  gmx2mdflex.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+		  MM_forces/FF_cutoff.o \
+          MM_forces/f_intra_DWFF.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -159,12 +159,19 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
 		  data_output.o \
-		  f_inter.o \
-		  f_intra.o \
+          barostat.o \
+          MM_forces/f_inter_DWFF.o \
+          MM_forces/f_inter_nonbonding.o \
+		  MM_forces/f_inter.o \
+          MM_forces/f_bond.o \
+          MM_forces/f_angle.o \
+          MM_forces/f_dihed.o \
+          MM_forces/f_Morse.o \
+          MM_forces/f_intra_nonbonding.o \
+		  MM_forces/f_intra.o \
 		  electron_hole_DP.o \
 		  AlphaPolar.o \
           backup_MM.o \
-          barostat.o \
 		  Berendsen.o \
 		  NoseHoover.o \
 		  NoseHoover_Reversible.o \
@@ -231,7 +238,7 @@ Manipulate:
 	$(MAKE) -C ./manipulate 
 
 # Program runs very slowly with this
-safe: FC_ALL += -check all -traceback -fstack-protector -assume protect_parens -implicitnone -warn all,noexternal -fpe-all=0
+safe: FC_ALL += -g -check all -traceback -fstack-protector -assume protect_parens -implicitnone #-warn all,noexternal -fpe-all=0
 safe: CC_ALL += -traceback -fstack-protector
 safe: dynemol
 
@@ -262,8 +269,8 @@ vtune: debug
 .F.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) -c $<
 
-.f.o:
-	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
+%.o : %.f
+	$(FC) -fpp -free $(FC_ALL) $(f_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $< -o $@
 
 .F90.o:
 	$(FC) -fpp $(FC_ALL) $(F_FLAGS) $(INCLUDES) $(GPU_DEFS) -c $<
@@ -274,9 +281,13 @@ vtune: debug
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(INCS_GPU) $(GPU_DEFS) -c $<
 
-
 clean:
-	-rm -fv dynemol *.o *.mod *__genmod.f90 *.i
+	-rm -fv dynemol
+	-find . -name '*.o' -delete
+	-find . -name '*.mod' -delete
+	-find . -name '__genmod.f90' -delete
+	-find . -name '*.i' -delete
+
 
 depend:
 	@echo -en "Searching module dependencies..."

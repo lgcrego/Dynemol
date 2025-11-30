@@ -3,12 +3,13 @@ module MM_types
 use constants_m
 
 public :: MM_atomic , MM_molecular , MM_system , DefineBonds , DefineAngles , DefinePairs , debug_MM
-public :: MMOPT_Control, Logicalkey
+public :: MMOPT_Control, Logicalkey, Dissociative
 
     type MM_atomic
         integer                             :: AtNo
         integer                             :: my_id
         integer                             :: my_intra_id
+        integer                             :: my_intra_species_id
         integer                             :: my_species
         integer                             :: nr
         character(3)                        :: residue
@@ -30,9 +31,10 @@ public :: MMOPT_Control, Logicalkey
         real*8                              :: f_MM(3)
         real*8                              :: f_QM(3)
         real*8                              :: ftotal(3)
-        real*8                              :: fch(3)
-        real*8                              :: fsr(3)
         real*8                              :: fMorse(3)
+        real*8                              :: f_inter_nonbond(3)
+        real*8                              :: f_intra_DWFF(3)
+        real*8                              :: f_inter_DWFF(3)
         real*8                              :: mass
         real*8                              :: kinetic
         real*8                              :: charge
@@ -47,6 +49,7 @@ public :: MMOPT_Control, Logicalkey
         logical                             :: flex
         logical                             :: LJ
         logical                             :: Buck
+        logical                             :: DWFF
     end type MM_atomic
 
     type interval
@@ -91,6 +94,7 @@ public :: MMOPT_Control, Logicalkey
         integer             , allocatable   :: IntraBuck(:,:)
         logical                             :: LJ
         logical                             :: Buck
+        logical                             :: DWFF
     end type MM_molecular
 
     type MM_system
@@ -118,10 +122,18 @@ public :: MMOPT_Control, Logicalkey
     end type DefineAngles
 
     type DefinePairs
-        character(4)                        :: MMSymbols(2)
+        character(2)                        :: MMSymbols(2)
         real*8                              :: Parms(3)
         character(4)                        :: model
     end type DefinePairs
+
+    type Dissociative
+        character(2)         , allocatable  :: PairSymbols(:,:)
+        real*8               , allocatable  :: SR(:,:)        
+        real*8               , allocatable  :: Coul(:,:)        
+        real*8               , allocatable  :: Angle(:,:)        
+        integer                             :: H_ptr(2)
+    end type Dissociative
 
     type LogicalKey
         logical       :: bonds(3)    = .false.
