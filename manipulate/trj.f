@@ -77,7 +77,7 @@ do
     write(*,'(/a)') ' (10) = Reverse time direction in trajectory'
     write(*,'(/a)') ' (11) = Replicate structure'
     write(*,'(/a)') ' (12) = DIAGNOSIS: details of the structure'
-    write(*,'(/a)') ' (13)  = Statistics'
+    write(*,'(/a)') ' (13) = Statistics'
     write(*,'(/a)') ' (0)  = DONE  '
     write(*,'(/a)',advance='no') '>>>   '
     read (*,'(I)') choice 
@@ -764,10 +764,11 @@ end subroutine Read_DICE_Trajectories
 !
 !
 !
-!=====================================
- subroutine Save_PDB_Trajectories(trj)
-!=====================================
-type(universe)  , allocatable   , intent(inout)   :: trj(:)
+!================================================
+ subroutine Save_PDB_Trajectories(trj, file_name)
+!================================================
+type(universe), allocatable, intent(inout) :: trj(:)
+character(*)  , optional   , intent(in)    :: file_name
 
 ! local variables ...
 integer               :: i , j , k , frame_step
@@ -779,7 +780,11 @@ allocate( pm(trj(1)%N_of_atoms) )
 write(*,'(/a)',advance='no') ' Saving with Frame step : '
 read (*,'(i3.3)'           ) frame_step
 
-OPEN( unit=4 , file='frames-output.pdb' , status='unknown' , action="write" )
+If( present(file_name) ) then
+    OPEN(unit = 4, file = file_name          , status = 'unknown', action = 'write')
+else 
+    OPEN(unit = 4, file = 'frames-output.pdb', status = 'unknown', action = 'write')
+end if
 
 write(4,6) trj(1)%System_Characteristics
 
