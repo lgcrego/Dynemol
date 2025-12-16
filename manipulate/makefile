@@ -60,6 +60,7 @@ SOURCE = types_m.o \
 		 solvent.o \
 		 elastic.o \
 		 correlation.o \
+		 DW_diagnostic.o \
 		 stat.o \
          RW_driver.o \
 		 trj.o \

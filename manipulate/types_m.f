@@ -1,6 +1,6 @@
 module types_m
 
-    character(len=:) , allocatable :: manipulatedir(:) , dynemolworkdir(:)
+    character(len=:) , allocatable :: manipulatedir(:) ,dynemoldir(:) , dynemolworkdir(:)
 
     type atomic
         real*8              :: xyz(3)
@@ -114,6 +114,10 @@ character(len=255) :: directory
 call get_environment_variable("DYNEMOLWORKDIR",directory)
 allocate( character(len_trim(directory)+1) :: dynemolworkdir(1))
 dynemolworkdir = trim(directory)//"/"
+
+call get_environment_variable("DYNEMOLDIR",directory)
+allocate( character(len_trim(directory)+1) :: dynemoldir(1))
+dynemoldir = trim(directory)//"/"
 
 call get_environment_variable("DYNEMOLDIR",directory)
 allocate( character(len_trim(directory)+12) :: manipulatedir(1))

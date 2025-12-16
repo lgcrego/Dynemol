@@ -5,6 +5,7 @@
 
 if [ $# -eq 0 ]
 then 
+    # No arguments provided
 	rm -r -f "$DYNEMOLWORKDIR"/dyn.trunk 2> "$DYNEMOLDIR"/qdynamo.err
 	mkdir "$DYNEMOLWORKDIR"/dyn.trunk
 
@@ -25,3 +26,10 @@ then
 	mkdir "$DYNEMOLWORKDIR"/ancillary.trunk/configs
 fi
 
+
+if [ $# -eq 1 ] && [ "$1" = "manipulate" ]
+then 
+    # environment for manipulate
+	rm -r -f "$DYNEMOLWORKDIR"/DWFF.trunk 2> "$DYNEMOLDIR"/qdynamo.err
+	mkdir "$DYNEMOLWORKDIR"/DWFF.trunk
+fi

@@ -404,40 +404,59 @@ end subroutine Eliminate_Fragment
 !
 !
 !
-!==================================
-subroutine Bring_into_PBCBox(system)
-!==================================
+!=============================================
+subroutine Bring_into_PBCBox(system, res_name)
+!=============================================
 implicit none
-type(universe) , intent(inout) :: system
+type(universe)          , intent(inout) :: system
+character(*)  , optional, intent(in)    :: res_name
 
 !local variables
  integer :: nr , i , indx1 , indx2 
  integer :: N_of_solute_atoms = 0
  real*8  :: GeoCenter(3) , nr_CM(3)
  character(4) :: residue_name
- integer , allocatable :: atom_indeces(:)
+ integer , allocatable :: atom_indices(:)
 
-! STDIN info ...
-write(*,'(/a)') ' Residue Name of the Solute (use capital letters) ?     '
-write(*,'(/a)',advance='no') '>>>   '
-read (*,'(a)') residue_name
+if( .not. present(res_name) ) then
 
-N_of_solute_atoms = count(system%atom(:)%resid==residue_name) 
-if( N_of_solute_atoms == 0 ) stop "No solute with this residue name"
+    ! STDIN info ...
+    write(*,'(/a)') ' Residue Name of the Solute (use capital letters) ?     '
+    write(*,'(/a)',advance='no') '>>>   '
+    read (*,'(a)') residue_name
+    
+    N_of_solute_atoms = count(system%atom(:)%resid==residue_name) 
+    if( N_of_solute_atoms == 0 ) stop "No solute with this residue name"
+    
+    do i=1,3
+       GeoCenter(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==residue_name) / N_of_solute_atoms
+       ! translate coordinates to the geometric center ...
+       system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
+    end do
 
-do i=1,3
-   GeoCenter(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==residue_name) / N_of_solute_atoms
-   ! translate coordinates to the geometric center ...
-   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
-end do
+else
 
-atom_indeces = [(i , i=1,size(system%atom))]
+    N_of_solute_atoms = count(system%atom(:)%resid==res_name) 
+    if( N_of_solute_atoms == 0 ) then
+         print*, "No solute with this residue name: ", res_name
+         stop 
+         end if
+
+    do i=1,3
+       GeoCenter(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==res_name) / N_of_solute_atoms
+       ! translate coordinates to the geometric center ...
+       system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
+    end do
+
+end if
+
+atom_indices = [(i , i=1,size(system%atom))]
 
 do nr = minval(system%atom%nresid) , maxval(system%atom%nresid)
 
     ! atomic pointers of molecule with nresidue = nr
-    indx1 = minval( atom_indeces , (system%atom%nresid == nr) )
-    indx2 = maxval( atom_indeces , (system%atom%nresid == nr) )
+    indx1 = minval( atom_indices , (system%atom%nresid == nr) )
+    indx2 = maxval( atom_indices , (system%atom%nresid == nr) )
 
     do i = 1 , 3
 
@@ -459,7 +478,7 @@ end do
 
 ! place solute in the center of the PBC box
 do i=1,3
-   GeoCenter(i) = GeoCenter(i) - system%box(i)*HALF
+!   GeoCenter(i) = GeoCenter(i) - system%box(i)*HALF
    ! translate coordinates to the geometric center ...
    system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
 end do

@@ -6,7 +6,7 @@ use diagnosis_m
 use RW_routines
 use GMX_routines
 use Read_parms
-use EDIT_routines     , only: Copiar , Translation , Rotation , Reflection , Eliminate_Fragment , Bring_into_PBCBox , ReGroup , Replicate , Nonbonding_Topology , Include_fragment
+use EDIT_routines     , only: Copiar, Translation, Rotation, Reflection, Eliminate_Fragment, Bring_into_PBCBox, ReGroup, Replicate, Nonbonding_Topology, Include_fragment
 use SOLVENT_routines
 use FUNCTION_routines
 use Elastic_Band
@@ -35,6 +35,8 @@ integer                         :: file_type
 
 
 CALL get_environment_vars
+
+CALL system( dynemoldir//"env.sh manipulate" )
 
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
