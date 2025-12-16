@@ -42,7 +42,6 @@ INCLUDES = $(INCLUDES_MKL)
 #########################
 # FILES AND DEPENDECIES #
 #########################
-#INCS1   = comun.inc integcoul.inc m2cdat.inc $(INCLUDES)
 
 SOURCE = types_m.o \
  		 constants_m.o \
@@ -61,6 +60,7 @@ SOURCE = types_m.o \
 		 solvent.o \
 		 elastic.o \
 		 correlation.o \
+		 DW_diagnostic.o \
 		 stat.o \
          RW_driver.o \
 		 trj.o \

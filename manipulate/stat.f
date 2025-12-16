@@ -3,7 +3,8 @@ module Statistics_routines
 use types_m
 use constants_m
 use Read_parms
-use Correlation_m       , only : Correlation_driver
+use Dissociative  , only : DWFF
+use Correlation_m , only : Correlation_driver
 
 public :: Statistics , Most_Representative_Configuration
 
@@ -23,11 +24,12 @@ integer      :: step
 character(1) :: operation, answer
 character(2) :: atom
 character(3) :: atom_A , atom_B , residue
-logical      :: done
+logical      :: done, y_or_n
 
 CALL system( "clear" )
 
 write(*,'(/a)') ' Choose operation analysis '
+write(*,'(/a)') ' (w) = Dissociative Water '
 write(*,'(/a)') ' (l) = Bond Length '
 write(*,'(/a)') ' (a) = Bond Angle '
 write(*,'(/a)') ' (t) = Bond Torsion '
@@ -38,6 +40,9 @@ write(*,'(/a)',advance='no') '>>>   '
 read (*,'(a)') operation
 
 select case( operation )
+    case( 'w' )
+        CALL DWFF(trj)
+
     case( 'l' )
         CALL Bond_Length(trj)
 
@@ -48,6 +53,12 @@ select case( operation )
         CALL Bond_Torsion(trj)
 
     case( 'r' )
+
+        write(*,*)
+        write(*, '(a51)', advance = 'no') 'consider INTRA-MOLECULAR degrees of freedom? (y,n) '
+        read*, answer
+        y_or_no = merge(.true., .false., answer=="y")
+
         done = .false.
         do while (.NOT. done)
                write(*, '(1x,a)'               ) "MMSymbol of the first atom (A): "
@@ -62,7 +73,7 @@ select case( operation )
                write(*, '(a10)', advance = 'no') 'step = '
                read*, step
 
-               CALL Radial_Function( trj , atom_A , atom_B , step )
+               CALL Radial_Function( trj , atom_A , atom_B , step , only_inter_molecular=y_or_n )
 
                write(*,*)
                write(*, '(a28)', advance = 'no') 'repeat the operation? (y,n) '
@@ -94,9 +105,7 @@ select case( operation )
         CALL Correlation_driver
 
 end select
-!
-!
-!
+
 end subroutine Statistics
 !
 !
@@ -104,33 +113,30 @@ end subroutine Statistics
 !============================
 subroutine Bond_Length( trj )
 !============================
-type(universe)  , intent(in) :: trj(:)
-
-! local variables ....
-real*8   , allocatable  :: d_AB(:)
-real*8                  :: d_AB_avg , d_AB_sigma
-integer                 :: j , indx1 , indx2
-
-! calcule of the distance between the atoms ...
-write (*, '(1x,a)'),  "Enter the index of atoms whose distance (d_AB) is calculated: "
-write(*,'(A19)',advance='no') 'index of atom A = '
-read (*,'(i3)') indx1
-write(*,'(A19)',advance='no') 'index of atom B = '
-read (*,'(i3)') indx2
-
-allocate( d_AB(size(trj)) )
-
-forall( j=1:size(trj) ) d_AB(j) = sqrt( sum((trj(j)%atom(indx1)%xyz - trj(j)%atom(indx2)%xyz)**2) )
-
-d_AB_avg   = sum( d_AB ) / size(trj)
-d_AB_sigma = sqrt( (sum(d_AB*d_AB - d_AB_avg*d_AB_avg)) / size(trj) )
-
-print*, d_AB_avg , d_AB_sigma
-
-deallocate(d_AB)
-!
-!
-!
+    type(universe)  , intent(in) :: trj(:)
+    
+    ! local variables ....
+    real*8   , allocatable  :: d_AB(:)
+    real*8                  :: d_AB_avg , d_AB_sigma
+    integer                 :: j , indx1 , indx2
+    
+    ! calcule of the distance between the atoms ...
+    write (*, '(1x,a)'),  "Enter the index of atoms whose distance (d_AB) is calculated: "
+    write(*,'(A19)',advance='no') 'index of atom A = '
+    read (*,'(i3)') indx1
+    write(*,'(A19)',advance='no') 'index of atom B = '
+    read (*,'(i3)') indx2
+    
+    allocate( d_AB(size(trj)) )
+    
+    forall( j=1:size(trj) ) d_AB(j) = sqrt( sum((trj(j)%atom(indx1)%xyz - trj(j)%atom(indx2)%xyz)**2) )
+    
+    d_AB_avg   = sum( d_AB ) / size(trj)
+    d_AB_sigma = sqrt( (sum(d_AB*d_AB - d_AB_avg*d_AB_avg)) / size(trj) )
+    
+    print*, d_AB_avg , d_AB_sigma
+    
+    deallocate(d_AB)
 end subroutine Bond_Length
 !
 !
@@ -285,21 +291,22 @@ end subroutine Bond_Torsion
 !
 !
 !
-!=========================================================
-subroutine Radial_Function( trj , atom_A , atom_B , step )
-!=========================================================
-type(universe)  , intent(in)    :: trj(:)
-character(3)    , intent(in)    :: atom_A , atom_B
-integer         , intent(in)    :: step
+!================================================================================
+subroutine Radial_Function( trj , atom_A , atom_B , step , only_inter_molecular )
+!================================================================================
+type(universe), intent(in):: trj(:)
+character(3)  , intent(in):: atom_A , atom_B
+integer       , intent(in):: step
+logical       , intent(in):: only_inter_molecular
 
 ! local variables ...
-type(atomic)    , dimension(:)   , allocatable :: trj_PBC
-real*8          , dimension(:,:) , allocatable :: vec_A , vec_B , distance_AB , g_AB , g_AB_from_A
-real*8          , dimension(:)   , allocatable :: x , g_AB_total 
-real*8                                         :: side(3) , radius_max , delta_R , rho_B_bulk
-integer                                        :: i , j , n , N_A , N_B , frame , sampling_number , PBC_sys_size
-integer         , dimension(:)   , allocatable :: resid_A , resid_B , index_max 
-logical         , dimension(:,:) , allocatable :: mask
+type(atomic)  , dimension(:)  , allocatable:: trj_PBC
+real*8        , dimension(:,:), allocatable:: vec_A , vec_B , distance_AB , g_AB , g_AB_from_A
+real*8        , dimension(:)  , allocatable:: x , g_AB_total 
+real*8                                     :: side(3) , radius_max , delta_R , rho_B_bulk
+integer                                    :: i , j , n , N_A , N_B , frame , sampling_number , PBC_sys_size
+integer       , dimension(:)  , allocatable:: resid_A , resid_B , index_max 
+logical       , dimension(:,:), allocatable:: mask
 character(len=13) :: f_name
 
 ! local parameters ...
@@ -354,7 +361,9 @@ do frame = 1 , size(trj) , step
     end forall
 
 !   eliminate statistics between the same residue
-    where( mask ) distance_AB = real(ABOVE)
+    if( only_inter_molecular) then
+        where( mask ) distance_AB = real(ABOVE)
+    end if
 
     do i = 1 , N_A
         CALL sort( distance_AB(:,i) )
