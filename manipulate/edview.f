@@ -36,8 +36,6 @@ integer                         :: file_type
 
 CALL get_environment_vars
 
-CALL system( dynemoldir//"env.sh manipulate" )
-
 CALL Read_Atomic_Mass
 CALL Read_EHT_params
 
