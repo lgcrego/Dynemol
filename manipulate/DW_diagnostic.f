@@ -56,6 +56,8 @@ subroutine DWFF(trj)
     integer :: n
     type(statistics) :: OH_bond_length, HOH_angle
 
+    CALL system( dynemoldir//"env.sh manipulate" )
+
     !------------------------------------
     ! Open output files
     !------------------------------------
