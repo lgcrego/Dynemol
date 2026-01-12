@@ -1,5 +1,6 @@
 module RW_driver
 
+use ansi_colors
 use RW_routines       , only : View_XYZ, View_Yaehmop, Save_POSCAR, Save_MD_Urht
 use types_m           , only : universe
 use GMX_routines      , only : Save_GROMACS
@@ -32,15 +33,18 @@ CALL diagnosis( structure )
 
 do
 
-     write(*,'(/a)') '>>>    Writing the output file     <<<'
+     write(*,'(/a)') bold // cyan // '>>>    Writing the output file     <<<' // reset
      
-     write(*,'(/a)') '1 : XYZ format'
-     write(*,'(/a)') '2 : Yaehmop format '
-     write(*,'(/a)') '3 : POSCAR format '
-     write(*,'(/a)') '4 : PDB format '
-     write(*,'(/a)') '5 : Generate Topology ( must have CONECT in the pdb file; "obabel -ipdb input.pdb -opdb -O output.pdb" ) '
-     write(*,'(/a)') '0 : DONE '
-     write(*,'(/a)',advance='no') '>>>   '
+     write(*,'(a)') green // ' 1 :' // reset // ' XYZ format'
+     write(*,'(a)') green // ' 2 :' // reset // ' Yaehmop format'
+     write(*,'(a)') green // ' 3 :' // reset // ' POSCAR format'
+     write(*,'(a)') green // ' 4 :' // reset // ' PDB format'
+     write(*,'(a)') green // ' 5 :' // reset // ' Generate topology ' // &
+                          '(requires CONECT in PDB; obabel -ipdb input.pdb -opdb -O output.pdb)'
+     
+     write(*,'(a)') bold // orange // ' 0 :' // reset // ' DONE'
+     
+     write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
      read (*,'(a)') Writing_Method
      
      select case ( Writing_Method )
@@ -59,12 +63,16 @@ do
              CALL Save_GROMACS( structure )
      
          case ('5')
-             write(*,'(/a)') 'Choose format: 1=OPLS , 2=GAFF/NAMD/Amber'
-             write(*,'(/a)',advance='no') '>>>   '
+             write(*,'(/a)') bold // cyan // 'Choose topology format:' // reset
+             write(*,'(a)') green // ' 1 ' // reset // '= OPLS'
+             write(*,'(a)') green // ' 2 ' // reset // '= GAFF / NAMD / Amber'
+             
+             write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
              read (*,*) file_type
              
-             CALL get_topology( structure , file_type )
-             pause ">>> DONE <<<"
+             call get_topology(structure, file_type)
+             
+             write(*,'(a)') bold // green // '>>> DONE <<< ' // reset
      
          case default
              exit

@@ -2,6 +2,7 @@ module Trajectory_routines
 
 use types_m
 use constants_m
+use ansi_colors
 use util_m              , only : read_file_name
 use EDT_util_m          , only : on_the_fly_tuning
 use RW_driver           , only : WritingRoutines
@@ -36,12 +37,14 @@ type(universe)  , allocatable   :: frozen_trj(:)
 
 CALL system( "clear" )
 
-write(*,'(/a)') ' Choose the format : '
-write(*,'(/a)') ' (p) = PDB '
-write(*,'(/a)') ' (v) = VASP '
-write(*,'(/a)') ' (d) = DICE '
-write(*,'(/a)') ' (x) = XYZ '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // cyan // ' Choose the file format :' // reset
+
+write(*,'(a)') green // ' (p) ' // reset // '= PDB'
+write(*,'(a)') green // ' (v) ' // reset // '= VASP'
+write(*,'(a)') green // ' (d) ' // reset // '= DICE'
+write(*,'(a)') green // ' (x) ' // reset // '= XYZ'
+
+write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
 read (*,'(a)') file_format
 
 select case( file_format )
@@ -63,34 +66,36 @@ end select
 
 ! select frame OR trajectory ...
 do
-    write(*,'(/a)') '>>>    Modifying the  trajectory  file     <<<'
+    write(*,'(/a)') bold // cyan // '>>>    Modifying the trajectory file     <<<' // reset
 
-    write(*,'(/a)') ' (1)  = Ad-doc tuning'
-    write(*,'(/a)') ' (2)  = TRANSLATE stuff'
-    write(*,'(/a)') ' (3)  = select frame '      
-    write(*,'(/a)') ' (4)  = save PDB trajectory '
-    write(*,'(/a)') ' (5)  = re-GROUP molecules ( may need to use AD-HOC & Translation before; first frame must be united )'
-    write(*,'(/a)') ' (6)  = DELETE  stuff'
-    write(*,'(/a)') ' (7)  = RMSD of frames'
-    write(*,'(/a)') ' (8)  = produce trajectory from single PDB frame'
-    write(*,'(/a)') ' (9)  = Interpolate between frames'
-    write(*,'(/a)') ' (10) = Reverse time direction in trajectory'
-    write(*,'(/a)') ' (11) = Replicate structure'
-    write(*,'(/a)') ' (12) = DIAGNOSIS: details of the structure'
-    write(*,'(/a)') ' (13) = Statistics'
-    write(*,'(/a)') ' (0)  = DONE  '
-    write(*,'(/a)',advance='no') '>>>   '
-    read (*,'(I)') choice 
+    write(*,'(a)') green // ' (1)  ' // reset // '= Ad-hoc tuning'
+    write(*,'(a)') green // ' (2)  ' // reset // '= TRANSLATE stuff'
+    write(*,'(a)') green // ' (3)  ' // reset // '= Select frame'
+    write(*,'(a)') green // ' (4)  ' // reset // '= Save PDB trajectory'
+    write(*,'(a)') green // ' (5)  ' // reset // '= Re-group molecules'
+    write(*,'(a)') green // ' (6)  ' // reset // '= DELETE stuff'
+    write(*,'(a)') green // ' (7)  ' // reset // '= RMSD of frames'
+    write(*,'(a)') green // ' (8)  ' // reset // '= Produce trajectory from single PDB frame'
+    write(*,'(a)') green // ' (9)  ' // reset // '= Interpolate between frames'
+    write(*,'(a)') green // ' (10) ' // reset // '= Reverse time direction'
+    write(*,'(a)') green // ' (11) ' // reset // '= Replicate structure'
+    write(*,'(a)') green // ' (12) ' // reset // '= DIAGNOSIS'
+    write(*,'(a)') green // ' (13) ' // reset // '= Statistics'
+    write(*,'(a)') bold // orange // ' (0)  ' // reset // '= DONE'
 
-    select case( choice )
+    write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
+    read (*,'(I)') choice
+
+    select case (choice)
 
         case( 1 ) 
 
-            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
+            write(*,'(/a)',advance='no') bold // yellow // '>>> On-the-fly tuning? (y/n): ' // reset
             read (*,'(a)') YorN
 
             if( YorN /= "n" ) &
             then
+                  write(*,'(a)') green // '>> Applying on-the-fly tuning to all frames...' // reset
                   CALL on_the_fly_tuning( trj(1) )
                   ! propagate the changes throughtout the trj(:)
                   do concurrent (i = 1:size(trj))
@@ -101,6 +106,8 @@ do
                       trj(i) % atom(:) % delete   = trj(1) % atom(:) % delete
                   end do
             else
+                  write(*,'(a)') green // '>> Applying ad-hoc tuning frame by frame...' // reset
+
                   do i = 1 , size(trj)
                       CALL ad_hoc_tuning( trj(i) , i )
                   end do
@@ -115,25 +122,27 @@ do
 
         case( 3 )
 
-            write(*,'(/a)',advance='no') ' Frame number : '
-            read (*,'(i5.5)'           ) frame
-            allocate( sys%atom(size(trj(1)%atom)) )
-
+            write(*,'(/a)', advance='no') bold // yellow // ' Frame number: ' // reset
+            read (*,'(i5.5)') frame
+            
+            allocate(sys%atom(size(trj(1)%atom)))
+            
             sys = trj(frame)
-
             sys%System_Characteristics = trj(1)%System_Characteristics
-
+            
             deallocate(trj)
-
-            write(*,'(/a)',advance='no') ' Save Frame (y,n) : [y] '
+            
+            write(*,'(/a)', advance='no') bold // yellow // ' Save frame? (y/n) [y]: ' // reset
             read (*,'(a)') YorN
-
-            If( YorN /= "n" ) then 
-                call WritingRoutines( sys ) 
+            
+            if (YorN /= 'n') then
+                write(*,'(a)') green // '>> Writing frame to disk...' // reset
+                call WritingRoutines(sys)
                 stop
-            else 
+            else
+                write(*,'(a)') red // '>> Frame discarded. Returning.' // reset
                 return
-            End If
+            end if
 
         case( 4 )
 
@@ -141,23 +150,25 @@ do
 
         case( 5 )
 
-            write(*,'(/a)') ' Choose : '
-            write(*,'(/a)') ' (1)  = solution in a box'
-            write(*,'(/a)') ' (2)  = adsorbate on surface (no need for using ad-hoc)'  
-            write(*,'(/a)',advance='no') '>>>   '
+            write(*,'(/a)') bold // cyan // ' Choose:' // reset
+            
+            write(*,'(a)') green // ' (1) ' // reset // '= Solution in a box'
+            write(*,'(a)') green // ' (2) ' // reset // '= Adsorbate on surface (no ad-hoc required)'
+            
+            write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
             read (*,'(I)') option
-
-            select case ( option ) 
-
-                case ( 1 )
-                   do i = 1 , size(trj)
-                        trj(i)% atom(:)% group = .true.
-                        CALL ReGroup( trj(i) )
-                   end do
-
-                case ( 2 )
-                   CALL ReGroup( trj )
-
+            
+            select case (option)
+                case (1)
+                    write(*,'(a)') green // '>> Regrouping solution in a box...' // reset
+                    do i = 1, size(trj)
+                        trj(i)%atom(:)%group = .true.
+                        call ReGroup(trj(i))
+                    end do
+            
+                case (2)
+                    write(*,'(a)') green // '>> Regrouping adsorbate on surface...' // reset
+                    call ReGroup(trj)
             end select
 
         case( 6 )
@@ -174,15 +185,16 @@ do
 
         case( 8 ) 
 
-            write(*,'(/a)',advance='no') ' Frame number : '
-            read (*,'(i3.3)'           ) frame
-            allocate( sys%atom(size(trj(1)%atom)) )
-
-            write(*,'(/a)',advance='no') ' number of frame replicas : '
-            read (*,'(i6.6)'           ) n_frames
-
-            write(*,'(/a)',advance='no') ' time interval between frames : '
-            read (*,'(f8.5)'           ) delta_t
+            write(*,'(/a)', advance='no') bold // yellow // ' Frame number: ' // reset
+            read (*,'(i3.3)') frame
+            
+            allocate(sys%atom(size(trj(1)%atom)))
+            
+            write(*,'(/a)', advance='no') bold // yellow // ' Number of frame replicas: ' // reset
+            read (*,'(i6.6)') n_frames
+            
+            write(*,'(/a)', advance='no') bold // yellow // ' Time interval between frames (ps): ' // reset
+            read (*,'(f8.5)') delta_t
 
             sys = trj(frame)
 
@@ -250,7 +262,7 @@ do
 
 end do    
 
-write(*,'(/a)',advance='no') 'press ENTER '
+write(*,'(/a)', advance='no') bold // yellow // 'Press ENTER to continue ' // reset
 read (*,'(a)') wait
 
 end subroutine Read_Trajectories
