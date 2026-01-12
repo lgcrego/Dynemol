@@ -1,5 +1,6 @@
 module util_m
 
+    use ansi_colors
     use constants_m
     use f95_precision
     use blas95
@@ -372,7 +373,7 @@ if( present(file_type) ) &
 then
     select case(file_type)
            case("pdb")
-               write(*,'(/,a)') "ls *.pdb"
+               write(*,'(/,a)') cyan // "ls *.pdb" // reset
                call system("ls *.pdb") 
            case("xyz")
                write(*,'(/,a)') "ls *.xyz"
@@ -382,7 +383,7 @@ end if
 
 done = .false.
 do while (.NOT. done) 
-        write(*,'(/,a)',advance='no') 'name of the file:  '
+        write(*,'(/,a)',advance='no') yellow // 'name of the file:  ' // reset
         read (*,*) f_name
         
         inquire(file=f_name, EXIST=exist)

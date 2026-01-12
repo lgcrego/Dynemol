@@ -1,5 +1,6 @@
 module EDT_util_m
 
+use ansi_colors
 use types_m
 use util_m        , only: split_line , seq_in_range
 use Read_Parms
@@ -34,39 +35,43 @@ CALL display_menu(option)
 select case ( option )
 
     case (1)
-        Write(*,*) "not implemented"
+        write(*,'(a)') bold // red // 'not implemented' // reset
 
     case (2)
-        write(*,'(/a)',advance='no') ">>> enter new MMSymbol: "
+        write(*,'(/a)', advance='no') bold // yellow // '>>> enter new MMSymbol: ' // reset
         read (*,'(a)') MMSymbol
-        CALL change_this( system , instance="MMSymbol" )
+        call change_this(system, instance='MMSymbol')
 
     case (3)
-        write(*,'(/a)',advance='no') ">>> enter new fragment: "
+        write(*,'(/a)', advance='no') bold // yellow // '>>> enter new fragment: ' // reset
         read (*,'(a)') fragment
-        CALL change_this( system , instance="fragment" )
+        call change_this(system, instance='fragment')
 
     case (4)
-        write(*,'(/a)',advance='no') ">>> enter new residue name: "
+        write(*,'(/a)', advance='no') bold // yellow // '>>> enter new residue name: ' // reset
         read (*,'(a)') resid
-        CALL change_this( system , instance="resid" )
+        call change_this(system, instance='resid')
 
     case (5)
-        write(*,'(/a)',advance='no') ">>> enter new residue number: "
+        write(*,'(/a)', advance='no') bold // yellow // '>>> enter new residue number: ' // reset
         read (*,*) nresid
-        CALL change_this( system , instance="nresid" )
+        call change_this(system, instance='nresid')
 
     case (6)
-        CALL copy_mask( system )
+        write(*,'(a)') cyan // 'Applying copy mask...' // reset
+        call copy_mask(system)
 
     case (7)
-        CALL delete_mask( system )
+        write(*,'(a)') cyan // 'Applying delete mask...' // reset
+        call delete_mask(system)
 
     case (8)
-        CALL translation_mask( system )
+        write(*,'(a)') cyan // 'Applying translation mask...' // reset
+        call translation_mask(system)
 
     case (9)
-        CALL rotation_mask( system )
+        write(*,'(a)') cyan // 'Applying rotation mask...' // reset
+        call rotation_mask(system)
 
     case default
         return
@@ -95,39 +100,47 @@ system% atom(:)% translate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose keyword of stuff to TRANSLATE : '
-write(*,'(/a)') ' (1) = tuning already done'
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom index '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // blue // ' Choose keyword of stuff to TRANSLATE : ' // reset
+
+write(*,'(a)')  bold // cyan // ' (1) = tuning already done' // reset
+write(*,'(a)')  bold // cyan // ' (2) = residue number ' // reset
+write(*,'(a)')  bold // cyan // ' (3) = residue name ' // reset
+write(*,'(a)')  bold // cyan // ' (4) = atom index ' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
 read (*,'(a)') choice
 
 select case( choice )
-    case( '1' ) 
+
+    case( '1' )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        nr =  parse_this(line)
+
+        nr = parse_this(line)
         do i = 1 , size(nr)
-           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% copy = .true.
+            where( system% atom(:)% nresid == nr(i) ) system% atom(:)% copy = .true.
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue names to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         residue = split_line(line)
         do i = 1 , size(residue)
-           where( system% atom(:)% resid == residue(i) ) system% atom(:)% copy = .true.
+            where( system% atom(:)% resid == residue(i) ) system% atom(:)% copy = .true.
         end do
- 
-    case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
-        read (*,'(a)') line
-        indx =  parse_this(line)
 
+    case( '4' )
+        write(*,'(/a)', advance='no') green // &
+        "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
+        read (*,'(a)') line
+
+        indx = parse_this(line)
         system% atom(indx)% copy = .true.
 
 end select
@@ -155,49 +168,61 @@ system% atom(:)% translate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose the feature that controls the operation : '
-write(*,'(/a)') ' (1) = tuning already done'
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom index '
-write(*,'(/a)') ' (5) = MMSymbol '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // blue // &
+    ' Choose the feature that controls the operation : ' // reset
+
+write(*,'(a)') bold // cyan // ' (1) = tuning already done' // reset
+write(*,'(a)') bold // cyan // ' (2) = residue number ' // reset
+write(*,'(a)') bold // cyan // ' (3) = residue name ' // reset
+write(*,'(a)') bold // cyan // ' (4) = atom index ' // reset
+write(*,'(a)') bold // cyan // ' (5) = MMSymbol ' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
 read (*,'(a)') choice
 
 select case( choice )
-    case( '1' ) 
+
+    case( '1' )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        nr =  parse_this(line)
+
+        nr = parse_this(line)
         do i = 1 , size(nr)
-           CALL change_via_nr( system , nr(i) , instance )
+            CALL change_via_nr( system , nr(i) , instance )
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue names to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         residue = split_line(line)
         do i = 1 , size(residue)
-           CALL change_via_residue( system , residue(i) , instance )
+            CALL change_via_residue( system , residue(i) , instance )
         end do
- 
+
     case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        indx =  parse_this(line)
+
+        indx = parse_this(line)
         CALL change_via_index( system , indx , instance )
 
     case( '5' )
-        write(*,'(1x,3/a)') "enter the MMSymbol names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the MMSymbol names to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         MM_name = split_line(line)
         do i = 1 , size(MM_name)
-           CALL change_via_MM_name( system , MM_name(i) , instance )
+            CALL change_via_MM_name( system , MM_name(i) , instance )
         end do
- 
+
 end select
 
 CALL systemQQ( "clear" )
@@ -224,39 +249,52 @@ system% atom(:)% translate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose keyword of stuff to TRANSLATE : '
-write(*,'(/a)') ' (1) = tuning already done'
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom index '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // blue // &
+    ' Choose keyword of stuff to TRANSLATE : ' // reset
+
+write(*,'(a)') bold // cyan // ' (1) = tuning already done' // reset
+write(*,'(a)') bold // cyan // ' (2) = residue number ' // reset
+write(*,'(a)') bold // cyan // ' (3) = residue name ' // reset
+write(*,'(a)') bold // cyan // ' (4) = atom index ' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
 read (*,'(a)') choice
 
 select case( choice )
-    case( '1' ) 
+
+    case( '1' )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(1x,3/a)') "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        nr =  parse_this(line)
+
+        nr = parse_this(line)
         do i = 1 , size(nr)
-           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% translate = .true.
+            where( system% atom(:)% nresid == nr(i) )
+                system% atom(:)% translate = .true.
+            end where
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue names to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         residue = split_line(line)
         do i = 1 , size(residue)
-           where( system% atom(:)% resid == residue(i) ) system% atom(:)% translate = .true.
+            where( system% atom(:)% resid == residue(i) )
+                system% atom(:)% translate = .true.
+            end where
         end do
- 
-    case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
-        read (*,'(a)') line
-        indx =  parse_this(line)
 
+    case( '4' )
+        write(*,'(/a)', advance='no') green // &
+        "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
+        read (*,'(a)') line
+
+        indx = parse_this(line)
         system% atom(indx)% translate = .true.
 
 end select
@@ -283,39 +321,52 @@ system% atom(:)% rotate = .false.
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose keyword of stuff to Rotate : '
-write(*,'(/a)') ' (1) = tuning already done'
-write(*,'(/a)') ' (2) = residue number '
-write(*,'(/a)') ' (3) = residue name '
-write(*,'(/a)') ' (4) = atom index '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // blue // &
+    ' Choose keyword of stuff to ROTATE : ' // reset
+
+write(*,'(a)') bold // cyan // ' (1) = tuning already done' // reset
+write(*,'(a)') bold // cyan // ' (2) = residue number ' // reset
+write(*,'(a)') bold // cyan // ' (3) = residue name ' // reset
+write(*,'(a)') bold // cyan // ' (4) = atom index ' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
 read (*,'(a)') choice
 
 select case( choice )
-    case( '1' ) 
+
+    case( '1' )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(1x,3/a)') "enter the residue numbers to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue numbers to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
-        nr =  parse_this(line)
+
+        nr = parse_this(line)
         do i = 1 , size(nr)
-           where( system% atom(:)% nresid == nr(i) ) system% atom(:)% rotate = .true.
+            where( system% atom(:)% nresid == nr(i) )
+                system% atom(:)% rotate = .true.
+            end where
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue names to be changed, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         residue = split_line(line)
         do i = 1 , size(residue)
-           where( system% atom(:)% resid == residue(i) ) system% atom(:)% rotate = .true.
+            where( system% atom(:)% resid == residue(i) )
+                system% atom(:)% rotate = .true.
+            end where
         end do
- 
-    case( '4' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
-        read (*,'(a)') line
-        indx =  parse_this(line)
 
+    case( '4' )
+        write(*,'(/a)', advance='no') green // &
+        "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
+        read (*,'(a)') line
+
+        indx = parse_this(line)
         system% atom(indx)% rotate = .true.
 
 end select
@@ -343,53 +394,74 @@ allocate( displace(system%N_of_atoms) , source = 0 )
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)') ' Choose keyword of stuff to Delete : '
-write(*,'(/a)') ' (1) = MMSymbol'
-write(*,'(/a)') ' (2) = fragment'
-write(*,'(/a)') ' (3) = residue number '
-write(*,'(/a)') ' (4) = residue name '
-write(*,'(/a)') ' (5) = atom indices '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold // red // &
+    ' Choose keyword of stuff to DELETE : ' // reset
+
+write(*,'(a)') bold // cyan // ' (1) = MMSymbol' // reset
+write(*,'(a)') bold // cyan // ' (2) = fragment' // reset
+write(*,'(a)') bold // cyan // ' (3) = residue number ' // reset
+write(*,'(a)') bold // cyan // ' (4) = residue name ' // reset
+write(*,'(a)') bold // cyan // ' (5) = atom indices ' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
 read (*,'(a)') option
 
 select case( option )
-    case( '1' ) 
-        write(*,'(1x,3/a)') "enter the MMSymbol names to be DELETED, separated by spaces (press ENTER to send) : "
+
+    case( '1' )
+        write(*,'(/a)', advance='no') green // &
+        "enter the MMSymbol names to be DELETED, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         MMSymbol = split_line(line)
         do i = 1 , size(MMSymbol)
-             where( system% atom(:)% MMSymbol == MMSymbol(i) ) system% atom(:)% delete = .true.
+            where( system% atom(:)% MMSymbol == MMSymbol(i) )
+                system% atom(:)% delete = .true.
+            end where
         end do
 
-    case( '2' ) 
-        write(*,'(1x,3/a)') "enter the fragment names to be DELETED, separated by spaces (press ENTER to send) : "
+    case( '2' )
+        write(*,'(/a)', advance='no') green // &
+        "enter the fragment names to be DELETED, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         fragment = split_line(line)
         do i = 1 , size(fragment)
-             where( system% atom(:)% fragment == fragment(i) ) system% atom(:)% delete = .true.
+            where( system% atom(:)% fragment == fragment(i) )
+                system% atom(:)% delete = .true.
+            end where
         end do
 
     case( '3' )
-        write(*,'(1x,3/a)') "enter the residue numbers to be DELETED: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue numbers to be DELETED: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        nr =  parse_this(line)
+
+        nr = parse_this(line)
         do i = 1 , size(nr)
-             where( system% atom(:)% nresid == nr(i) ) system% atom(:)% delete = .true.
+            where( system% atom(:)% nresid == nr(i) )
+                system% atom(:)% delete = .true.
+            end where
         end do
 
     case( '4' )
-        write(*,'(1x,3/a)') "enter the residue names to be changed, separated by spaces (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the residue names to be DELETED, separated by spaces (press ENTER to send) : " // reset
         read (*,'(a)') line
+
         residue = split_line(line)
         do i = 1 , size(residue)
-           where( system% atom(:)% resid == residue(i) ) system% atom(:)% delete = .true.
+            where( system% atom(:)% resid == residue(i) )
+                system% atom(:)% delete = .true.
+            end where
         end do
 
     case( '5' )
-        write(*,'(1x,3/a)') "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : "
+        write(*,'(/a)', advance='no') green // &
+        "enter the indices of the atoms to be DELETED: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
-        indx =  parse_this(line)
 
+        indx = parse_this(line)
         system% atom(indx)% delete = .true.
 
 end select
@@ -569,20 +641,21 @@ integer , intent(out) :: option
 
 CALL systemQQ( "clear" )
 
-write(*,'(/a)',advance='no') ">>> choose keyword for Edition Operation (1..9): "
-print*, ""
-write(*,'(/a)') 'Modify Symbol (1)'
-write(*,'(/a)') 'Modify MMSymbol  (2)'
-write(*,'(/a)') 'Modify Fragment (3)'
-write(*,'(/a)') 'Modify residue name (4)'
-write(*,'(/a)') 'residue number (5)'
-write(*,'(/a)') 'COPY stuff (6)'
-write(*,'(/a)') 'DELETE stuff (7)'
-write(*,'(/a)') 'TRANSLATE stuff (8)'
-write(*,'(/a)') 'ROTATE stuff (9)'
+write(*,'(/a)', advance='no') bold // green // '>>> choose keyword for Edition Operation (1..9): ' // reset
+print*, ''
 
-write(*,'(/a)',advance='no') '>>>   '                                                                                                                     
-read (*,'(I)') option 
+write(*,'(a)') bold // cyan // 'Modify Symbol            (1)' // reset
+write(*,'(a)') bold // cyan // 'Modify MMSymbol          (2)' // reset
+write(*,'(a)') bold // cyan // 'Modify Fragment          (3)' // reset
+write(*,'(a)') bold // cyan // 'Modify residue name      (4)' // reset
+write(*,'(a)') bold // cyan // 'Residue number           (5)' // reset
+write(*,'(a)') bold // cyan // 'COPY stuff               (6)' // reset
+write(*,'(a)') bold // cyan // 'DELETE stuff             (7)' // reset
+write(*,'(a)') bold // cyan // 'TRANSLATE stuff          (8)' // reset
+write(*,'(a)') bold // cyan // 'ROTATE stuff             (9)' // reset
+
+write(*,'(/a)', advance='no') bold // yellow // '>>>   ' // reset
+read (*,'(I)') option
 
 end subroutine display_menu
 !

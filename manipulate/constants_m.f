@@ -26,3 +26,24 @@ MODULE constants_m
     REAL*8     , PARAMETER :: infty=1.d10
     complex*16 , parameter :: zi=(0.d0,1.d0)
 END MODULE constants_m
+
+module ansi_colors
+! ANSI (American National Standards Institute)
+! ANSI Escape Codes are sequences of characters used to control the 
+! display of a terminal or command-line interface
+    implicit none
+    character(len=*), parameter :: esc = char(27)
+
+    character(len=*), parameter :: reset = esc // '[0m'
+    character(len=*), parameter :: bold  = esc // '[1m'
+
+    character(len=*), parameter :: red     = esc // '[31m'
+    character(len=*), parameter :: green   = esc // '[32m'
+    character(len=*), parameter :: yellow  = esc // '[33m'
+    character(len=*), parameter :: blue    = esc // '[34m'
+    character(len=*), parameter :: magenta = esc // '[35m'
+    character(len=*), parameter :: cyan    = esc // '[36m'
+    character(len=*), parameter :: white   = esc // '[37m'
+    character(len=*), parameter :: orange  = esc // '[38;5;208m'
+end module ansi_colors
+

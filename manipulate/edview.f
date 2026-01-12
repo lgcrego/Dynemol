@@ -1,6 +1,7 @@
 program edview
 
 use types_m
+use ansi_colors
 use util_m            , only: read_file_name
 use diagnosis_m
 use RW_routines
@@ -43,66 +44,66 @@ CALL system( "clear" )
 
 !-----------------------------------------------------------
 !       Reading the input file
-do 
-    write(*,'(/a)') '>>>    Read the input file     <<<'
+do
+    write(*,'(/a)') bold // cyan // '>>>    Read the input file     <<<' // reset
 
-    write(*,'(/a)') '1  : Read "poscar.dat" file (coordinates from vasp-CONTCAR)'
-    write(*,'(/a)') '2  : Read XYZ file '
-    write(*,'(/a)') '3  : Read "solvent.dat" file '
-    write(*,'(/a)') '4  : AMBER stuff'
-    write(*,'(/a)') '5  : Read PDB file '
-    write(*,'(/a)') '6  : Build up crystal'
-    write(*,'(/a)') '7  : Read trajectories '
-    write(*,'(/a)') '8  : Read Multiple trajectories '
-    write(*,'(/a)') '9  : Read "Occupation.bin" file'
-    write(*,'(/a)') 'A  : ad_hoc tuning '
-    write(*,'(/a)') '0  : DONE / ADVANCE'
-    write(*,'(/a)',advance='no') '>>>   '
+    write(*,'(a)') green // ' 1  :' // reset // ' Read "poscar.dat" file (VASP CONTCAR)'
+    write(*,'(a)') green // ' 2  :' // reset // ' Read XYZ file'
+    write(*,'(a)') green // ' 3  :' // reset // ' Read "solvent.dat" file'
+    write(*,'(a)') green // ' 4  :' // reset // ' AMBER stuff'
+    write(*,'(a)') green // ' 5  :' // reset // ' Read PDB file'
+    write(*,'(a)') green // ' 6  :' // reset // ' Build up crystal'
+    write(*,'(a)') green // ' 7  :' // reset // ' Read trajectories'
+    write(*,'(a)') green // ' 8  :' // reset // ' Read multiple trajectories'
+    write(*,'(a)') green // ' 9  :' // reset // ' Read "Occupation.bin" file'
+    write(*,'(a)') green // ' A  :' // reset // ' Ad hoc tuning'
+    write(*,'(a)') bold // orange // ' 0  :' // reset // ' DONE / ADVANCE'
+
+    write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
     read (*,'(a)') Reading_Method
 
-    select case ( Reading_Method )
+    select case (Reading_Method)
 
         case ('1')
-            CALL Read_from_poscar( structure )
+            call Read_from_poscar(structure)
 
         case ('2')
-            CALL read_file_name( f_name , file_type="xyz" )
-            CALL Read_from_XYZ( structure , f_name )
-            write(*,'(/a)',advance='no') 'Type of main Residue : '
+            call read_file_name(f_name, file_type="xyz")
+            call Read_from_XYZ(structure, f_name)
+            write(*,'(/a)', advance='no') yellow // 'Type of main residue: ' // reset
             read (*,'(a)') resid
-            structure % atom % resid = resid
+            structure%atom%resid = resid
 
         case ('3')
-            CALL Include_Solvent( structure )
+            call Include_Solvent(structure)
 
         case ('4')
-            CALL amber_stuff 
+            call amber_stuff
 
         case ('5')
-            CALL read_file_name( f_name , file_type="pdb" )
-            CALL Read_GROMACS( structure , f_name , file_type="pdb")
+            call read_file_name(f_name, file_type="pdb")
+            call Read_GROMACS(structure, f_name, file_type="pdb")
 
         case ('6')
-            CALL Buildup_Crystal( structure )
+            call Buildup_Crystal(structure)
 
         case ('7')
-            CALL Read_Trajectories( trajectories , structure )
+            call Read_Trajectories(trajectories, structure)
 
         case ('8')
-            CALL Work_Multiple_Trajectories
+            call Work_Multiple_Trajectories
 
         case ('9')
-            CALL Post_proccess_Occupation
+            call Post_proccess_Occupation
 
         case ('A','a')
-            write(*,'(/a)',advance='no') ">>> on the fly tuning? (y/n) "
+            write(*,'(/a)', advance='no') yellow // '>>> On-the-fly tuning? (y/n): ' // reset
             read (*,'(a)') yn
 
-            if( yn /= "n" ) &
-            then
-                CALL on_the_fly_tuning (structure )
+            if (yn /= 'n') then
+                call on_the_fly_tuning(structure)
             else
-                CALL ad_hoc_tuning( structure )
+                call ad_hoc_tuning(structure)
             end if
 
         case default
@@ -135,25 +136,26 @@ end if
 !-----------------------------------------------------------
 !       Editing the structure
 do
-    write(*,'(/a)') '>>>    Modifying the  input file     <<<'
-
-    write(*,'(/a)') '1  : Translation'
-    write(*,'(/a)') '2  : Rotation '
-    write(*,'(/a)') '3  : Reflection '
-    write(*,'(/a)') '4  : Align Structures '
-    write(*,'(/a)') '5  : Copy '      
-    write(*,'(/a)') '6  : Delete '
-    write(*,'(/a)') '7  : Sort fragments together '
-    write(*,'(/a)') '8  : Statistics '
-    write(*,'(/a)') '9  : Include fragment '
-    write(*,'(/a)') '10 : Include Solvent '
-    write(*,'(/a)') '11 : Replication '
-    write(*,'(/a)') '12 : nonbonding topology '
-    write(*,'(/a)') '13 : Images '
-    write(*,'(/a)') '14 : Bring Solvent into the Bounding Box '
-    write(*,'(/a)') '15 : ad_hoc tuning '
-    write(*,'(/a)') '16 : DONE '
-    write(*,'(/a)',advance='no') '>>>   '
+    write(*,'(/a)') bold // cyan // '>>>    Modifying the input file     <<<' // reset
+    
+    write(*,'(a)') green // ' 1  :' // reset // ' Translation'
+    write(*,'(a)') green // ' 2  :' // reset // ' Rotation'
+    write(*,'(a)') green // ' 3  :' // reset // ' Reflection'
+    write(*,'(a)') green // ' 4  :' // reset // ' Align structures'
+    write(*,'(a)') green // ' 5  :' // reset // ' Copy'
+    write(*,'(a)') green // ' 6  :' // reset // ' Delete'
+    write(*,'(a)') green // ' 7  :' // reset // ' Sort fragments together'
+    write(*,'(a)') green // ' 8  :' // reset // ' Statistics'
+    write(*,'(a)') green // ' 9  :' // reset // ' Include fragment'
+    write(*,'(a)') green // '10  :' // reset // ' Include solvent'
+    write(*,'(a)') green // '11  :' // reset // ' Replication'
+    write(*,'(a)') green // '12  :' // reset // ' Nonbonding topology'
+    write(*,'(a)') green // '13  :' // reset // ' Images'
+    write(*,'(a)') green // '14  :' // reset // ' Bring solvent into the bounding box'
+    write(*,'(a)') green // '15  :' // reset // ' Ad hoc tuning'
+    write(*,'(a)') bold // orange // ' 0  :' // reset // ' DONE'
+    
+    write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
     read (*,'(a2)') Editing_Method
 
     select case ( Editing_Method )

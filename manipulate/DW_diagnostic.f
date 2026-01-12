@@ -33,7 +33,8 @@ module Dissociative
     type(universe), allocatable :: new_trj(:)
 
     ! module variables
-    integer :: n_frames, n_atoms, n_mols, nHX, nOX, unit1, unit2, unit3
+    integer :: n_frames, n_atoms, n_mols, nHX, nOX, unit1, unit2, unit3, unit4
+    integer :: counter = 0
 
     ! module parameters 
     real*8, parameter :: OH_covalent_len = 1.25d0
@@ -493,9 +494,10 @@ end subroutine ask_user_visualization
 !=============================================
  subroutine open_output_files()
 !=============================================
-    open(newunit=unit1, file="DWFF.trunk/DWFF_data", status="unknown", action="write")
-    open(newunit=unit2, file="DWFF.trunk/dimer_list",status="unknown", action="write")
-    open(newunit=unit3, file="DWFF.trunk/ions_list", status="unknown", action="write")
+    open(newunit=unit1, file="DWFF.trunk/DWFF_data",  status="unknown", action="write")
+    open(newunit=unit2, file="DWFF.trunk/dimer_list", status="unknown", action="write")
+    open(newunit=unit3, file="DWFF.trunk/ions_list",  status="unknown", action="write")
+    open(newunit=unit4, file="DWFF.trunk/PT_map.dat", status="unknown", action="write")
 end subroutine open_output_files
 !
 !
@@ -723,9 +725,9 @@ subroutine identify_dimer(frame, atom)
 
     ! Local variables
     integer :: i, j
-    integer :: O_acceptor, O_donor
+    integer :: O_acceptor, O_donor, PT_indx
     integer :: total_charge
-    integer :: HOH(3)
+    integer :: HOH_acptr(3), HOH_dnr(3)
     real(8) :: d_OO
 
     if (frame /= 1) write(unit2,*) repeat("=", 60)
@@ -750,21 +752,46 @@ subroutine identify_dimer(frame, atom)
 
         !--------------------------------------------------
         ! Neutral water dimer: total charge = 0
+        ! Assumes intact HOH molecules (no dissociation)
         !--------------------------------------------------
         if (total_charge == 0 .and. d_OO < OO_dimer_len) then
 
             ! -- First H2O: acceptor
             j   = 2 * (O_acceptor - 1)
-            HOH = [ H_ptr(j+1), O_ptr(O_acceptor), H_ptr(j+2) ]
+            HOH_acptr = [ H_ptr(j+1), O_ptr(O_acceptor), H_ptr(j+2) ]
 
             ! -- Second H2O: donor
             j   = 2 * (O_donor - 1)
-            HOH = [ H_ptr(j+1), O_ptr(O_donor), H_ptr(j+2) ]
+            HOH_dnr = [ H_ptr(j+1), O_ptr(O_donor), H_ptr(j+2) ]
+
+            !--------------------------------------------------
+            ! Identify transferred proton:
+            ! choose the hydrogen of the donor molecule that
+            ! is closest to the acceptor oxygen
+            !--------------------------------------------------
+            if (table_OH(O_acceptor, j+1) < table_OH(O_acceptor, j+2)) then
+                PT_indx = H_ptr(j + 1)
+            else
+                PT_indx = H_ptr(j + 2)
+            end if
+            counter = counter + 1
+            CALL get_PT_map( frame, atom, HOH_acptr, HOH_dnr, PT_indx)
+
+!            if( counter == 242 ) then
+!                print*, "d_OO = ", table_OO(O_acceptor,O_donor)
+!                print*, frame
+!                print*, O_ptr(O_acceptor), O_ptr(O_donor)
+!                stop
+!            end if
+
+
+
+
+
+
+            dimer_counter(O_donor, O_acceptor) = dimer_counter(O_donor, O_acceptor) + 1
 
             write(unit2, 2) frame, O_ptr(O_donor), O_ptr(O_acceptor), d_OO
-
-            dimer_counter(O_donor, O_acceptor) = &
-                dimer_counter(O_donor, O_acceptor) + 1
 
         end if
 
@@ -773,6 +800,67 @@ subroutine identify_dimer(frame, atom)
 2 format(4x, i8, 6x, i8, 5x, i8, 7x, f8.4)
 
 end subroutine identify_dimer
+!
+!
+!
+!==================================================================
+ subroutine get_PT_map( frame, atom, HOH_acptr, HOH_dnr, PT_indx )
+!==================================================================
+    implicit none
+    integer     , intent(in) :: frame
+    type(atomic), intent(in) :: atom(:)
+    integer     , intent(in) :: HOH_acptr(3)   ! [H, O, H]
+    integer     , intent(in) :: HOH_dnr(3)     ! [H, O, H]
+    integer     , intent(in) :: PT_indx        ! transferred proton index
+
+    ! Local variables
+    integer :: Oa, Od, PT
+    real(8) :: Txyz(3)
+    real(8) :: r_OO(3), r_OdH(3), r_OaH(3)
+    real(8) :: versor_OO(3)
+    real(8) :: r2, r_OO_len
+    real(8) :: r_OdH_proj, r_OaH_proj
+
+    ! Periodic box
+    Txyz = new_trj(frame)% box
+
+    !--------------------------------------------------
+    ! Atom indices
+    !--------------------------------------------------
+    Oa = HOH_acptr(2)   ! acceptor oxygen
+    Od = HOH_dnr(2)     ! donor oxygen
+    PT = PT_indx        ! transferred proton
+
+    !--------------------------------------------------
+    ! O_donor -> O_acceptor vector
+    !--------------------------------------------------
+    r_OO = atom(Oa)%xyz - atom(Od)%xyz
+    r_OO = r_OO - Txyz * dnint(r_OO / Txyz)
+
+    r2        = dot_product(r_OO, r_OO)
+    r_OO_len  = sqrt(r2)
+    versor_OO = r_OO / r_OO_len
+
+    !--------------------------------------------------
+    ! Donor O -> transferred proton vector
+    !--------------------------------------------------
+    r_OdH = atom(PT)%xyz - atom(Od)%xyz
+    r_OdH = r_OdH - Txyz * dnint(r_OdH / Txyz)
+
+    ! Projection along O–O axis
+    r_OdH_proj = dot_product(r_OdH, versor_OO)
+
+    !--------------------------------------------------
+    ! Acceptor O -> transferred proton vector
+    !--------------------------------------------------
+    r_OaH = r_OdH - r_OO
+
+    ! Projection along O–O axis (positive toward acceptor)
+    r_OaH_proj = dot_product(-r_OaH, versor_OO)
+
+    write(unit4, '(I,4F14.6)') counter, r_OO_len, (r_OdH_proj - r_OaH_proj), r_OdH_proj, r_OaH_proj
+
+end subroutine get_PT_map
 !
 !
 !
