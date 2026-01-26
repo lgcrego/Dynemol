@@ -7,7 +7,7 @@ use Read_Parms
 use Constants_m
 use GMX_routines
 
-public :: on_the_fly_tuning , parse_this
+public :: on_the_fly_tuning , parse_this , translation_mask
 
 private
 
@@ -290,8 +290,8 @@ select case( choice )
         end do
 
     case( '4' )
-        write(*,'(/a)', advance='no') green // &
-        "enter the indices of the atoms to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
+        write(*,'(/a)') green // "enter the indices of the atoms to be changed," // reset
+        write(*,'(a)', advance='no') green // "separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
 
         indx = parse_this(line)

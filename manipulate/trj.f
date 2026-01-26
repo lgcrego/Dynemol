@@ -804,7 +804,7 @@ do j = 1 , size(trj) , frame_step
 
     write(4,4) 'REMARK' , 'manipulated by edview'
     write(4,5) 'TITLE'  , 'manipulated by edview     t= ',trj(j)%time
-    write(4,4) 'REMARK' , 'manipulated by edview'
+!    write(4,4) 'REMARK' , 'manipulated by edview'
     write(4,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
     write(4,3) 'MODEL' , j
 

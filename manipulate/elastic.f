@@ -1,10 +1,12 @@
 module Elastic_Band
 
 use types_m
+use ansi_colors
 use Read_Parms
-use RW_routines         , only : Sort_Chemical_Elements
+use RW_routines       , only : Sort_Chemical_Elements
 use FUNCTION_routines
-use GMX_routines        , only : Dump_PDB
+use GMX_routines      , only : Dump_PDB
+use EDT_util_m        , only: translation_mask
 
 public :: Build_Configurations , Pick_Configurations
 
@@ -14,124 +16,159 @@ contains
 !
 !
 !
-!===============================================
-subroutine Pick_Configurations( trj , file_type)
-!===============================================
-implicit none
-type(universe)  , allocatable   , intent(inout) :: trj(:)
-integer                         , intent(in)    :: file_type
+!============================================
+subroutine Pick_Configurations( trj , f_type)
+!============================================
+    implicit none
+    type(universe)  , allocatable   , intent(inout) :: trj(:)
+    integer                         , intent(in)    :: f_type
+    
+    ! local varibles ...
+    integer                 :: n, N_of_frames
+    integer, allocatable    :: frames(:), N_of_elements(:)
+    integer                 :: n1, n2, step
+    character(21)           :: string
+    character(4), parameter :: file_format(2) = ["vasp","pdb"]
+    
+    CALL system( "clear" )
+    
+    ! ------------------------------------------------------------
+    ! Read frame indices
+    ! ------------------------------------------------------------
+    write(*,'(/a)') bold//blue// ">>> Extracting frames from the pre-existing trajectory <<<"//reset
+    
+    write(*,'(/a)', advance='no') green//"start: "//reset
+    read (*,'(i3)') n1
+    
+    write(*,'(/a)', advance='no') green//"end  : "//reset
+    read (*,'(i3)') n2
+    
+    write(*,'(/a)', advance='no') green//"step : "//reset
+    read (*,'(i3)') step
+    
+    ! if N_of_frames > size(trj) select 100 snapshots equally spaced ...
+    N_of_frames = (n2 - n1) / max(step,1) + 1
+    N_of_frames = min(N_of_frames, size(trj))
+    
+    allocate(frames(N_of_frames))
+    
+    ! ------------------------------------------------------------
+    ! Select frames
+    ! ------------------------------------------------------------
+    if (N_of_frames < size(trj)) then
+    
+        write(*,'(/a)') yellow//"Selecting a subset of frames..."//reset
+    
+        do n = 1, N_of_frames
+            frames(n) = n1 + (n-1) * step
+        end do
+    
+    else
+    
+        write(*,'(/a)') yellow//"Using all available frames."//reset
+        frames = [(n, n=1, size(trj))]
+    
+    end if
+    
+    ! Pre-process system & environment ...
+    select case( file_format(f_type) )
 
-! local varibles ...
-integer                         :: n , N_of_frames
-integer         , allocatable   :: frames(:) , N_of_elements(:) 
-character(21)                   :: string
-character(4)    , parameter     :: file_format(2)=["vasp","pdb"] 
+       case( "vasp" )
+           CALL Pre_process( trj(1) , N_of_elements )
+           ! save frames in elastic band format ...
+           do n = 1 , N_of_frames
+               write(string,'(A14,i7.7)')  'frame index = ',frames(n)
+               CALL save_Confgs( trj(frames(n)) , N_of_elements , string , n-1 , file_format(f_type) )   
+           end do
 
-CALL system( "clear" )
-
-! read frame indices ...
-write(*,'(/a)',advance='no') "Number of frames (if > size(trj) select all): "
-read (*,'(i3.3)'           ) N_of_frames
-
-! if N_of_frames > size(trj) select 100 snapshots equally spaced ...
-N_of_frames = min( N_of_frames,size(trj) )
-allocate( frames(N_of_frames) )
-
-If( N_of_frames < size(trj) ) then
-
-    write(*,'(/a)') "Frame indices : "
-    do n = 1 , N_of_frames
-        read(*,'(i2.2)') frames(n)
-    end do
-
-else
-
-    frames = [ ( n , n=1,size(trj) ) ]
-
-end if
-
-! Pre-process system & environment ...
-CALL Pre_process( trj(1) , N_of_elements )
-
-! save frames in elastic band format ...
-do n = 1 , N_of_frames
-
-    write(string,'(A14,i7.7)')  'frame index = ',frames(n)
-
-    CALL save_Confgs( trj(frames(n)) , N_of_elements , string , n-1 , file_format(file_type) )   
-
-end do
- 
-stop
+        case( "pdb" ) 
+           print*, bold//red//"to be implemented as required: save pdb trajectoty"//reset
+     
+    end select
 
 end subroutine Pick_Configurations
 !
 !
 !
-!=================================================
-subroutine Build_Configurations( sys , file_type )
-!=================================================
+!================================================
+subroutine Build_Configurations( sys, f_type )
+!================================================
 implicit none 
-type(universe)      , target , intent(inout) :: sys
-integer                      , intent(in)    :: file_type
+type(universe), target, intent(inout) :: sys
+integer               , intent(in)    :: f_type
 
 ! local variables ...
-integer                             :: i , i1 , i2 , n , N_Confgs 
-integer             , allocatable   :: N_of_elements(:) 
-real*8                              :: versor(3) , Trans(3)
-real*8                              :: bond_stretch , bond_length , norm , distance , step
-type(real_interval)                 :: bond
-character(len=96)                   :: string
-character(4)        , parameter     :: file_format(2)=["vasp","pdb"] 
+integer                           :: i, n, n_steps 
+real*8                           :: versor(3)
+real*8                           :: displacement, step
+character(len=96)                :: string
+character(4)       , parameter   :: file_format(2)=["vasp","pdb"] 
+type(universe)     , allocatable :: trj(:)
 
-! input data ...
-write(*,'(2/a)'  ) '>>> REMEMBER TO DEFINE FRAGMENT <<< '
-write(*,'(3/a)') '> Number of Configurations ? '
-write(*,'(a)',advance='no') '# Confgs = '
-read (*,'(I3)' ) N_Confgs
-!
-write(*,'(a)') '> index of the first atom' 
-read (*,'(I3)') i1
-write(*,'(a)') '> index of the second atom (>> IN THE FRAGMENT <<)'
-read (*,'(I3)') i2
-!
-write(*,'(a)') '> enter minimum bond length (as a Real number) '
-read (*,'(F8.4)') bond%inicio
-!
-write(*,'(a)') '> enter maximum bond length (as a Real number) '
-read (*,'(F8.4)') bond%fim
+CALL system( "clear" )
 
-! Pre-process system & environment ...
-CALL Pre_process( sys , N_of_elements )
+! ------------------------------------------------------------
+! Read frame indices
+! ------------------------------------------------------------
+write(*,'(/a)') bold//blue// &
+    ">>> Creating frames from a single structure <<<"//reset
 
-! define translation vector ...
-norm = dsqrt( sum( (sys%atom(i2)%xyz(:)-sys%atom(i1)%xyz(:))**2 ) )
-versor(:) = ( sys % atom(i2) % xyz(:) - sys % atom(i1) % xyz(:) ) / norm 
+write(*,'(/a)') green//"Purpose:"//reset
+write(*,'(/a)') "  Generate a set of configurations by moving a selected atomic fragment along a prescribed path."
 
-! move the fragment to the initial position ...
-Trans(:) = versor(:) * (norm-bond%inicio)
-forall( i=1:sys%N_of_atoms , sys%atom(i)%fragment=='F' ) sys%atom(i)%xyz(:) = sys%atom(i)%xyz(:) - Trans(:)
+write(*,'(/a)') green//"Required steps:"//reset
+write(*,'(/a)') "  1) Define the atomic fragment that will move (a single atom or a group of atoms)."
+write(*,'(/a)') "  2) Define the path length (minimum and maximum distance, in consistent units)."
+write(*,'(/a)') "  3) Specify the number of configurations to be generated."
+write(*,'(/a)') "  4) Define the direction of the motion (typically a bond vector or user-defined axis)."
+
+write(*,'(/a)') green//"Notes:"//reset
+write(*,'(/a)') bold//"  - The fragment must be placed at the initial position before starting this routine."//reset
+write(*,'(/a)')       "  - All generated frames preserve the original system topology."
+write(*,'(/a)')       "  - This procedure is typically used to scan bond stretching,"
+write(*,'(/a)')       "    adsorption paths, or constrained reaction coordinates."
+
+! ------------------------------------------------------------ 
+! Input data
+! ------------------------------------------------------------
+write(*,'(/a)') bold//green//"Step 1: define fragment that will move."//reset
+call translation_mask(sys)
+
+write(*,'(/a)') bold//cyan//"Steps 2,3,4: define reaction path (origin = current position)."//reset
+
+write(*,'(/a)') green//"> Length of the reaction path "//yellow//"(Angs. units):"//reset
+write(*,'(a)',advance='no') yellow//">>> "//reset
+read (*,*) displacement
+write(*,'(/a)') green//"> Enter the number of steps:"//reset
+write(*,'(a)',advance='no') yellow//">>> "//reset
+read (*,*) n_steps
+
+step = displacement / float(n_steps)
+
+call define_translation_vector( sys, versor )
 
 ! generate configurations ...
-bond_length = bond%inicio
-write(string,'(A14,F7.4,A2,A72)') 'bond length = ',bond_length,'   ',sys%Surface_Characteristics
-CALL save_Confgs( sys , N_of_elements , string , 0 , file_format(file_type) )
+allocate( trj(0:n_steps) )
 
-bond_stretch = bond%fim - bond%inicio
-step = bond_stretch / N_Confgs
-do n = 1 , N_Confgs
+do n = 0, n_steps
+    print*, "step ", n
 
-    forall( i=1:sys%N_of_atoms , sys%atom(i)%fragment=='F' ) sys%atom(i)%xyz(:) = sys%atom(i)%xyz(:) + versor(:)*step
+    displacement = n * step  
+    trj(n) = sys
+    
+    write(string,'(A55,F7.4)') "reaction path generated by DynEMol, this bond displacement = ", displacement
+ 
+    trj(n)% System_Characteristics = string
 
-    bond_length = dsqrt( sum( (sys%atom(i2)%xyz(:)-sys%atom(i1)%xyz(:))**2 ) )
-   
-    write(string,'(A14,F7.4,A2,A72)') 'bond length = ',bond_length,'   ',sys%Surface_Characteristics
-
-    CALL save_Confgs( sys , N_of_elements , string , n , file_format(file_type) )   
+    do concurrent ( i=1:sys%N_of_atoms , sys%atom(i)%translate ) 
+            trj(n)%atom(i)%xyz = sys%atom(i)%xyz + versor * displacement
+    end do
 
 end do
 
-stop
+if( file_format(f_type) == "pdb") then
+    call Save_PDB_Trajectories(trj) 
+end if
 
 end subroutine Build_Configurations
 !
@@ -319,6 +356,165 @@ integer :: irra, l, n, ir, i, j
       goto 10
 
 end subroutine sort2
+!
+!
+!
+!=======================================================
+subroutine define_translation_vector( system, T_versor )
+!=======================================================
+    implicit none 
+    type(universe), intent(inout) :: system
+    real*8        , intent(out)   :: T_versor(3)
+    
+    ! local variables ...
+    integer :: option , at1 , at2 , at3
+    real*8  , save :: T_vector(3)
+    
+    ! define translation vector
+    write(*,'(/a)') bold//orange//"define translation vector."//reset
+    write(*,'(/a)') yellow//"> Use: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector? "//reset
+    write(*,'(a)',advance='no') yellow//">>> "//reset
+    read(*,*) option
+    
+    select case (option)
+    
+       case(1)
+            ! use cartesian vectors 
+            write(*,'(/a)') '> enter translation vector (T_x,T_y,T_z) as a Real number:'
+            write(*,'(a)',advance='no') 'T_x = '
+            read (*,*) T_vector(1)
+            write(*,'(a)',advance='no') 'T_y = '
+            read (*,*) T_vector(2)
+            write(*,'(a)',advance='no') 'T_z = '
+            read (*,*) T_vector(3)
+            T_versor = T_vector / sqrt( dot_product(T_vector,T_vector) )
+    
+       case(2) 
+            ! define translation vector 
+            write(*,'(/a)') '> define vector: at1 ======> at2'
+            write(*,'(a)',advance='no') 'index of atom 1 = '
+            read(*,*) at1
+            write(*,'(a)',advance='no') 'index of atom 2 = '
+            read(*,*) at2
+    
+            T_versor = (system% atom(at2)% xyz - system% atom(at1)% xyz) / sqrt(sum( (system% atom(at2)% xyz-system% atom(at1)% xyz)**2) )
+    
+       case(3) 
+            ! define rotation vector 
+            write(*,'(/a)') '> define vector perpendicular to the plane: '
+            write(*,'(/a)') '            at1    at3                      '
+            write(*,'(a)')  '              \    /                        '
+            write(*,'(a)')  '               \  /                         '
+            write(*,'(a)')  '                \/                          '
+            write(*,'(a)')  '                at2                         '
+            write(*,'(/a)',advance='no') 'index of atom 1 = '
+            read(*,*) at1
+            write(*,'(a)',advance='no') 'index of atom 2 = '
+            read(*,*) at2
+            write(*,'(a)',advance='no') 'index of atom 3 = '
+            read(*,*) at3
+    
+            ! the versor ...
+            T_versor = vector_product(system,at1,at2,at3)
+    
+    end select
+
+    print*,"" 
+
+end subroutine define_translation_vector
+!
+!
+!
+!======================================================
+ function vector_product(sys,at1,at2,at3) result(w_vec)
+!======================================================
+    implicit none
+    type(universe) , intent(in) :: sys
+    integer        , intent(in) :: at1
+    integer        , intent(in) :: at2
+    integer        , intent(in) :: at3
+    
+    !local variables ...
+    real*8 :: u_vec(3) , v_vec(3) , w_vec(3) 
+    
+    u_vec = (sys% atom(at1)% xyz - sys% atom(at2)% xyz) 
+    v_vec = (sys% atom(at3)% xyz - sys% atom(at2)% xyz) 
+    
+    w_vec(1) = u_vec(3)*v_vec(2) - u_vec(2)*v_vec(3)
+    w_vec(2) = u_vec(1)*v_vec(3) - u_vec(3)*v_vec(1)
+    w_vec(3) = u_vec(2)*v_vec(1) - u_vec(1)*v_vec(2)
+    
+    w_vec = w_vec / sqrt( dot_product(w_vec,w_vec) )
+
+end function vector_product
+!
+!
+!
+!================================================
+ subroutine Save_PDB_Trajectories(trj, file_name)
+!================================================
+type(universe), allocatable, intent(inout) :: trj(:)
+character(*)  , optional   , intent(in)    :: file_name
+
+! local variables ...
+integer      :: i, j, k, last_config 
+character(1) :: YorN
+
+If( present(file_name) ) then
+    OPEN(unit = 4, file = file_name          , status = 'unknown', action = 'write')
+else 
+    OPEN(unit = 4, file = 'frames-output.pdb', status = 'unknown', action = 'write')
+end if
+
+last_config = size(trj) -1
+
+do j = 0 , last_config
+
+    write(4,5) 'REMARK' , trj(j)% System_Characteristics
+    write(4,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+    write(4,3) 'MODEL'  , j
+
+    ! where MMSymbol is not defined MMSymbol = symbol ...
+    where( trj(j)%atom%MMSymbol == "XXX" ) trj(j)%atom%MMSymbol = trj(j)%atom%symbol
+
+    do i = 1 , trj(j)%N_of_atoms
+
+            write(4,2)  'ATOM  '                            ,  &    ! <== non-standard atom
+                        i                                   ,  &    ! <== global number
+                        trj(j)%atom(i)%MMSymbol             ,  &    ! <== atom type
+                        ' '                                 ,  &    ! <== alternate location indicator
+                        trj(j)%atom(i)%resid                ,  &    ! <== residue name
+                        ' '                                 ,  &    ! <== chain identifier
+                        trj(j)%atom(i)%nresid               ,  &    ! <== residue sequence number
+                        ' '                                 ,  &    ! <== code for insertion of residues
+                        ( trj(j)%atom(i)%xyz(k) , k=1,3 )   ,  &    ! <== xyz coordinates 
+                        1.00                                ,  &    ! <== occupancy
+                        0.00                                ,  &    ! <== temperature factor
+                        ' '                                 ,  &    ! <== segment identifier
+                        ' '                                 ,  &    ! <== here only for tabulation purposes
+                        trj(j)%atom(i)%symbol               ,  &    ! <== chemical element symbol
+                        trj(j)%atom(i)%charge                       ! <== charge on the atom
+    end do
+
+    write(4,'(a)') 'MASTER'
+    write(4,'(a)') 'END'
+
+end do
+
+close(4)
+
+1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
+2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)              
+3 FORMAT(a5,i8)
+4 FORMAT(a6,t15,a21)
+5 FORMAT(a6,t10,a72)
+
+write(*,'(/a)') ' >>> frames-output.pdb : writing done, press any key <<<'
+write(*,'(/a)') "That's all ? (y/n)"
+read (*,'(a)') YorN
+if( YorN /= "n" ) stop
+
+end subroutine Save_PDB_Trajectories
 !
 !
 !

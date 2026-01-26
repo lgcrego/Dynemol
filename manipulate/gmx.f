@@ -360,7 +360,7 @@ character(*)    , optional  , intent(in)  :: file_name
 character(*)    , optional  , intent(in)  :: file_type
 
 ! local variables ...
-integer                         :: i, j, indx, ioerr, useless, N_of_atoms
+integer                         :: i, j, indx, ioerr, N_of_atoms
 character(len=80)               :: line
 character(len=5)                :: MMSymbol_char , FFSymbol_char
 character(len=6)                :: keyword
