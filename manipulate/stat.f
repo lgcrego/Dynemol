@@ -57,7 +57,7 @@ select case( operation )
         write(*,*)
         write(*, '(a51)', advance = 'no') 'consider INTRA-MOLECULAR degrees of freedom? (y,n) '
         read*, answer
-        y_or_no = merge(.true., .false., answer=="y")
+        y_or_n = merge(.true., .false., answer=="y")
 
         done = .false.
         do while (.NOT. done)

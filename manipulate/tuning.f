@@ -25,8 +25,12 @@ type(universe)  , intent(inout) :: sys
 integer         , optional      :: frame
 
 ! local variables ...
-integer :: i  
+integer :: n_atoms
 real*8  :: delta_t = 0.d0
+logical :: use_frame
+
+use_frame = present(frame)
+n_atoms   = size(sys%atom)
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !

@@ -150,7 +150,7 @@ do
     write(*,'(a)') green // '10  :' // reset // ' Include solvent'
     write(*,'(a)') green // '11  :' // reset // ' Replication'
     write(*,'(a)') green // '12  :' // reset // ' Nonbonding topology'
-    write(*,'(a)') green // '13  :' // reset // ' Images'
+    write(*,'(a)') green // '13  :' // reset // ' Build Reaction Coordinate'
     write(*,'(a)') green // '14  :' // reset // ' Bring solvent into the bounding box'
     write(*,'(a)') green // '15  :' // reset // ' Ad hoc tuning'
     write(*,'(a)') bold // orange // ' 0  :' // reset // ' DONE'
@@ -198,8 +198,10 @@ do
             CALL Nonbonding_Topology( structure )
 
         case ('13')
-            write(*,'(/a)') "Format of image files :   vasp-1   /   pdb-2"
+            write(*,'(/a)') blue//"Format of image files:"//reset// &
+                            "  "//green//"vasp-1"//reset//"  /  "// green//"pdb-2"//reset
             read (*,'(i1)') file_type
+            
 
             if( allocated(trajectories) ) then
                 CALL Pick_Configurations( trajectories , file_type ) 
