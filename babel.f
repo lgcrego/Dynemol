@@ -3,10 +3,10 @@
     use IFPORT 
     use type_m                  
     use MM_input                , only : MM_input_format
-    use parameters_m            , only : file_type,             &
-                                         ad_hoc ,               &
-                                         driver
+    use util_m                  , only : split_line
+    use parameters_m            , only : file_type, ad_hoc, driver
     use Allocation_m            , only : Allocate_UnitCell
+    use Semi_Empirical_Parms    , only : atom                                         
     use tuning_m                , only : ad_hoc_tuning
     use Babel_routines_m        , only : Symbol_2_AtNo ,        &
                                          Identify_Fragments ,   &
@@ -18,7 +18,6 @@
                                          TO_UPPER_CASE ,        &
                                          Center_of_Gravity ,    &
                                          Initialize_System
-    use Semi_Empirical_Parms    , only : atom                                         
 
 !    private
 
@@ -425,12 +424,13 @@ implicit none
 type(universe)  , allocatable   , intent(out)   :: trj(:)
 
 ! local variables ...
-integer      :: i , j , k  , dumb_number , openstatus , inputstatus , model , number_of_atoms
-real*8       :: time_1 , time_2 , delta_t 
-character(1) :: test
-character(4) :: keyword
-character(5) :: MMSymbol_char
-logical      :: TorF
+integer            :: i , j , k  , openstatus , iostat , model , number_of_atoms
+real*8             :: time_1 , time_2 , delta_t 
+logical            :: TorF, has_time
+character(4)       :: keyword
+character(5)       :: MMSymbol_char
+character(len=100) :: line
+character(len=9), allocatable :: tokens(:)
 
 open(unit = 31, file = 'frames.pdb', status = 'old', action = 'read', iostat = openstatus)
 if (openstatus > 0) then
@@ -438,69 +438,83 @@ if (openstatus > 0) then
     STOP 
 end if
 
-read(unit = 31, fmt = 43, iostat = inputstatus) System_Characteristics
+read(unit = 31, fmt = 43, iostat = iostat) System_Characteristics
 
 ! find the number of model frames ...
 model = 0
 do
-    read(unit = 31, fmt = 35, iostat = inputstatus) keyword
-    if ( inputstatus /= 0  ) exit
+    read(unit = 31, fmt = 35, iostat = iostat) keyword
+    if ( iostat /= 0  ) exit
     if ( keyword == 'MODE' ) model = model + 1
 end do
 
 ! return to the top of the file ...
 rewind 31
 
-! read number the atoms and time ...
-read(unit = 31, fmt = 35, iostat = inputstatus) keyword
-do
-    if ( keyword == 'MODE' ) then
-        exit
-    else
-        ! reading the time ...
-        if ( keyword == 'TITL' ) then
-            backspace 31
-            do 
-                read(unit = 31, fmt = 42,advance='no',iostat = inputstatus) test
-                if(test == "=") then
-                    read(unit = 31, fmt = 41, iostat = inputstatus) time_1 
-                    exit    ! <== time_1 read
-                end if
-            end do
-            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
-        else
-            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+!======================================================
+! looking for time token "t=" in the headers ...
+!======================================================
+    do
+        read(unit = 31, fmt='(a)', iostat = iostat) line
+        tokens = split_line(line, token_length=8)
+    
+        if( any(tokens == "t=") ) then
+            i =  minloc(tokens, 1 , tokens == "t=")
+            read(tokens(i+1),*) time_1
+            has_time = .true.
+            exit
+    
+        else if( any(tokens == "END") ) then
+            has_time = .false.
+            time_1 = 0.0
+            exit
+    
         end if
+    end do
+    
+    if( has_time ) then
+        do
+            read(unit = 31, fmt='(a)', iostat = iostat) line
+            tokens = split_line(line, token_length=8)
+        
+            if( any(tokens == "t=") ) then
+                i =  minloc(tokens, 1 , tokens == "t=")
+                read(tokens(i+1),*) time_2
+    
+                delta_t = time_2 - time_1
+                exit
+            end if
+        end do
+    
+    else 
+        delta_t = 0.0
     end if
-end do
 
-number_of_atoms = 0
-do
-    read(unit = 31, fmt = 35, iostat = inputstatus) keyword
-    if ( keyword == 'ATOM' ) then
-        backspace 31
-        read(unit = 31, fmt = 32, iostat = inputstatus) dumb_number
-        number_of_atoms = number_of_atoms + 1
-    else
-        ! reading the time ...
-        if ( keyword == 'TITL' ) then
-            backspace 31
-            do 
-                read(unit = 31, fmt = 42,advance='no',iostat = inputstatus) test
-                if(test == "=") then
-                    read(unit = 31, fmt = 41, iostat = inputstatus) time_2 
-                    exit    ! <== time_2 read
-                end if
-            end do
-            exit    ! <== leave outer do loop
+    ! Molecular Dynamics time step (pico-sec) ...
+    if(has_time) MD_dt = delta_t + epsilon(1.d0)
+
+!======================================================
+
+! return to the top of the file ...
+rewind 31
+
+!======================================================
+! get the number of atoms per frame ...
+!======================================================
+    number_of_atoms = 0
+    do
+        read(unit = 31, fmt='(a)', iostat = iostat) line
+        tokens = split_line(line, token_length=6)
+        
+        if( any(tokens == "ATOM") ) then
+            number_of_atoms = number_of_atoms + 1
+        
+        else if( any(tokens == "END") ) then
+            exit
+    
         end if
-    end if
-end do
-
-delta_t = time_2 - time_1
-
-! Molecular Dynamics time step (pico-sec) ...
-MD_dt = delta_t + epsilon(1.d0)
+    end do
+!======================================================
 
 ! return to the top of the file ...
 rewind 31
@@ -515,10 +529,10 @@ do j = 1 , model
     if( j == 1 ) then
 
         do
-            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+            read(unit = 31, fmt = 35, iostat = iostat) keyword
             if( keyword == 'CRYS' ) then
                 backspace 31
-                read(unit = 31, fmt = 40, iostat = inputstatus) ( trj(j)%box(i) , i=1,3 )
+                read(unit = 31, fmt = 40, iostat = iostat) ( trj(j)%box(i) , i=1,3 )
             end if
             if( keyword == 'MODE' ) exit
         end do
@@ -527,7 +541,7 @@ do j = 1 , model
         CALL Initialize_System( trj(j) )
 
         do i = 1 , number_of_atoms
-            read(unit = 31, fmt = 33, iostat = inputstatus)   MMSymbol_char               ,     &
+            read(unit = 31, fmt = 33, iostat = iostat)   MMSymbol_char               ,     &
                                                               trj(j) % atom(i) % residue ,      &
                                                               trj(j) % atom(i) % nr ,           &
                                                             ( trj(j) % atom(i) % xyz(k) , k=1,3 )
@@ -549,10 +563,10 @@ do j = 1 , model
     else
 
         do
-            read(unit = 31, fmt = 35, iostat = inputstatus) keyword
+            read(unit = 31, fmt = 35, iostat = iostat) keyword
             if( keyword == 'CRYS' ) then
                 backspace 31
-                read(unit = 31, fmt = 40, iostat = inputstatus) ( trj(j)%box(i) , i=1,3 )
+                read(unit = 31, fmt = 40, iostat = iostat) ( trj(j)%box(i) , i=1,3 )
             end if
             if ( keyword == 'MODE' ) exit
         end do
@@ -561,7 +575,7 @@ do j = 1 , model
         CALL Initialize_System( trj(j) )
     
         do i = 1 , number_of_atoms
-            read(unit = 31, fmt = 37, iostat = inputstatus) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
+            read(unit = 31, fmt = 37, iostat = iostat) ( trj(j)%atom(i)%xyz(k) , k=1,3 )
         end do
 
     end if

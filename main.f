@@ -2,10 +2,11 @@ Program qdynamo
 
 use type_m
 use constants_m
-use setup_checklist      
+use util_m                  , only : to_upper_case
+use setup_checklist         , only : checklist, need_MM_stuff, dump_driver_parameters_and_tuning
 use card_reading            , only : ReadInputCard
-use parameters_m            , only : Define_Environment , driver , restart
-use MM_input                , only : Define_MM_Environment , driver_MM
+use parameters_m            , only : Define_Environment, driver, restart
+use MM_input                , only : Define_MM_Environment, driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
@@ -14,9 +15,9 @@ use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
 use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
-use MMechanics_m            , only : MMechanics
+use MMechanics_m            , only : MMechanics, Scan_PES
 use MD_read_m               , only : Build_MM_Environment
-use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
+use good_vibrations_m       , only : Optimize_Structure, normal_modes, Optimize_Parameters_Driver
 
 ! local variables ...
 logical :: go_without_card 
@@ -75,19 +76,22 @@ select case ( driver )
 
     case ( "MM_Dynamics" )
 
-        select case ( driver_MM )
+        select case ( to_upper_case(driver_MM) )
 
-            case ( "MM_Dynamics" )
+            case ( "MM_DYNAMICS" )
                 CALL MMechanics        
 
-            case ( "MM_Optimize" , "XS_Optimize" )
+            case ( "MM_OPTIMIZE" , "XS_OPTIMIZE" )
                 CALL Optimize_Structure
 
-            case ( "NormalModes" )
+            case ( "NORMALMODES" )
                 CALL normal_modes
 
-            case ( "Parametrize" )
+            case ( "PARAMETRIZE" )
                 CALL Optimize_Parameters_Driver
+
+            case ( "SCANPES" )
+                CALL Scan_PES
 
             case default
                 Print*, " >>> Check your card options: {MM_Dynamics,{MM,XS}_Optimize,NormalModes,Parametrize} <<< " , driver_MM
