@@ -3,11 +3,12 @@ Program qdynamo
 use MPI
 use type_m
 use constants_m
-use setup_checklist      
+use util_m                  , only : to_upper_case
+use setup_checklist         , only : checklist, need_MM_stuff, dump_driver_parameters_and_tuning
 use card_reading            , only : ReadInputCard
-use MPI_definitions_m       , only : launch_MPI , setup_MPI_labor_force , master , myid , world
-use parameters_m            , only : Define_Environment , driver , restart
-use MM_input                , only : Define_MM_Environment , driver_MM
+use MPI_definitions_m       , only : launch_MPI, setup_MPI_labor_force, master, myid, world
+use parameters_m            , only : Define_Environment, driver, restart
+use MM_input                , only : Define_MM_Environment, driver_MM
 use Semi_Empirical_Parms    , only : read_EHT_parameters
 use Structure_Builder       , only : Read_Structure
 use qdynamics_m             , only : qdynamics
@@ -18,7 +19,7 @@ use Chebyshev_driver_m      , only : Chebyshev_driver
 use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
 use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
-use good_vibrations_m       , only : Optimize_Structure , normal_modes , Optimize_Parameters_Driver
+use good_vibrations_m       , only : Optimize_Structure, normal_modes, Optimize_Parameters_Driver
 
 ! local variables ...
 integer :: err
@@ -92,18 +93,18 @@ select case ( driver )
 
         if( master )&
         then
-            select case ( driver_MM )
+            select case ( to_upper_case(driver_MM) )
 
-                case ( "MM_Dynamics" )
+                case ( "MM_DYNAMICS" )
                     CALL MMechanics        
 
-                case ( "MM_Optimize" )
+                case ( "MM_OPTIMIZE" )
                     CALL Optimize_Structure
 
-                case ( "NormalModes" )
+                case ( "NORMALMODES" )
                     CALL normal_modes
 
-                case ( "Parametrize" )
+                case ( "PARAMETRIZE" )
                     CALL Optimize_Parameters_Driver
 
             case default
