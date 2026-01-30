@@ -179,11 +179,12 @@ type(MM_molecular), intent(in):: species(:)
 ! local variables
 integer :: HOH
 
-! find HOH species 
+! locate HOH species in array species
 do HOH = 1 , size(species)
    if ( species(HOH)%DWFF ) exit
 end do
 
+! for HOH species, do the following
 associate( MMSymbol => species(HOH)% atom(:)% MMSymbol )
     if( MMSymbol(1) == "OX" ) then
         HOH_diss_parms% H_ptr(:) = [2,3]
