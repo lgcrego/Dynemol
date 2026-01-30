@@ -146,8 +146,8 @@ close(11)
  CALL ReGroupMolecule
 
  open (14, file='frames.pdb', status='unknown', access='append')
-        if( first .AND. (.NOT. restart) ) write(14,*)  "MDFlex , no title"
-        write(14,995) 'TITLE'  , 'manipulated by MDFlex     t= ', frame*dt*1.d12
+        if( first .AND. (.NOT. restart) ) write(14,*)  "DynEMol , no title"
+        write(14,995) 'TITLE'  , 'manipulated by DynEMol     t= ', frame*dt*1.d12
         write(14,991) 'CRYST1' , MM % box(1) , MM % box(2) , MM % box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
         write(14,993) 'MODEL'  , frame
 
