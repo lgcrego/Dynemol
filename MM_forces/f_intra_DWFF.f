@@ -39,12 +39,12 @@ contains
     
     call intra_3body_DWFF
     
-    ! local force units = J/Angs ...
+    ! local force (units = J/Angs) ...
     do i = 1, MM % N_of_atoms
        atom(i)% f_intra_DWFF(:) = f_bond(i,:) + f_ang(i,:)
     end do
 
-    ! energy 
+    ! energy (Joule units)
     DWFF_intra = (bond_erg + ang_erg)*factor3 
     
     deallocate( f_bond , f_ang )

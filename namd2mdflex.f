@@ -352,7 +352,42 @@ deallocate( InputChars , InputIntegers )
 
 end subroutine psf2mdflex
 !
-!
+            !-----------------------------------------------------------!
+            !   Legacy Conversion procedure:  kcal/mol -> Joule         ! 
+            !                                                           ! 
+            !          1[cal] = 4.184 [J]                               ! 
+            !                                                           ! 
+            !                   kilo                                    !
+            !    [kcal/mol] = --------- [cal]                           !
+            !                  6.02d23                                  !
+            !                                                           ! 
+            !   Therefore:                                              !
+            !                   10^3                                    !
+            !    [kcal/mol] = --------- * 4.184 [J]                     !
+            !                  6.02d23                                  !
+            !                                                           !
+            !                   10^6                                    !
+            !    [kcal/mol] = --------- * 4.184 [J]                     !
+            !                  6.02d26                                  !
+            !                                                           !
+            !    [kcal/mol] = 10^6 * imol * cal_2_J [J]                 !
+            !                                                           !
+            !                   10^26                                   !
+            !    [kcal/mol] = --------- * imol * cal_2_J [J]            !
+            !                   10^20                                   !
+            !                                                           !
+            !                    1                                      !
+            !    [kcal/mol] =  ------ *  factor1 * imol * cal_2_J [J]   !
+            !                  10^20                                    !
+            !                                                           !
+            !                                                           !
+            !    [kcal/mol] = factor3 * factor1 * imol * cal_2_J [J]    !
+            !                    |     \__________  ____________/       !
+            !                    |                \/                    !
+            !                    |      this is applied herein          !
+            !                   \|/                                     !
+            !           this is applied after force calculations        !
+            !-----------------------------------------------------------!
 !
 !==========================================
  subroutine prm2mdflex( MM , species , FF )
@@ -715,7 +750,6 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     end do
 
     ! conversion 
-    ! imol*cal_2_J converts kcal/mol ==> micro J per molecule
     ! factor1 = 1.0d26  <== Factor used to bring numbers close to unit
     ! GAFF  vs  GMX  LJ parameters:
     ! -> epsilon_GAFF = epsilon_GMX/cal_2_J 

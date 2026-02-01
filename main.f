@@ -15,7 +15,7 @@ use GA_driver_m             , only : GA_driver
 use diagnostic_m            , only : diagnostic
 use Chebyshev_driver_m      , only : Chebyshev_driver
 use QMDynamicSlice_driver_m , only : QMDynamicSlice_driver
-use MMechanics_m            , only : MMechanics, Scan_PES
+use MMechanics_m            , only : MMechanics
 use MD_read_m               , only : Build_MM_Environment
 use good_vibrations_m       , only : Optimize_Structure, normal_modes, Optimize_Parameters_Driver
 
@@ -89,9 +89,6 @@ select case ( driver )
 
             case ( "PARAMETRIZE" )
                 CALL Optimize_Parameters_Driver
-
-            case ( "SCANPES" )
-                CALL Scan_PES
 
             case default
                 Print*, " >>> Check your card options: {MM_Dynamics,{MM,XS}_Optimize,NormalModes,Parametrize} <<< " , driver_MM
