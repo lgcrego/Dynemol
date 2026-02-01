@@ -360,6 +360,40 @@ deallocate( InputChars , InputIntegers )
 end subroutine itp2mdflex
 !
 !
+           !-------------------------------------------------------!
+            !   Legacy Conversion procedure:  kJ/mol -> Joule      ! 
+            !                                                      ! 
+            !                   kilo                               !
+            !    [kJ/mol] = --------- [J]                          !
+            !                  6.02d23                             !
+            !                                                      ! 
+            !   Therefore:                                         !
+            !                   10^3                               !
+            !    [kJ/mol] = ---------  [J]                         !
+            !                  6.02d23                             !
+            !                                                      !
+            !                   10^6                               !
+            !    [kJ/mol] = ---------  [J]                         !
+            !                  6.02d26                             !
+            !                                                      !
+            !    [kJ/mol] = 10^6 * imol [J]                        !
+            !                                                      !
+            !                   10^26                              !
+            !    [kJ/mol] = --------- * imol [J]                   !
+            !                   10^20                              !
+            !                                                      !
+            !                    1                                 !
+            !    [kJ/mol] =  ------ *  factor1 * imol [J]          !
+            !                  10^20                               !
+            !                                                      !
+            !                                                      !
+            !    [kcal/mol] = factor3 * factor1 * imol  [J]        !
+            !                    |     \_______  _____/            !
+            !                    |             \/                  !
+            !                    |      this is applied herein     !
+            !                   \|/                                !
+            !           this is applied after force calculations   !
+            !------------------------------------------------------!
 !
 !==========================================
  subroutine top2mdflex( MM , species , FF )

@@ -86,12 +86,32 @@ IF( .NOT. done ) then
     done = .true.
 
 end IF
+            !--------------------------------------------!
+            !   Conversion:  Joule -> kJ/mol             ! 
+            !                                            ! 
+            !            kilo     6.02d23                !
+            !    [J] = -------- * -------- [J]           !
+            !            10^3       mol                  !
+            !                                            ! 
+            !   Therefore:                               !
+            !                     (6.02d23)              !
+            !    var [J] = var * ---------- [kJ/mol]     !
+            !                       10^3                 !
+            !                                            !
+            !                     (6.02d26)              !
+            !    var [J] = var * ---------- [kJ/mol]     !
+            !                       10^6                 !
+            !                                            !
+            !    var [J] = var * MOL * micro [kJ/mol]    !
+            !                                            !
+            !    with MOL=6.02d26 and micro=10^-6        !
+            !---------------------------------------------
 
 open (10, file='log.trunk/MM_log.out', status='unknown', access='append')
 
-    write(10,'(''<======  ###############  ==>'')')
-    write(10,'(''<====  E N E R G I E S  ====>'')')
-    write(10,'(''<==  ###############  ======>'')')
+    write(10,'(''<====  ###############  ====> '')')
+    write(10,'(''    E N E R G I E S  (kJ/mol) '')')
+    write(10,'(''<=== = ###############  ====> '')')
     write(10,*)
     write(10,'(''time :'',F10.4,'' ps'')') frame*dt*1.d12
     write(10,*)'                                (kJ/mol)'
