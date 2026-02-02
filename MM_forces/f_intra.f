@@ -72,9 +72,46 @@ call f_intra_nonbonding()
 if (any(molecule%DWFF)) then
    call DW_f_intra()
 endif
-
+!
+       !-----------------------------------------------------------!
+       !                 Legacy Conversion procedure               ! 
+       !                                                           ! 
+       !        e^2                                                !
+       !   --------------- =  2.3071 * 10^(-28)  [N.m^2]           !
+       !   4.pi.epsilon_0                                          !
+       !                                                           ! 
+       !   Therefore:                                              !
+       !        e^2          1              10^(-28)               !
+       !   -------------- * ---- = 2.3071 * --------  [N.m^2]      !
+       !   4.pi.epsilon_0   Angs              Angs                 !
+       !                                                           !
+       !        e^2          1              10^(-28)  [N.m^2]      !
+       !   -------------- * ---- = 2.3071 * --------  -------      !
+       !   4.pi.epsilon_0   Angs            10^(-10)    [m]        !
+       !                                                           !
+       !        e^2          1                                     !
+       !   -------------- * ---- = 2.3071 * 10^(-18)  [N.m]        !
+       !   4.pi.epsilon_0   Angs                                   !
+       !                                                           !
+       !        e^2          1                                     !
+       !   -------------- * ---- = 230.71 * 10^(-20)  [J]          !
+       !   4.pi.epsilon_0   Angs                                   !
+       !                                                           !
+       !        e^2          1                                     !
+       !   -------------- * ---- = 230.71 * factor3  [J]           !
+       !   4.pi.epsilon_0   Angs                                   !
+       !                                                           !
+       !        e^2          1                                     !
+       !   -------------- * ---- = coulomb * factor3 [J]           !
+       !   4.pi.epsilon_0   Angs     |          |                  !
+       !                             |          |                  !
+       !                            \|/         |                  !
+       !                  significant figures   |                  !
+       !                                       \|/                 !
+       !                          applied after force calculation  !
+       !-----------------------------------------------------------!
 !====================================================================
-! factor used to compensate the factor1 and factor2 factors ...
+! factor3 used to compensate the factor1 and factor2 rescaling ...
 ! factor3 = 1.0d-20
 pot_INTRA = (bdpot + angpot + dihpot)*factor3 + LJ_14 + LJ_intra + Coul_14 + Coul_intra + Morspot + DWFF_intra
 pot_total = pot_INTER + DWFF_inter + pot_INTRA - Vself

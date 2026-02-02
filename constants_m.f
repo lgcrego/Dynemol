@@ -55,7 +55,7 @@ MODULE constants_m
     real*8  , parameter :: imol        = 0.166053906d-26            ! 1/(mol x 1000)
     real*8  , parameter :: boltz       = 1.3806488d-23              ! kB in J/K
     real*8  , parameter :: iboltz      = 2.41432176d22              ! 1/(3kB) in K/J
-    real*8  , parameter :: coulomb     = 230.7113d0                 ! e^2/(4.pi.epsilon_0) x 1.E+20 N.m^2
+    real*8  , parameter :: coulomb     = 230.7113d0                 ! e^2/(4.pi.epsilon_0)*(1/Angs) [Joule], mantissa part
     real*8  , parameter :: kJmol_2_eV  = 0.010364272301331d0        ! converts kJ/mol to eV units 
     real*8  , parameter :: Dalton_2_eV = 0.010364272301331d-2       ! converts mass: Dalton to eV*ps^2/Ang^2
     real*8  , parameter :: eV_2_kJmol  = 96.485307499258d0          ! converts eV to kJ/mol units 
