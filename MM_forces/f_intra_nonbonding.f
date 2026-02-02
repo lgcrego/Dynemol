@@ -179,7 +179,43 @@ deallocate( tmp_vdw , tmp_ele )
 
 end subroutine f_intra_nonbonding
 !
-!
+            !-----------------------------------------------------------!
+            !                 Legacy Conversion procedure               ! 
+            !                                                           ! 
+            !        e^2                                                !
+            !   --------------- =  2.3071 * 10^(-28)  [N.m^2]           !
+            !   4.pi.epsilon_0                                          !
+            !                                                           ! 
+            !   Therefore:                                              !
+            !        e^2          1              10^(-28)               !
+            !   -------------- * ---- = 2.3071 * --------  [N.m^2]      !
+            !   4.pi.epsilon_0   Angs              Angs                 !
+            !                                                           !
+            !        e^2          1              10^(-28)  [N.m^2]      !
+            !   -------------- * ---- = 2.3071 * --------  -------      !
+            !   4.pi.epsilon_0   Angs            10^(-10)    [m]        !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 2.3071 * 10^(-18)  [N.m]        !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 230.71 * 10^(-20)  [J]          !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 230.71 * factor3  [J]           !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = coulomb * factor3 [J]           !
+            !   4.pi.epsilon_0   Angs     |          |                  !
+            !                             |          |                  !
+            !                            \|/         |                  !
+            !                  significant figures   |                  !
+            !                                       \|/                 !
+            !                          applied after force calculation  !
+            !-----------------------------------------------------------!
 !
 !==========================================================
  subroutine Coulomb_DSF (rij2 , ati , atj , fcoul , E_coul)
