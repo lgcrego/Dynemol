@@ -45,6 +45,7 @@ INCLUDES = $(INCLUDES_MKL)
 
 SOURCE = types_m.o \
  		 constants_m.o \
+ 		 DWFF_Build.o \
          util.o \
 		 diagnosis.o \
 		 parms.o \
@@ -58,6 +59,7 @@ SOURCE = types_m.o \
          alignment.o \
 		 crystal.o \
 		 solvent.o \
+		 scan_DWFF.o \
 		 elastic.o \
 		 correlation.o \
 		 DW_diagnostic.o \

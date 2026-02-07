@@ -802,9 +802,9 @@ write(4,6) trj(1)%System_Characteristics
 
 do j = 1 , size(trj) , frame_step
 
-    write(4,4) 'REMARK' , 'manipulated by edview'
-    write(4,5) 'TITLE'  , 'manipulated by edview     t= ',trj(j)%time
-!    write(4,4) 'REMARK' , 'manipulated by edview'
+    write(4,4) 'REMARK' , 'manipulated by DynEMol'
+    write(4,5) 'TITLE'  , 'manipulated by DynEMol    t= ',trj(j)%time
+!    write(4,4) 'REMARK' , 'manipulated by DynEMol'
     write(4,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
     write(4,3) 'MODEL' , j
 
@@ -877,9 +877,9 @@ delta_t = trj(2)%time - trj(1)%time
 
 do j = size(trj) , 1 , -1
 
-    write(4,4) 'REMARK' , 'manipulated by edview'
-    write(4,5) 'TITLE'  , 'manipulated by edview     t= ', (size(trj) - j)* delta_t
-    write(4,4) 'REMARK' , 'manipulated by edview'
+    write(4,4) 'REMARK' , 'manipulated by DynEMol'
+    write(4,5) 'TITLE'  , 'manipulated by DynEMol    t= ', (size(trj) - j)* delta_t
+    write(4,4) 'REMARK' , 'manipulated by DynEMol'
     write(4,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
     write(4,3) 'MODEL' , j
 

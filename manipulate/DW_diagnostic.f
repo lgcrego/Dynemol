@@ -1,6 +1,8 @@
 module Dissociative
+
     use types_m
     use constants_m
+    use ansi_colors
     use Read_parms
     use EDIT_routines, only : ReGroup, Bring_into_PBCBox
     use EDT_util_m   , only : parse_this
@@ -474,13 +476,13 @@ end subroutine data_output
     character(len=80) :: line
     integer, allocatable :: O_list(:)
 
-    write(*,'(/a)') 'Visualize a particular structure (y/n)?'
-    write(*,'(a)', advance='no') '>>> '
+    write(*,'(/a)') bold//cyan//'Visualize a particular structure (y/n)?'//reset
+    write(*,'(a)', advance='no') yellow//'>>> '//reset
     read(*,'(a)') YorN
 
     if (YorN /= 'y') return
 
-    write(*,'(/a)') 'Enter the Oxygen atom indices for visualization:'
+    write(*,'(/a)') bold//cyan//'Enter the Oxygen atom indices for visualization:'//reset
     write(*,'(a)') 'List them separated by spaces:'
     read(*,'(a)') line
 
@@ -517,7 +519,7 @@ end subroutine open_output_files
     integer, allocatable :: res_number(:)
     
     ! Ask user for a frame step
-    write(*,'(/a)',advance='no') ' Saving with Frame step : '
+    write(*,'(/a)',advance='no') bold//cyan//'Saving with Frame step : '//reset
     read (*,'(i3)'             ) frame_step
     
     ! Open output file
@@ -553,7 +555,7 @@ end subroutine open_output_files
     !-------------------------------------------
     do j = 1 , size(trj) , frame_step
     
-        write(un,5) 'TITLE'  , 'manipulated by edview     t= ',trj(j)%time
+        write(un,5) 'TITLE'  , 'manipulated by DynEMol    t= ',trj(j)%time
         write(un,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
         write(un,3) 'MODEL' , j
     
@@ -588,8 +590,8 @@ end subroutine open_output_files
     5 FORMAT(a5,t1,a35,f12.7)
     6 FORMAT(a72)
     
-    write(*,'(/a)') ' >>> frames-DWFF.pdb : writing done, press any key <<<'
-    write(*,'(/a)') "That's all ? (y/n)"
+    write(*,'(/a)') bold//orange//'>>> frames-DWFF.pdb : writing done <<<'//reset
+    write(*,'(/a)') yellow//"That's all ? (y/n)"//reset
     read (*,'(a)') YorN
     if( YorN /= "n" ) stop
 
@@ -605,7 +607,7 @@ subroutine identify_species(frame, atom)
     type(atomic), intent(in) :: atom(:)
 
     ! Local variables
-    integer :: i, j
+    integer :: i
     integer :: O_acceptor, O_donor, O_hydrox
     integer :: total_charge, hydrox_charge, dimer_charge
     real*8  :: d_OO, d_hydrox
@@ -661,8 +663,7 @@ subroutine identify_species(frame, atom)
                 !-------------------------------
                 if (hydrox_charge < 0) then
 
-                    Zundel_counter(O_hydrox, O_acceptor) = &
-                        Zundel_counter(O_hydrox, O_acceptor) + 1
+                    Zundel_counter(O_hydrox, O_acceptor) = Zundel_counter(O_hydrox, O_acceptor) + 1
 
                     if (more_than_one) write(unit3,*) repeat(".", 48)
 

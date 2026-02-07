@@ -2,6 +2,7 @@ module EDIT_routines
 
 use types_m
 use util_m        , only: renumber_sequence
+use ansi_colors
 use Read_Parms
 use Constants_m
 use GMX_routines
@@ -121,9 +122,11 @@ end if
 if( .NOT. done ) &
 then
      ! define translation vector
-     write(*,'(a)') '> Use: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector?   '
+     write(*,'(/a)') bold//orange//"define translation vector."//reset                                             
+     write(*,'(/a)') yellow//"> Use: (1)-cartesian axis , (2)-ad-hoc vector ,  (3)-normal vector? "//reset         
+     write(*,'(a)',advance='no') yellow//">>> "//reset                                                             
      read(*,*) option
-     
+
      select case (option)
      
         case(1)
@@ -171,6 +174,9 @@ then
              T_vector = distance * T_versor
 
         end select
+
+        print*, ""
+
 end if
 
 if( present(copies) ) then

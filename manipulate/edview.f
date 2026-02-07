@@ -27,12 +27,11 @@ implicit none
 ! local variables
 type(universe)                  :: structure
 type(universe)   , allocatable  :: trajectories(:)
-character(len=1)                :: Reading_Method , yn
+character(len=1)                :: Reading_Method , y_or_n
 character(len=2)                :: Editing_Method 
 character(len=3)                :: resid
 character(len=30)               :: f_name
 integer                         :: AtNo, N_of_atom_type
-integer                         :: file_type
 
 
 CALL get_environment_vars
@@ -98,9 +97,9 @@ do
 
         case ('A','a')
             write(*,'(/a)', advance='no') yellow // '>>> On-the-fly tuning? (y/n): ' // reset
-            read (*,'(a)') yn
+            read (*,'(a)') y_or_n
 
-            if (yn /= 'n') then
+            if (y_or_n /= 'n') then
                 call on_the_fly_tuning(structure)
             else
                 call ad_hoc_tuning(structure)
@@ -150,7 +149,7 @@ do
     write(*,'(a)') green // '10  :' // reset // ' Include solvent'
     write(*,'(a)') green // '11  :' // reset // ' Replication'
     write(*,'(a)') green // '12  :' // reset // ' Nonbonding topology'
-    write(*,'(a)') green // '13  :' // reset // ' Build Reaction Coordinate'
+    write(*,'(a)') green // '13  :' // reset // ' Scan Reaction Path'
     write(*,'(a)') green // '14  :' // reset // ' Bring solvent into the bounding box'
     write(*,'(a)') green // '15  :' // reset // ' Ad hoc tuning'
     write(*,'(a)') bold // orange // ' 0  :' // reset // ' DONE'
@@ -198,16 +197,11 @@ do
             CALL Nonbonding_Topology( structure )
 
         case ('13')
-            write(*,'(/a)') blue//"Format of image files:"//reset// &
-                            "  "//green//"vasp-1"//reset//"  /  "// green//"pdb-2"//reset
-            read (*,'(i1)') file_type
-            
-
-            if( allocated(trajectories) ) then
-                CALL Pick_Configurations( trajectories , file_type ) 
-            else
-                CALL Build_Configurations( structure , file_type )
-            end if
+            write(*,'(/a)') cyan//"Compute energy profile along reaction path (y/n)?"//reset
+            write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
+            read (*,'(a)') y_or_n
+ 
+            call Build_Configurations(structure, pes_scan_flag = y_or_n)
 
         case ('14')
             CALL Bring_into_PBCBox( structure )
