@@ -2,6 +2,7 @@ module Statistics_routines
 
 use types_m
 use constants_m
+use ansi_colors
 use Read_parms
 use Dissociative  , only : DWFF
 use Correlation_m , only : Correlation_driver
@@ -28,31 +29,31 @@ logical      :: done, y_or_n
 
 CALL system( "clear" )
 
-write(*,'(/a)') ' Choose operation analysis '
-write(*,'(/a)') ' (w) = Dissociative Water '
-write(*,'(/a)') ' (l) = Bond Length '
-write(*,'(/a)') ' (a) = Bond Angle '
-write(*,'(/a)') ' (t) = Bond Torsion '
-write(*,'(/a)') ' (r) = Radial Distribution Functions (RDF) '
-write(*,'(/a)') ' (z) = Linear Distribution Functions (LDF) '
-write(*,'(/a)') ' (c) = Correlation Analysis '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a)') bold//cyan//' Choose operation analysis '//reset
+write(*,'(a)') green//' (1) '//reset//'= Dissociative Water '
+write(*,'(a)') green//' (2) '//reset//'= Bond Length '
+write(*,'(a)') green//' (3) '//reset//'= Bond Angle '
+write(*,'(a)') green//' (4) '//reset//'= Bond Torsion '
+write(*,'(a)') green//' (5) '//reset//'= Radial Distribution Functions (RDF) '
+write(*,'(a)') green//' (6) '//reset//'= Linear Distribution Functions (LDF) '
+write(*,'(a)') green//' (7) '//reset//'= Correlation Analysis '
+write(*,'(/a)',advance='no') yellow//'>>>   '//reset
 read (*,'(a)') operation
 
 select case( operation )
-    case( 'w' )
+    case( '1' )
         CALL DWFF(trj)
 
-    case( 'l' )
+    case( '2' )
         CALL Bond_Length(trj)
 
-    case( 'a' )
+    case( '3' )
         CALL Bond_Angle(trj)
 
-    case( 't' )
+    case( '4' )
         CALL Bond_Torsion(trj)
 
-    case( 'r' )
+    case( '5' )
 
         write(*,*)
         write(*, '(a51)', advance = 'no') 'consider INTRA-MOLECULAR degrees of freedom? (y,n) '
@@ -88,7 +89,7 @@ select case( operation )
                 end select
         end do
 
-    case( 'z' )
+    case( '6' )
         write(*, '(1x,a  )'                ) "MMSymbol of the atom: "
         write(*, '(1x,a7 )', advance = 'no') 'atom = '
         read*, atom
@@ -101,7 +102,7 @@ select case( operation )
 
         CALL Linear_Function( trj , atom , residue , step )
 
-    case( 'c' )
+    case( '7' )
         CALL Correlation_driver
 
 end select

@@ -23,6 +23,7 @@ module types_m
         logical             :: translate
         logical             :: rotate
         logical             :: group
+        logical             :: DWFF
     end type atomic
 
 
@@ -88,6 +89,14 @@ module types_m
     type R3_vector
         real*8 , dimension(3) :: xyz
     end type R3_vector
+
+    type DWFF_type
+        character(2)         , allocatable  :: PairSymbols(:,:)                                                     
+        real*8               , allocatable  :: SR(:,:)                                                              
+        real*8               , allocatable  :: Coul(:,:)                                                            
+        real*8               , allocatable  :: Angle(:,:)                                                           
+        integer                             :: H_ptr(2)                                                             
+    end type DWFF_type
 
 contains
 !

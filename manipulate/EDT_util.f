@@ -7,7 +7,7 @@ use Read_Parms
 use Constants_m
 use GMX_routines
 
-public :: on_the_fly_tuning , parse_this , translation_mask
+public :: on_the_fly_tuning, parse_this, translation_mask, bring_to_GCenter
 
 private
 
@@ -19,7 +19,28 @@ private
         character(len=1) :: fragment
 
 contains
+!                                                                                                                                                             
+!
+!=================================
+ subroutine bring_to_GCenter(atom)
+!=================================
+    implicit none
+    type(atomic), intent(inout):: atom(:)
 
+    ! local variables
+    integer :: i, n_atoms
+    real(8) :: centroid(3)
+
+    n_atoms = size(atom)
+
+    forall( i=1:3 ) 
+       centroid(i) = sum(atom% xyz(i)) / n_atoms
+       atom% xyz(i) = atom% xyz(i) - centroid(i)
+    end forall
+ 
+end subroutine bring_to_GCenter    
+!
+!
 !
 !=====================================
 subroutine on_the_fly_tuning( system )
@@ -295,6 +316,7 @@ select case( choice )
         read (*,'(a)') line
 
         indx = parse_this(line)
+        print*, indx
         system% atom(indx)% translate = .true.
 
 end select
