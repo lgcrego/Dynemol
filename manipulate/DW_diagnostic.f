@@ -160,8 +160,8 @@ subroutine bond_topology(frame, atom, Txyz)
     OO_neighbors  = 0
 
     do concurrent (i = 1:nOX)
-        OH_bond_order(i) = count(table_OH(i, :) <  OH_covalent_len)
-        OO_neighbors(i)  = count(table_OO(i, :) <= OO_dimer_len)
+        OH_bond_order(i) = count( table_OH(i, :) <  OH_covalent_len )
+        OO_neighbors(i)  = count( table_OO(i, :) <= OO_dimer_len )
     end do
 
     where (OH_bond_order /= 2)
@@ -777,18 +777,6 @@ subroutine identify_dimer(frame, atom)
             end if
             counter = counter + 1
             CALL get_PT_map( frame, atom, HOH_acptr, HOH_dnr, PT_indx)
-
-!            if( counter == 242 ) then
-!                print*, "d_OO = ", table_OO(O_acceptor,O_donor)
-!                print*, frame
-!                print*, O_ptr(O_acceptor), O_ptr(O_donor)
-!                stop
-!            end if
-
-
-
-
-
 
             dimer_counter(O_donor, O_acceptor) = dimer_counter(O_donor, O_acceptor) + 1
 
