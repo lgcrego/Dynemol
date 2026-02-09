@@ -24,14 +24,14 @@ type(universe)            , intent(inout) :: sys
 character(len=*), optional, intent(in)    :: pes_scan_flag
 
 ! local variables ...
-integer                          :: i, n, n_steps, pes 
-real*8                           :: versor(3)
-real*8                           :: displacement, step
-real*8             , allocatable :: config_erg(:)
-logical                          :: pes_scan = .false.
-character(len=96)                :: string
-type(universe)     , allocatable :: trj(:)
-real(8) :: distance65, distance53
+integer                        :: i, n, n_steps, pes 
+real*8                         :: versor(3)
+real*8                         :: displacement, step
+real*8           , allocatable :: config_erg(:)
+logical                        :: pes_scan = .false.
+character(len=96)              :: string
+type(universe)   , allocatable :: trj(:)
+
 
 if(present(pes_scan_flag) .and. (pes_scan_flag=="y")) pes_scan=.true.
 
@@ -61,12 +61,9 @@ do n = 0, n_steps
             trj(n)%atom(i)%xyz = sys%atom(i)%xyz + versor * displacement
     end do
  
-    distance65 = sqrt(dot_product(trj(n)%atom(5)%xyz-trj(n)%atom(6)%xyz,trj(n)%atom(5)%xyz-trj(n)%atom(6)%xyz))
-    distance53 = sqrt(dot_product(trj(n)%atom(5)%xyz-trj(n)%atom(3)%xyz,trj(n)%atom(5)%xyz-trj(n)%atom(3)%xyz))
-
     if(pes_scan) then
         config_erg(n) = configuration_energy(trj(n)%atom)
-        write(pes,'(4f10.4)') 0.80+displacement, config_erg(n), distance65, distance53
+        write(pes,'(2f10.4)') displacement, config_erg(n)
     end if
 
 end do

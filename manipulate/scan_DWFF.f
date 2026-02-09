@@ -8,6 +8,9 @@ module DWFF_stuff
 
     public :: configuration_energy
 
+    !module variables
+    integer, allocatable:: H2_list(:, :), O_list(:)
+
     !module parameters
     real(8), parameter:: milli   = 1.0d-3
     real(8), parameter:: J_2_eV  = 6.242d18
@@ -63,36 +66,47 @@ contains
     type(atomic), intent(in):: atom(:)
    
     ! local variables
-    real*8 :: two_body_erg, DWFF_erg
+    real(8) :: two_body_erg, three_body_erg, DWFF_erg
+    real(8) :: bond, ang
+
+    call build_H2_list(atom) 
     
-    call DWFF( atom, two_body_erg )
+    call DWFF( atom, two_body_erg, three_body_erg )
 
     ! energy (Joule units)
-    DWFF_erg = two_body_erg * factor3 
+    bond = two_body_erg * factor3 
+    ang  = three_body_erg * factor3 
 
-    !DWFF_erg (eV units)
-    DWFF_erg = DWFF_erg * J_2_eV 
+    !energy (eV units)
+    bond = bond * J_2_eV 
+    ang  = ang  * J_2_eV 
+
+    !total energy (eV units)
+    DWFF_erg = bond + ang 
+ 
+    deallocate( H2_list, O_list )
 
 end function configuration_energy
 !
 !
 !
-!==========================================
- subroutine DWFF( atom, two_body_erg )
-!==========================================
+!=====================================================
+ subroutine DWFF( atom, two_body_erg, three_body_erg )
+!=====================================================
     implicit none
     type(atomic), intent(in)  :: atom(:)
     real*8      , intent(out) :: two_body_erg
+    real*8      , intent(out) :: three_body_erg
 
     !local variables ...
     real*8  :: rkl(3), rkl2 , E_kl
-    integer :: k, l, pair_of_kind, n_atoms
+    integer :: k, l, pair_of_kind, n_atoms, n_O, n_H2
     logical :: DWFF_pair
     character(len=2) :: type1, type2
     
-    two_body_erg = D_zero
-
     n_atoms = size(atom)
+
+    two_body_erg = D_zero
 
     do k = 1, n_atoms - 1
        do l = k+1, n_atoms
@@ -119,16 +133,6 @@ end function configuration_energy
             case ('HX-OX' , 'OX-HX')
                 pair_of_kind = 1
                 ! not usgin 3body for the moment
-                !---------------------------------------------------------
-                ! 3body calculations: inter_3body_DWFF( H, O, H=ptr )
-                !if ( atom(k)% MMSymbol == 'HX' ) then
-                !     call inter_3body_DWFF ( k , l , HOH%H_ptr(1) )
-                !     call inter_3body_DWFF ( k , l , HOH%H_ptr(2) )
-                !else
-                !     call inter_3body_DWFF ( l , k , HOH%H_ptr(1) )
-                !     call inter_3body_DWFF ( l , k , HOH%H_ptr(2) )
-                !end if
-                !---------------------------------------------------------
 
             case default
                 cycle
@@ -136,10 +140,30 @@ end function configuration_energy
             end select
 
             ! evaluate 2-body interaction 
-            call evaluate_2body_inter_DWFF (pair_of_kind, rkl2, E_kl )
+            call evaluate_2body_DWFF (pair_of_kind, rkl2, E_kl )
        
             two_body_erg = two_body_erg + E_kl
             
+       end do
+    end do
+
+    !---------------------------------------------------------
+    ! 3body calculations: 3body_DWFF( H, O, H )
+    !---------------------------------------------------------
+    n_O  = size(O_list)
+    n_H2 = size(H2_list, dim=1)
+
+    three_body_erg = D_zero
+
+    do k = 1, n_O
+       do l = 1, n_H2
+          
+          if( .not. all( [atom(H2_list(l,1))%DWFF, &
+                          atom( O_list(k)  )%DWFF, &
+                          atom(H2_list(l,2))%DWFF] ) ) cycle
+
+          three_body_erg = three_body_erg + &
+                         + evaluate_3body_DWFF ( atom, H2_list(l,1), O_list(k), H2_list(l,2) )
        end do
     end do
 
@@ -147,9 +171,9 @@ end subroutine DWFF
 !
 !
 !
-!=======================================================
- subroutine evaluate_2body_inter_DWFF( m , rkl2 , E_kl )
-!=======================================================
+!=================================================
+ subroutine evaluate_2body_DWFF( m , rkl2 , E_kl )
+!=================================================
     implicit none
     integer , intent(in)  :: m
     real*8  , intent(in)  :: rkl2 
@@ -199,26 +223,27 @@ end subroutine DWFF
     
     E_kl = E_sr + Ecoul 
 
-end subroutine evaluate_2body_inter_DWFF
+end subroutine evaluate_2body_DWFF
 !
 !
 !
-!=====================================================
- subroutine inter_3body_DWFF( atom, atj , ati , atk )
-!=====================================================
+!======================================================================
+ function evaluate_3body_DWFF( atom, atj , ati , atk )  result(ang_erg)
+!======================================================================
     implicit none
-    type(atomic), intent(in) :: atom(:)
-    integer     , intent(in) :: atj , ati , atk
+    type(atomic), intent(in):: atom(:)
+    integer     , intent(in):: atj , ati , atk
+    real(8):: ang_erg
     
     ! local parameter ...
     real*8 :: r0 = 1.6d0
     
     ! local_variables ...
     real*8 , dimension (3):: rij, rik 
-    real*8  :: rijq, rijsq, rikq, riksq, ang_erg
+    real*8  :: rij2, rij_norm, rik2, rik_norm
     real*8  :: cos_theta, U3, U03, exp_arg, exponential
     real*8  :: inv_delta_0ij, inv_delta_0ik
-    
+
     !================================
     !          Angle potential ...
     !
@@ -229,23 +254,24 @@ end subroutine evaluate_2body_inter_DWFF
     !
     ! MIND: the atomic sequence is JIK
     !================================
+
+     !initializing result
+     ang_erg = 0.d0 
     
      ! rij = r_j - r_i
      rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
-     rijq   = dot_product(rij,rij)
-     rijsq  = SQRT(rijq)
-     if ( (rijsq+milli) > r0 ) return
+     rij_norm  = norm2(rij)
+     if ( (rij_norm+milli) > r0 ) return
 
      ! rik = r_k - r_i 
      rik(:) = atom(atk) % xyz(:) - atom(ati) % xyz(:)
-     rikq   = dot_product(rik,rik)
-     riksq  = SQRT(rikq)
-     if ( (riksq+milli) > r0) return
+     rik_norm  = norm2(rik)
+     if ( (rik_norm+milli) > r0) return
 
-     cos_theta = (rij(1)*rik(1) + rij(2)*rik(2) + rij(3)*rik(3)) / ( rijsq * riksq )
-    
-     inv_delta_0ij = 1.d0/(r0-rijsq)
-     inv_delta_0ik = 1.d0/(r0-riksq)
+     cos_theta = dot_product(rij,rik) / ( rij_norm * rik_norm )
+
+     inv_delta_0ij = 1.d0/(r0-rij_norm)
+     inv_delta_0ik = 1.d0/(r0-rik_norm)
     
      exp_arg = HOH%Angle(1,3)*( inv_delta_0ij + inv_delta_0ik )
      exponential = exp(-exp_arg)
@@ -254,10 +280,69 @@ end subroutine evaluate_2body_inter_DWFF
      U3  = U03 * (cos_theta - HOH%Angle(1,4))
 
      ! energy of the triplet
-     ang_erg = ang_erg + U3
+     ang_erg = U3
     
-end subroutine inter_3body_DWFF
+end function evaluate_3body_DWFF
 !
+!
+!
+!==============================
+ subroutine build_H2_list(atom)
+!==============================
+    implicit none
+    type(atomic), intent(in) :: atom(:)
+
+    !local variables
+    integer :: i, j, k, n_atoms
+    character(len=2), allocatable :: MMSymbol(:)
+
+    n_atoms = size(atom)
+
+    allocate( MMSymbol(n_atoms) )
+    forall(i=1:n_atoms) MMSymbol(i) = trim(adjustL(atom(i)% MMSymbol))
+
+    !========================================
+    !               H2_list 
+    !========================================
+    ! ---------- First pass: count ----------
+    k = 0
+    do i = 1, n_atoms - 1
+        if (MMSymbol(i) /= "HX") cycle
+        do j = i + 1, n_atoms
+            if (MMSymbol(j) /= "HX") cycle
+            k = k + 1
+        end do
+    end do
+
+    allocate(H2_list(k, 2))
+
+    ! ---------- Second pass: fill ----------
+    k = 0
+    do i = 1, n_atoms - 1
+        if (MMSymbol(i) /= "HX") cycle
+        do j = i + 1, n_atoms
+            if (MMSymbol(j) /= "HX") cycle
+            k = k + 1
+            H2_list(k, :) = [i, j]
+        end do
+    end do
+
+    !========================================
+    !               O_list 
+    !========================================
+    k = count( MMSymbol == "OX" )
+    
+    allocate( O_list(k) )
+
+    k=0
+    do i = 1, n_atoms
+        if (MMSymbol(i) == "OX") then
+           k = k + 1
+           O_list(k) = i
+        end if
+    end do
+
+end subroutine build_H2_list
 !
 !
 !
