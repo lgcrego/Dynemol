@@ -17,7 +17,46 @@ module F_inter_DWFF
     ! module variables ...
     real*8 , allocatable :: f_bond_aux(:,:,:), f_ang_aux(:,:,:), ang_erg(:)
     real*8               :: bond_erg
-    
+
+            !-----------------------------------------------------------!
+            ! Legacy Conversion procedure for Electrostatic Interaction ! 
+            !                                                           ! 
+            !        e^2                                                !
+            !   --------------- =  2.3071 * 10^(-28)  [N.m^2]           !
+            !   4.pi.epsilon_0                                          !
+            !                                                           ! 
+            !   Therefore:                                              !
+            !        e^2          1              10^(-28)               !
+            !   -------------- * ---- = 2.3071 * --------  [N.m^2]      !
+            !   4.pi.epsilon_0   Angs              Angs                 !
+            !                                                           !
+            !        e^2          1              10^(-28)  [N.m^2]      !
+            !   -------------- * ---- = 2.3071 * --------  -------      !
+            !   4.pi.epsilon_0   Angs            10^(-10)    [m]        !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 2.3071 * 10^(-18)  [N.m]        !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 230.71 * 10^(-20)  [J]          !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = 230.71 * factor3  [J]           !
+            !   4.pi.epsilon_0   Angs                                   !
+            !                                                           !
+            !        e^2          1                                     !
+            !   -------------- * ---- = coulomb * factor3 [J]           !
+            !   4.pi.epsilon_0   Angs     |          |                  !
+            !                             |          |                  !
+            !                            \|/         |                  !
+            !         mantissa significant figures   |                  !
+            !                                       \|/                 !
+            !                          applied after force calculation  !
+            !                                                           ! 
+            !   See parameter definitions in modulo header              ! 
+            !-----------------------------------------------------------!    
 contains
 !
 !
@@ -72,7 +111,7 @@ end subroutine f_DWFF_inter
     allocate( f_ang_aux  ( MM % N_of_atoms , 3 , numthr) , source = D_zero )
 
     bond_erg = D_zero
-    allocate( ang_erg( numthr) , source = D_zero )
+    allocate( ang_erg(numthr) , source = D_zero )
     
     !##############################################################################
     ! INTER-MOLECULAR DWFF calculations ...
@@ -176,7 +215,7 @@ end subroutine inter_DWFF
     
     ! local_variables ...
     real*8 , dimension (3):: rij, rik 
-    real*8  :: rijq, rijsq, rikq, riksq
+    real*8  :: rij_norm, rik_norm
     real*8  :: cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
     
@@ -194,21 +233,19 @@ end subroutine inter_DWFF
      ! rij = r_j - r_i
      rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)
      rij(:) = rij(:) - MM % box(:) * DNINT( rij(:) * MM % ibox(:) ) * PBC(:)
-     rijq   = rij(1)*rij(1) + rij(2)*rij(2) + rij(3)*rij(3)
-     rijsq  = SQRT(rijq)
-     if ( (rijsq+milli) > r0 ) return
+     rij_norm  = norm2(rij)
+     if ( (rij_norm+milli) > r0 ) return
 
      ! rik = r_k - r_i 
      rik(:) = atom(atk) % xyz(:) - atom(ati) % xyz(:)
      rik(:) = rik(:) - MM % box(:)*DNINT( rik(:) * MM % ibox(:) ) * PBC(:)
-     rikq   = rik(1)*rik(1) + rik(2)*rik(2) + rik(3)*rik(3)
-     riksq  = SQRT(rikq)
-     if ( (riksq+milli) > r0) return
+     rik_norm  = norm2(rik)
+     if ( (rik_norm+milli) > r0) return
 
-     cos_theta = (rij(1)*rik(1) + rij(2)*rik(2) + rij(3)*rik(3)) / ( rijsq * riksq )
+     cos_theta = dot_product(rij,rik) / ( rij_norm * rik_norm )
     
-     inv_delta_0ij = 1.d0/(r0-rijsq)
-     inv_delta_0ik = 1.d0/(r0-riksq)
+     inv_delta_0ij = 1.d0/(r0-rij_norm)
+     inv_delta_0ik = 1.d0/(r0-rik_norm)
     
      exp_arg = HOH%Angle(1,3)*( inv_delta_0ij + inv_delta_0ik )
      exponential = exp(-exp_arg)
@@ -224,13 +261,13 @@ end subroutine inter_DWFF
      a3 = a2*cos_theta
      
      ! forces on each atom of the triplet 
-     f_ij = a1*inv_delta_0ij**2 + a3/rijsq
-     f_ik = a2/rijsq
-     f_ang_aux(atj,:,ithr) = f_ang_aux(atj,:,ithr) + f_ij*rij(:)/rijsq - f_ik*rik(:)/riksq
+     f_ij = a1*inv_delta_0ij**2 + a3/rij_norm
+     f_ik = a2/rij_norm
+     f_ang_aux(atj,:,ithr) = f_ang_aux(atj,:,ithr) + f_ij*rij(:)/rij_norm - f_ik*rik(:)/rik_norm
     
-     f_ik = a1*inv_delta_0ik**2 + a3/riksq
-     f_ij = a2/riksq
-     f_ang_aux(atk,:,ithr) = f_ang_aux(atk,:,ithr) + f_ik*rik(:)/riksq - f_ij*rij(:)/rijsq
+     f_ik = a1*inv_delta_0ik**2 + a3/rik_norm
+     f_ij = a2/rik_norm
+     f_ang_aux(atk,:,ithr) = f_ang_aux(atk,:,ithr) + f_ik*rik(:)/rik_norm - f_ij*rij(:)/rij_norm
     
      f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_ang_aux(atj,:,ithr) + f_ang_aux(atk,:,ithr))
     
