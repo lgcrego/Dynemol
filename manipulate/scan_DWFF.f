@@ -240,7 +240,7 @@ end subroutine evaluate_2body_DWFF
     
     ! local_variables ...
     real*8 , dimension (3):: rij, rik 
-    real*8  :: rij2, rij_norm, rik2, rik_norm
+    real*8  :: rij_norm, rik_norm
     real*8  :: cos_theta, U3, U03, exp_arg, exponential
     real*8  :: inv_delta_0ij, inv_delta_0ik
 
