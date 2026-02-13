@@ -83,9 +83,18 @@ HH_C6_dsprsion = D_zero     ! <== J*Angs^6
 
 ! Three-Body Parameters
 lambda   = 3.0d-17          ! <== Joule
-r0       = 1.6d0            ! <== Angs
-gama     = 1.3d0            ! <== Angs
 theta_0  = 100.d0           ! <== degrees
+!------------------------------------------
+! original parameters
+!r0       = 1.6d0            ! <== Angs
+!gama     = 1.3d0            ! <== Angs
+!------------------------------------------
+! tuned parameters: 
+! Phys. Chem. Chem. Phys.,2015, 17, 10934
+!------------------------------------------
+r0       = 1.5d0            ! <== Angs
+gama     = 1.089d0          ! <== Angs
+!------------------------------------------
 
 !-------------------------------------------------------------
 !          CONVERT PARAMETERS TO DYNEMOL UNITS     
