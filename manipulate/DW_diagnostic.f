@@ -164,6 +164,7 @@ subroutine bond_topology(frame, atom, Txyz)
         OO_neighbors(i)  = count( table_OO(i, :) <= OO_dimer_len )
     end do
 
+    HOH_modified = .false.
     where (OH_bond_order /= 2)
         HOH_modified = .true.
     end where

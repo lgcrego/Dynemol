@@ -25,7 +25,7 @@ integer      :: step
 character(1) :: operation, answer
 character(2) :: atom
 character(3) :: atom_A , atom_B , residue
-logical      :: done, y_or_n
+logical      :: done, flag
 
 CALL system( "clear" )
 
@@ -56,9 +56,9 @@ select case( operation )
     case( '5' )
 
         write(*,*)
-        write(*, '(a51)', advance = 'no') 'consider INTRA-MOLECULAR degrees of freedom? (y,n) '
+        write(*, '(a)', advance = 'no') blue//'consider INTRA-MOLECULAR bonds? (y,n) '//reset
         read*, answer
-        y_or_n = merge(.true., .false., answer=="y")
+        flag = (answer /= "y")
 
         done = .false.
         do while (.NOT. done)
@@ -74,7 +74,7 @@ select case( operation )
                write(*, '(a10)', advance = 'no') 'step = '
                read*, step
 
-               CALL Radial_Function( trj , atom_A , atom_B , step , only_inter_molecular=y_or_n )
+               CALL Radial_Function( trj , atom_A , atom_B , step , only_inter_molecular=flag )
 
                write(*,*)
                write(*, '(a28)', advance = 'no') 'repeat the operation? (y,n) '
@@ -330,16 +330,16 @@ N_B = 27*count( trj(1) % atom % MMSymbol == adjustl(atom_B) )
 
 PBC_sys_size = trj(1)%N_of_atoms * 27
 
-allocate( distance_AB       (N_B,N_A)               )
-allocate( mask              (N_B,N_A)               )
-allocate( vec_A             (N_A,3)                 )
-allocate( vec_B             (N_B,3)                 )
-allocate( resid_A           (N_A)                   )
-allocate( resid_B           (N_B)                   )
-allocate( index_max         (N_A)                   )
-allocate( g_AB_from_A       (N_interval-1,N_A)      )
-allocate( g_AB              (N_interval-1,size(trj)))
-allocate( trj_PBC           (PBC_sys_size)          )
+allocate( distance_AB (N_B,N_A)                )
+allocate( mask        (N_B,N_A), source=.false.)
+allocate( vec_A       (N_A,3)                  )
+allocate( vec_B       (N_B,3)                  )
+allocate( resid_A     (N_A)                    )
+allocate( resid_B     (N_B)                    )
+allocate( index_max   (N_A)                    )
+allocate( g_AB_from_A (N_interval-1,N_A)       )
+allocate( g_AB        (N_interval-1,size(trj)) )
+allocate( trj_PBC     (PBC_sys_size)           )
 
 do frame = 1 , size(trj) , step
 
@@ -355,14 +355,16 @@ do frame = 1 , size(trj) , step
 
     resid_B(:) = pack( trj_PBC(:) % nresid , trj_PBC(:) % MMSymbol == adjustl(atom_B) )
 
-!   distance of atom_B to the atom_A ...
+!   distance of atom_B to atom_A ...
     forall( i=1:N_A , j=1:N_B )
         distance_AB (j,i)  =  sqrt( sum((vec_B(j,:) - vec_A(i,:))**2) )
         mask        (j,i)  =  ( resid_B(j) == resid_A(i) )
     end forall
 
 !   eliminate statistics between the same residue
+!   mask = T means same molecule
     if( only_inter_molecular) then
+        ! place distance outside the cutoff radius
         where( mask ) distance_AB = real(ABOVE)
     end if
 

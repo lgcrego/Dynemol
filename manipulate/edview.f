@@ -7,7 +7,7 @@ use diagnosis_m
 use RW_routines
 use GMX_routines
 use Read_parms
-use EDIT_routines     , only: Copiar, Translation, Rotation, Reflection, Eliminate_Fragment, Bring_into_PBCBox, ReGroup, Replicate, Nonbonding_Topology, Include_fragment
+use EDIT_routines     , only: Copiar, Translation, Rotation, Reflection, Eliminate_Fragment, Bring_into_PBCBox, ReGroup, Replicate, Include_fragment
 use SOLVENT_routines
 use FUNCTION_routines
 use Elastic_Band
@@ -148,9 +148,9 @@ do
     write(*,'(a)') green // ' 9  :' // reset // ' Include fragment'
     write(*,'(a)') green // '10  :' // reset // ' Include solvent'
     write(*,'(a)') green // '11  :' // reset // ' Replication'
-    write(*,'(a)') green // '12  :' // reset // ' Nonbonding topology'
-    write(*,'(a)') green // '13  :' // reset // ' Scan Reaction Path'
-    write(*,'(a)') green // '14  :' // reset // ' Bring solvent into the bounding box'
+    write(*,'(a)') green // '12  :' // reset // ' Scan Reaction Path'
+    write(*,'(a)') green // '13  :' // reset // ' Regroup SOLVENT molecules'
+    write(*,'(a)') green // '14  :' // reset // ' Bring SOLUTE to the box center'
     write(*,'(a)') green // '15  :' // reset // ' Ad hoc tuning'
     write(*,'(a)') bold // orange // ' 0  :' // reset // ' DONE'
     
@@ -194,14 +194,21 @@ do
             CALL Replicate( structure )
 
         case ('12')
-            CALL Nonbonding_Topology( structure )
-
-        case ('13')
             write(*,'(/a)') cyan//"Compute energy profile along reaction path (y/n)?"//reset
             write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
             read (*,'(a)') y_or_n
  
             call Build_Configurations(structure, pes_scan_flag = y_or_n)
+
+        case ('13')
+            structure%atom%group = .true.
+            CALL ReGroup( structure )
+            CALL dump_pdb( structure )
+
+            write(*,'(/a)') bold//orange//'>>> saving seed.pdb : writing done <<<'//reset
+            write(*,'(/a)') yellow//"That's all ? (y/n)"//reset 
+            read (*,'(a)') y_or_n
+            if( y_or_n /= "n" ) stop
 
         case ('14')
             CALL Bring_into_PBCBox( structure )
