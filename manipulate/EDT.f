@@ -18,8 +18,7 @@ public::  Copiar &
        , Bring_into_PBCBox &
        , ReGroup &
        , Include_Fragment &
-       , Replicate &
-       , Nonbonding_Topology
+       , Replicate 
 
 interface ReGroup
     module procedure ReGroup_Molecule
@@ -501,30 +500,36 @@ type(universe) , intent(inout) :: system
 
 !local variables
 integer :: nr , i , j , indx1 , indx2 
-real*8  :: delta(3) , GeoCenter(3)
+integer :: nr_min, nr_max 
+real*8  :: delta(3) , centroid(3)
 
-do nr = minval(system%atom%nresid) , maxval(system%atom%nresid)
+nr_min =  minval(system%atom%nresid)
+nr_max =  maxval(system%atom%nresid)
+
+do nr = nr_min, nr_max
 
     ! atomic pointers of molecule with nresidue = nr
-    indx1 = minval( [(i , i=1,size(system%atom))] , (system%atom%nresid == nr) )
-    indx2 = maxval( [(i , i=1,size(system%atom))] , (system%atom%nresid == nr) )
+    indx1 = findloc(system%atom%nresid, nr, dim=1)
+    if (indx1 == 0) then
+      Print*, "Residue ",nr," not found"; stop
+    end if
+    indx2 = findloc(system%atom%nresid, nr, dim=1, back=.true.)
 
     if( system%atom(indx1)%group == .false. ) cycle
 
     do i = indx1+1 , indx2
-
         delta = system%atom(i)%xyz - system%atom(indx1)%xyz
-
         do j = 1 , 3
              if( abs(delta(j)) > system%box(j)*HALF ) system%atom(i)%xyz(j) = system%atom(i)%xyz(j) - sign( system%box(j) , delta(j) )
         end do 
     end do
+
 end do
 
 do concurrent (i=1:3)
-   GeoCenter(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
-   ! translate coordinates to the original geometric center ...
-   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
+   centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
+   ! translate coordinates to the centroid of the system ...
+   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
 end do
 
 end subroutine ReGroup_Molecule
@@ -803,68 +808,6 @@ write(string,'(i3.3)') Replication_Factor
 system%System_Characteristics = trim(system%System_Characteristics)//'-Replicated:'//string
 
 end subroutine Replicate
-!
-!
-!
-!=======================================
- subroutine Nonbonding_Topology(system)
-!=======================================
-implicit none
-type(universe) , intent(in) :: system
-
-! local variables ...
-integer             :: ati , atj , N_of_pairs
-real*8              :: cutoff , ScaleFactor , distance
-logical             :: mask
-character(len=3)    :: residue
-character(len=10)   :: file_name
-
-! reading parameters ...
-write(*,'(a)',advance='no') 'cutoff radius (Real)  = '
-read (*,*) cutoff
-write(*,'(a)',advance='no') 'scale factor  (Real)  = '
-read (*,*) ScaleFactor
-write(*,'(a)',advance='no') 'residue name  (len=3 , use capital letters) = '
-read (*,'(A3)') residue
-
-
-! count number of nonbonding pairs ...
-N_of_pairs = 0
-do ati = 1 , system%N_of_atoms
-    do atj = ati+1 , system%N_of_atoms
-
-        distance = sqrt( sum( (system%atom(ati)%xyz(:) - system%atom(atj)%xyz(:))**2 ) )
-
-        mask = distance >= cutoff
-
-        If( mask ) N_of_pairs = N_of_pairs + 1
-
-    end do
-end do
-
-! save nonbonding pairs ...
-file_name = residue//".inpt14"
-OPEN(unit=3,file=file_name,status='new')
-write(3,'(I9)') N_of_pairs
-
-do ati = 1 , system%N_of_atoms
-    do atj = ati+1 , system%N_of_atoms
-
-        distance = sqrt( sum( (system%atom(ati)%xyz(:) - system%atom(atj)%xyz(:))**2 ) )
-
-        mask = distance >= cutoff
-
-        If( mask ) write(unit=3,fmt=10) ati , atj , ScaleFactor
-
-    end do
-end do
-
-close(3)
-
-10 format(2I6,F9.4)
-
-end subroutine Nonbonding_Topology
-!
 !
 !
 !
