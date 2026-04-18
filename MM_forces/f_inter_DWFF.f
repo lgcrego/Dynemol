@@ -7,7 +7,7 @@ module F_inter_DWFF
     use md_read_m          , only : atom, MM, molecule, special_pair_mtx
     use Data_Output        , only : Net_Charge
     use Berendsen_Barostat , only : virial_tensor
-    use for_force          , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, DWFF_inter
+    use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_inter
     use Build_DWFF         , only : HOH => HOH_diss_parms
 
     public :: f_DWFF_inter
@@ -141,7 +141,7 @@ end subroutine f_DWFF_inter
             rkl2 = sum( rkl(:)**2 )
        
             ! only inside cutoff radius ... 
-            if( rkl2 > rcutsq ) cycle
+            if( rkl2 > rcut2 ) cycle
        
             type1 = atom(k)% MMSymbol
             type2 = atom(l)% MMSymbol
@@ -161,11 +161,11 @@ end subroutine f_DWFF_inter
                 ! 3body calculations
                 ! (pass ithr so 3body can write into per-thread arrays)
                 if ( atom(k)% MMSymbol == 'HX' ) then
-                     call inter_3body_DWFF ( k , l , HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( k , l , HOH%H_ptr(2) , ithr )
+                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
+                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
                 else
-                     call inter_3body_DWFF ( l , k , HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( l , k , HOH%H_ptr(2) , ithr )
+                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr )
+                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
                 end if
                 !---------------------------------------------------------
             end select

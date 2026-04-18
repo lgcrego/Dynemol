@@ -11,6 +11,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         integer                             :: my_intra_id
         integer                             :: my_intra_species_id
         integer                             :: my_species
+        integer                             :: offset
         integer                             :: nr
         character(3)                        :: residue
         character(2)                        :: Symbol

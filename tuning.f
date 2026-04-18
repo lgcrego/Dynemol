@@ -386,7 +386,7 @@ module for_force
 
     integer                               :: forcefield
     real*8, dimension(:,:)  , allocatable :: vscut, fscut
-    real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
+    real*8                                :: rcut, vrecut, frecut, rcut2, KAPPA
     character(4)                          :: Dihedral_Potential_Type
  
     real*8 :: Coul_inter = 0.d0 

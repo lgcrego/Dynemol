@@ -3,8 +3,8 @@ module F_intra_DWFF
     use constants_m
     use omp_lib
     use parameters_m , only: PBC 
-    use for_force    , only: DWFF_intra
     use MD_read_m    , only: atom , molecule , MM 
+    use for_force    , only: rcut, rcut2, vscut, fscut, KAPPA, DWFF_intra
     use Build_DWFF   , only: HOH => HOH_diss_parms
                                 
 
@@ -100,7 +100,7 @@ end subroutine DW_f_intra
     ! local variables
     real*8  :: rkl(3)
     real*8  :: rkl2, force, erg
-    integer :: i, j, atk, atl, pair_of_kind
+    integer :: i, j, k, l, pair_of_kind
     character(len=2) :: type1, type2
     
     allocate( f_bond (MM%N_of_atoms,3) , source = D_zero )
@@ -113,18 +113,19 @@ end subroutine DW_f_intra
     
          do j = 1 , molecule(i) % NintraIJ
     
-              atk  = molecule(i) % IntraIJ(j,1) 
-              atl  = molecule(i) % IntraIJ(j,2) 
+              k = molecule(i) % IntraIJ(j,1) 
+              l = molecule(i) % IntraIJ(j,2) 
 
-              if (.not. any([atom(atk)%flex, atom(atl)%flex]) ) cycle
-    
-              rkl(:) = atom(atk) % xyz(:) - atom(atl) % xyz(:)
+              rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
               rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
     
               rkl2 = sum( rkl(:)**2 )
+
+              ! only inside cutoff radius ...
+              if( rkl2 > rcut2 ) cycle
     
-              type1 = atom(atk)% MMSymbol
-              type2 = atom(atl)% MMSymbol
+              type1 = atom(k)% MMSymbol
+              type2 = atom(l)% MMSymbol
     
               select case (trim(type1)//'-'//trim(type2))
               case ('HX-HX')
@@ -136,10 +137,10 @@ end subroutine DW_f_intra
                   pair_of_kind = 1
               end select
     
-              call evaluate_2body_DWFF( pair_of_kind , rkl2 , force , erg )
+              call evaluate_2body_DWFF( k , l , pair_of_kind , rkl2 , force , erg )
     
-              f_bond(atk,1:3) = f_bond(atk,1:3) + force * rkl(:)
-              f_bond(atl,1:3) = f_bond(atl,1:3) - force * rkl(:)
+              f_bond(k,1:3) = f_bond(k,1:3) + force * rkl(:)
+              f_bond(l,1:3) = f_bond(l,1:3) - force * rkl(:)
     
               bond_erg = bond_erg + erg
     
@@ -150,11 +151,11 @@ end subroutine intra_2body_DWFF
 !
 !
 !
-!==============================================================
- subroutine evaluate_2body_DWFF( k , rkl2 , DW_force , DW_erg )
-!==============================================================
+!======================================================================
+ subroutine evaluate_2body_DWFF( k , l , m , rkl2 , DW_force , DW_erg )
+!======================================================================
     implicit none
-    integer , intent(in)  :: k
+    integer , intent(in)  :: k, l, m
     real*8  , intent(in)  :: rkl2 
     real*8  , intent(out) :: DW_force
     real*8  , intent(out) :: DW_erg
@@ -163,9 +164,11 @@ end subroutine intra_2body_DWFF
     real*8, parameter :: a1 = 1.1283791671d0  ! <== 2/sqrt(PI)
     
     ! local variables ...
+    integer :: atk , atl
     real*8 :: irkl , ir2 , ir6 , ir8 , rkl
     real*8 :: zeta , erfc_zeta , arg , exp_arg2
-    real*8 :: a2, a3, U0 , Ecoul , Fcoul , f_sr , E_sr
+    real*8 :: arg_Wolf , decay_Wolf , exp_Wolf
+    real*8 :: a2, a3, a4, U0 , Ecoul , Fcoul , f_sr , E_sr
     
     rkl  = SQRT(rkl2)
     irkl = D_one / rkl
@@ -174,7 +177,7 @@ end subroutine intra_2body_DWFF
     !----------------------------------------------------
     ! SR (short-range) applies only to O-H pair ...
     !----------------------------------------------------
-    if (k==1) then 
+    if (m==1) then 
         zeta = rkl * B
         erfc_zeta = erfc(zeta) / zeta
         
@@ -192,27 +195,36 @@ end subroutine intra_2body_DWFF
 
     !----------------------------------------------------
     ! Coulomb applies to O-H and H-H pairs
-    ! O-H ==> k = 1
-    ! H-H ==> k = 3
+    ! O-H ==> m = 1
+    ! H-H ==> m = 3
     !----------------------------------------------------
-    a2  = irsqPI * ( two * HOH% Coul(k,4) )   
-    arg = rkl * HOH%Coul(k,4)
+    a2  = irsqPI * ( two * HOH% Coul(m,4) )   
+    arg = rkl * HOH%Coul(m,4)
     exp_arg2 = EXP(-arg**2)
+
+    arg_Wolf   = KAPPA * rkl
+    decay_Wolf = erfc(arg_Wolf)
+    exp_Wolf   = EXP(-arg_Wolf**2)   
     
     ! Energy
-    U0 = HOH%Coul(k,1) + HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
-    Ecoul = coulomb * U0 * irkl
+    U0 = HOH%Coul(m,1) + HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)* erf(arg*sqrt2)
+    Ecoul = coulomb * U0 * decay_Wolf * irkl
     
     ! Force
     ! Fcoul (not damped)
-    a3 = a2 * ( HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3) * exp_arg2 )
-    Fcoul = coulomb * (U0*ir2*irkl - a3*exp_arg2*ir2)
+    a3 = a2 * ( HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3) * exp_arg2 )
+    a4 = decay_Wolf + TWO*irsqPI*KAPPA*rkl*exp_Wolf
+    Fcoul = coulomb * (U0*a4*ir2*irkl - a3*exp_arg2*decay_Wolf*ir2)
     
     !----------------------------------------------------
     ! total 
     !----------------------------------------------------
-    DW_erg   = E_sr + Ecoul
-    DW_force = f_sr + Fcoul
+    
+    atk = atom(k)% my_intra_species_id
+    atl = atom(l)% my_intra_species_id
+
+    DW_erg   = E_sr + Ecoul - vscut(atk,atl) + fscut(atk,atl)*( rkl - rcut )
+    DW_force = f_sr + Fcoul - fscut(atk,atl)*irkl
 
 end subroutine evaluate_2body_DWFF
 !

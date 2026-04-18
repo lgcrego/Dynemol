@@ -9,7 +9,7 @@ module F_inter_nonbond
     use Data_Output        , only : Net_Charge
     use gmx2mdflex         , only : SpecialPairs
     use Berendsen_Barostat , only : virial_tensor
-    use for_force          , only : rcut, vrecut, frecut, rcutsq, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
+    use for_force          , only : rcut, vrecut, frecut, rcut2, pot_INTER, Coul_inter, evdw, vscut, fscut, KAPPA
 
     public :: f_inter_nonbonding
 
@@ -54,7 +54,7 @@ do l = k+1 , MM % N_of_atoms
 
      rkl2 = sum( rkl(:)**2 )
 
-     if( rkl2 > rcutsq ) cycle
+     if( rkl2 > rcut2 ) cycle
 
      !-------------------------------------------------------------
      atk = atom(k)% my_intra_species_id
