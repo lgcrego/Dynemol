@@ -3,7 +3,6 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                ! <== MM and species are defined here
-    use MPI_definitions_m       , only : master
     use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
@@ -146,6 +145,8 @@ end select
 If( ad_hoc ) CALL ad_hoc_MM_tuning( atom , instance = "General" )
 
 call get_intra_species_id
+
+call get_molecule_offset
 
 ! feedback from ad_hoc up to Unit_Cell ...
 Unit_Cell% flex(:) = atom(:)% flex
@@ -374,7 +375,7 @@ using_barostat% anyone = (talp < real_large)
 ! use this to debug: { atom , molecule , species , FF } ...
 !call debug_MM( atom )
 
-If( master ) CALL MM_diagnosis( ) 
+CALL MM_diagnosis( )
 
 end subroutine Build_MM_Environment
 !
@@ -630,6 +631,38 @@ do i = 1 , size(atom)
 end do
 
 end subroutine Structure_2_MD
+!
+!
+!
+subroutine get_molecule_offset
+    !! Assign a molecule offset index to each atom.
+    !! offset starts at 0; max offset = (nr-1)
+    !! The offset increments whenever a new molecule is detected,
+    !! based on a change in the molecule identifier (atom%nr).
+    !!
+    !! Assumes that atoms belonging to the same molecule are stored
+    !! contiguously in input.pdb.
+
+    implicit none
+
+    ! local variables
+    integer :: i, offset, nr
+
+    offset = 0
+    nr = atom(1)%nr
+
+    do i = 1, size(atom)
+        ! Detect change of molecule (new molecule block)
+        if (atom(i)%nr /= nr) then
+            nr = atom(i)%nr
+            offset = offset + count(atom%nr == nr)
+        end if
+
+        ! Assign offset index to atom
+        atom(i)%offset = offset
+    end do
+
+end subroutine get_molecule_offset
 !
 !
 !

@@ -84,14 +84,10 @@ MODULE constants_m
     real*8     , allocatable :: dummy_array_R(:,:)
     complex*16 , allocatable :: dummy_array_C(:,:)
 
-END MODULE constants_m
-
-
-module ansi_colors
 ! ANSI (American National Standards Institute)
 ! ANSI Escape Codes are sequences of characters used to control the 
 ! display of a terminal or command-line interface
-    implicit none
+
     character(len=*), parameter :: esc = char(27)
 
     character(len=*), parameter :: reset = esc // '[0m'
@@ -105,5 +101,6 @@ module ansi_colors
     character(len=*), parameter :: cyan    = esc // '[36m'
     character(len=*), parameter :: white   = esc // '[37m'
     character(len=*), parameter :: orange  = esc // '[38;5;208m'
-end module ansi_colors
+
+END MODULE constants_m
 

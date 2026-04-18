@@ -5,7 +5,7 @@ module FF_cutoff
     use MD_read_m  , only : MM , atom , species , FF , FF_SP_mtx 
     use gmx2mdflex , only : SpecialPairs
     use Build_DWFF , only : HOH => HOH_diss_parms
-    use for_force  , only : rcut, vrecut, frecut, rcutsq, vscut, fscut, KAPPA, vself
+    use for_force  , only : rcut, vrecut, frecut, rcut2, vscut, fscut, KAPPA, vself
 
     public :: FF_cutoff_sphere 
 
@@ -22,7 +22,7 @@ contains
     integer :: i, j, atmax
     real*8  :: expar, arg_Wolf, total_q2
    
-    rcutsq = rcut**2
+    rcut2 = rcut**2
    
     atmax = sum( species(:) % N_of_atoms )                 
    
@@ -57,7 +57,7 @@ contains
     arg_Wolf = KAPPA * rcut
     vrecut   = coulomb * ERFC(arg_Wolf) / rcut
     expar    = exp(-arg_Wolf**2)
-    frecut   = coulomb * ( ERFC(arg_Wolf) + TWO*irsqPI*KAPPA*rcut*expar ) / rcutsq
+    frecut   = coulomb * ( ERFC(arg_Wolf) + TWO*irsqPI*KAPPA*rcut*expar ) / rcut2
    
     ! vself part of the Coulomb calculation
     total_q2 = sum( atom(:)%charge**2 )
@@ -88,11 +88,11 @@ end subroutine FF_cutoff_sphere
           
               case (2) 
                   ! AMBER FF :: GMX COMB-RULE 2
-                  sr2 = (FF(k)%sig + FF(l)%sig)**2 / rcutsq
+                  sr2 = (FF(k)%sig + FF(l)%sig)**2 / rcut2
           
               case (3)
                   ! OPLS  FF :: GMX COMB-RULE 3
-                  sr2 = (FF(k)%sig * FF(l)%sig )**2 / rcutsq
+                  sr2 = (FF(k)%sig * FF(l)%sig )**2 / rcut2
           
           end select
           eps = FF(k)%eps * FF(l)%eps
@@ -107,7 +107,7 @@ end subroutine FF_cutoff_sphere
                      ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( FF(l) % MMSymbol ) )
           
              if ( flag1 .OR. flag2 ) then      ! <== apply SpecialPair parms ... 
-                sr2 = SpecialPairs(n)%Parms(1)**2 / rcutsq
+                sr2 = SpecialPairs(n)%Parms(1)**2 / rcut2
                 eps = SpecialPairs(n)%Parms(2) 
                 exit n_loop
              end if
@@ -170,7 +170,7 @@ end subroutine Lennard_Jones
           end do n_loop
     end if
     
-    sr2 = 1.d0 / rcutsq
+    sr2 = 1.d0 / rcut2
     sr6 = sr2 * sr2 * sr2
     
     !Energy at spherical surface of radius rcut
@@ -218,7 +218,7 @@ end subroutine Buckingham
  
     rkl  = rcut   ! <==== mind this line, it replicates for all length parameters
     irkl = D_one / rcut
-    ir2  = D_one / rcutsq
+    ir2  = D_one / rcut2
     
     !----------------------------
     ! SR (short-range) only for:

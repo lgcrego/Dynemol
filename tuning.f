@@ -2,7 +2,6 @@ module tuning_m
 
     use type_m
     use constants_m
-    use MPI_definitions_m  , only: master
     use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment , solvent_QM_droplet_radius
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival , ad_hoc_droplet
 
@@ -123,7 +122,7 @@ if(ad_hoc_droplet) call QM_droplet( univ )
 
 call warnings( univ%atom ) 
 
-If( master ) Print 46
+Print 46
 
 include 'formats.h'
 
@@ -387,7 +386,7 @@ module for_force
 
     integer                               :: forcefield
     real*8, dimension(:,:)  , allocatable :: vscut, fscut
-    real*8                                :: rcut, vrecut, frecut, rcutsq, KAPPA
+    real*8                                :: rcut, vrecut, frecut, rcut2, KAPPA
     character(4)                          :: Dihedral_Potential_Type
  
     real*8 :: Coul_inter = 0.d0 

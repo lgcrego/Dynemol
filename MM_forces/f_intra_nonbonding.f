@@ -5,7 +5,7 @@ module FF_intra_nonbond
     use constants_m
     use parameters_m       , only : PBC
     use syst               , only : using_barostat
-    use for_force          , only : rcut, vrecut, frecut, vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, rcutsq
+    use for_force          , only : rcut, vrecut, frecut, vscut, fscut, KAPPA, LJ_14, LJ_intra, Coul_14, Coul_intra, rcut2
     use MD_read_m          , only : atom, molecule, MM 
     use gmx2mdflex         , only : SpecialPairs, SpecialPairs14
     use Berendsen_Barostat , only : virial_tensor
@@ -51,7 +51,7 @@ numthr = OMP_get_max_threads()
 ! Nonbonding Interactions
 ! parameters:
 ! rcut = cutoff radius for vdW and Coulomb interactions (defined in card.intp)
-! rcutsq = rcut*rcut
+! rcut2 = rcut*rcut
 ! FScut(i,j) = LJ/Bck Force at a spherical Surface of radius rcut for each MM atom pair
 ! VScut(i,j) = LJ/Bck energy at a spherical Surface of radius rcut for each MM atom pair
 ! rij(:)/dij is the direction versor of the atomic pair ij
@@ -117,7 +117,7 @@ do i = 1 , MM % N_of_molecules
 
              rij2 = sum( rij(:)**2 )
 
-             if ( rij2 < rcutsq ) then
+             if ( rij2 < rcut2 ) then
 
                   select case( molecule(i)% intraIJ(j,3) )
 
