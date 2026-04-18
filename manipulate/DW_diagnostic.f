@@ -22,7 +22,6 @@ module Dissociative
     integer, allocatable :: O_ptr(:)             ! O-atom indices
     integer, allocatable :: H_ptr(:)             ! H-atom indices
     integer, allocatable :: OH_bond_order(:)     ! bond order per-water
-    integer, allocatable :: OO_neighbors(:)      ! count of O neighbors
     integer, allocatable :: HOH_indices(:,:)     ! per-water H indices (2)
     integer, allocatable :: Zundel_counter(:,:)  ! life-time counter
     integer, allocatable :: dimer_counter (:,:)  ! life-time counter
@@ -35,12 +34,12 @@ module Dissociative
     type(universe), allocatable :: new_trj(:)
 
     ! module variables
-    integer :: n_frames, n_atoms, n_mols, nHX, nOX, unit1, unit2, unit3, unit4
+    integer :: n_frames, n_atoms, n_mols, nHX, nOX, unit1, unit2, unit3, unit4, unit5
     integer :: counter = 0
 
     ! module parameters 
     real*8, parameter :: OH_covalent_len = 1.25d0
-    real*8, parameter :: OO_dimer_len    = 2.90d0
+    real*8, parameter :: OO_dimer_len    = 3.00d0
     real*8, parameter :: OH_distance_ref = 0.96d0
     real*8, parameter :: HH_distance_ref = 1.52d0
     real*8, parameter :: HOH_angle_ref   = 104.4d0
@@ -157,11 +156,9 @@ subroutine bond_topology(frame, atom, Txyz)
     ! Count neighbors for each oxygen
     ! --------------------------------------------------------
     OH_bond_order = 0
-    OO_neighbors  = 0
 
     do concurrent (i = 1:nOX)
         OH_bond_order(i) = count( table_OH(i, :) <  OH_covalent_len )
-        OO_neighbors(i)  = count( table_OO(i, :) <= OO_dimer_len )
     end do
 
     HOH_modified = .false.
@@ -497,10 +494,11 @@ end subroutine ask_user_visualization
 !=============================================
  subroutine open_output_files()
 !=============================================
-    open(newunit=unit1, file="DWFF.trunk/DWFF_data",  status="unknown", action="write")
-    open(newunit=unit2, file="DWFF.trunk/dimer_list", status="unknown", action="write")
-    open(newunit=unit3, file="DWFF.trunk/ions_list",  status="unknown", action="write")
-    open(newunit=unit4, file="DWFF.trunk/PT_map.dat", status="unknown", action="write")
+    open(newunit=unit1, file="DWFF.trunk/DWFF_data",   status="unknown", action="write")
+    open(newunit=unit2, file="DWFF.trunk/dimer_list",  status="unknown", action="write")
+    open(newunit=unit3, file="DWFF.trunk/Zundel_list", status="unknown", action="write")
+    open(newunit=unit4, file="DWFF.trunk/PT_map.dat",  status="unknown", action="write")
+    open(newunit=unit5, file="DWFF.trunk/free-ion_list.dat",  status="unknown", action="write")
 end subroutine open_output_files
 !
 !
@@ -749,6 +747,13 @@ subroutine identify_dimer(frame, atom)
         O_donor = minloc(table_OO(:, i), dim=1)
         d_OO    = table_OO(O_donor, O_acceptor)
 
+        if( d_OO > OO_dimer_len ) then
+          if (frame /= 1) then
+             write(unit5,*) "........frame......O_donor.....O_acceptor.......d_OO > 3.0"
+          end if
+          write(unit5, 2) frame, O_ptr(O_acceptor), O_ptr(O_donor), d_OO
+        end if
+
         total_charge = OH_bond_order(O_acceptor) + &
                        OH_bond_order(O_donor)    - 4
 
@@ -897,7 +902,6 @@ subroutine preprocess(atom, n_frames)
     allocate(table_OO(nOX, nOX), source=0.0d0)
 
     allocate(OH_bond_order(nOX), source=0)
-    allocate(OO_neighbors(nOX), source=0)
 
     allocate(HOH_indices(nOX, 3), source=0)
     allocate(HOH_modified(nOX), source=.false.)

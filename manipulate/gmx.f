@@ -21,9 +21,6 @@ type(universe) , intent(inout) :: sys
 character(1)                        :: answer
 logical             , parameter     ::  BACK = .TRUE. 
 
-!determine charge groups for TiO2 itp file ...
-!CALL TiO2_charge_groups(sys)
-
 !determine residue groups for solvent ...
 if( (count(sys%atom%fragment == "S") /= 0) .AND. (sum(sys%atom%nresid) == 0) ) CALL Solvent_residue_groups(sys)
 
