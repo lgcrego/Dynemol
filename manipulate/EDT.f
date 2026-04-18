@@ -501,13 +501,24 @@ type(universe) , intent(inout) :: system
 !local variables
 integer :: nr , i , j , indx1 , indx2 
 integer :: nr_min, nr_max 
-real*8  :: delta(3) , centroid(3)
+real*8  :: shift, replace, delta(3) , centroid(3)
+
+if (product(system%box) == 0) then
+  Print*, "ERROR: simulation box has zero length in at least one dimension", system%box; stop
+end if
 
 nr_min =  minval(system%atom%nresid)
 nr_max =  maxval(system%atom%nresid)
 
-do nr = nr_min, nr_max
+!pre-process
+do concurrent (i=1:3)
+   centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
+   ! translate coordinates to the centroid of the system ...
+   system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
+end do
 
+! start regrouping 
+do nr = nr_min, nr_max
     ! atomic pointers of molecule with nresidue = nr
     indx1 = findloc(system%atom%nresid, nr, dim=1)
     if (indx1 == 0) then
@@ -524,8 +535,18 @@ do nr = nr_min, nr_max
         end do 
     end do
 
+    ! bring the molecule's centroid inside the box
+    do j = 1 , 3
+        centroid(j) = sum(system%atom(indx1:indx2)%xyz(j)) / (indx2-indx1+1)
+        if( abs(centroid(j)) > system%box(j)*HALF ) then
+            replace = system%box(j) * DNINT( centroid(j) / system%box(j) )
+            system%atom(indx1:indx2)%xyz(j) = system%atom(indx1:indx2)%xyz(j) - replace
+        end if 
+    end do 
+
 end do
 
+!post-process
 do concurrent (i=1:3)
    centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
    ! translate coordinates to the centroid of the system ...

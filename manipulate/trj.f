@@ -4,8 +4,8 @@ use types_m
 use constants_m
 use ansi_colors
 use util_m              , only : read_file_name
-use EDT_util_m          , only : on_the_fly_tuning
-use RW_driver           , only : WritingRoutines
+use EDT_util_m          , only : on_the_fly_tuning, parse_this
+use GMX_routines        , only : Dump_pdb
 use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo , Pack_Residues , Identify_Residues
 use RW_routines         , only : view_XYZ , Initialize_System
 use Function_routines   , only : ad_hoc_tuning
@@ -30,9 +30,12 @@ type(universe)                  , intent(out)   :: sys
 
 ! local varibles ...
 character(len=1)                :: file_format , YorN , wait
+character(len=4)                :: string
 character(len=30)               :: f_name
-integer                         :: frame , n_frames , i , j , choice , option
+character(len=80)               :: line
 real*8                          :: delta_t 
+integer                         :: frame , n_frames , i , j , choice , option
+integer         , allocatable   :: frame_list(:)
 type(universe)  , allocatable   :: frozen_trj(:)
 
 CALL system( "clear" )
@@ -70,7 +73,7 @@ do
 
     write(*,'(a)') green // ' (1)  ' // reset // '= Ad-hoc tuning'
     write(*,'(a)') green // ' (2)  ' // reset // '= TRANSLATE stuff'
-    write(*,'(a)') green // ' (3)  ' // reset // '= Select frame'
+    write(*,'(a)') green // ' (3)  ' // reset // '= Save selected frame(s)'
     write(*,'(a)') green // ' (4)  ' // reset // '= Save PDB trajectory'
     write(*,'(a)') green // ' (5)  ' // reset // '= Re-group molecules'
     write(*,'(a)') green // ' (6)  ' // reset // '= DELETE stuff'
@@ -122,27 +125,29 @@ do
 
         case( 3 )
 
-            write(*,'(/a)', advance='no') bold // yellow // ' Frame number: ' // reset
-            read (*,'(i5.5)') frame
+            write(*,'(/a)') bold//yellow//'Enter frame number(s):'//reset                        
+            write(*,'(a)') "If more than one, list them separated by spaces, or in the format first:last (press ENTER to send) :"
+            read(*,'(a)') line                                                                                           
+                                                                                                                         
+            frame_list = parse_this(line)
             
             allocate(sys%atom(size(trj(1)%atom)))
+           
+            do frame = 1, size(frame_list) 
+                sys = trj( frame_list(frame) )
+                sys%System_Characteristics = trj(1)%System_Characteristics
             
-            sys = trj(frame)
-            sys%System_Characteristics = trj(1)%System_Characteristics
-            
-            deallocate(trj)
-            
-            write(*,'(/a)', advance='no') bold // yellow // ' Save frame? (y/n) [y]: ' // reset
-            read (*,'(a)') YorN
-            
-            if (YorN /= 'n') then
-                write(*,'(a)') green // '>> Writing frame to disk...' // reset
-                call WritingRoutines(sys)
-                stop
-            else
-                write(*,'(a)') red // '>> Frame discarded. Returning.' // reset
-                return
-            end if
+                ! dump RDF ...                                                                                                   
+                write(string,'(i4.4)') frame_list(frame)
+                f_name = "seed-"//string//".pdb"           
+                write(*,'(a16,a13,a11)') green // '>> Writing ',f_name,' to disk...' // reset
+                call Dump_pdb(sys, f_name)
+
+            end do
+
+            write(*,'(/a)') yellow//"That's all ? (y/n)"//reset                                                          
+            read (*,'(a)') YorN                                                                                          
+            if( YorN /= "n" ) stop
 
         case( 4 )
 
