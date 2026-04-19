@@ -99,13 +99,13 @@ end subroutine f_DWFF_inter
     !local variables ...
     real*8  :: rkl(3) , cm_kl(3)
     real*8  :: rkl2 , force , erg
-     real*8 :: virial_private(3,3)
+    real*8 :: virial_private(3,3)
     integer :: i, j, k, l, pair_of_kind
     integer :: nresidl, nresidk, OMP_get_thread_num, ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
     
-    numthr = OMP_get_max_threads() 
+    numthr = OMP_get_max_threads()  !safe if runtime ≤ max_threads, which is usually true
 
     allocate( f_bond_aux ( MM % N_of_atoms , 3 , numthr) , source = D_zero )
     allocate( f_ang_aux  ( MM % N_of_atoms , 3 , numthr) , source = D_zero )
@@ -214,7 +214,7 @@ end subroutine inter_DWFF
     real*8 :: r0 = 1.6d0
     
     ! local_variables ...
-    real*8 , dimension (3):: rij, rik 
+    real*8 , dimension(3) :: rij, rik, f_atj, f_atk 
     real*8  :: rij_norm, rik_norm
     real*8  :: cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
@@ -261,15 +261,17 @@ end subroutine inter_DWFF
      a3 = a2*cos_theta
      
      ! forces on each atom of the triplet 
-     f_ij = a1*inv_delta_0ij**2 + a3/rij_norm
-     f_ik = a2/rij_norm
-     f_ang_aux(atj,:,ithr) = f_ang_aux(atj,:,ithr) + f_ij*rij(:)/rij_norm - f_ik*rik(:)/rik_norm
+     f_ij  = a1*inv_delta_0ij**2 + a3/rij_norm
+     f_ik  = a2/rij_norm
+     f_atj = f_ij*rij(:)/rij_norm - f_ik*rik(:)/rik_norm
+     f_ang_aux(atj,:,ithr) = f_ang_aux(atj,:,ithr) + f_atj
     
-     f_ik = a1*inv_delta_0ik**2 + a3/rik_norm
-     f_ij = a2/rik_norm
-     f_ang_aux(atk,:,ithr) = f_ang_aux(atk,:,ithr) + f_ik*rik(:)/rik_norm - f_ij*rij(:)/rij_norm
+     f_ik  = a1*inv_delta_0ik**2 + a3/rik_norm
+     f_ij  = a2/rik_norm
+     f_atk = f_ik*rik(:)/rik_norm - f_ij*rij(:)/rij_norm
+     f_ang_aux(atk,:,ithr) = f_ang_aux(atk,:,ithr) + f_atk
     
-     f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_ang_aux(atj,:,ithr) + f_ang_aux(atk,:,ithr))
+     f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_atj + f_atk)
     
 end subroutine inter_3body_DWFF
 !
