@@ -6,7 +6,7 @@ module MD_read_m
     use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
-    use syst                    , only : bath_T, press, talt, talp, initial_density, using_barostat
+    use syst                    , only : bath_T, press, tau_temp, tau_p, initial_density, using_barostat
     use for_force               , only : KAPPA, Dihedral_potential_type, rcut, forcefield
     use MM_tuning_routines      , only : ad_hoc_MM_tuning 
     use gmx2mdflex              , only : itp2mdflex, top2mdflex, SpecialPairs, MorsePairs
@@ -41,8 +41,8 @@ logical :: flag1 , flag2
 bath_T        = temperature                     !  Temperature (K)
 press         = pressure                        !  Pressure (atm)
 rcut          = cutoff_radius                   !  Cutoff radius (Angs.)
-talt          = thermal_relaxation_time         !  Temperature coupling
-talp          = pressure_relaxation_time        !  Pressure coupling 
+tau_temp      = thermal_relaxation_time         !  Temperature coupling
+tau_p         = pressure_relaxation_time        !  Pressure coupling 
 KAPPA         = damping_Wolf                    !  Wolf's method damping paramenter (length^{-1}) ; &
                                                 !  Ref: J. Chem. Phys. 1999; 110(17):8254
 ! =====================================================================================
@@ -365,11 +365,11 @@ endif
 
 !---------------------------------------------
 ! define barostat use ... 
-! if talp = infty, barostat is turned off ... 
+! if tau_p = infty, barostat is turned off ... 
 rounded_avg_atoms = nint(real(maxval(molecule%N_of_atoms)) / real(MM%N_of_molecules))
-using_barostat% inter = (talp < real_large) .and. (rounded_avg_atoms <= 1)
-using_barostat% intra = (talp < real_large) .and. (rounded_avg_atoms > 1)
-using_barostat% anyone = (talp < real_large)
+using_barostat% inter = (tau_p < real_large) .and. (rounded_avg_atoms <= 1)
+using_barostat% intra = (tau_p < real_large) .and. (rounded_avg_atoms > 1)
+using_barostat% anyone = (tau_p < real_large)
 !---------------------------------------------
 
 ! use this to debug: { atom , molecule , species , FF } ...

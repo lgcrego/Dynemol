@@ -77,7 +77,7 @@ real*8           , intent(in)    :: dt
 
 ! local variables ...
 integer :: i , j 
-real*8  :: E_kinetic , temperature , lambda , dt_half 
+real*8  :: E_kinetic , temperature , lambda , dt_half , arg
 real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , accelerate(3)
 
 if(using_barostat% anyone) CALL Ek_tensor( me % thermostat_type )
@@ -101,12 +101,13 @@ else
     end select
 endif
 
-! Berendsen Thermostat ; turned off for talt == infty ...
-If( talt == infty ) then
+! Berendsen Thermostat ; turned off for tau_temp == infty ...
+If( tau_temp == infty ) then
     lambda = D_one
 else
-    lambda = ( dt / (talt*pico_2_sec) ) * ( bath_T / temperature - D_ONE )
-    lambda = SQRT(D_ONE + lambda)
+    arg = D_ONE + (dt / (tau_temp*pico_2_sec))*(bath_T / temperature - D_ONE)
+    arg = max(arg, D_zero)
+    lambda = SQRT(arg)
 end If
 
 !######################################################

@@ -87,7 +87,7 @@ select case (me % thermostat_type)
 
 end select
 
-Q   =  D_one/(THREE*real(count(atom%flex))*boltz*bath_T*(talt*pico_2_sec)**2)
+Q   =  D_one/(THREE*real(count(atom%flex))*boltz*bath_T*(tau_temp*pico_2_sec)**2)
 
 Csi =  Csi + Q*(me%kinetic - sigma)*dt
 
