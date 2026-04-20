@@ -367,7 +367,7 @@ end module MM_tuning_routines
 !
 module syst
 implicit none
-real*8  :: bath_T, press, talt, talp, Initial_density
+real*8  :: bath_T, press, tau_temp, tau_p, Initial_density
 
 type kind_of_ensemble
      logical :: inter = .false.

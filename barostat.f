@@ -87,9 +87,9 @@ stress_tensor = kinetic_tensor + virial_tensor
 ! scalar pressure, for isotropic systems
 pressure = ( stress_tensor(1,1) + stress_tensor(2,2) + stress_tensor(3,3) ) * third
 
-!mip = dt * ( 107.0d-6 / (talp * pico_2_sec) ) * ( pressure - press )
-mip = dt * ( 10.70d-6 / (talp * pico_2_sec) ) * ( pressure - press )
-mip = (D_one + mip)**third
+! press = P0, pressure = P(system)
+mip = 10.70d-6 * ( dt / (tau_p * pico_2_sec) ) * ( press - pressure )
+mip = (D_one - mip)**third
 
 MM% box  = MM% box * mip
 MM% ibox = 1.d0 / MM% box
