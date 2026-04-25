@@ -294,7 +294,7 @@ end subroutine inter_3body_DWFF
     real*8 :: zeta , erfc_zeta , arg , exp_arg2
     real*8 :: arg_Wolf , decay_Wolf , exp_Wolf
     real*8 :: Ecoul , Fcoul , f_sr , E_sr
-    real*8 :: A, B, C, a2 , a3 , a4 , U0
+    real*8 :: A, B, C, a2, a3, a4, d1, d2, U0
     
     rkl  = SQRT(rkl2)
     irkl = D_one / rkl
@@ -336,13 +336,21 @@ end subroutine inter_3body_DWFF
     decay_Wolf = erfc(arg_Wolf)
     exp_Wolf   = EXP(-arg_Wolf**2)
     
+    if( HOH%contain_diffuse ) then
+        d1 = HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)* erf(arg*sqrt2)
+        d2 = HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3)* exp_arg2 
+    else
+        d1 = D_zero
+        d2 = D_zero
+    end if
+
     ! Energy
-    U0 = HOH%Coul(m,1) + HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)* erf(arg*sqrt2)
+    U0 = HOH%Coul(m,1) + d1
     Ecoul = coulomb * U0 * decay_Wolf * irkl
     
     ! Force
     ! Fcoul (damped)
-    a3 = a2 * ( HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3) * exp_arg2 )
+    a3 = a2 * d2
     a4 = decay_Wolf + TWO*irsqPI*KAPPA*rkl*exp_Wolf
     Fcoul = coulomb * (U0*a4*ir2*irkl - a3*exp_arg2*decay_Wolf*ir2)
     
