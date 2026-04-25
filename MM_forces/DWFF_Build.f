@@ -248,6 +248,8 @@ HOH_diss_parms% Coul(1,4) = half / OH_q_dsprsion             !..................
 HOH_diss_parms% Coul(2,4) = half / OO_q_dsprsion             !........................ chrg_decay(O-O)
 HOH_diss_parms% Coul(3,4) = half / HH_q_dsprsion             !........................ chrg_decay(H-H)
 
+HOH_diss_parms%contain_diffuse = .not. all(abs(HOH_diss_parms%Coul(:,2:3)) < mid_prec)
+
 ! Coulomb 3-body paramters
 allocate( HOH_diss_parms% Angle(1,4) )
 HOH_diss_parms% Angle(1,1) = lambda

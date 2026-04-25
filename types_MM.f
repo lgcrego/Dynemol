@@ -134,6 +134,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         real*8               , allocatable  :: Coul(:,:)        
         real*8               , allocatable  :: Angle(:,:)        
         integer                             :: H_ptr(2)
+        logical                             :: contain_diffuse
     end type Dissociative
 
     type LogicalKey
