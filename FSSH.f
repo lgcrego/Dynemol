@@ -642,7 +642,7 @@ do K = 1   , sys% atoms
    
        R_LK = sqrt(sum( (sys%coord(K,:)-sys%coord(L,:))**2 ) )
    
-       flag1 = R_LK < cutoff_Angs  
+       flag1 = R_LK < QM_cutoff  
         
        flag2 = sys% flex(K) .AND. sys% flex(L)
    

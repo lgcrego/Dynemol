@@ -5,7 +5,7 @@
     use constants_m
     use parameters_m                , only : file_type ,                &
                                              file_format ,              &
-                                             nnx , nny ,                &
+                                             nnx , nny , PBC ,          &
                                              hole_state ,               &
                                              OPT_parms ,                &
                                              GaussianCube ,             &
@@ -48,40 +48,42 @@ select case( file_type )
     case( "structure" )
 
         select case( file_format )
+               case( "xyz" )
+                   CALL Read_from_XYZ      ( Unit_Cell ) 
 
-            case( "xyz" )
-                CALL Read_from_XYZ      ( Unit_Cell ) 
+               case( "pdb " )
 
-            case( "pdb " )
+                   If( resume ) then
+                       CALL Resume_from_TRJ ( Unit_Cell )
+                   else
+                       CALL Read_from_PDB   ( Unit_Cell ) 
+                   end If
+                  
+               case( "vasp" )
+                   CALL Read_from_POSCAR   ( Unit_Cell )
 
-                If( resume ) then
-                    CALL Resume_from_TRJ ( Unit_Cell )
-                else
-                    CALL Read_from_PDB   ( Unit_Cell ) 
-                end If
-               
-            case( "vasp" )
-                CALL Read_from_POSCAR   ( Unit_Cell )
+               case default
+                   print*, ">>> check file type selection <<< : " , file_format
+                   stop
+               end select
 
-            case default
-                print*, ">>> check file type selection <<< : " , file_format
-                stop
-            end select
+        call reset_QM_cutoff( Unit_Cell )
 
     case( "trajectory" )
     
         select case( file_format ) 
+               case( "pdb" ) 
+                   CALL Read_PDB   ( trj ) 
 
-            case( "pdb" ) 
-                CALL Read_PDB   ( trj ) 
+               case( "xyz" ) 
+                   CALL Read_XYZ   ( trj )
 
-            case( "xyz" ) 
-                CALL Read_XYZ   ( trj )
+               case default
+                   print*, ">>> check file type selection <<< : " , file_format
+                   stop
+               end select
 
-            case default
-                print*, ">>> check file type selection <<< : " , file_format
-                stop
-            end select
+!        call reset_QM_cutoff( trj(1) )
 
     case default
         print*, ">>> check file type selection <<< : " , file_type
@@ -512,6 +514,31 @@ where( (system%fragment == 'H') .AND. (system%copy_No /= 0) ) system%fragment = 
 where( (system%fragment == 'E') .AND. (system%copy_No /= 0) ) system%fragment = achar( ASC_offset_1 + system%copy_No) 
 
 end subroutine fix_fragments
+!
+!
+!
+!====================================
+ subroutine reset_QM_cutoff( system )
+!====================================
+implicit none
+type(structure), intent(in):: system
+
+!local variables 
+real*8  :: shortest, QM_cutoff
+logical :: mask(3)
+
+if( any(PBC /= 0) ) then
+   mask = (PBC/=0)
+   shortest = minval( system%T_xyz, mask=mask )
+
+   QM_cutoff = min( cutoff_Angs, half*shortest )
+else
+   QM_cutoff = cutoff_Angs
+end if
+
+call BcastQM_cutoff( QM_cutoff )
+
+end subroutine reset_QM_cutoff
 !
 !
 !

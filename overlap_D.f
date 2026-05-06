@@ -193,7 +193,7 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
             if (motion_detector_ready) then
 
                 Rab = GET_RAB(a_system%coord(ia,:), b_system%coord(ib,:))
-                if (Rab > cutoff_Angs) then
+                if (Rab > QM_cutoff) then
                     cycle
                 end if
 
@@ -227,7 +227,7 @@ subroutine BUILD_OVERLAP_MATRIX(b_system, b_basis, a_system, a_basis, S_matrix, 
             ! if atoms ia and ib move => calculate rotation matrix for the highest l
             call RotationOverlap( b_system, a_system, ia, ib, Rab, rl, rl2 )
 
-            if (Rab > cutoff_Angs) then
+            if (Rab > QM_cutoff) then
                 cycle
             end if
 
@@ -368,7 +368,7 @@ subroutine PULAY_OVERLAP(b_system, b_basis, a_system, a_basis, S_matrix, site)
 
         ! ckecking: if atoms ia and ib remain fixed
         Rab = GET_RAB(a_system%coord(ia,:), b_system%coord(ib,:))
-        if (Rab > cutoff_Angs) then
+        if (Rab > QM_cutoff) then
             cycle
         end if
 

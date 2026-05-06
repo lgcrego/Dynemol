@@ -102,5 +102,18 @@ MODULE constants_m
     character(len=*), parameter :: white   = esc // '[37m'
     character(len=*), parameter :: orange  = esc // '[38;5;208m'
 
+
+    real*8, public :: QM_cutoff
+
+    contains
+
+    !================================ 
+    subroutine BcastQM_cutoff(cutoff)
+    !================================ 
+        implicit none
+        real*8 , intent(in) :: cutoff
+        QM_cutoff = cutoff
+    end subroutine BcastQM_cutoff
+
 END MODULE constants_m
 
