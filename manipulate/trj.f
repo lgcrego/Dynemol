@@ -32,7 +32,7 @@ type(universe)                  , intent(out)   :: sys
 character(len=1)                :: file_format , YorN , wait
 character(len=4)                :: string
 character(len=30)               :: f_name
-character(len=80)               :: line
+character(len=120)              :: line
 real*8                          :: delta_t 
 integer                         :: frame , n_frames , i , j , choice , option
 integer         , allocatable   :: frame_list(:)

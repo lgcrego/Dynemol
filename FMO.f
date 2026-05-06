@@ -407,7 +407,7 @@ do ib = 1, system%atoms
     do ia = ib+1, system%atoms
 
         Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
-        if (Rab > cutoff_Angs) then
+        if (Rab > QM_cutoff) then
            cycle
         end if
 

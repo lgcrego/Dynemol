@@ -137,7 +137,7 @@ If( EnvCrew ) then ! <== evaluates snd_h ...
             end if
     
             Rab = GET_RAB(system%coord(ib,:), system%coord(ia,:))
-            if (Rab > cutoff_Angs) then
+            if (Rab > QM_cutoff) then
                cycle
             end if
 
