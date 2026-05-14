@@ -180,6 +180,8 @@
 
 210 format(/,1x,'OPT cost/original cost = ',F20.4,' / ',F20.4)
 
+211 format(1x,"using DWFF; diffuse charge = ",L1)
+
 214 format(1x,'Number of Torsion DHDs in  ' ,a3 ' = ',I6)
 
 215 format(1x,'MM input format >>> ', A6 , '   <<<')
