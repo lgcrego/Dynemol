@@ -317,6 +317,7 @@ chrgl = atom(l)% charge
 
 if( QMMM ) &
 then
+     ! only for f_inter, long range interactions
      chrgk = atom(k)% charge + Net_Charge(k)
      chrgl = atom(l)% charge + Net_Charge(l)
 endif

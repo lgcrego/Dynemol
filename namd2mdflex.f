@@ -3,10 +3,10 @@
 module namd2mdflex
 
 use iso_fortran_env
-use type_m             , only : dynemolworkdir , warning
-use MM_input           , only : MM_input_format
 use constants_m
 use for_force
+use type_m             , only : dynemolworkdir , warning
+use MM_input           , only : MM_input_format
 use MPI_definitions_m  , only : master
 use MM_types           , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
 use MM_tuning_routines , only : SpecialBonds, SpecialAngs
@@ -14,7 +14,7 @@ use NonBondPairs       , only : Identify_NonBondPairs
 use Babel_routines_m   , only : TO_UPPER_CASE
 use gmx2mdflex         , only : SpecialPairs , SpecialPairs14
 use setup_checklist    , only : Checking_Topology
-use Build_DWFF         , only : include_DWFF_parameters
+use Build_DWFF         , only : include_DWFF_parameters, read_DWFF_parameters, check_DWFF_parameters
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -101,7 +101,6 @@ do a = 1 , MM % N_of_species
                                       species(a) % atom(i) % MM_charge ,  &
                                       species(a) % atom(i) % mass
 
-
             species(a) % atom(i) % my_id      = i
             species(a) % atom(i) % nr         = 1
             species(a) % atom(i) % MMSymbol   = TO_UPPER_CASE( adjustr(species(a) % atom(i) % MMSymbol) )
@@ -132,20 +131,7 @@ do a = 1 , MM % N_of_species
         ! set dissociative water force-field for HOH residues ...
         if( species(a)% residue == "HOH" ) species(a)% DWFF = .true.
 
-        i = 1
-        do
-            if( i > size(atom) ) exit
-
-            if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
-                atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
-                i = i + N_of_atoms
-            else
-                i = i + 1
-            end if
-
-        end do
-        rewind 33
-
+!        rewind 33
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -314,37 +300,57 @@ do a = 1 , MM % N_of_species
         read(33,'(A)',iostat=ioerr) line
         read(line,*,iostat=ioerr) keyword
         read(keyword,'(i)') N_adhoc
-        if( N_adhoc == 0 ) goto 11
 
-        read(line,*,iostat=ioerr) (word(i) , i=1,3)
-        keyword = to_upper_case(word(3))
+        if( N_adhoc /= 0 ) &
+        then
+            read(line,*,iostat=ioerr) (word(i) , i=1,3)
+            keyword = to_upper_case(word(3))
 
-        select case (keyword)
+            select case (keyword)
 
-          case( "FLEX" ) 
-               do i = 1 , N_adhoc
+              case( "FLEX" ) 
+                   do i = 1 , N_adhoc
 
-                  read(33,'(A)',iostat=ioerr) line
-                  read(line,*,iostat=ioerr) (word(j) , j=1,3)
+                      read(33,'(A)',iostat=ioerr) line
+                      read(line,*,iostat=ioerr) (word(j) , j=1,3)
 
-                  read(word(1),'(i)') k
+                      read(word(1),'(i)') k
 
-                  keyword = to_upper_case(word(3))                                                                                                                                        
-                  TorF = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == keyword ) )
+                      keyword = to_upper_case(word(3))                                                                                                                                        
+                      TorF = merge( .true. , .false. , any( [".TRUE.","TRUE","T","T_"] == keyword ) )
 
-                  atom(k) % flex = TorF 
+                      atom(k) % flex = TorF 
  
-               end do
+                   end do
 
-          case default
-               CALL warning("halting: check AD-HOC section of psf file")                                                    
-               stop
+              case default
+                   CALL warning("halting: check AD-HOC section of psf file")                                                    
+                   stop
 
-        end select
+            end select
+        end if
 
 !==============================================================================================
-11      close(33)
+        ! DWFF parameters :: reading ...
+        if( species(a)% DWFF )&
+        then
+            do
+                read(33,'(A)',iostat=ioerr) line
+                ! End-of-file
+                if (ioerr < 0) exit
 
+                line = to_upper_case(line)
+                if( verify( "DWFF" , line ) == 0 ) then
+                    call read_DWFF_parameters
+                    call check_DWFF_parameters(species(a)%atom)
+                    exit
+                end if
+
+            end do
+        end if
+!==============================================================================================
+
+        close(33)
         If( master ) write(*,'(a9)') " << done "
 
 end do  ! <== loop(a=1:MM%N_of_species)

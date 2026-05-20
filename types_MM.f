@@ -133,6 +133,8 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         real*8               , allocatable  :: SR(:,:)        
         real*8               , allocatable  :: Coul(:,:)        
         real*8               , allocatable  :: Angle(:,:)        
+        real*8                              :: PointCharge_O
+        real*8                              :: PointCharge_H
         integer                             :: H_ptr(2)
         logical                             :: contain_diffuse
     end type Dissociative

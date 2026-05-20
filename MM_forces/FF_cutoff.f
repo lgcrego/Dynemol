@@ -21,7 +21,8 @@ contains
     ! local variables
     integer :: i, j, atmax
     real*8  :: expar, arg_Wolf, total_q2
-   
+
+    !! herein, all calculations are for r = Rcut !!
     rcut2 = rcut**2
    
     atmax = sum( species(:) % N_of_atoms )                 
