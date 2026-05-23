@@ -661,8 +661,8 @@ subroutine get_molecule_offset
     do i = 1, size(atom)
         ! Detect change of molecule (new molecule block)
         if (atom(i)%nr /= nr) then
-            nr = atom(i)%nr
             offset = offset + count(atom%nr == nr)
+            nr = atom(i)%nr
         end if
 
         ! Assign offset index to atom
