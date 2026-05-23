@@ -3,7 +3,7 @@ module MD_read_m
     use constants_m
     use atomicmass
     use MM_input                ! <== MM and species are defined here
-    use type_m                  , only : dynemolworkdir , dynemoldir, warning
+    use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
     use MM_types                , only : MM_molecular, MM_atomic, debug_MM, DefinePairs
     use syst                    , only : bath_T, press, tau_temp, tau_p, initial_density, using_barostat
@@ -14,7 +14,7 @@ module MD_read_m
     use Babel_m                 , only : QMMM_key
     use Structure_Builder       , only : Unit_Cell
     use util_m                  , only : split_line
-    use Build_DWFF              , only : HOH => HOH_diss_parms 
+    use Build_DWFF              , only : dump_DWFF_parameters, HOH => HOH_diss_parms 
 
     type(MM_molecular) , allocatable :: molecule(:)
     type(MM_atomic)    , allocatable :: atom(:) , FF(:)
@@ -201,9 +201,14 @@ do i = 1 , size(FF)
     end where
 end do
 
-! define the atomic charge ...
-do i = 1 , size(atom)
-    atom(i)% MM_charge = species(atom(i)%my_species) % atom(atom(i)%my_intra_id) % MM_charge
+! define the atomic charge: assign MM charges from species templates
+do i = 1, size(atom)
+    associate ( sp  => atom(i)%my_species, &
+                id  => atom(i)%my_intra_id )
+
+        atom(i)%MM_charge = species(sp)%atom(id)%MM_charge
+
+    end associate
 end do
 
 !=======================         set-up molecule(:)          ============================= 
@@ -375,7 +380,7 @@ using_barostat% anyone = (tau_p < real_large)
 !---------------------------------------------
 
 ! use this to debug: { atom , molecule , species , FF } ...
-!call debug_MM( atom )
+!call debug_MM( FF )
 
 CALL MM_diagnosis( )
 
@@ -656,8 +661,8 @@ subroutine get_molecule_offset
     do i = 1, size(atom)
         ! Detect change of molecule (new molecule block)
         if (atom(i)%nr /= nr) then
-            nr = atom(i)%nr
             offset = offset + count(atom%nr == nr)
+            nr = atom(i)%nr
         end if
 
         ! Assign offset index to atom
@@ -855,12 +860,10 @@ implicit none
 
 ! local variabbles ...
 integer                         :: i , j , m , at1 , at2 , at3 , at4 , funct_dih , multiples , prototype
-integer                         :: f_unit, ioerr
 real*8                          :: factor , factor_1 , factor_2 , eps , sig, BuckA, BuckB, BuckC, MorsA, MorsB, MorsC
 logical                         :: flag
 character(3)                    :: funct_type , arrow
-character(120)                  :: line
-character(len=:) , allocatable  :: string(:), keyword_list(:)
+character(len=:) , allocatable  :: string(:)
 
  open( unit = 51 , file = "log.trunk/MM_parms_log.out" , status = "replace", action = "write" , position = "append" )
 
@@ -1268,7 +1271,6 @@ character(len=:) , allocatable  :: string(:), keyword_list(:)
     write(51,"(A5,F8.4,A5)") (species(j)% atom(i)% MMSymbol , species(j)% atom(i) % MM_Charge , &
                               merge("<==" , "   " , species(j)% atom(i) % MM_Charge == 0), i = 1,species(j)% N_of_atoms)
  end do
-!========================================================================================================
 
  !========================================================================================================
  ! DWFF parms saving ...
@@ -1277,65 +1279,7 @@ character(len=:) , allocatable  :: string(:), keyword_list(:)
      write(51,"(A)") "[ DWFF parameters ]"               
      write(51,*) ""               
 
-     allocate( character(len=14) :: keyword_list(20) )
-
-     keyword_list = [ "PointCharge_O"   , &                                                                                        
-                      "PointCharge_H"   , &                                                                                        
-                      "DiffCharge_O"    , &                                                                                        
-                      "DiffCharge_H"    , &                                                                                        
-                      "OH_A_repulsive"  , &                                                                                        
-                      "OH_short_range"  , &
-                      "OH_q_dsprsion"   , &                                                                                        
-                      "OH_C6_dsprsion"  , &                                                                                        
-                      "OO_A_repulsive"  , &                                                                                        
-                      "OO_short_range"  , &                                                                                        
-                      "OO_q_dsprsion"   , &                                                                                        
-                      "OO_C6_dsprsion"  , &                                                                                        
-                      "HH_A_repulsive"  , &                                                                                        
-                      "HH_short_range"  , &                                                                                        
-                      "HH_q_dsprsion"   , &                                                                                        
-                      "HH_C6_dsprsion"  , &                                                                                        
-                      "lambda"          , &
-                      "theta_0"         , &
-                      "r0"              , &
-                      "gama" ]
-
-     OPEN(newunit=f_unit, file=dynemoldir//'MM_forces/DWFF_Build.f', status='old')
-     do
-         read(f_unit,'(A)',iostat=ioerr) line
-     
-         ! end-of-file
-         if (ioerr < 0) exit
-     
-         ! read error
-         if (ioerr > 0) then
-             print*, "Error reading file: DWFF_Build.f"
-             close(f_unit)
-             stop
-         end if
-         
-         allocate( string , source=split_line( line , token_length=14 ) )
-
-         if (.not. allocated(string)) cycle
-
-         if (size(string) > 0) then
-     
-             if (any(keyword_list == string(1))) then
-                 write(51,*) trim(line)
-             end if
-     
-             if (trim(string(1)) == "gama") then
-                 deallocate(string)
-                 exit
-             end if
-     
-         end if
-     
-         deallocate(string)
-
-     end do
-
-     close(f_unit)
+     call dump_DWFF_parameters 
 
  end if
 !========================================================================================================

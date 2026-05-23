@@ -126,20 +126,6 @@ do a = 1 , MM % N_of_species
         ! convert residues to upper case ...
         forall( i=1:N_of_atoms ) species(a)% atom(i)% residue  = TO_UPPER_CASE( species(a)% atom(i)% residue )
 
-        i = 1
-        do
-
-            if( i > size(atom) ) exit
-
-            if( trim(atom(i) % residue) == trim(species(a) % atom(1) % residue) ) then
-                atom(i:i+N_of_atoms-1) % MM_charge = species(a) % atom(:N_of_atoms) % MM_charge
-                i = i + N_of_atoms
-            else
-                i = i + 1
-            end if
-
-        end do
-        rewind 33
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
