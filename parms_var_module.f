@@ -1,6 +1,7 @@
 module EH_parms_module
 
-use type_m ,       only :  real_interval , warning
+use type_m       , only: real_interval , warning
+use color_funcs  , only: red_, green_, yellow_, blue_, magenta_, orange_, red_bg, green_bg, blue_bg, magenta_bg
 
 integer                 :: nnx , nny , n_t , step_security , PBC(3)
 integer                 :: n_part , electron_state , hole_state , frame_step , GaussianCube_step 
@@ -25,9 +26,10 @@ end module EH_parms_module
 !
 module MM_parms_module
 
-use type_m          , only : integer_interval
-use MM_types        , only : MM_molecular , MM_system , MM_atomic
-use EH_parms_module , only : Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
+use type_m          , only: integer_interval
+use MM_types        , only: MM_molecular , MM_system , MM_atomic
+use EH_parms_module , only: Pop_size , N_generations , Top_Selection , Pop_range , Mutation_rate , Mutate_Cross
+use color_funcs     , only: red_, green_, yellow_, blue_, magenta_, orange_, red_bg, green_bg, blue_bg, magenta_bg
 
 real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxation_time, pressure_relaxation_time, damping_Wolf
 integer                :: MM_log_step, MM_frame_step, spawn_step
