@@ -102,6 +102,10 @@ MODULE constants_m
     character(len=*), parameter :: white   = esc // '[37m'
     character(len=*), parameter :: orange  = esc // '[38;5;208m'
 
+    character(len=*), parameter :: bg_red     = esc // '[31;47m'
+    character(len=*), parameter :: bg_green   = esc // '[32;47m'
+    character(len=*), parameter :: bg_blue    = esc // '[34;47m'
+    character(len=*), parameter :: bg_magenta = esc // '[35;47m'
 
     real*8, public :: QM_cutoff
 
@@ -116,4 +120,110 @@ MODULE constants_m
     end subroutine BcastQM_cutoff
 
 END MODULE constants_m
+!
+!
+!
+!
+MODULE color_funcs
 
+use constants_m 
+implicit none
+
+    public:: red_, green_, yellow_, blue_, magenta_, orange_
+    public:: red_bg, green_bg, blue_bg, magenta_bg
+
+    private
+
+    contains
+
+    !================================================
+    function green_(string) 
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: green_
+        green_ = green//string//reset
+    end function green_
+!   
+    !===============================================
+    function green_bg(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: green_bg
+        green_bg = bg_green//string//reset
+    end function green_bg
+!
+    !================================================
+    function red_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: red_
+        red_ = red//string//reset
+    end function red_
+!   
+    !===============================================
+    function red_bg(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: red_bg
+        red_bg = bg_red//string//reset
+    end function red_bg
+!   
+    !================================================
+    function yellow_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: yellow_
+        yellow_ = yellow//string//reset
+    end function yellow_
+!   
+    !================================================
+    function orange_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: orange_
+        orange_ = orange//string//reset
+    end function orange_
+!   
+    !================================================
+    function blue_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: blue_
+        blue_ = blue//string//reset
+    end function blue_
+!   
+    !===============================================
+    function blue_bg(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: blue_bg
+        blue_bg = bg_blue//string//reset
+    end function blue_bg
+!   
+    !================================================
+    function magenta_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: magenta_
+        magenta_ = magenta//string//reset
+    end function magenta_
+!   
+    !===============================================
+    function magenta_bg(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: magenta_bg
+        magenta_bg = bg_magenta//string//reset
+    end function magenta_bg
+
+END MODULE color_funcs
