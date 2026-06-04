@@ -2,6 +2,8 @@ module Topology_routines
 
 use types_m
 use constants_m
+use ansi_colors
+use color_funcs
 use Read_Parms  , only: Atomic_Mass
 
 public :: connect , dump_topol , InputIntegers , get_topology
@@ -21,59 +23,33 @@ contains
  subroutine connect( sys )
 !=========================
 implicit none
-type(universe)                  , intent(inout)   :: sys 
+type(universe), intent(inout) :: sys 
 
 ! local varibles ...
-character(len=1)                :: yn
-character(len=2)                :: S1 , S2
-integer                         :: i , j
-real*8                          :: cutoff
-logical                         :: flag
+integer :: i, j, option
 
 CALL system( "clear" )
 
-write(*,'(/a)',advance='no') ">>> Connect Specific Bonds ? (y/n) "
-read (*,'(a)') yn
+write(*,'(/a)') bold // cyan // ' Edit specific bonds :' // reset
 
-if ( yn == "y" ) then
+write(*,'(2a)') green_("(1)"),"= connect"
+write(*,'(4a)') green_("(0)"),"= do nothing (",orange_("default"),")"
 
-    allocate( sys % topol (sys%N_of_atoms,sys%N_of_atoms) , source = .false. )
+write(*,'(/a)', advance='no') bold//yellow_(">>> ")
+read (*,*) option
 
-    do
+select case (option)
+    case(1)
+        call edit_topology( sys )
 
-        write(*,'(1x,3/a)') "Choose chemical elements whose bonds are to be connected (@ to exit) : "
-        read*, S1
-        If( S1 == "@" ) exit
-        read*, S2
-
-        write(*,'(1x,a)') "cut-off distance for the bond: "
-        read*, cutoff
-
-        do j = 1 , sys%N_of_atoms 
-            do i = j+1 , sys%N_of_atoms 
-
-                flag = (sys%atom(i)%Symbol==S1 .AND. sys%atom(j)%Symbol==S2)       &
-                    .OR.                                                           &  
-                       (sys%atom(i)%Symbol==S2 .AND. sys%atom(j)%Symbol==S1) 
-
-                If( flag .AND. sqrt(sum((sys%atom(i)%xyz - sys%atom(j)%xyz)**2)) < cutoff ) then
-        
-                    sys % topol(i,j) = .true. 
-                    sys % topol(j,i) = .true.
-
-                end If
-
-            end do
-        end do
-
-    end do
-
-end If
+    case default
+        ! do nothing
+end select   
 
 CALL system( "clear" )
     
 end subroutine connect
-
+!
 !
 !
 !========================================
@@ -168,9 +144,9 @@ end do
 
 if( mol_conect == 0 ) then
     Write(*,*)
-    Write(*,*) "======================= W A R N I N G ======================="
-    Write(*,*) "No CONECT in the pdb file; cannot generate bonds, angles, etc"
-    Write(*,*) "============================================================="
+    Write(*,*) "======================= W A R N I N G ========================"
+    Write(*,*) "No CONNECT in the pdb file; cannot generate bonds, angles, etc"
+    Write(*,*) "=============================================================="
     Write(*,*)
 endif
 
@@ -215,9 +191,6 @@ deallocate( bond_matrix, angle_matrix, dihedral_matrix )
 102 FORMAT(a9)
 
 end subroutine get_topology
-!
-!
-!
 !
 !
 !
@@ -684,5 +657,55 @@ end subroutine error_message
 !
 !
 !
+!=============================
+ subroutine edit_topology(sys)
+!=============================
+implicit none
+type(universe), intent(inout) :: sys 
 
+! local varibles ...
+character(len=2) :: S1, S2
+integer          :: i, j
+real*8           :: cutoff
+logical          :: flag1, flag2
+
+allocate( sys%topol (sys%N_of_atoms,sys%N_of_atoms) , source = .false. )
+do
+    write(*,'(1x,3a)') &
+                        yellow//"Choose chemical elements (not MMSymbols) whose bonds are to be edited ("//reset, &
+                        orange//"@ to exit"//reset, &
+                        yellow//") : "//reset
+    read(*,*) S1
+    If( trim(S1) == "@" ) exit
+    read(*,*) S2
+
+    S1 = trim(adjustl(S1))
+    S2 = trim(adjustl(S1))
+
+    write(*,'(1x,a)') yellow//"cut-off distance for the bond: "//reset
+    read*, cutoff
+
+    do j = 1 , sys%N_of_atoms 
+    do i = j+1 , sys%N_of_atoms 
+
+        flag1 =  &
+            (trim(sys%atom(i)%Symbol)==S1 .AND. trim(sys%atom(j)%Symbol)==S2) .or.                                                           &  
+            (trim(sys%atom(i)%Symbol)==S2 .AND. trim(sys%atom(j)%Symbol)==S1) 
+
+        If (.not. flag1) cycle
+
+        flag2 = (norm2(sys%atom(i)%xyz - sys%atom(j)%xyz) < cutoff )
+        if (flag2) then
+           sys % topol(i,j) = .true. 
+           sys % topol(j,i) = .true.
+        end if
+
+    end do
+    end do
+end do
+
+end subroutine edit_topology
+
+!
+!
 end module Topology_routines
