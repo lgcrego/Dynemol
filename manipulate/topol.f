@@ -36,7 +36,7 @@ write(*,'(2a)') green_("(1)"),"= connect"
 write(*,'(4a)') green_("(0)"),"= do nothing (",orange_("default"),")"
 
 write(*,'(/a)', advance='no') bold//yellow_(">>> ")
-read (*,*) option
+read (*,'(I)') option
 
 select case (option)
     case(1)

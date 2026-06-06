@@ -3,6 +3,7 @@ module EDIT_routines
 use types_m
 use util_m        , only: renumber_sequence
 use ansi_colors
+use color_funcs
 use Read_Parms
 use Constants_m
 use GMX_routines
@@ -501,7 +502,7 @@ type(universe) , intent(inout) :: system
 !local variables
 integer :: nr , i , j , indx1 , indx2 
 integer :: nr_min, nr_max 
-real*8  :: shift, replace, delta(3) , centroid(3)
+real*8  :: replace, delta(3) , centroid(3)
 
 if (product(system%box) == 0) then
   Print*, "ERROR: simulation box has zero length in at least one dimension", system%box; stop
@@ -724,65 +725,80 @@ implicit none
 type(universe) , intent(inout) :: system
 
 ! local variables ...
-type(atomic)           , allocatable :: temp(:)
-type(integer_interval)               :: n_x , n_y , n_z
-integer                              :: New_N_of_atoms , i , j , k , n , counter , S_counter , F_counter , Replication_Factor 
-integer                              :: max_nresid = 0 , P_counter 
-character(len=3)                     :: string
-logical                              :: replicate_ALL = .true.
-logical                , save        :: done = .false.
+type(atomic), allocatable :: temp(:)
+integer                   :: New_N_of_atoms , i , j , k , n , Replication_Factor 
+integer                   :: counter , S_counter , F_counter , S_span, F_span
+integer                   :: max_nresid = 0
+character(len=3)          :: string
+logical                   :: replicate_ALL = .true.
+type(integer_interval), save :: n_x , n_y , n_z
+logical               , save :: done = .false.
 
-! reading parameters ...
+! reading parameters; do it only once ...
 If( .NOT. done ) then
-    write(*,'(/a)') '> Do you want to replicate the whole structure? (y/n, default=y)'
-    write(*,'(/a)') '> MIND: if you choose to replicate a specific fragment, the fragment to be replicated has to be defined in tuning.f by setting %copy = .true.'
+    write(*,'(/a)') cyan_('> Do you want to replicate the whole structure? (y/n, default=y)')
     read (*,'(a)') string
+
     if( string == 'n' ) &
     then
         replicate_ALL = .false.
-        if( .not. any(system%atom%copy==.true.) ) return
+        CALL on_the_fly_tuning( system )
     endif
 
     Print*, " "
-    write(*,'(a)') '> Enter replication control keys (integer)'
-    write(*,'(a)',advance='no') 'n_x%inicio (<= 0) = '
-    read (*,'(I200)') n_x%inicio 
-    write(*,'(a)',advance='no') 'n_x%fim    (>= 0) = '
+    write(*,'(a)') orange_('> Enter replication control keys (integer)')
+    write(*,'(a)',advance='no') yellow_('n_x%inicio (<= 0) = ')
+    read (*,'(I200)') n_x%inicio
+    write(*,'(a)',advance='no') yellow_('n_x%fim    (>= 0) = ')
     read (*,'(I200)') n_x%fim
-    write(*,'(a)',advance='no') 'n_y%inicio (<= 0) = '
+    write(*,'(a)',advance='no') yellow_('n_y%inicio (<= 0) = ')
     read (*,'(I200)') n_y%inicio
-    write(*,'(a)',advance='no') 'n_y%fim    (>= 0) = '
+    write(*,'(a)',advance='no') yellow_('n_y%fim    (>= 0) = ')
     read (*,'(I200)') n_y%fim
-    write(*,'(a)',advance='no') 'n_z%inicio (<= 0) = '
-    read (*,'(I200)') n_z%inicio 
-    write(*,'(a)',advance='no') 'n_z%fim =  (>= 0) = '
+    write(*,'(a)',advance='no') yellow_('n_z%inicio (<= 0) = ')
+    read (*,'(I200)') n_z%inicio
+    write(*,'(a)',advance='no') yellow_('n_z%fim =  (>= 0) = ')
     read (*,'(I200)') n_z%fim
 
     done = .true.
 end If
 
+! Determine the replication factor
+Replication_Factor = &
+    (n_x%fim - n_x%inicio + 1) * &
+    (n_y%fim - n_y%inicio + 1) * &
+    (n_z%fim - n_z%inicio + 1)
+
+New_N_of_atoms = Replication_Factor * system%N_of_atoms
+
 ! creating the temp array ...
-Replication_Factor  = ( n_x%fim - n_x%inicio + 1 ) * ( n_y%fim - n_y%inicio + 1 ) * ( n_z%fim - n_z%inicio + 1 ) 
-New_N_of_atoms      = system%N_of_atoms * Replication_factor
+allocate( temp(New_N_of_atoms) )
 
-allocate( temp( New_N_of_atoms ) )
-temp(1:system%N_of_atoms) = system%atom
+S_span = 0
+if (any(system%atom%fragment == 'S')) &
+then
+    S_span = maxval(system%atom%nresid, system%atom%fragment=='S') &
+           - minval(system%atom%nresid, system%atom%fragment=='S') + 1
+end if
 
-! replicating ...
-forall( i = 2:Replication_Factor ) temp( system%N_of_atoms*(i-1)+1:system%N_of_atoms*i ) = system%atom
+F_span = 0
+if (any(system%atom%fragment == 'F')) &
+then
+    F_span = maxval(system%atom%nresid, system%atom%fragment=='F') &
+           - minval(system%atom%nresid, system%atom%fragment=='F') + 1
+end if
 
-counter   = 0
 S_counter = 0   ! <== solvent 
 F_counter = 0   ! <== fragment
-P_counter = 0   ! <== polymer
-
-If( any(system % atom % fragment == "P") ) max_nresid = maxval( system % atom %  nresid )   ! <== polymer
+counter   = 0
 
 do k = n_z%inicio , n_z%fim 
 do j = n_y%inicio , n_y%fim 
 do i = n_x%inicio , n_x%fim 
 
     do n = 1 , system%N_of_atoms
+  
+        temp(counter+n) = system % atom(n)
 
         temp (counter+n) % xyz(1) = system % atom(n) % xyz(1) + i*system%box(1)
         temp (counter+n) % xyz(2) = system % atom(n) % xyz(2) + j*system%box(2)
@@ -790,22 +806,27 @@ do i = n_x%inicio , n_x%fim
 
         if( temp(counter+n) % fragment == 'S' ) temp(counter+n)%nresid = system%atom(n)%nresid + S_counter
         if( temp(counter+n) % fragment == 'F' ) temp(counter+n)%nresid = system%atom(n)%nresid + F_counter
-        if( temp(counter+n) % fragment == 'P' ) temp(counter+n)%nresid = system%atom(n)%nresid + P_counter
 
-        if( abs(i)+abs(j)+abs(k) == 0 ) temp(counter+n) % copy = .true.
+        if( abs(i)+abs(j)+abs(k) == 0 ) then
+            temp(counter+n) % copy = .true.
+        else
+            temp(counter+n) % copy = system%atom(n)%copy
+        end if
 
     end do
 
-    counter    =  counter   +  system % N_of_atoms
-    S_counter  =  S_counter +  maxval( system%atom%nresid , system%atom%fragment == 'S' )       &
-                            -  minval( system%atom%nresid , system%atom%fragment == 'S' ) + 1
-    F_counter  =  F_counter +  maxval( system%atom%nresid , system%atom%fragment == 'F' )       &
-                            -  minval( system%atom%nresid , system%atom%fragment == 'F' ) + 1
-    P_counter  =  P_counter +  max_nresid
+    counter   = counter   + system % N_of_atoms
+    S_counter = S_counter + S_span
+    F_counter = F_counter + F_span
 
 end do
 end do
 end do    
+
+! consistency check
+if (counter /= New_N_of_atoms) then
+    error stop "Replication error: counter /= New_N_of_atoms"
+end if
 
 ! final setting of the system array ...
 CALL move_alloc(from=temp,to=system%atom)
@@ -815,14 +836,14 @@ system%box(1) = ( n_x%fim - n_x%inicio + 1 ) * system%box(1)
 system%box(2) = ( n_y%fim - n_y%inicio + 1 ) * system%box(2)
 system%box(3) = ( n_z%fim - n_z%inicio + 1 ) * system%box(3)
 
-system%N_of_Surface_atoms      =  system%N_of_Surface_atoms      * Replication_factor
-system%N_of_Solvent_atoms      =  system%N_of_Solvent_atoms      * Replication_factor
-system%N_of_Solvent_molecules  =  system%N_of_Solvent_molecules  * Replication_factor
+system%N_of_Surface_atoms     = system%N_of_Surface_atoms     * Replication_factor
+system%N_of_Solvent_atoms     = system%N_of_Solvent_atoms     * Replication_factor
+system%N_of_Solvent_molecules = system%N_of_Solvent_molecules * Replication_factor
 
 if( replicate_ALL == .false.) &
 then
-        where(system%atom%copy == .false.) system%atom%delete = .true.
-        CALL Eliminate_Fragment( system )    
+    where(system%atom%copy == .false.) system%atom%delete = .true.
+    CALL Eliminate_Fragment( system, frame=0 )    
 end if
 
 write(string,'(i3.3)') Replication_Factor
