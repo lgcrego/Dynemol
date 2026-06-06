@@ -137,7 +137,7 @@ select case( choice )
         ! do nothing, proceed ...
 
     case( '2' )
-        write(*,'(/a)', advance='no') green // &
+        write(*,'(/a)') green // &
         "enter the residue numbers to be changed: separated by spaces, or in the format 'first:last' (press ENTER to send) : " // reset
         read (*,'(a)') line
 
@@ -671,7 +671,7 @@ write(*,'(a)') bold // cyan // 'Modify MMSymbol          (2)' // reset
 write(*,'(a)') bold // cyan // 'Modify Fragment          (3)' // reset
 write(*,'(a)') bold // cyan // 'Modify residue name      (4)' // reset
 write(*,'(a)') bold // cyan // 'Residue number           (5)' // reset
-write(*,'(a)') bold // cyan // 'COPY stuff               (6)' // reset
+write(*,'(a)') bold // cyan // 'COPY / REPLICATE stuff   (6)' // reset
 write(*,'(a)') bold // cyan // 'DELETE stuff             (7)' // reset
 write(*,'(a)') bold // cyan // 'TRANSLATE stuff          (8)' // reset
 write(*,'(a)') bold // cyan // 'ROTATE stuff             (9)' // reset

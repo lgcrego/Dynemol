@@ -3,6 +3,7 @@ module Trajectory_routines
 use types_m
 use constants_m
 use ansi_colors
+use color_funcs
 use util_m              , only : read_file_name
 use EDT_util_m          , only : on_the_fly_tuning, parse_this
 use GMX_routines        , only : Dump_pdb
@@ -247,7 +248,6 @@ do
             do i = 1 , size( trj )
                 CALL Replicate( trj(i) )
             end do
-
             CALL connect( trj(1) )
 
        case( 12 )
@@ -854,8 +854,8 @@ deallocate( pm )
 5 FORMAT(a5,t15,a35,f12.7)
 6 FORMAT(a72)
 
-write(*,'(/a)') ' >>> frames-output.pdb : writing done, press any key <<<'
-write(*,'(/a)') "That's all ? (y/n)"
+write(*,'(/a)') orange_(' >>> frames-output.pdb : writing done, press any key <<<')
+write(*,'(/a)') yellow_("That's all ? (y/n)")
 read (*,'(a)') YorN
 if( YorN /= "n" ) stop
 
