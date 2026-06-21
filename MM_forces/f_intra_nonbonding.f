@@ -536,24 +536,5 @@ end subroutine InitializeStressMatrix
 end subroutine ConcludeStressMatrix
 !
 !
-!===================
- function ERFC ( X )
-!===================
-! ERFC = (1 - ERF), complementary error function ...
- implicit none
- real*8 :: ERFC
- real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
- parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 
- parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
- parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
-
- T    = d_one / ( d_one + P * X )
- XSQ  = X * X
- TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
- ERFC = TP * EXP ( -XSQ )
-
-end function ERFC
-!
-!
 !
 end module FF_intra_nonbond
