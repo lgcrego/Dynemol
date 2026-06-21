@@ -210,13 +210,10 @@ end subroutine inter_DWFF
     implicit none
     integer , intent(in) :: atj , ati , atk , ithr
     
-    ! local parameter ...
-    real*8 :: r0 = 1.6d0
-    
     ! local_variables ...
     real*8 , dimension(3) :: rij, rik, f_atj, f_atk 
     real*8  :: rij_norm, rik_norm
-    real*8  :: cos_theta, U3, U03, exp_arg, exponential
+    real*8  :: r0, cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
     
     !================================
@@ -229,6 +226,8 @@ end subroutine inter_DWFF
     !
     ! MIND: the atomic sequence is JIK
     !================================
+
+     r0 = HOH%Angle(1,2)
     
      ! rij = r_j - r_i
      rij(:) = atom(atj) % xyz(:) - atom(ati) % xyz(:)

@@ -3,6 +3,7 @@ module Dissociative
     use types_m
     use constants_m
     use ansi_colors
+    use color_funcs
     use Read_parms
     use EDIT_routines, only : ReGroup, Bring_into_PBCBox
     use EDT_util_m   , only : parse_this
@@ -23,12 +24,11 @@ module Dissociative
     integer, allocatable :: H_ptr(:)             ! H-atom indices
     integer, allocatable :: OH_bond_order(:)     ! bond order per-water
     integer, allocatable :: HOH_indices(:,:)     ! per-water H indices (2)
-    integer, allocatable :: Zundel_counter(:,:)  ! life-time counter
     integer, allocatable :: dimer_counter (:,:)  ! life-time counter
     integer, allocatable :: dimer_list(:)        ! indices of atoms in dimers
 
-    real(8), allocatable :: table_OH(:,:)        ! OH distance table
-    real(8), allocatable :: table_OO(:,:)        ! OO distance table
+    real(8), allocatable :: OH_distance_table(:,:)
+    real(8), allocatable :: OO_distance_table(:,:)
 
     logical, allocatable :: HOH_modified(:)
     type(universe), allocatable :: new_trj(:)
@@ -38,7 +38,7 @@ module Dissociative
     integer :: counter = 0
 
     ! module parameters 
-    real*8, parameter :: OH_covalent_len = 1.25d0
+    real*8, parameter :: OH_covalent_len = 1.15d0
     real*8, parameter :: OO_dimer_len    = 3.00d0
     real*8, parameter :: OH_distance_ref = 0.96d0
     real*8, parameter :: HH_distance_ref = 1.52d0
@@ -117,8 +117,8 @@ subroutine bond_topology(frame, atom, Txyz)
     ! --------------------------------------------------------
     ! Compute O–H and O–O distances (minimum image convention)
     ! --------------------------------------------------------
-    table_OH = 0.0d0
-    table_OO = 0.0d0
+    OH_distance_table = 0.0d0
+    OO_distance_table = 0.0d0
 
     associate (OX => atom(O_ptr), HX => atom(H_ptr))
 
@@ -131,7 +131,7 @@ subroutine bond_topology(frame, atom, Txyz)
                 rij2   = dot_product(rij, rij)
                 rijlen = sqrt(rij2)
 
-                table_OH(i, j) = rijlen
+                OH_distance_table(i, j) = rijlen
             end do
         end do
 
@@ -144,10 +144,10 @@ subroutine bond_topology(frame, atom, Txyz)
                 rij2   = dot_product(rij, rij)
                 rijlen = sqrt(rij2)
 
-                table_OO(i, j) = rijlen
-                table_OO(j, i) = rijlen
+                OO_distance_table(i, j) = rijlen
+                OO_distance_table(j, i) = rijlen
             end do
-            table_OO(i, i) = huge(1.0d0)
+            OO_distance_table(i, i) = huge(1.0d0)
         end do
 
     end associate
@@ -158,7 +158,7 @@ subroutine bond_topology(frame, atom, Txyz)
     OH_bond_order = 0
 
     do concurrent (i = 1:nOX)
-        OH_bond_order(i) = count( table_OH(i, :) <  OH_covalent_len )
+        OH_bond_order(i) = count( OH_distance_table(i, :) <  OH_covalent_len )
     end do
 
     HOH_modified = .false.
@@ -173,10 +173,8 @@ subroutine bond_topology(frame, atom, Txyz)
         select case (OH_bond_order(i))
         case (0)
             write(*,*) "Error: Oxygen", i, "has no covalent hydrogens."
-            stop
         case (4:)
             write(*,*) "Error: Oxygen", i, "has bond order > 3."
-            stop
         end select
     end do
 
@@ -371,7 +369,7 @@ subroutine data_output(frame, n_frames, OH_bond_length, HOH_angle)
     type(statistics), intent(in) :: OH_bond_length, HOH_angle
 
     ! Local variables
-    integer :: i, un
+    integer :: i, un, HOH_sample_number
     integer :: idx(2)
     logical :: done
     integer, allocatable :: lifetime(:)
@@ -384,7 +382,8 @@ subroutine data_output(frame, n_frames, OH_bond_length, HOH_angle)
         write(unit1, '(a)') '# frame  <OH>  <HOH>'
     end if
 
-    write(unit1, '(i8,2f16.8)') frame, OH_bond_length%mean, HOH_angle%mean
+    HOH_sample_number = count(.not. HOH_modified)
+    write(unit1, '(i8,2f16.8,i4)') frame, OH_bond_length%mean, HOH_angle%mean, HOH_sample_number
 
     !------------------------------------------------------
     ! Final processing at last frame
@@ -396,16 +395,6 @@ subroutine data_output(frame, n_frames, OH_bond_length, HOH_angle)
     !======================================================
     allocate(lifetime(0))
     done = .false.
-
-    do while (.not. done)
-        idx = maxloc(Zundel_counter)
-        if (Zundel_counter(idx(1), idx(2)) == 0) then
-            done = .true.
-        else
-            lifetime = [lifetime, Zundel_counter(idx(1), idx(2))]
-            Zundel_counter(idx(1), idx(2)) = 0
-        end if
-    end do
 
     if (size(lifetime) > 0) then
         Zundel_lifetime%mean = sum(lifetime) / real(size(lifetime), 8)
@@ -496,7 +485,7 @@ end subroutine ask_user_visualization
 !=============================================
     open(newunit=unit1, file="DWFF.trunk/DWFF_data",   status="unknown", action="write")
     open(newunit=unit2, file="DWFF.trunk/dimer_list",  status="unknown", action="write")
-    open(newunit=unit3, file="DWFF.trunk/Zundel_list", status="unknown", action="write")
+    open(newunit=unit3, file="DWFF.trunk/charged_species_list", status="unknown", action="write")
     open(newunit=unit4, file="DWFF.trunk/PT_map.dat",  status="unknown", action="write")
     open(newunit=unit5, file="DWFF.trunk/free-ion_list.dat",  status="unknown", action="write")
 end subroutine open_output_files
@@ -624,91 +613,73 @@ subroutine identify_species(frame, atom)
     !--------------------------------------------------
     do i = 1, nOX
 
+        !-------------------------------------
+        ! charged species  
+        !-------------------------------------
+        if (OH_bond_order(i) /= 2) &
+        then
+            if (more_than_one) write(unit3,*) repeat(".", 70)
+
+            call save_charged_species(i, frame)
+
+            more_than_one = .true.
+        end if
+
         ! Only oxygens with excess protons
         if (OH_bond_order(i) <= 2) cycle
 
         O_acceptor = i
 
         ! Nearest oxygen to acceptor
-        O_donor = minloc(table_OO(:, i), dim=1)
-        d_OO    = table_OO(O_donor, O_acceptor)
+        O_donor = minloc(OO_distance_table(:, i), dim=1)
+        d_OO    = OO_distance_table(O_donor, O_acceptor)
 
         ! Mask this pair to avoid reuse
-        table_OO(O_acceptor, O_donor) = huge(1.0d0)
-        table_OO(O_donor, O_acceptor) = huge(1.0d0)
+        OO_distance_table(O_acceptor, O_donor) = huge(1.0d0)
+        OO_distance_table(O_donor, O_acceptor) = huge(1.0d0)
 
         total_charge = OH_bond_order(O_acceptor) + OH_bond_order(O_donor) - 4
 
         select case (total_charge)
 
         !==================================================
-        ! Candidate for hydronium-related species
+        ! Candidate for dimer species
         !==================================================
         case (1)
 
             if (d_OO < OO_dimer_len) then
-
                 ! Look for hydroxyl oxygen bound to donor
-                O_hydrox = minloc(table_OO(:, O_donor), dim=1)
-                d_hydrox = table_OO(O_donor, O_hydrox)
+                O_hydrox = minloc(OO_distance_table(:, O_donor), dim=1)
+                d_hydrox = OO_distance_table(O_donor, O_hydrox)
 
-                table_OO(O_donor, O_hydrox) = huge(1.0d0)
-                table_OO(O_hydrox, O_donor) = huge(1.0d0)
+                OO_distance_table(O_donor, O_hydrox) = huge(1.0d0)
+                OO_distance_table(O_hydrox, O_donor) = huge(1.0d0)
 
                 hydrox_charge = OH_bond_order(O_hydrox) - 2
 
                 !-------------------------------
-                ! Zundel-like configuration
-                !-------------------------------
-                if (hydrox_charge < 0) then
-
-                    Zundel_counter(O_hydrox, O_acceptor) = Zundel_counter(O_hydrox, O_acceptor) + 1
-
-                    if (more_than_one) write(unit3,*) repeat(".", 48)
-
-                    write(unit3,*) frame, "Zundel", &
-                                   O_ptr(O_donor), O_ptr(O_acceptor), d_OO, total_charge
-                    write(unit3,*) frame, "Hydrox", &
-                                   O_ptr(O_hydrox), O_ptr(O_acceptor), d_hydrox, hydrox_charge
-
-                    more_than_one = .true.
-
-                !-------------------------------
                 ! Neutral dimer
                 !-------------------------------
-                elseif (hydrox_charge == 0) then
+                if (hydrox_charge == 0) then
+                    O_hydrox = minloc(OO_distance_table(:, O_acceptor), dim=1)
+                    d_hydrox = OO_distance_table(O_acceptor, O_hydrox)
 
-                    O_hydrox = minloc(table_OO(:, O_acceptor), dim=1)
-                    d_hydrox = table_OO(O_acceptor, O_hydrox)
-
-                    table_OO(O_acceptor, O_hydrox) = huge(1.0d0)
-                    table_OO(O_hydrox, O_acceptor) = huge(1.0d0)
+                    OO_distance_table(O_acceptor, O_hydrox) = huge(1.0d0)
+                    OO_distance_table(O_hydrox, O_acceptor) = huge(1.0d0)
 
                     if (OH_bond_order(O_acceptor) + OH_bond_order(O_hydrox) == 4) then
                         dimer_charge = 0
                         write(unit2,2) frame, O_ptr(O_hydrox), O_ptr(O_acceptor), d_hydrox
-                        dimer_counter(O_donor, O_acceptor) = &
-                            dimer_counter(O_donor, O_acceptor) + 1
+                        dimer_counter(O_donor, O_acceptor) = dimer_counter(O_donor, O_acceptor) + 1
                     end if
-
                 end if
-
-            else
-                ! Isolated hydronium
-                write(unit3,*) frame, "H3O+", O_ptr(O_donor), O_ptr(O_acceptor), d_OO
             end if
-
-        !==================================================
-        ! Candidate for hydroxide
-        !==================================================
-        case (-1)
-            write(unit3,*) frame, "HO-", O_ptr(O_donor), O_ptr(O_acceptor), d_OO
 
         end select
 
     end do
 
-    write(unit3,*) repeat("=", 48)
+    write(unit3,*) repeat("=", 70)
 
 2 format(4x, i8, 6x, i8, 5x, i8, 7x, f8.4)
 
@@ -744,8 +715,8 @@ subroutine identify_dimer(frame, atom)
         O_acceptor = i
 
         ! Nearest oxygen donor
-        O_donor = minloc(table_OO(:, i), dim=1)
-        d_OO    = table_OO(O_donor, O_acceptor)
+        O_donor = minloc(OO_distance_table(:, i), dim=1)
+        d_OO    = OO_distance_table(O_donor, O_acceptor)
 
         if( d_OO > OO_dimer_len ) then
           if (frame /= 1) then
@@ -776,7 +747,7 @@ subroutine identify_dimer(frame, atom)
             ! choose the hydrogen of the donor molecule that
             ! is closest to the acceptor oxygen
             !--------------------------------------------------
-            if (table_OH(O_acceptor, j+1) < table_OH(O_acceptor, j+2)) then
+            if (OH_distance_table(O_acceptor, j+1) < OH_distance_table(O_acceptor, j+2)) then
                 PT_indx = H_ptr(j + 1)
             else
                 PT_indx = H_ptr(j + 2)
@@ -873,8 +844,8 @@ subroutine preprocess(atom, n_frames)
     ! Basic system sizes
     !------------------------------------
     n_atoms = size(atom)
-    nOX     = count(atom%symbol == "O")
-    nHX     = count(atom%symbol == "H")
+    nOX     = count(atom%MMsymbol == "OX")
+    nHX     = count(atom%MMsymbol == "HX")
 
     !------------------------------------
     ! Build pointer lists for O and H
@@ -885,11 +856,11 @@ subroutine preprocess(atom, n_frames)
     i = 0
     j = 0
     do k = 1, n_atoms
-        select case (atom(k)%symbol)
-        case ("O")
+        select case (atom(k)%MMsymbol)
+        case ("OX")
             i = i + 1
             O_ptr(i) = k
-        case ("H")
+        case ("HX")
             j = j + 1
             H_ptr(j) = k
         end select
@@ -898,15 +869,14 @@ subroutine preprocess(atom, n_frames)
     !------------------------------------
     ! Allocate module-level work arrays
     !------------------------------------
-    allocate(table_OH(nOX, nHX), source=0.0d0)
-    allocate(table_OO(nOX, nOX), source=0.0d0)
+    allocate(OH_distance_table(nOX, nHX), source=0.0d0)
+    allocate(OO_distance_table(nOX, nOX), source=0.0d0)
 
     allocate(OH_bond_order(nOX), source=0)
 
     allocate(HOH_indices(nOX, 3), source=0)
     allocate(HOH_modified(nOX), source=.false.)
 
-    allocate(Zundel_counter(nOX, nOX), source=0)
     allocate(dimer_counter (nOX, nOX), source=0)
 
     !------------------------------------
@@ -915,6 +885,31 @@ subroutine preprocess(atom, n_frames)
     allocate(new_trj(n_frames))
 
 end subroutine preprocess
+!
+!
+!
+!========================================
+subroutine save_charged_species(i, frame)
+!========================================
+    implicit none
+    integer, intent(in) :: i, frame
+
+    ! Local variables
+    integer :: total_charge
+
+    select case(OH_bond_order(i))
+         case(:1)
+              total_charge = (-1)*OH_bond_order(i) 
+              write(unit3,10) "frame = ", frame, "OH-", "Oxygen = ",O_ptr(i), "charge = ", total_charge
+
+         case(3:)
+              total_charge = OH_bond_order(i) 
+              write(unit3,10) "frame = ", frame, "H3O+", "Oxygen = ",O_ptr(i), "charge = ", total_charge 
+    end select
+
+10  format(t1,a8,i4,t21,a4,t33,a9,i4,t54,a9,i4)
+
+end subroutine save_charged_species
 !
 !
 !

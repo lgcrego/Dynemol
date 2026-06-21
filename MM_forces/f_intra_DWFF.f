@@ -244,13 +244,10 @@ end subroutine evaluate_2body_DWFF
 !==============================
     implicit none
     
-    ! local parameter ...
-    real*8 :: r0 = 1.6
-    
     ! local_variables ...
     real*8 , dimension (3):: rij, rik 
     real*8  :: rij_norm, rik_norm, fxyz
-    real*8  :: cos_theta, U3, U03, exp_arg, exponential
+    real*8  :: r0, cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
     integer :: i, j, k, l, n, ati, atj, atk 
     
@@ -262,6 +259,8 @@ end subroutine evaluate_2body_DWFF
     !                I 
     !================================
     
+    r0 = HOH%Angle(1,2)
+
     allocate( f_ang (MM% N_of_atoms,3) , source = D_zero )
     
     ang_erg = D_zero
@@ -359,26 +358,6 @@ end subroutine intra_3body_DWFF
     end associate
     
 end subroutine get_bond_triplet
-!
-!
-!
-!===================
- function ERFC ( X )
-!===================
-    ! ERFC = (1 - ERF), complementary error function ...
-    implicit none
-    real*8 :: ERFC
-    real*8 :: A1, A2, A3, A4, A5, P, T, X, XSQ, TP
-    parameter ( A1 = 0.254829592d0, A2 = -0.284496736d0 ) 
-    parameter ( A3 = 1.421413741d0, A4 = -1.453122027d0 ) 
-    parameter ( A5 = 1.061405429d0, P  =  0.3275911d0   ) 
-    
-    T    = d_one / ( d_one + P * X )
-    XSQ  = X * X
-    TP   = T * (A1 + T * (A2 + T * (A3 + T * (A4 + T * A5))))
-    ERFC = TP * EXP ( -XSQ )
-
-end function ERFC
 !
 !
 !
