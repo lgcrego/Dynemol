@@ -115,7 +115,6 @@ do a = 1 , MM % N_of_species
             i = i + 1
  
         end do read_loop1
-        backspace(33)
 
         N_of_atoms = species(a) % N_of_atoms
 

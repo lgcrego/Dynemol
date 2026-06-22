@@ -261,10 +261,11 @@ end subroutine get_DWFF_Parameters
 !
 !
 !
-!===============================
- subroutine read_DWFF_parameters
-!===============================
+!======================================
+ subroutine read_DWFF_parameters(funit)
+!======================================
 implicit none
+integer, intent(in):: funit
 
 !local variables
 character(len=120) :: line
@@ -274,7 +275,7 @@ integer :: pos, fim, ioerr
 from_outside = .false.
 
 do 
-    read(33,'(A)',iostat=ioerr) line
+    read(funit,'(A)',iostat=ioerr) line
 
     ! End-of-file
     if (ioerr < 0) exit

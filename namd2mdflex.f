@@ -121,7 +121,6 @@ do a = 1 , MM % N_of_species
             FF(counter) % MM_charge  = species(a) % atom(i) % MM_charge 
             FF(counter) % mass       = species(a) % atom(i) % mass 
         end do 
-        backspace(33)
 
         N_of_atoms = species(a) % N_of_atoms
 
@@ -341,7 +340,7 @@ do a = 1 , MM % N_of_species
 
                 line = to_upper_case(line)
                 if( verify( "DWFF" , line ) == 0 ) then
-                    call read_DWFF_parameters
+                    call read_DWFF_parameters(funit=33)
                     call check_DWFF_parameters(species(a)%atom)
                     exit
                 end if
@@ -756,7 +755,7 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
     FF % eps14 = FF % eps
     FF % sig14 = FF % sig
     do i = 1 , NBondParms
-        if( InputReals(i,5) /= D_zero ) then
+        if( InputChars(i,2) == "LJ" .AND. InputReals(i,5) /= D_zero ) then
             where( (FF % MMSymbol == InputChars(i,1)) .OR. (adjustR(FF % MMSymbol(1:2))//"*" == InputChars(i,1)) )
                 FF % sig14 = InputReals(i,4)
                 FF % eps14 = abs(InputReals(i,3)) 
@@ -884,6 +883,7 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
  
         allocate( SpecialPairs14 ( SpecialNBParms ) )
 
+        ! always treated as LJ — BUCK and DWFF types ignored for SpecialPairs14
         forall(i=1:2) SpecialPairs14(:SpecialNBParms) % MMSymbols(i) = InputChars(:SpecialNBParms,i)
 
         SpecialPairs14(:SpecialNBParms) % Parms(1) = InputReals(:SpecialNBParms,6)
@@ -1205,8 +1205,9 @@ do a = 1 , MM % N_of_species
                   .AND. species(a)%atom(j)% BUCK &
                   .AND. (species(a)%atom(i)%buckA + species(a)%atom(j)%buckA /= 0.0)
 
-             flag3  =   (species(a)%atom(i)%MMSymbol == "HX") .or. (species(a)%atom(i)%MMSymbol == "OX") &
-                  .AND. (species(a)%atom(j)%MMSymbol == "HX") .or. (species(a)%atom(j)%MMSymbol == "OX")
+             flag3  =   ( (species(a)%atom(i)%MMSymbol == "HX") .or. (species(a)%atom(i)%MMSymbol == "OX") ) &
+                  .AND. ( (species(a)%atom(j)%MMSymbol == "HX") .or. (species(a)%atom(j)%MMSymbol == "OX") )
+
              if(flag3) then
                        flag1 = .false.
                        flag2 = .false.
