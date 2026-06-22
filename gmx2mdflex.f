@@ -112,7 +112,6 @@ do a = 1 , MM % N_of_species
             i = i + 1
  
         end do read_loop1
-        backspace(33)
 
         N_of_atoms = species(a) % N_of_atoms
 
@@ -854,6 +853,7 @@ open(33, file=dynemolworkdir//'topol.top', status='old', iostat=ioerr, err=10)
 
         allocate( SpecialPairs14 ( NPairsParms ) )
 
+        ! always treated as LJ — BUCK and DWFF types ignored for SpecialPairs14
         forall(i=1:2) SpecialPairs14(:NPairsParms) % MMSymbols(i) = InputChars(:NPairsParms,i)
 
         SpecialPairs14(:NPairsParms) % Parms(1) = InputReals(:NPairsParms,1)
