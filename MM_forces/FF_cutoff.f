@@ -61,7 +61,7 @@ contains
     frecut   = coulomb * ( ERFC(arg_Wolf) + TWO*irsqPI*KAPPA*rcut*expar ) / rcut2
    
     ! vself part of the Coulomb calculation
-    total_q2 = sum( atom(:)%charge**2 )
+    total_q2 = sum( atom(:)% MM_charge**2 )
     vself    = (HALF*vrecut + irsqPI*KAPPA*coulomb) * total_q2
     vself    = vself*factor3
 
