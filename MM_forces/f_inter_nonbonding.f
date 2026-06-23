@@ -25,21 +25,29 @@ contains
 implicit none
 
 !local variables ...
-real*8 , allocatable :: tmp_f_inter(:,:)
+real*8 , allocatable :: tmp_f_inter(:,:,:)
 real*8               :: rkl(3) , cm_kl(3)
+real*8               :: virial_private(3,3)
 real*8               :: Ecoul_damped , Fcoul , fs , vsr  , rkl2 
-integer              :: i , j , k , l , atk , atl, nresidk, nresidl
+integer              :: i , j , k , l , atk , atl, nresidk, nresidl, ithr, numthr
 
-allocate( tmp_f_inter (MM % N_of_atoms, 3), source = D_zero )
+numthr = OMP_get_max_threads()  !safe if runtime ≤ max_threads, which is usually true  
+
+allocate( tmp_f_inter (MM % N_of_atoms, 3, numthr), source = D_zero )
 evdw = D_zero
 Coul_inter = D_zero
 
 !##############################################################################
 ! INTER-MOLECULAR vdW and Coulomb forces ...
-!$OMP parallel DO &
-!$OMP default (shared) &
-!$OMP private (k, l, atk, atl, rkl, rkl2, fs, vsr, Ecoul_damped, Fcoul, i, j, nresidk, nresidl, cm_kl)  &
-!$OMP reduction (+: tmp_f_inter, Coul_inter, evdw, virial_tensor) 
+!$OMP parallel default (shared) &
+!$OMP private (k, l, atk, atl, rkl, rkl2, fs, vsr, Ecoul_damped, Fcoul, i, j, nresidk, nresidl, cm_kl, ithr, virial_private)  &
+!$OMP reduction (+: Coul_inter, evdw) 
+
+! initialize thread-local variables                                                                                                                 
+ithr = OMP_get_thread_num() + 1
+virial_private = D_zero
+
+!$OMP do schedule(dynamic,4)
 do k = 1 , MM % N_of_atoms - 1
 do l = k+1 , MM % N_of_atoms
 
@@ -80,8 +88,8 @@ do l = k+1 , MM % N_of_atoms
             case(2) !  <== this is a BUCK special-pair
                     call Buckingham( k , l , atk , atl , rkl2 , fs , vsr )
 
-            case(3) !  <== this is a DWFF special-pair
-                    CALL warning("f_inter.f: DWFF molecule reached a forbidden kernel")
+            case default 
+                    CALL warning("f_inter.f: unexpected special_pair_mtx value")
                     stop 
                     
      end select
@@ -90,8 +98,8 @@ do l = k+1 , MM % N_of_atoms
      call Electrostatic( k , l , rkl2 , Fcoul , Ecoul_damped )
 
      ! attention: calculation subject to non-associative floating-point arithemtic
-     tmp_f_inter(k,:) = tmp_f_inter(k,:) + (fs + Fcoul) * rkl(:)
-     tmp_f_inter(l,:) = tmp_f_inter(l,:) - (fs + Fcoul) * rkl(:)
+     tmp_f_inter(k,1:3,ithr) = tmp_f_inter(k,1:3,ithr) + (fs + Fcoul) * rkl(1:3)
+     tmp_f_inter(l,1:3,ithr) = tmp_f_inter(l,1:3,ithr) - (fs + Fcoul) * rkl(1:3)
 
      !Energy
      evdw       = evdw + vsr
@@ -105,14 +113,19 @@ do l = k+1 , MM % N_of_atoms
            cm_kl(:) = molecule(nresidk)% cm(:) - molecule(nresidl) % cm(:)
            cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
            do i=1,3 ; do j=i,3
-              virial_tensor(i,j) = virial_tensor(i,j) + cm_kl(i)*(fs + Fcoul)*rkl(j)
+              virial_private(i,j) = virial_private(i,j) + cm_kl(i)*(fs + Fcoul)*rkl(j)
            end do; end do
      end if
      !---------------------------------------------------------------------------------
 
 end do
 end do
-!$OMP end parallel do
+!$OMP end do
+! reduce thread-local virial into the shared virial_tensor safely                                                                                   
+!$OMP critical                                                                                                                                      
+   virial_tensor = virial_tensor + virial_private                                                                                                   
+!$OMP end critical                                                                                                                                  
+!$OMP end parallel   
 
 !##############################################################################
 evdw       = evdw * factor3
@@ -120,8 +133,11 @@ Coul_inter = Coul_inter * factor3
 pot_INTER  = evdw + Coul_inter
 
 ! force units = J/mts = Newtons ...
+! manual reduction (+: tmp_f_inter) ...
 do i = 1, MM % N_of_atoms
-    atom(i) % f_inter_nonbond(:) = tmp_f_inter(i,:)
+    do j = 1,3
+        atom(i) % f_inter_nonbond(j) = sum(tmp_f_inter(i,j,:))
+    end do
 end do
 
 deallocate ( tmp_f_inter )
@@ -165,7 +181,6 @@ if( special_pair_mtx(k,l) == 0 ) then
 else
       
       read_loop: do  n = 1, size(SpecialPairs)
-      
          flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
                  ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
          flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
@@ -176,8 +191,14 @@ else
             eps = SpecialPairs(n)%Parms(2) 
             exit read_loop
          end if
-      
       end do read_loop
+
+      ! consistency check
+      if( .not. (flag1 .OR. flag2) ) then
+          call warning("no SpecialPair match for atoms "//atom(k)%MMSymbol//" "//atom(l)%MMSymbol)
+          stop
+      end if
+
 endif
 
 r_kl = SQRT(rkl2)
@@ -226,7 +247,6 @@ if( special_pair_mtx(k,l) == 0 ) then
 else
       
       read_loop: do  n = 1, size(SpecialPairs)
-      
          flag1 = ( adjustl( SpecialPairs(n) % MMSymbols(1) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
                  ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(l) % MMSymbol ) )
          flag2 = ( adjustl( SpecialPairs(n) % MMSymbols(2) ) == adjustl( atom(k) % MMSymbol ) ) .AND. &
@@ -238,15 +258,21 @@ else
             C = SpecialPairs(n)% Parms(3)
             exit read_loop
          end if
-      
       end do read_loop
+
+      ! consistency check
+      if( .not. (flag1 .OR. flag2) ) then
+          call warning("no SpecialPair match for atoms "//atom(k)%MMSymbol//" "//atom(l)%MMSymbol)
+          stop
+      end if
+
 end if
 
 r_kl = SQRT(rkl2)
 
 ir2 = 1.d0 / rkl2
 ir6 = ir2 * ir2 * ir2
-ir8 = ir2 * ir2 * ir2 * ir2
+ir8 = ir6 * ir2
 
 !Force
 fs = A*B*exp(-B*r_kl)/r_kl - SIX*C*ir8
@@ -312,14 +338,14 @@ real*8 :: chrgk , chrgl , ir2 , KRIJ , expar , r_kl
 
 ! Electrostatic Coulomb Interaction ...
 
-chrgk = atom(k)% charge
-chrgl = atom(l)% charge
+chrgk = atom(k)% MM_charge
+chrgl = atom(l)% MM_charge
 
 if( QMMM ) &
 then
      ! only for f_inter, long range interactions
-     chrgk = atom(k)% charge + Net_Charge(k)
-     chrgl = atom(l)% charge + Net_Charge(l)
+     chrgk = atom(k)% MM_charge + Net_Charge(k)
+     chrgl = atom(l)% MM_charge + Net_Charge(l)
 endif
 
 r_kl  = SQRT(rkl2)

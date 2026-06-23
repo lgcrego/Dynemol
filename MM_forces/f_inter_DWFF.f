@@ -101,7 +101,7 @@ end subroutine f_DWFF_inter
     real*8  :: rkl2 , force , erg
     real*8 :: virial_private(3,3)
     integer :: i, j, k, l, pair_of_kind
-    integer :: nresidl, nresidk, OMP_get_thread_num, ithr, numthr
+    integer :: nresidl, nresidk, ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
     
