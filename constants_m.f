@@ -129,7 +129,7 @@ MODULE color_funcs
 use constants_m 
 implicit none
 
-    public:: red_, green_, yellow_, blue_, magenta_, orange_
+    public:: red_, green_, yellow_, blue_, magenta_, cyan_, orange_
     public:: red_bg, green_bg, blue_bg, magenta_bg
 
     private
@@ -225,5 +225,14 @@ implicit none
         character(len=:), allocatable :: magenta_bg
         magenta_bg = bg_magenta//string//reset
     end function magenta_bg
+!   
+    !================================================
+    function cyan_(string)
+        character(len=*), intent(in) :: string
+
+        !local variable
+        character(len=:), allocatable :: cyan_
+        cyan_ = cyan//string//reset
+    end function cyan_
 
 END MODULE color_funcs
