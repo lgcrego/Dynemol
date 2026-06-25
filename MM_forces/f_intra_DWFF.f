@@ -2,6 +2,7 @@ module F_intra_DWFF
 
     use constants_m
     use omp_lib
+    use color_funcs
     use parameters_m , only: PBC 
     use MD_read_m    , only: atom , molecule , MM 
     use for_force    , only: rcut, rcut2, vscut, fscut, KAPPA, DWFF_intra
@@ -112,7 +113,7 @@ end subroutine DW_f_intra
          if ( .not. molecule(i)% DWFF ) cycle
     
          do j = 1 , molecule(i) % NintraIJ
-    
+
               k = molecule(i) % IntraIJ(j,1) 
               l = molecule(i) % IntraIJ(j,2) 
 
@@ -220,7 +221,7 @@ end subroutine intra_2body_DWFF
     Ecoul = coulomb * U0 * decay_Wolf * irkl
     
     ! Force
-    ! Fcoul (not damped)
+    ! Fcoul (damped)
     a3 = a2 * d2
     a4 = decay_Wolf + TWO*irsqPI*KAPPA*rkl*exp_Wolf
     Fcoul = coulomb * (U0*a4*ir2*irkl - a3*exp_arg2*decay_Wolf*ir2)
@@ -268,7 +269,7 @@ end subroutine evaluate_2body_DWFF
     do i = 1 , MM % N_of_molecules
     
          if ( .not. molecule(i)% DWFF ) cycle
-    
+
             ! MIND: the atomic sequence is JIK, with ATOM I AT THE VERTEX
             call get_bond_triplet(i, ati, atj, atk)
     
@@ -316,7 +317,7 @@ end subroutine evaluate_2body_DWFF
     
                 f_ang(ati,:) = -f_ang(atj,:) -f_ang(atk,:)
     end do
-    
+
 end subroutine intra_3body_DWFF
 !
 !
@@ -325,6 +326,7 @@ end subroutine intra_3body_DWFF
  subroutine get_bond_triplet(i, ati, atj, atk)
 ! Given intraIJ array, determine the OX/HX atom indices
 ! and return them in ati, atj, atk.
+! subroutine revised
 !======================================================
     implicit none
     integer, intent(in)  :: i
@@ -332,8 +334,9 @@ end subroutine intra_3body_DWFF
     
     ! local variables
     integer :: idx1, idx2, idx3, idx4
-    
+
     associate( intraIJ => molecule(i)% intraIJ )
+
           ! Unpack once
           idx1 = intraIJ(1,1)
           idx2 = intraIJ(1,2)
@@ -343,18 +346,19 @@ end subroutine intra_3body_DWFF
           if (atom(idx1)%MMSymbol == "OX") then
               ati = idx1
               atj = idx2
-              atk = merge(idx3, idx4, atom(idx3)%MMSymbol == "HX")
+              atk = merge(idx3, idx4, mask = (atom(idx3)%MMSymbol == "HX") .and. (idx3 /= idx2) )
     
           elseif (atom(idx2)%MMSymbol == "OX") then
               ati = idx2
               atj = idx1
-              atk = merge(idx3, idx4, atom(idx3)%MMSymbol == "HX")
+              atk = merge(idx3, idx4,  mask = (atom(idx3)%MMSymbol == "HX") .and. (idx3 /= idx1) )
     
           else
               atj = idx1
               atk = idx2
               ati = merge(idx3, idx4, atom(idx3)%MMSymbol == "OX")
           end if
+
     end associate
     
 end subroutine get_bond_triplet
@@ -365,9 +369,6 @@ end subroutine get_bond_triplet
 subroutine set_local_parameters()
 !================================
     implicit none
-    
-    !local variables
-    real*8 :: chrg_decay
     
     A = HOH% SR(1,1)
     B = HOH% SR(1,2)

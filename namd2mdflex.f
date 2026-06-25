@@ -152,7 +152,7 @@ do a = 1 , MM % N_of_species
         allocate( species(a) % funct_bond ( Nbonds     ) )
         allocate( species(a) % bond_type  ( Nbonds     ) )
 
-        forall(i=1:2) species(a) % bonds(:Nbonds,i) = InputIntegers(:Nbonds,i)
+        species(a)%bonds(1:Nbonds,1:2) = InputIntegers(1:Nbonds,1:2)
 
         select case (species(a)% atom(1)% residue)
                case default
@@ -224,25 +224,27 @@ do a = 1 , MM % N_of_species
         backspace(33)
         read(33,*) Nimpropers
 
-        ! reading full lines ...
-        do k = 1 , ceiling(Nimpropers/two)-1
+        if( Nimpropers > 0 ) then
+            ! reading full lines ...
+            do k = 1 , ceiling(Nimpropers/two)-1
+                select case ( MM_input_format )
+                    case( "GAFF" )
+                    read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,2 )
+                    case default
+                    read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,2 )
+                end select
+            end do 
+
+            ! reading incomplete lines ...
             select case ( MM_input_format )
                 case( "GAFF" )
-                read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,2 )
+                read(33 , * , iostat=ioerr )  &
+                ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
                 case default
-                read(33 , * , iostat=ioerr )  ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,2 )
+                read(33 , * , iostat=ioerr )  &
+                ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
             end select
-        end do 
-
-        ! reading incomplete lines ...
-        select case ( MM_input_format )
-            case( "GAFF" )
-            read(33 , * , iostat=ioerr )  &
-            ( ( InputIntegers(Ndiheds+(k-1)*2+n,GAFF_order(j)) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
-            case default
-            read(33 , * , iostat=ioerr )  &
-            ( ( InputIntegers(Ndiheds+(k-1)*2+n,           j ) , j=1,4 ) , n=1,merge(2,mod(Nimpropers,2),mod(Nimpropers,2)==0) ) 
-        end select
+        end if
 
         !=========================================================================
 
