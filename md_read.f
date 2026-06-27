@@ -380,7 +380,7 @@ using_barostat% anyone = (tau_p < real_large)
 !---------------------------------------------
 
 ! use this to debug: { atom , molecule , species , FF } ...
-!call debug_MM( FF )
+!call debug_MM( atom )
 
 CALL MM_diagnosis( )
 
@@ -1279,7 +1279,7 @@ character(len=:) , allocatable  :: string(:)
      write(51,"(A)") "[ DWFF parameters ]"               
      write(51,*) ""               
 
-     call dump_DWFF_parameters 
+     call dump_DWFF_parameters(f_unit=51)
 
  end if
 !========================================================================================================

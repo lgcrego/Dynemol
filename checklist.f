@@ -211,6 +211,9 @@ if( nuclear_matter == "MDynamics" ) then
    write( number_string , '(F8.5)' ) damping_Wolf
    write(10,'(" Wolf_damping    : " , A8)') adjustl(number_string)
    write(10,'(" MM_input_format : " , A4)') MM_input_format
+   if (to_upper_case(trim(adjustl(DWFF_type))) /= "NONE") then
+       write(10,'(" use_DWFF_type   : ",A8)') DWFF_type
+   end if
    write(10,'(" MM_log_step     : " , I0)') MM_log_step
    write(10,'(" MM_frame_step   : " , I0)') MM_frame_step
    write(10,*)
