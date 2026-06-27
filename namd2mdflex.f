@@ -14,7 +14,7 @@ use NonBondPairs       , only : Identify_NonBondPairs
 use Babel_routines_m   , only : TO_UPPER_CASE
 use gmx2mdflex         , only : SpecialPairs , SpecialPairs14
 use setup_checklist    , only : Checking_Topology
-use Build_DWFF         , only : include_DWFF_parameters, read_DWFF_parameters, check_DWFF_parameters
+use Build_DWFF         , only : include_DWFF_parameters, set_H_pointers, HOH => HOH_diss_parms
 
 public :: prm2mdflex, psf2mdflex, convert_NAMD_velocities, SpecialPairs, SpecialPairs14
 
@@ -64,6 +64,12 @@ do a = 1 , MM % N_of_species
         call systemQQ("cp "//string//" log.trunk/.")
     EndIf
 
+    ! dissociative water force-field for HOH residues ...
+    if( species(a)% residue == "HOH" ) then
+         species(a)% DWFF = .true.
+         call include_DWFF_parameters
+    end if
+
     open(33, file=dynemolworkdir//string, status='old',iostat=ioerr,err=101)
 
         101 if( ioerr > 0 ) then
@@ -78,8 +84,8 @@ do a = 1 , MM % N_of_species
             line = to_upper_case(line)
             ! checking the number of atoms declared in psf file ...
             if( verify( "!NATOM" , line ) == 0 ) then
-                      read(line,*,iostat=ioerr) dummy_int 
-                      exit
+                read(line,*,iostat=ioerr) dummy_int 
+                exit
             end if
         end do
 
@@ -111,6 +117,11 @@ do a = 1 , MM % N_of_species
             ! this is the standard; atomic flexibity can also be defined @ ad_hoc_MM_tuning ...    
             where( atom % my_species == a ) atom % flex = species(a) % flex
 
+            if( species(a)%DWFF ) then
+                if(species(a)%atom(i)%MMSymbol == "OX") species(a)%atom(i)%MM_charge = HOH%PointCharge_O
+                if(species(a)%atom(i)%MMSymbol == "HX") species(a)%atom(i)%MM_charge = HOH%PointCharge_H
+            end if
+
             counter = counter + 1
             FF(counter) % my_species = a
             FF(counter) % my_id      = species(a) % atom(i) % my_id
@@ -127,10 +138,6 @@ do a = 1 , MM % N_of_species
         ! convert residues to upper case ...
         forall( i=1:N_of_atoms ) species(a)% atom(i)% residue = TO_UPPER_CASE( species(a)% atom(i)% residue )
 
-        ! set dissociative water force-field for HOH residues ...
-        if( species(a)% residue == "HOH" ) species(a)% DWFF = .true.
-
-!        rewind 33
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
@@ -329,25 +336,6 @@ do a = 1 , MM % N_of_species
                    stop
 
             end select
-        end if
-
-!==============================================================================================
-        ! DWFF parameters :: reading ...
-        if( species(a)% DWFF )&
-        then
-            do
-                read(33,'(A)',iostat=ioerr) line
-                ! End-of-file
-                if (ioerr < 0) exit
-
-                line = to_upper_case(line)
-                if( verify( "DWFF" , line ) == 0 ) then
-                    call read_DWFF_parameters(funit=33)
-                    call check_DWFF_parameters(species(a)%atom)
-                    exit
-                end if
-
-            end do
         end if
 !==============================================================================================
 
@@ -899,8 +887,7 @@ open(33, file=dynemolworkdir//'input.prm', status='old', iostat=ioerr, err=10)
 
 99 close(33)   ! <== FINISHED READING PARAMETERS from INPUT.PRM 
 
-! get Dissociative Water Force Field (DWFF) parameners ... 
-if ( any(species%DWFF) ) call include_DWFF_parameters(species)
+if ( any(species%DWFF) ) call set_H_pointers(species)
 
 deallocate( InputChars , InputReals , InputIntegers )
 deallocate( Input2Chars , Input2Reals )

@@ -1279,7 +1279,7 @@ character(len=:) , allocatable  :: string(:)
      write(51,"(A)") "[ DWFF parameters ]"               
      write(51,*) ""               
 
-     call dump_DWFF_parameters 
+     call dump_DWFF_parameters(f_unit=51)
 
  end if
 !========================================================================================================

@@ -355,6 +355,10 @@ read_loop: do
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
                 mm_input_format = command
 
+        case( "USE_DWFF_TYPE" , "USE-DWFF-TYPE" )
+                read(line,*,iostat=ioerr) keyword , equal_sign , command
+                DWFF_type = command
+
         case( "MM_LOG_STEP" )
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
                 read(command,'(i)') MM_log_step
@@ -881,6 +885,7 @@ cutoff_radius = 50.d0
 damping_Wolf = 0.001d0
 driver_MM = "MM_Dynamics"
 read_velocities = .false.
+DWFF_type = "none"
 MM_log_step = 50
 MM_frame_step = 50
 Units_mm = "eV"
