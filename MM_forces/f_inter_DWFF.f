@@ -2,13 +2,14 @@ module F_inter_DWFF
 
     use constants_m
     use omp_lib
+    use MM_parms_module    , only : DWFF_type
     use syst               , only : using_barostat
     use parameters_m       , only : PBC
     use md_read_m          , only : atom, MM, molecule, special_pair_mtx
-    use Data_Output        , only : Net_Charge
     use Berendsen_Barostat , only : virial_tensor
     use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_inter
     use Build_DWFF         , only : HOH => HOH_diss_parms
+    use DWFF_QMMM          , only : qd_qd, mix_q_qd
 
     public :: f_DWFF_inter
 
@@ -335,13 +336,17 @@ end subroutine inter_3body_DWFF
     decay_Wolf = erfc(arg_Wolf)
     exp_Wolf   = EXP(-arg_Wolf**2)
     
-    if( HOH%contain_diffuse ) then
-        d1 = HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)* erf(arg*sqrt2)
-        d2 = HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3)* exp_arg2 
-    else
-        d1 = D_zero
-        d2 = D_zero
-    end if
+    select case( DWFF_type )
+        case("DIFFUSE")
+            d1 = HOH%Coul(m,2)*erf(arg) + HOH%Coul(m,3)*erf(arg*sqrt2)
+            d2 = HOH%Coul(m,2) + sqrt2*HOH%Coul(m,3)*exp_arg2 
+        case("SPC_LIKE")
+            d1 = D_zero
+            d2 = D_zero
+        case("QMMM")
+            d1 = qd_qd(k,l)*erf(arg) + mix_q_qd(k,l)*erf(arg*sqrt2)
+            d2 = qd_qd(k,l) + sqrt2*mix_q_qd(k,l)*exp_arg2
+    end select
 
     ! Energy
     U0 = HOH%Coul(m,1) + d1

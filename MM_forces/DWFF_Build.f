@@ -7,7 +7,8 @@ use type_m          , only: dynemoldir, warning
 use util_m          , only: TO_UPPER_CASE, split_line
 use MM_types        , only: Dissociative, MM_molecular, MM_atomic
 
-    public :: include_DWFF_parameters , HOH_diss_parms, dump_DWFF_parameters, set_H_pointers
+    public :: include_DWFF_parameters, dump_DWFF_parameters, set_H_pointers
+    public :: HOH_diss_parms
 
     private
 
@@ -37,24 +38,16 @@ contains
 implicit none
 
 !local variables ...
-character(len=8) :: which_DWFF
 
-which_DWFF = TO_UPPER_CASE(trim(adjustl(DWFF_type)))
-
-select case (which_DWFF) 
-
-    case("DIFFUSE" , "DIFUSE")
+select case (DWFF_type) 
+    case("DIFFUSE")
         call Diffuse_DWFF_Parameters
 
-    case("SPC_LIKE" , "SPC-LIKE")
+    case("SPC_LIKE")
         call SPC_like_DWFF_Parameters
 
     case("QMMM")
-!        call QMMM_DWFF_Parameters
-
-    case default
-        error stop "unknown choice for <use_DWFF_type> parameter: check your card.inpt file"
-
+        call QMMM_DWFF_Parameters
 end select
 
 call export_DWFF_Parameters
@@ -197,6 +190,74 @@ lambda  = lambda / factor3
 theta_0 = theta_0 * deg_2_rad   
 
 end subroutine SPC_like_DWFF_Parameters 
+!
+!
+!
+!===============================
+ subroutine QMMM_DWFF_Parameters 
+!===============================
+implicit none
+!-------------------------------------------------------------
+!                PARAMETERS FROM THE ARTICLE
+!
+!       BASED ON THE PAPER: 
+!       How to build a better pair potential for water
+!            Bertrand Guillot and Yves Guissani
+!           J. Chem. Phys. 2001, 114, 6720-6733
+!-------------------------------------------------------------
+
+call define_mtxA 
+
+!  Charges on Species
+PointCharge_O = -0.898d0
+PointCharge_H = +0.449d0
+
+DiffCharge_O  = D_zero
+DiffCharge_H  = D_zero
+
+!  Parameters of the Two-Body Potential
+OH_A_repulsive = 2.283d-16  ! <== Joule
+OH_short_range = PolynomialFunction( )       ! <== Angs
+OH_q_dsprsion  = 1.5d0      ! <== Angs, from Guillot
+OH_C6_dsprsion = D_zero     ! <== J*Angs^6
+
+OO_A_repulsive = 4.250d-17  ! <== Joule
+OO_short_range = 0.610d0    ! <== Angs
+OO_q_dsprsion  = 1.5d0      ! <== Angs, from Guillot
+OO_C6_dsprsion = 4.226d-18  ! <== J*Angs^6
+
+HH_A_repulsive = D_zero     ! <== Joule
+HH_short_range = D_zero     ! <== Angs
+HH_q_dsprsion  = 1.5d0      ! <== Angs, from Guillot
+HH_C6_dsprsion = D_zero     ! <== J*Angs^6
+
+! Three-Body Parameters
+lambda   = 2.0d-17 ! <== Joule
+theta_0  = 98.09d0 ! <== degrees
+r0       = 1.55d0  ! <== Angs
+gama     = 1.19d0  ! <== Angs
+
+!-------------------------------------------------------------
+!          CONVERT PARAMETERS TO DYNEMOL UNITS     
+! the following values are being converted to Dynemol internal units ...                                                                       
+! Dynemol uses Joule and Newton units to evaluate the eqs. of motion ...
+!-------------------------------------------------------------
+
+!  Parameters of the Two-Body Potential
+OH_A_repulsive = OH_A_repulsive / factor3
+OH_C6_dsprsion = OH_C6_dsprsion / factor3
+
+OO_A_repulsive = OO_A_repulsive / factor3
+OO_C6_dsprsion = OO_C6_dsprsion / factor3
+
+HH_A_repulsive = HH_A_repulsive / factor3
+HH_C6_dsprsion = HH_C6_dsprsion / factor3
+
+! Three-Body Parameters
+lambda  = lambda / factor3
+theta_0 = theta_0 * deg_2_rad   
+
+end subroutine QMMM_DWFF_Parameters 
 !
 !
 !
@@ -353,14 +414,14 @@ end subroutine export_DWFF_Parameters
 implicit none
 integer, intent(in) :: f_unit
 
-write(51,"(A18,F8.4)")   "PointCharge_O  = ", PointCharge_O                                                                                        
-write(51,"(A18,F8.4)")   "PointCharge_H  = ", PointCharge_H
-write(51,"(A18,F8.4)")   "DiffCharge_O   = ", DiffCharge_O
-write(51,"(A18,F8.4)")   "DiffCharge_H   = ", DiffCharge_H
-write(51,"(A20,ES10.3)") "lambda  (Joule)  = ", lambda * factor3
-write(51,"(A20,F8.4)")   "theta_0 (degree) = ", theta_0 / deg_2_rad
-write(51,"(A20,F8.4)")   "r0 (Angstron)    = ", r0
-write(51,"(A20,F8.4)")   "gamma (Angstron) = ", gama
+write(f_unit,"(A18,F8.4)")   "PointCharge_O  = ", PointCharge_O                                                                                        
+write(f_unit,"(A18,F8.4)")   "PointCharge_H  = ", PointCharge_H
+write(f_unit,"(A18,F8.4)")   "DiffCharge_O   = ", DiffCharge_O
+write(f_unit,"(A18,F8.4)")   "DiffCharge_H   = ", DiffCharge_H
+write(f_unit,"(A20,ES10.3)") "lambda  (Joule)  = ", lambda * factor3
+write(f_unit,"(A20,F8.4)")   "theta_0 (degree) = ", theta_0 / deg_2_rad
+write(f_unit,"(A20,F8.4)")   "r0 (Angstron)    = ", r0
+write(f_unit,"(A20,F8.4)")   "gamma (Angstron) = ", gama
 
 end subroutine dump_DWFF_parameters
 !

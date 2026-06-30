@@ -133,8 +133,10 @@ SOURCE2 = constants_m.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+          MM_forces/DWFF_QMMM_onthefly.o \
 		  MM_forces/FF_cutoff.o \
           MM_forces/f_intra_DWFF.o \
+		  data_output.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -158,7 +160,6 @@ SOURCE2 = constants_m.o \
 		  Ehrenfest.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
-		  data_output.o \
           barostat.o \
           MM_forces/f_inter_DWFF.o \
           MM_forces/f_inter_nonbonding.o \

@@ -172,6 +172,8 @@
 
   MM_input_format =                    ! <== choose from { GMX, NAMD, GAFF } ; GMX = OPLS , GAFF and NAMD = Amber
 
+  use_DWFF_type   =                    ! <== choose from { Diffuse, SPC-like, QMMM } ; default = none
+
   MM_log_step     =                    ! <== step for saving MM results & parameters (Integer) ; default = 50
 
   MM_frame_step   =                    ! <== step for saving MM results & parameters (Integer) ; default = 50

@@ -357,7 +357,17 @@ read_loop: do
 
         case( "USE_DWFF_TYPE" , "USE-DWFF-TYPE" )
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
-                DWFF_type = command
+                command = to_upper_case(trim(adjustl(command)))
+                select case (command)
+                    case("DIFFUSE" , "DIFUSE")
+                        DWFF_type = "DIFFUSE"
+                    case("SPC_LIKE" , "SPC-LIKE")
+                        DWFF_type = "SPC_LIKE"
+                    case("QMMM")
+                        DWFF_type = "QMMM"
+                    case default
+                        error stop "unknown choice for <use_DWFF_type> parameter: check your card.inpt file"
+                end select
 
         case( "MM_LOG_STEP" )
                 read(line,*,iostat=ioerr) keyword , equal_sign , command
