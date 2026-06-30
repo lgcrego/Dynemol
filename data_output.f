@@ -1,15 +1,16 @@
  module Data_Output
 
     use type_m
-    use parameters_m        , only  : driver ,      &
-                                      n_part ,      &
-                                      spectrum ,    &
-                                      survival ,    &
-                                      NetCharge 
-    use MM_input            , only  : MM_frame_step
-    use tuning_m            , only  : eh_tag                                      
-    use Babel_m             , only  : System_Characteristics    
-    use Structure_Builder   , only  : system => Extended_Cell    
+    use parameters_m      , only : driver ,      &
+                                   n_part ,      &
+                                   spectrum ,    &
+                                   survival ,    &
+                                   NetCharge 
+    use MM_parms_module   , only : DWFF_type
+    use DWFF_QMMM         , only : net_charge_prods
+    use MM_input          , only : MM_frame_step
+    use tuning_m          , only : eh_tag                                      
+    use Structure_Builder , only : system => Extended_Cell    
 
     private
 
@@ -71,6 +72,7 @@ Populations_vct(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
 do ati = 1 , system%atoms
     Net_Charge(ati) = abs( sum( bra(:)*ket(:) , basis(:)%atom == ati ) )
 end do
+if( DWFF_type == "QMMM") call net_charge_prods(net_charge)
 
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,MM_frame_step)==0) ) CALL dump_NetCharge (t) 
@@ -136,6 +138,7 @@ do n = 1 , n_part
       Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
       end do
       end do
+if( DWFF_type == "QMMM") call net_charge_prods(net_charge)
 
 ! dump atomic net-charges for visualization
 If ( NetCharge .AND. (mod(counter,MM_frame_step)==0) ) CALL dump_NetCharge (t) 

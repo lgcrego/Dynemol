@@ -1,11 +1,12 @@
 module FF_cutoff
 
     use constants_m
-    use type_m     , only : warning
-    use MD_read_m  , only : MM , atom , species , FF , FF_SP_mtx 
-    use gmx2mdflex , only : SpecialPairs
-    use Build_DWFF , only : HOH => HOH_diss_parms
-    use for_force  , only : rcut, vrecut, frecut, rcut2, vscut, fscut, KAPPA, vself
+    use type_m          , only : warning
+    use MM_parms_module , only : DWFF_type
+    use MD_read_m       , only : MM , atom , species , FF , FF_SP_mtx 
+    use gmx2mdflex      , only : SpecialPairs
+    use Build_DWFF      , only : HOH => HOH_diss_parms
+    use for_force       , only : rcut, vrecut, frecut, rcut2, vscut, fscut, KAPPA, vself
 
     public :: FF_cutoff_sphere 
 
@@ -257,13 +258,14 @@ end subroutine Buckingham
     decay_Wolf = erfc(arg_Wolf)
     exp_Wolf   = EXP(-arg_Wolf**2)
 
-    if( HOH%contain_diffuse ) then
-        d1 = HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)* erf(arg*sqrt2)
-        d2 = HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3)* exp_arg2 
-    else
-        d1 = D_zero
-        d2 = D_zero
-    end if
+    select case( DWFF_type )                                                                                                                            
+        case("DIFFUSE")                                                                                                                                 
+            d1 = HOH%Coul(k,2)*erf(arg) + HOH%Coul(k,3)*erf(arg*sqrt2)                                                                                  
+            d2 = HOH%Coul(k,2) + sqrt2*HOH%Coul(k,3)*exp_arg2                                                                                           
+        case("SPC_LIKE")                                                                                                                                
+            d1 = D_zero                                                                                                                                 
+            d2 = D_zero                                                                                                                                 
+    end select
     
     ! Energy
     U0 = HOH%Coul(k,1) + d1
