@@ -135,7 +135,6 @@ SOURCE2 = constants_m.o \
 		  md_setup.o \
           MM_forces/DWFF_QMMM_onthefly.o \
 		  MM_forces/FF_cutoff.o \
-          MM_forces/f_intra_DWFF.o \
 		  data_output.o \
 		  md_output.o \
 		  pbc.o \
@@ -161,7 +160,7 @@ SOURCE2 = constants_m.o \
 		  FSSH.o \
 		  CoulInt_QMMM.o \
           barostat.o \
-          MM_forces/f_inter_DWFF.o \
+          MM_forces/f_DWFF.o \
           MM_forces/f_inter_nonbonding.o \
 		  MM_forces/f_inter.o \
           MM_forces/f_bond.o \

@@ -406,8 +406,7 @@ module for_force
     real*8 :: LJ_intra   = 0.d0
     real*8 :: Coul_14    = 0.d0
     real*8 :: Coul_intra = 0.d0
-    real*8 :: DWFF_intra = 0.d0
-    real*8 :: DWFF_inter = 0.d0
+    real*8 :: DWFF_erg   = 0.d0
     real*8 :: pot_INTER  = 0.d0
     real*8 :: pot_total  = 0.d0
 

@@ -34,8 +34,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         real*8                              :: ftotal(3)
         real*8                              :: fMorse(3)
         real*8                              :: f_inter_nonbond(3)
-        real*8                              :: f_intra_DWFF(3)
-        real*8                              :: f_inter_DWFF(3)
+        real*8                              :: f_DWFF(3)
         real*8                              :: mass
         real*8                              :: kinetic
         real*8                              :: charge

@@ -1,4 +1,4 @@
-module F_inter_DWFF
+module DWFF
 
     use constants_m
     use omp_lib
@@ -7,11 +7,11 @@ module F_inter_DWFF
     use Berendsen_Barostat , only : virial_tensor
     use syst               , only : using_barostat
     use md_read_m          , only : atom, MM, molecule, special_pair_mtx
-    use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_inter
+    use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_erg
     use Build_DWFF         , only : HOH => HOH_diss_parms
     use DWFF_QMMM          , only : qd_qd, mix_q_qd
 
-    public :: f_DWFF_inter
+    public :: f_DWFF
 
     private
 
@@ -61,46 +61,46 @@ module F_inter_DWFF
 contains
 !
 !
-!=========================
- subroutine f_DWFF_inter()
-!=========================
+!===================
+ subroutine f_DWFF()
+!===================
     implicit none
    
     ! local variables
     integer :: i, j
     
     do i = 1 , MM % N_of_atoms
-        atom(i)% f_inter_DWFF(:) = D_zero  
+        atom(i)% f_DWFF(:) = D_zero  
     end do
 
-    call inter_DWFF
+    call calculate_DWFF
 
     ! force units = J/Angs ...
     ! manual reduction (+: f_bond , f_ang) ...
     do i = 1, MM % N_of_atoms
         do j = 1,3
-            atom(i) % f_inter_DWFF(j) = sum(f_bond_aux(i,j,:)) + sum(f_ang_aux(i,j,:))
+            atom(i) % f_DWFF(j) = sum(f_bond_aux(i,j,:)) + sum(f_ang_aux(i,j,:))
         end do
     end do
    
     ! energy 
-    DWFF_inter = ( bond_erg + sum(ang_erg) )*factor3 
+    DWFF_erg = ( bond_erg + sum(ang_erg) )*factor3 
  
     deallocate( f_bond_aux , f_ang_aux , ang_erg )
 
-end subroutine f_DWFF_inter
+end subroutine f_DWFF
 !
 !
 !
-!=====================
- subroutine inter_DWFF
-!=====================
+!=========================
+ subroutine calculate_DWFF
+!=========================
     implicit none
     
     !local variables ...
     real*8  :: rkl(3) , cm_kl(3)
     real*8  :: rkl2 , force , erg
-    real*8 :: virial_private(3,3)
+    real*8  :: virial_private(3,3)
     integer :: i, j, k, l, pair_of_kind
     integer :: nresidl, nresidk, ithr, numthr
     logical :: DWFF_special_pair
@@ -133,9 +133,6 @@ end subroutine f_DWFF_inter
             DWFF_special_pair = (special_pair_mtx(k,l) == 3)
             if ( .not. DWFF_special_pair ) cycle
        
-            ! only for different molecules ...
-            if ( atom(k)% nr == atom(l)% nr ) cycle
-       
             rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
             rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
        
@@ -161,18 +158,29 @@ end subroutine f_DWFF_inter
                 !---------------------------------------------------------
                 ! 3body calculations
                 ! (pass ithr so 3body can write into per-thread arrays)
-                if ( atom(k)% MMSymbol == 'HX' ) then
-                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
-                else
-                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
+
+                if ( atom(k)% nr == atom(l)% nr ) then
+                    !! HOH atoms withing the same nr
+                    if ( atom(k)% MMSymbol == 'OX' ) then
+                         call DWFF_3body ( atom(k)%offset + HOH%H_ptr(1) , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
+                    else
+                         call DWFF_3body ( atom(l)%offset + HOH%H_ptr(1) , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
+                    end if
+                else 
+                    !! HOH atoms with different nr's 
+                    if ( atom(k)% MMSymbol == 'HX' ) then
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
+                    else
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr )
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
+                    end if
                 end if
                 !---------------------------------------------------------
             end select
 
             ! evaluate 2-body interaction (force and energy)
-            call evaluate_2body_inter_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
+            call evaluate_2body_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
        
             f_bond_aux(k,1:3,ithr) = f_bond_aux(k,1:3,ithr) + force * rkl(1:3)
             f_bond_aux(l,1:3,ithr) = f_bond_aux(l,1:3,ithr) - force * rkl(1:3)
@@ -201,12 +209,12 @@ end subroutine f_DWFF_inter
     !$OMP end parallel 
     !##############################################################################
 
-end subroutine inter_DWFF
+end subroutine calculate_DWFF
 !
 !
 !
 !=====================================================
- subroutine inter_3body_DWFF( atj , ati , atk , ithr )
+ subroutine DWFF_3body( atj , ati , atk , ithr )
 !=====================================================
     implicit none
     integer , intent(in) :: atj , ati , atk , ithr
@@ -273,11 +281,11 @@ end subroutine inter_DWFF
     
      f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_atj + f_atk)
     
-end subroutine inter_3body_DWFF
+end subroutine DWFF_3body
 !
 !
 !======================================================================
- subroutine evaluate_2body_inter_DWFF( k , l , m , rkl2 , force , erg )
+ subroutine evaluate_2body_DWFF( k , l , m , rkl2 , force , erg )
 !======================================================================
     implicit none
     integer , intent(in)  :: k , l , m
@@ -367,9 +375,9 @@ end subroutine inter_3body_DWFF
     erg   = E_sr + Ecoul - vscut(atk,atl) + fscut(atk,atl)*( rkl - rcut )
     force = f_sr + Fcoul - fscut(atk,atl)*irkl
 
-end subroutine evaluate_2body_inter_DWFF
+end subroutine evaluate_2body_DWFF
 !
 !
 !
 !
-end module F_inter_DWFF
+end module DWFF
