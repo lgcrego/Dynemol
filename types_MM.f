@@ -135,6 +135,7 @@ public :: MMOPT_Control, Logicalkey, Dissociative
         real*8                              :: PointCharge_O
         real*8                              :: PointCharge_H
         integer                             :: H_ptr(2)
+        integer                             :: O_ptr
         logical                             :: contain_diffuse
     end type Dissociative
 

@@ -147,7 +147,10 @@ end subroutine f_DWFF
             select case (trim(type1)//'-'//trim(type2))
             case ('HX-HX')
                 pair_of_kind = 3
-                ! 3body does not apply 
+                ! only intramolecular 3-body 
+                if ( atom(k)% nr == atom(l)% nr ) then
+                    call DWFF_3body ( k, atom(k)%offset + HOH% O_ptr, l , ithr )
+                end if 
        
             case ('OX-OX')
                 pair_of_kind = 2
@@ -158,15 +161,7 @@ end subroutine f_DWFF
                 !---------------------------------------------------------
                 ! 3body calculations
                 ! (pass ithr so 3body can write into per-thread arrays)
-
-                if ( atom(k)% nr == atom(l)% nr ) then
-                    !! HOH atoms withing the same nr
-                    if ( atom(k)% MMSymbol == 'OX' ) then
-                         call DWFF_3body ( atom(k)%offset + HOH%H_ptr(1) , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
-                    else
-                         call DWFF_3body ( atom(l)%offset + HOH%H_ptr(1) , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
-                    end if
-                else 
+                if ( atom(k)% nr /= atom(l)% nr ) then
                     !! HOH atoms with different nr's 
                     if ( atom(k)% MMSymbol == 'HX' ) then
                          call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
