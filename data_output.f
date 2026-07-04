@@ -68,13 +68,12 @@ end do
 ! total population ...
 Populations_vct(N_of_fragments+1) = pop_Slater( basis , bra(:) , ket(:) )
 
-! atomic net-charge ...
+! atomic ABSOLUTE net-charge ...
 do ati = 1 , system%atoms
     Net_Charge(ati) = abs( sum( bra(:)*ket(:) , basis(:)%atom == ati ) )
 end do
-if( DWFF_type == "QMMM") call net_charge_prods(net_charge)
 
-! dump atomic net-charges for visualization
+! dump atomic ABSOLUTE net-charges for visualization
 If ( NetCharge .AND. (mod(counter,MM_frame_step)==0) ) CALL dump_NetCharge (t) 
 
 counter = counter + 1
@@ -138,6 +137,8 @@ do n = 1 , n_part
       Net_Charge(ati) = Net_Charge(ati) + ChargeSign(n)*abs( sum( bra(:,n)*ket(:,n) , basis(:)%atom == ati ) )
       end do
       end do
+! negative for electron 
+! positive for hole
 if( DWFF_type == "QMMM") call net_charge_prods(net_charge)
 
 ! dump atomic net-charges for visualization

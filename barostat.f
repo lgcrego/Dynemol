@@ -22,16 +22,16 @@ module Berendsen_Barostat
  subroutine Ek_Tensor( thermostat_type )
 !=======================================
 implicit none
-integer , intent(in) :: thermostat_type
+character(len=*) , intent(in) :: thermostat_type
 
 ! local variables ...
-real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , massa 
 integer :: i , j , k , l
+real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , massa 
 
 kinetic_tensor = D_zero
 
 select case ( thermostat_type )
-    case(0:1)  ! <== molecular ...         
+    case("molecular")  ! <== molecular ...         
         do i = 1 , MM % N_of_molecules
             total_Momentum = D_zero
             do j = molecule(i)%span % inicio , molecule(i)%span % fim
@@ -45,7 +45,7 @@ select case ( thermostat_type )
             end do     
         end do
 
-    case (2:)  ! <== atomic ...
+    case ("atomic","DWFF")  ! <== atomic ...
         do i = 1 , MM % N_of_atoms 
             If( atom(i) % flex ) then
                 V_atomic = atom(i) % vel 
@@ -55,6 +55,10 @@ select case ( thermostat_type )
                 end do     
             end if
         end do
+
+    case default
+      error stop "unknown choice for thermostat in barostat.f"
+
 end select
 
 do concurrent (l = 1:2, k = 1:3, k>l)

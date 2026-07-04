@@ -107,7 +107,7 @@ If( QMMM ) CALL ForceQMMM  ! <== new QM , old MM ...
 
 CALL this % VV1( dt )
 
-if( driver /= "slice_FSSH" ) CALL move_to_box_CM
+if( driver /= "slice_FSSH" ) CALL move_to_box_CM(frame)
 
 CALL Molecular_CM
 
@@ -205,7 +205,7 @@ end select
 atom( QMMM_key ) % charge = atom( QMMM_key ) % MM_charge
 
 CALL FF_cutoff_sphere
-If( .not. done ) CALL move_to_box_CM
+If( .not. done ) CALL move_to_box_CM( frame_init )
 CALL Molecular_CM
 
 if( restart ) then
@@ -262,7 +262,7 @@ integer :: i
 
 ! just pass nuclear configuration to QM routines and leave ...
 
-CALL move_to_box_CM
+CALL move_to_box_CM( frame = 0 )
 
 forall(i=1:size(atom)) Unit_Cell % coord(i,:) = atom( QMMM_key(i) ) % xyz(:)
 
