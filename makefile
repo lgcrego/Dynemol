@@ -83,10 +83,10 @@ SOURCE2 = constants_m.o \
 		  types_MM.o \
           parms_var_module.o \
 		  util.o \
+		  OPT_parent.o \
           read_card.o \
 		  parameters.o \
           MPI_topologies.o \
-		  OPT_parent.o \
 		  parameters_MM.o \
 		  allocation_m.o \
 		  EHT_input.o \
@@ -101,8 +101,9 @@ SOURCE2 = constants_m.o \
           namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+          MM_forces/DWFF_QMMM_onthefly.o \
 		  MM_forces/FF_cutoff.o \
-          MM_forces/f_intra_DWFF.o \
+		  data_output.o \
 		  md_output.o \
 		  pbc.o \
 		  overlap_D.o \
@@ -127,9 +128,8 @@ SOURCE2 = constants_m.o \
           CSDM_workers.o \
           FSSH.o \
 		  CoulInt_QMMM.o \
-		  data_output.o \
           barostat.o \
-          MM_forces/f_inter_DWFF.o \
+          MM_forces/f_DWFF.o \
           MM_forces/f_inter_nonbonding.o \
 		  MM_forces/f_inter.o \
           MM_forces/f_bond.o \
