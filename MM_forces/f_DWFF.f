@@ -98,11 +98,11 @@ end subroutine f_DWFF
     implicit none
     
     !local variables ...
-    real*8  :: rkl(3) , cm_kl(3)
+    real*8  :: rkl(3)
     real*8  :: rkl2 , force , erg
     real*8  :: virial_private(3,3)
     integer :: i, j, k, l, pair_of_kind
-    integer :: nresidl, nresidk, ithr, numthr
+    integer :: ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
     
@@ -118,7 +118,7 @@ end subroutine f_DWFF
     ! INTER-MOLECULAR DWFF calculations ...
 
 !$OMP parallel default (shared) &
-!$OMP private (i, j, k, l, rkl, rkl2, cm_kl, force, erg, nresidk, nresidl, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
+!$OMP private (i, j, k, l, rkl, rkl2, force, erg, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
 !$OMP reduction (+: bond_erg)
                            
     ! initialize thread-local variables
@@ -149,7 +149,7 @@ end subroutine f_DWFF
                 pair_of_kind = 3
                 ! only intramolecular 3-body 
                 if ( atom(k)% nr == atom(l)% nr ) then
-                    call DWFF_3body ( k, atom(k)%offset + HOH% O_ptr, l , ithr )
+                    call DWFF_3body ( k, atom(k)%offset + HOH% O_ptr, l , ithr , virial_private )
                 end if 
        
             case ('OX-OX')
@@ -164,11 +164,11 @@ end subroutine f_DWFF
                 if ( atom(k)% nr /= atom(l)% nr ) then
                     !! HOH atoms with different nr's 
                     if ( atom(k)% MMSymbol == 'HX' ) then
-                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
-                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr , virial_private )
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr , virial_private )
                     else
-                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr )
-                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr , virial_private )
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr , virial_private )
                     end if
                 end if
                 !---------------------------------------------------------
@@ -183,15 +183,10 @@ end subroutine f_DWFF
             bond_erg = bond_erg + erg
             
             !-------------------------------------------------------------------------------
-            if( using_barostat% inter ) &
-            then
-                  nresidk = atom(k)% nr
-                  nresidl = atom(l)% nr
-                  cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                  cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                  do i=1,3 ; do j=i,3
-                     virial_private(i,j) = virial_private(i,j) + cm_kl(i) * force * rkl(j)
-                  end do; end do
+            if( using_barostat% inter ) then
+                do i=1,3 ; do j=i,3
+                   virial_private(i,j) = virial_private(i,j) + rkl(i) * force * rkl(j)
+                end do; end do
             end if
             !---------------------------------------------------------------------------------
        end do
@@ -208,17 +203,19 @@ end subroutine calculate_DWFF
 !
 !
 !
-!=====================================================
- subroutine DWFF_3body( atj , ati , atk , ithr )
-!=====================================================
+!========================================================
+ subroutine DWFF_3body( atj , ati , atk , ithr , virial )
+!========================================================
     implicit none
-    integer , intent(in) :: atj , ati , atk , ithr
+    integer , intent(in)    :: atj , ati , atk , ithr
+    real*8  , intent(inout) :: virial(3,3)
     
     ! local_variables ...
     real*8 , dimension(3) :: rij, rik, f_atj, f_atk 
     real*8  :: rij_norm, rik_norm
     real*8  :: r0, cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
+    integer :: i , j
     
     !================================
     !          Angle potential ...
@@ -276,6 +273,13 @@ end subroutine calculate_DWFF
     
      f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_atj + f_atk)
     
+     ! inside DWFF_3body, after computing f_atj, f_atk:
+     if( using_barostat% inter ) then
+         do i = 1,3 ; do j = i,3
+             virial(i,j) = virial(i,j) + rij(i)*f_atj(j) + rik(i)*f_atk(j)
+         end do ; end do
+     end if
+
 end subroutine DWFF_3body
 !
 !
