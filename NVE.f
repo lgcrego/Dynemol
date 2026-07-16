@@ -34,9 +34,17 @@ implicit none
 type(NVE) :: me 
 
 !local variable ...
+integer :: rounded_avg_atoms
 
-! select atomic or molecular kinetic energy to calculate the temperature ...
-me % thermostat_type = NINT( float(maxval(molecule%N_of_atoms)) / float(MM%N_of_molecules) )
+!---------------------------------------------
+! select atomic or molecular thermostat to calculate the temperature ...
+rounded_avg_atoms = nint(real(maxval(molecule%N_of_atoms)) / real(MM%N_of_molecules))
+if( rounded_avg_atoms <= 1 ) then
+    me % thermostat_type = "molecular"
+else
+    me % thermostat_type = "atomic"
+end if
+!---------------------------------------------  
 
 end function constructor
 !
@@ -89,7 +97,7 @@ E_kinetic = D_zero
 ! VV2 ... 
 select case (me % thermostat_type)
 
-    case (0:1) ! <== molecular ...
+    case ("molecular")
 
         do i = 1 , MM % N_of_molecules
             total_Momentum = D_zero
@@ -105,7 +113,8 @@ select case (me % thermostat_type)
             E_kinetic = E_kinetic + molecule(i) % mass * sum(V_CM*V_CM)    ! <== Joule ...
         end do
 
-    case (2:) ! <== atomic ...
+    case ("atomic","DWFF")
+
         V_atomic = D_zero
         do i = 1 , MM % N_of_atoms
             if( atom(i) % flex ) then
@@ -117,15 +126,22 @@ select case (me % thermostat_type)
             end if
         end do
 
+    case default
+        error stop "unknown choice for thermostat in NVE.f"
+
 end select
 
 ! instantaneous temperature of the system after contact with thermostat ...
 select case (me % thermostat_type)
-    case (0:1) ! <== molecular ...
+    case ("molecular")
     me % Temperature =  E_kinetic * iboltz / real( count(molecule%flex) ) 
 
-    case (2:)  ! <atomic ...
+    case ("atomic","DWFF")
     me % Temperature =  E_kinetic * iboltz / real( count(atom%flex) ) 
+
+    case default
+    error stop "unknown choice for thermostat in NVE.f"
+
 end select
 
 ! calculation of the kinetic energy ...

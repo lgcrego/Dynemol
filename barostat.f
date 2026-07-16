@@ -22,16 +22,16 @@ module Berendsen_Barostat
  subroutine Ek_Tensor( thermostat_type )
 !=======================================
 implicit none
-integer , intent(in) :: thermostat_type
+character(len=*) , intent(in) :: thermostat_type
 
 ! local variables ...
-real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , massa 
 integer :: i , j , k , l
+real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , massa 
 
 kinetic_tensor = D_zero
 
 select case ( thermostat_type )
-    case(0:1)  ! <== molecular ...         
+    case("molecular") 
         do i = 1 , MM % N_of_molecules
             total_Momentum = D_zero
             do j = molecule(i)%span % inicio , molecule(i)%span % fim
@@ -45,7 +45,7 @@ select case ( thermostat_type )
             end do     
         end do
 
-    case (2:)  ! <== atomic ...
+    case ("atomic","DWFF")
         do i = 1 , MM % N_of_atoms 
             If( atom(i) % flex ) then
                 V_atomic = atom(i) % vel 
@@ -55,6 +55,10 @@ select case ( thermostat_type )
                 end do     
             end if
         end do
+
+    case default
+      error stop "unknown choice for thermostat in barostat.f"
+
 end select
 
 do concurrent (l = 1:2, k = 1:3, k>l)
@@ -88,7 +92,8 @@ stress_tensor = kinetic_tensor + virial_tensor
 pressure = ( stress_tensor(1,1) + stress_tensor(2,2) + stress_tensor(3,3) ) * third
 
 ! press = P0, pressure = P(system)
-mip = 10.70d-6 * ( dt / (tau_p * pico_2_sec) ) * ( press - pressure )
+! isothermal compressibility of water 4.5d-5 bar^(-1)
+mip = 4.5d-5 * ( dt / (tau_p * pico_2_sec) ) * ( press - pressure )
 mip = (D_one - mip)**third
 
 MM% box  = MM% box * mip

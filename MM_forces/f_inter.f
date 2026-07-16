@@ -5,8 +5,8 @@ module F_inter_m
     use syst               , only : using_barostat
     use md_read_m          , only : MM, molecule
     use F_inter_nonbond    , only : f_inter_nonbonding
-    use F_inter_DWFF       , only : f_DWFF_inter
     use Berendsen_Barostat , only : virial_tensor
+    use DWFF               , only : f_DWFF
 
     public :: FORCEINTER
 
@@ -28,7 +28,7 @@ contains
         call f_inter_nonbonding()
     
         if (any(molecule%DWFF)) then
-           call f_DWFF_inter()
+           call f_DWFF()
         endif
         
     end if

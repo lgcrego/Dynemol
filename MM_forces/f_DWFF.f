@@ -1,17 +1,17 @@
-module F_inter_DWFF
+module DWFF
 
     use constants_m
     use omp_lib
-    use MM_parms_module    , only : DWFF_type
-    use syst               , only : using_barostat
     use parameters_m       , only : PBC
-    use md_read_m          , only : atom, MM, molecule, special_pair_mtx
+    use MM_parms_module    , only : DWFF_type
     use Berendsen_Barostat , only : virial_tensor
-    use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_inter
+    use syst               , only : using_barostat
+    use md_read_m          , only : atom, MM, molecule, special_pair_mtx
+    use for_force          , only : rcut, rcut2, vscut, fscut, KAPPA, DWFF_erg
     use Build_DWFF         , only : HOH => HOH_diss_parms
     use DWFF_QMMM          , only : qd_qd, mix_q_qd
 
-    public :: f_DWFF_inter
+    public :: f_DWFF
 
     private
 
@@ -61,48 +61,48 @@ module F_inter_DWFF
 contains
 !
 !
-!=========================
- subroutine f_DWFF_inter()
-!=========================
+!===================
+ subroutine f_DWFF()
+!===================
     implicit none
    
     ! local variables
     integer :: i, j
     
     do i = 1 , MM % N_of_atoms
-        atom(i)% f_inter_DWFF(:) = D_zero  
+        atom(i)% f_DWFF(:) = D_zero  
     end do
 
-    call inter_DWFF
+    call calculate_DWFF
 
     ! force units = J/Angs ...
     ! manual reduction (+: f_bond , f_ang) ...
     do i = 1, MM % N_of_atoms
         do j = 1,3
-            atom(i) % f_inter_DWFF(j) = sum(f_bond_aux(i,j,:)) + sum(f_ang_aux(i,j,:))
+            atom(i) % f_DWFF(j) = sum(f_bond_aux(i,j,:)) + sum(f_ang_aux(i,j,:))
         end do
     end do
    
     ! energy 
-    DWFF_inter = ( bond_erg + sum(ang_erg) )*factor3 
+    DWFF_erg = ( bond_erg + sum(ang_erg) )*factor3 
  
     deallocate( f_bond_aux , f_ang_aux , ang_erg )
 
-end subroutine f_DWFF_inter
+end subroutine f_DWFF
 !
 !
 !
-!=====================
- subroutine inter_DWFF
-!=====================
+!=========================
+ subroutine calculate_DWFF
+!=========================
     implicit none
     
     !local variables ...
-    real*8  :: rkl(3) , cm_kl(3)
+    real*8  :: rkl(3)
     real*8  :: rkl2 , force , erg
-    real*8 :: virial_private(3,3)
+    real*8  :: virial_private(3,3)
     integer :: i, j, k, l, pair_of_kind
-    integer :: nresidl, nresidk, ithr, numthr
+    integer :: ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
     
@@ -118,7 +118,7 @@ end subroutine f_DWFF_inter
     ! INTER-MOLECULAR DWFF calculations ...
 
 !$OMP parallel default (shared) &
-!$OMP private (i, j, k, l, rkl, rkl2, cm_kl, force, erg, nresidk, nresidl, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
+!$OMP private (i, j, k, l, rkl, rkl2, force, erg, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
 !$OMP reduction (+: bond_erg)
                            
     ! initialize thread-local variables
@@ -132,9 +132,6 @@ end subroutine f_DWFF_inter
             ! only for DWFF special pairs ...
             DWFF_special_pair = (special_pair_mtx(k,l) == 3)
             if ( .not. DWFF_special_pair ) cycle
-       
-            ! only for different molecules ...
-            if ( atom(k)% nr == atom(l)% nr ) cycle
        
             rkl(:) = atom(k) % xyz(:) - atom(l) % xyz(:)
             rkl(:) = rkl(:) - MM % box(:) * DNINT( rkl(:) * MM % ibox(:) ) * PBC(:)
@@ -150,7 +147,10 @@ end subroutine f_DWFF_inter
             select case (trim(type1)//'-'//trim(type2))
             case ('HX-HX')
                 pair_of_kind = 3
-                ! 3body does not apply 
+                ! only intramolecular 3-body 
+                if ( atom(k)% nr == atom(l)% nr ) then
+                    call DWFF_3body ( k, atom(k)%offset + HOH% O_ptr, l , ithr , virial_private )
+                end if 
        
             case ('OX-OX')
                 pair_of_kind = 2
@@ -161,18 +161,21 @@ end subroutine f_DWFF_inter
                 !---------------------------------------------------------
                 ! 3body calculations
                 ! (pass ithr so 3body can write into per-thread arrays)
-                if ( atom(k)% MMSymbol == 'HX' ) then
-                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr )
-                else
-                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr )
-                     call inter_3body_DWFF ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr )
+                if ( atom(k)% nr /= atom(l)% nr ) then
+                    !! HOH atoms with different nr's 
+                    if ( atom(k)% MMSymbol == 'HX' ) then
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr , virial_private )
+                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr , virial_private )
+                    else
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr , virial_private )
+                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr , virial_private )
+                    end if
                 end if
                 !---------------------------------------------------------
             end select
 
             ! evaluate 2-body interaction (force and energy)
-            call evaluate_2body_inter_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
+            call evaluate_2body_DWFF ( k , l , pair_of_kind , rkl2 , force , erg )
        
             f_bond_aux(k,1:3,ithr) = f_bond_aux(k,1:3,ithr) + force * rkl(1:3)
             f_bond_aux(l,1:3,ithr) = f_bond_aux(l,1:3,ithr) - force * rkl(1:3)
@@ -180,15 +183,10 @@ end subroutine f_DWFF_inter
             bond_erg = bond_erg + erg
             
             !-------------------------------------------------------------------------------
-            if( using_barostat% inter ) &
-            then
-                  nresidk = atom(k)% nr
-                  nresidl = atom(l)% nr
-                  cm_kl(:) = molecule(nresidk) % cm(:) - molecule(nresidl) % cm(:)
-                  cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
-                  do i=1,3 ; do j=i,3
-                     virial_private(i,j) = virial_private(i,j) + cm_kl(i) * force * rkl(j)
-                  end do; end do
+            if( using_barostat% inter ) then
+                do i=1,3 ; do j=i,3
+                   virial_private(i,j) = virial_private(i,j) + rkl(i) * force * rkl(j)
+                end do; end do
             end if
             !---------------------------------------------------------------------------------
        end do
@@ -201,21 +199,23 @@ end subroutine f_DWFF_inter
     !$OMP end parallel 
     !##############################################################################
 
-end subroutine inter_DWFF
+end subroutine calculate_DWFF
 !
 !
 !
-!=====================================================
- subroutine inter_3body_DWFF( atj , ati , atk , ithr )
-!=====================================================
+!========================================================
+ subroutine DWFF_3body( atj , ati , atk , ithr , virial )
+!========================================================
     implicit none
-    integer , intent(in) :: atj , ati , atk , ithr
+    integer , intent(in)    :: atj , ati , atk , ithr
+    real*8  , intent(inout) :: virial(3,3)
     
     ! local_variables ...
     real*8 , dimension(3) :: rij, rik, f_atj, f_atk 
     real*8  :: rij_norm, rik_norm
     real*8  :: r0, cos_theta, U3, U03, exp_arg, exponential
     real*8  :: a1, a2, a3, f_ij, f_ik, inv_delta_0ij, inv_delta_0ik
+    integer :: i , j
     
     !================================
     !          Angle potential ...
@@ -273,11 +273,18 @@ end subroutine inter_DWFF
     
      f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_atj + f_atk)
     
-end subroutine inter_3body_DWFF
+     ! inside DWFF_3body, after computing f_atj, f_atk:
+     if( using_barostat% inter ) then
+         do i = 1,3 ; do j = i,3
+             virial(i,j) = virial(i,j) + rij(i)*f_atj(j) + rik(i)*f_atk(j)
+         end do ; end do
+     end if
+
+end subroutine DWFF_3body
 !
 !
 !======================================================================
- subroutine evaluate_2body_inter_DWFF( k , l , m , rkl2 , force , erg )
+ subroutine evaluate_2body_DWFF( k , l , m , rkl2 , force , erg )
 !======================================================================
     implicit none
     integer , intent(in)  :: k , l , m
@@ -367,9 +374,9 @@ end subroutine inter_3body_DWFF
     erg   = E_sr + Ecoul - vscut(atk,atl) + fscut(atk,atl)*( rkl - rcut )
     force = f_sr + Fcoul - fscut(atk,atl)*irkl
 
-end subroutine evaluate_2body_inter_DWFF
+end subroutine evaluate_2body_DWFF
 !
 !
 !
 !
-end module F_inter_DWFF
+end module DWFF

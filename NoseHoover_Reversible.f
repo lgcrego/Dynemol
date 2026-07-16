@@ -34,9 +34,18 @@ implicit none
 type(NH_Reversible) :: me
 
 !local variable ...
+integer :: rounded_avg_atoms
 
-! select atomic or molecular kinetic energy to calculate the temperature ...
-me % thermostat_type = NINT( float(maxval(molecule%N_of_atoms)) / float(MM%N_of_molecules) )
+!---------------------------------------------
+! select atomic or molecular thermostat to calculate the temperature ...
+rounded_avg_atoms = nint(real(maxval(molecule%N_of_atoms)) / real(MM%N_of_molecules))
+if( rounded_avg_atoms <= 1 ) then
+    me % thermostat_type = "molecular"
+else
+    me % thermostat_type = "atomic"
+end if
+!---------------------------------------------  
+
 end function constructor
 !
 !
@@ -60,7 +69,7 @@ dt2_HALF = dt_HALF * dt
 me % kinetic = D_zero
 select case (me % thermostat_type)
 
-    case (0:1) ! <== molecular ...
+    case ("molecular")
       sigma = bath_T*boltz*THREE*real( count(molecule%flex) )*HALF
       ! molecular kinetic energy at time t ...
       do i = 1 , MM % N_of_molecules
@@ -78,12 +87,15 @@ select case (me % thermostat_type)
         me % kinetic = me % kinetic + molecule(i) % mass *  sum( V_CM * V_CM ) * half
       end do
 
-    case (2:) ! <== atomic ...
+    case ("atomic","DWFF")
       sigma = bath_T*boltz*THREE*real(count(atom%flex))*HALF 
       ! atomic kinetic energy at time t ...
       do i = 1 , MM % N_of_atoms 
         me % kinetic = me%kinetic + imol*atom(i)%mass*sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
       end do
+
+    case default
+      error stop "unknown choice for thermostat in NoseHoover_Reversible.f"
 
 end select
 
@@ -125,7 +137,7 @@ sumtemp = D_zero
 me % kinetic = D_zero
 select case (me % thermostat_type)
 
-    case (0:1) ! <== molecular ...
+    case ("molecular")
       sigma = bath_T*boltz*THREE*real( count(molecule%flex) )*HALF
       ! molecular kinetic energy at time t ...
       do i = 1 , MM % N_of_molecules
@@ -143,12 +155,15 @@ select case (me % thermostat_type)
         me % kinetic = me % kinetic + molecule(i) % mass *  sum( V_CM * V_CM ) * half
       end do
 
-    case (2:) ! <== atomic ...
+    case ("atomic","DWFF")
       sigma = bath_T*boltz*THREE*real(count(atom%flex))*HALF 
       ! atomic kinetic energy at time t ...
       do i = 1 , MM % N_of_atoms 
         me % kinetic = me%kinetic + imol*atom(i)%mass*sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
       end do
+
+    case default
+      error stop "unknown choice for thermostat in NoseHoover_Reversible.f"
 
 end select
 
@@ -157,7 +172,7 @@ Csi = Csi + Q*(me%kinetic - sigma)*dt
 ! VV2 ...
 select case (me % thermostat_type)
 
-    case (0:1) ! <== molecular ...
+    case ("molecular")
 
         do i = 1 , MM % N_of_molecules
             tmp = D_zero
@@ -177,7 +192,8 @@ select case (me % thermostat_type)
             sumtemp = sumtemp + molecule(i) % mass *  sum( V_CM * V_CM )
         end do
 
-    case (2:) ! <== atomic ...
+    case ("atomic","DWFF")
+
         V_atomic = D_zero
         do i = 1 , MM % N_of_atoms
             if( atom(i) % flex ) then
@@ -191,14 +207,20 @@ select case (me % thermostat_type)
 
             end if
         end do
+
+    case default
+        error stop "unknown choice for thermostat in NoseHoover_Reversible.f"
+
 end select
 
 ! instantaneous temperature of the system after contact with thermostat ...
 select case (me % thermostat_type)
-    case (0:1) ! <== molecular ...
+    case ("molecular")
     me % Temperature =  sumtemp * iboltz / real( count(molecule%flex) )
-    case (2:)  ! <atomic ...
+    case ("atomic","DWFF")
     me % Temperature =  sumtemp * iboltz / real( count(atom%flex) )
+    case default
+    error stop "unknown choice for thermostat in NoseHoover_Reversible.f"
 end select
 
 ! calculation of the kinetic energy ...

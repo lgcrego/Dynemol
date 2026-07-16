@@ -337,10 +337,13 @@ end do
 ! for HOH species, do the following
 associate( MMSymbol => species(HOH)% atom(:)% MMSymbol )
     if( MMSymbol(1) == "OX" ) then
+        HOH_diss_parms% O_ptr    = 1
         HOH_diss_parms% H_ptr(:) = [2,3]
     elseif ( MMSymbol(2) == "OX" ) then
+        HOH_diss_parms% O_ptr    = 2
         HOH_diss_parms% H_ptr(:) = [1,3]
     elseif ( MMSymbol(3) == "OX" ) then
+        HOH_diss_parms% O_ptr    = 3
         HOH_diss_parms% H_ptr(:) = [1,2]
     endif
 end associate

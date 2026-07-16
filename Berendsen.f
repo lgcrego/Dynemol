@@ -34,9 +34,18 @@ implicit none
 type(Berendsen) :: me 
 
 !local variable ...
+integer :: rounded_avg_atoms
 
-! select atomic or molecular kinetic energy to calculate the temperature ...
-me % thermostat_type = NINT( float(maxval(molecule%N_of_atoms)) / float(MM%N_of_molecules) )
+!---------------------------------------------
+! select atomic or molecular thermostat to calculate the temperature ...
+rounded_avg_atoms = nint(real(maxval(molecule%N_of_atoms)) / real(MM%N_of_molecules))
+if( rounded_avg_atoms <= 1 ) then
+    me % thermostat_type = "molecular"
+else
+    me % thermostat_type = "atomic"
+end if
+    me % thermostat_type = "atomic"
+!---------------------------------------------  
 
 end function constructor
 !
@@ -80,9 +89,47 @@ integer :: i , j
 real*8  :: E_kinetic , temperature , lambda , dt_half , arg
 real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , accelerate(3)
 
-if(using_barostat% anyone) CALL Ek_tensor( me % thermostat_type )
+dt_half = dt / two
 
-E_kinetic= kinetic_erg( me % thermostat_type ) 
+! VV2 ... 
+E_kinetic = D_zero
+
+select case (me % thermostat_type)
+
+    case ("molecular")
+          do j = 1 , MM % N_of_molecules
+              total_Momentum = D_zero
+              do i = molecule(j)%span % inicio , molecule(j)%span % fim
+                  if ( atom(i) % flex ) then
+                      accelerate = atom(i)% ftotal / (atom(i)% mass * inv_kilo_mol)
+                      atom(i) % vel = atom(i) % vel + accelerate*dt_half
+
+                      total_Momentum = total_Momentum + (atom(i)%mass * atom(i)%vel) * inv_kilo_mol
+
+                  end if
+              end do
+              V_CM = total_Momentum / molecule(j) % mass
+              ! 2*kinetic energy (molecular) of the system ... 
+              E_kinetic = E_kinetic + molecule(j) % mass * sum( V_CM * V_CM ) 
+          end do
+
+    case ("atomic","DWFF")
+          do i = 1 , MM % N_of_atoms
+              if( atom(i) % flex ) then
+                  accelerate = atom(i)% ftotal / (atom(i)% mass * inv_kilo_mol)
+                  atom(i) % vel = atom(i) % vel + accelerate*dt_half 
+
+                  V_atomic = atom(i) % vel 
+                  ! 2*kinetic energy (atomic) of the system ...
+                  E_kinetic = E_kinetic + atom(i)%mass * sum( V_atomic * V_atomic ) * inv_kilo_mol
+              end if
+          end do
+
+    case default
+          error stop "unknown choice for thermostat in Berendsen.f"
+
+end select
+
 !######################################################
 !               Berendsen Thermostat 
 
@@ -92,11 +139,14 @@ else
     ! instantaneous temperature : E_kin/(3/2*NkB) ... 
     select case (me % thermostat_type)
 
-        case (0:1) ! <== molecular ...
+        case ("molecular")
         temperature = E_kinetic * iboltz / real( count(molecule%flex) )
 
-        case (2:)  ! <== atomic ...
+        case ("atomic","DWFF")
         temperature = E_kinetic * iboltz / real( count(atom%flex) )
+
+        case default
+        error stop "unknown choice for thermostat in Berendsen.f"
 
     end select
 endif
@@ -110,56 +160,32 @@ else
     lambda = SQRT(arg)
 end If
 
+! rescale all velocities
+do i = 1 , MM % N_of_atoms
+    atom(i) % vel = atom(i) % vel * lambda
+end do
+
+! Berendsen Barostat ...
+if( using_barostat% anyone ) then
+    CALL Ek_tensor( me % thermostat_type )
+    CALL barostat( me % pressure , dt )
+end if
+
 !######################################################
-
-dt_half = dt / two
-
-! VV2 ... 
-E_kinetic = D_zero
-select case (me % thermostat_type)
-
-    case (0:1) ! <== molecular ...
-          do i = 1 , MM % N_of_molecules
-              total_Momentum = D_zero
-              do j = molecule(i)%span % inicio , molecule(i)%span % fim
-                  if ( atom(j) % flex ) then
-                      accelerate = atom(j)% ftotal / (atom(j)% mass * inv_kilo_mol)
-                      atom(j) % vel = atom(j) % vel + accelerate*dt_half
-                      atom(j) % vel = atom(j) % vel * lambda
-
-                      total_Momentum = total_Momentum + (atom(j)%mass * atom(j)%vel) * inv_kilo_mol
-
-                  end if
-              end do
-              V_CM = total_Momentum / molecule(i) % mass
-              E_kinetic = E_kinetic + molecule(i) % mass *  sum( V_CM * V_CM ) 
-          end do
-
-    case (2:) ! <== atomic ...
-          V_atomic = D_zero
-          do i = 1 , MM % N_of_atoms
-              if( atom(i) % flex ) then
-                  accelerate = atom(i)% ftotal / (atom(i)% mass * inv_kilo_mol)
-                  atom(i) % vel = atom(i) % vel + accelerate*dt_half 
-                  atom(i) % vel = atom(i) % vel * lambda
-
-                  V_atomic = atom(i) % vel 
-                  E_kinetic = E_kinetic + atom(i)%mass * sum( V_atomic * V_atomic ) * inv_kilo_mol
-              end if
-          end do
-
-end select
-
 ! instantaneous temperature of the system after contact with thermostat ...
+E_kinetic= kinetic_erg( me % thermostat_type )
 select case (me % thermostat_type)
-    case (0:1) ! <== molecular ...
+    case ("molecular")
     me % Temperature =  E_kinetic * iboltz / real( count(molecule%flex) ) 
 
-    case (2:)  ! <atomic ...
+    case ("atomic","DWFF")
     me % Temperature =  E_kinetic * iboltz / real( count(atom%flex) ) 
+
+    case default
+    error stop "unknown choice for thermostat in Berendsen.f"
 end select
 
-! calculation of the kinetic energy ...
+! calculation of the bare atomic kinetic energy ...
 me % Kinetic = D_zero
 do i = 1 , MM % N_of_atoms
     me % Kinetic = me % Kinetic + ( atom(i) % mass ) * sum( atom(i) % vel(:) * atom(i) % vel(:) ) * half
@@ -168,9 +194,6 @@ me % Kinetic = me % Kinetic * micro / MM % N_of_Molecules
 
 me % density = get_density()
 
-! calculation of pressure ...
-if(using_barostat% anyone) CALL barostat( me % pressure , dt )
-
 end subroutine VV2
 !
 !
@@ -178,7 +201,7 @@ end subroutine VV2
  function kinetic_erg( thermostat_type ) result(kinetic)
 !=======================================================
 implicit none
-integer , intent(in)  :: thermostat_type
+character(len=*) , intent(in)  :: thermostat_type
 
 ! local variables ...
 real*8  :: total_Momentum(3) , V_CM(3) , V_atomic(3) , kinetic
@@ -188,23 +211,23 @@ kinetic = D_zero
 
 select case ( thermostat_type )
 
-       case(0:1)  ! <== molecular ...
-                  do i = 1 , MM % N_of_molecules
+       case("molecular")
+                  do j = 1 , MM % N_of_molecules
                       total_Momentum = D_zero
-                      do j = molecule(i)%span % inicio , molecule(i)%span % fim
-                          if( atom(j) % flex ) then
-                              total_Momentum = total_Momentum + atom(j)%mass * atom(j)%vel
+                      do i = molecule(j)%span % inicio , molecule(j)%span % fim
+                          if( atom(i) % flex ) then
+                              total_Momentum = total_Momentum + atom(i)%mass * atom(i)%vel
                           end if
                       end do   
           
-                      V_CM = total_Momentum / molecule(i) % mass
+                      V_CM = total_Momentum / molecule(j) % mass
           
                       ! 2*kinetic energy (molecular) of the system ...
-                      kinetic = kinetic + molecule(i) % mass * sum( V_CM * V_CM )
+                      kinetic = kinetic + molecule(j) % mass * sum( V_CM * V_CM )
                   end do
                   kinetic = kinetic * inv_kilo_mol**2
           
-       case (2:)  ! <== atomic ...
+       case ("atomic","DWFF")
                   do i = 1 , MM % N_of_atoms 
                       If( atom(i) % flex ) then
                           V_atomic = atom(i) % vel 
@@ -212,6 +235,9 @@ select case ( thermostat_type )
                           kinetic = kinetic + atom(i) % mass * sum( V_atomic * V_atomic ) * inv_kilo_mol
                       end if
                   end do
+
+      case default
+      error stop "unknown choice for thermostat in Berendsen.f"
 
 end select
 
