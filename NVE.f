@@ -2,7 +2,7 @@ module NVE_m
 
     use constants_m
     use syst         ! using all syst
-    use MD_read_m    , only: MM , atom , molecule
+    use MD_read_m    , only: MM , atom , molecule , species
     use VV_Parent    , only: VV
 
 

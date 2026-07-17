@@ -110,7 +110,7 @@ end subroutine Molecular_CM
     
     ! determine the center of mass and center-of-mass velocity of the entire simulation box
 
-    If( mod(frame,100) == 0 ) then
+    If( mod(frame,10) == 0 ) then
     
         mass_times_position = 0.d0
         mass_times_velocity = 0.d0
