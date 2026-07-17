@@ -183,7 +183,7 @@ end subroutine f_DWFF
             bond_erg = bond_erg + erg
             
             !-------------------------------------------------------------------------------
-            if( using_barostat% anyone ) then
+            if( using_barostat% inter ) then
                 do i=1,3 ; do j=i,3
                    virial_private(i,j) = virial_private(i,j) + rkl(i) * force * rkl(j)
                 end do; end do
@@ -274,7 +274,7 @@ end subroutine calculate_DWFF
      f_ang_aux(ati,:,ithr) = f_ang_aux(ati,:,ithr) - (f_atj + f_atk)
     
      ! inside DWFF_3body, after computing f_atj, f_atk:
-     if( using_barostat% anyone ) then
+     if( using_barostat% inter ) then
          do i = 1,3 ; do j = i,3
              virial(i,j) = virial(i,j) + rij(i)*f_atj(j) + rik(i)*f_atk(j)
          end do ; end do
