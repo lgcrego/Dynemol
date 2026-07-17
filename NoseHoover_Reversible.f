@@ -44,6 +44,8 @@ if( rounded_avg_atoms <= 1 ) then
 else
     me % thermostat_type = "atomic"
 end if
+! special case                                                                                                                                                                           
+if( any(species%DWFF) ) me % thermostat_type = "atomic"
 !---------------------------------------------  
 
 end function constructor

@@ -90,7 +90,7 @@ end do
 ! Non-bonding intramolecular interactions ...
 ! Van der Walls , Buckingham , Electrostatic
 
-if( using_barostat% intra ) call InitializeStressMatrix
+if( using_barostat% anyone ) call InitializeStressMatrix
 
 allocate( tmp_vdw (MM%N_of_atoms,3,numthr) , source = D_zero )
 allocate( tmp_ele (MM%N_of_atoms,3,numthr) , source = D_zero )
@@ -173,7 +173,7 @@ end do
 !====================================================================
 ! dissociative forces
 
-if( using_barostat% intra ) call ConcludeStressMatrix
+if( using_barostat% anyone ) call ConcludeStressMatrix
 
 deallocate( tmp_vdw , tmp_ele )
 
