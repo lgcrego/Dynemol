@@ -21,7 +21,7 @@ contains
 !=====================
     implicit none
     
-    if( using_barostat% anyone ) call InitializeStressMatrix
+    if( using_barostat% inter ) call InitializeStressMatrix
     
     if ( MM % N_of_molecules > 1 ) &
     then
@@ -33,7 +33,7 @@ contains
         
     end if
     
-    if( using_barostat% anyone ) call ConcludeStressMatrix
+    if( using_barostat% inter ) call ConcludeStressMatrix
 
 end subroutine FORCEINTER
 !
