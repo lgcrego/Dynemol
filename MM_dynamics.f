@@ -1,6 +1,7 @@
 module MM_dynamics_m
 
     use constants_m
+    use color_funcs
     use parameters_m        , only : driver , restart , step_security , QMMM , VDOS_ , n_t
     use MM_input            , only : MM_log_step , MM_frame_step , Units_MM , thermostat , spawn , spawn_step
     use MD_read_m           , only : atom , MM
@@ -150,6 +151,9 @@ if( mod(frame,MM_log_step) == 0   ) then
 
             case( "kj-mol" )
             write(*,10) frame, Temperature, Unit_Cell% MD_Kin*eV_2_kJmol, Unit_Cell% MD_Pot*eV_2_kJmol, (Unit_Cell% MD_Kin + Unit_Cell% MD_Pot)*eV_2_kJmol
+
+            case default
+            error stop "Error: unknown choice for parameter units_MM, check your card.inpt file"
 
         end select
     close(13)

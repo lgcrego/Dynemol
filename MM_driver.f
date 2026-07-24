@@ -2,6 +2,7 @@ module MMechanics_m
 
     use type_m
     use constants_m
+    use color_funcs
     use parameters_m            , only : t_i , n_t , t_f , frame_step , preview
     use MM_dynamics_m           , only : MolecularMechanics , preprocess_MM
 
