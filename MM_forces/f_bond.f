@@ -3,6 +3,7 @@ module FF_bonds
     use type_m   
     use omp_lib
     use constants_m
+    use color_funcs
     use parameters_m , only: PBC    
     use for_force    , only: bdpot, harm_bond, morse_bond
     use MD_read_m    , only: atom , molecule , MM 

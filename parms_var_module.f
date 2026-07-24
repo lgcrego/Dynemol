@@ -35,7 +35,7 @@ real*8                 :: temperature, pressure, cutoff_radius, thermal_relaxati
 integer                :: MM_log_step, MM_frame_step, spawn_step
 logical                :: read_velocities, Selective_Dynamics, spawn
 character (4)          :: MM_input_format
-character (5)          :: Units_MM
+character (6)          :: Units_MM
 character (8)          :: DWFF_type
 character (len=14)     :: OPT_driver
 character (len=11)     :: driver_MM 

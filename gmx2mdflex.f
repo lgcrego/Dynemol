@@ -5,6 +5,7 @@ module gmx2mdflex
 use constants_m
 use MPI_definitions_m      , only : master
 use for_force
+use color_funcs
 use type_m                 , only : dynemolworkdir , warning
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
@@ -115,6 +116,7 @@ do a = 1 , MM % N_of_species
             i = i + 1
  
         end do read_loop1
+        backspace(33)
 
         N_of_atoms = species(a) % N_of_atoms
 

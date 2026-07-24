@@ -2,6 +2,7 @@ module MD_read_m
 
     use constants_m
     use atomicmass
+    use color_funcs
     use MM_input                ! <== MM and species are defined here
     use type_m                  , only : dynemolworkdir , warning
     use parameters_m            , only : restart , ad_hoc , driver , preview , resume
