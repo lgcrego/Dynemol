@@ -4,6 +4,7 @@ module gmx2mdflex
 
 use constants_m
 use for_force
+use color_funcs
 use type_m                 , only : dynemolworkdir , warning
 use MM_types               , only : MM_atomic, MM_molecular, MM_system, DefineBonds, DefineAngles, DefinePairs, debug_MM
 use MM_tuning_routines     , only : SpecialBonds, SpecialAngs
@@ -112,6 +113,7 @@ do a = 1 , MM % N_of_species
             i = i + 1
  
         end do read_loop1
+        backspace(33)
 
         N_of_atoms = species(a) % N_of_atoms
 
@@ -128,7 +130,7 @@ do a = 1 , MM % N_of_species
 !==============================================================================================
         ! Bonding parameters :: reading ...
         do
-            read(33,'(A)',iostat=ioerr) line                                                                                                                            
+            read(33,'(A)',iostat=ioerr) line
             line = to_upper_case(line)
             if( verify( "[ BONDS ]" , line ) == 0 ) exit   ! <== looking for [ bonds ] in *.itp
         end do
@@ -168,6 +170,7 @@ do a = 1 , MM % N_of_species
            end select 
         end do
         rewind 33
+
 !==============================================================================================
         ! Angle parameters :: reading ...
         do

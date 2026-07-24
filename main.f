@@ -2,6 +2,7 @@ Program qdynamo
 
 use type_m
 use constants_m
+use color_funcs
 use util_m                  , only : to_upper_case
 use setup_checklist         , only : checklist, need_MM_stuff, dump_driver_parameters_and_tuning
 use card_reading            , only : ReadInputCard
