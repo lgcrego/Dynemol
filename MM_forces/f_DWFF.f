@@ -16,8 +16,10 @@ module DWFF
     private
 
     ! module variables ...
+    real*8  :: bond_erg
+    integer :: nOX, nHX
+    integer, allocatable :: H_of_O(:,:), nH_of_O(:), O_ptr(:), H_ptr(:)
     real*8 , allocatable :: f_bond_aux(:,:,:), f_ang_aux(:,:,:), ang_erg(:)
-    real*8               :: bond_erg
 
             !-----------------------------------------------------------!
             ! Legacy Conversion procedure for Electrostatic Interaction ! 
@@ -68,7 +70,15 @@ contains
    
     ! local variables
     integer :: i, j
-    
+    integer :: nOX, nHX
+    logical, save :: done = .false.
+
+    if( .not. done ) then
+        call preprocess
+        done = .true.
+    end if
+    call HOH_bond_topology
+
     do i = 1 , MM % N_of_atoms
         atom(i)% f_DWFF(:) = D_zero  
     end do
@@ -101,7 +111,7 @@ end subroutine f_DWFF
     real*8  :: rkl(3)
     real*8  :: rkl2 , force , erg
     real*8  :: virial_private(3,3)
-    integer :: i, j, k, l, pair_of_kind
+    integer :: i, j, k, l, O_idx, pair_of_kind
     integer :: ithr, numthr
     logical :: DWFF_special_pair
     character(len=2) :: type1, type2
@@ -118,7 +128,7 @@ end subroutine f_DWFF
     ! INTER-MOLECULAR DWFF calculations ...
 
 !$OMP parallel default (shared) &
-!$OMP private (i, j, k, l, rkl, rkl2, force, erg, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
+!$OMP private (i, j, k, l, O_idx, rkl, rkl2, force, erg, DWFF_special_pair, type1, type2, pair_of_kind, ithr, virial_private)  &
 !$OMP reduction (+: bond_erg)
                            
     ! initialize thread-local variables
@@ -147,31 +157,14 @@ end subroutine f_DWFF
             select case (trim(type1)//'-'//trim(type2))
             case ('HX-HX')
                 pair_of_kind = 3
-                ! only intramolecular 3-body 
-                if ( atom(k)% nr == atom(l)% nr ) then
-                    call DWFF_3body ( k, atom(k)%offset + HOH% O_ptr, l , ithr , virial_private )
-                end if 
-       
+
             case ('OX-OX')
                 pair_of_kind = 2
                 ! 3body does not apply 
        
             case ('HX-OX' , 'OX-HX')
                 pair_of_kind = 1
-                !---------------------------------------------------------
-                ! 3body calculations
-                ! (pass ithr so 3body can write into per-thread arrays)
-                if ( atom(k)% nr /= atom(l)% nr ) then
-                    !! HOH atoms with different nr's 
-                    if ( atom(k)% MMSymbol == 'HX' ) then
-                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(1) , ithr , virial_private )
-                         call DWFF_3body ( k , l , atom(l)%offset + HOH%H_ptr(2) , ithr , virial_private )
-                    else
-                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(1) , ithr , virial_private )
-                         call DWFF_3body ( l , k , atom(k)%offset + HOH%H_ptr(2) , ithr , virial_private )
-                    end if
-                end if
-                !---------------------------------------------------------
+
             end select
 
             ! evaluate 2-body interaction (force and energy)
@@ -192,11 +185,25 @@ end subroutine f_DWFF
        end do
     end do
     !$OMP end do
+
+    !$OMP do schedule(dynamic,4)
+    do i = 1, size(O_ptr)
+        O_idx = O_ptr(i)
+        ! every pair of hydrogens bonded to this oxygen forms one angle
+        do k = 1, nH_of_O(i) - 1
+            do l = k+1, nH_of_O(i)
+                call DWFF_3body ( H_of_O(i,k) , O_idx , H_of_O(i,l) , ithr , virial_private )
+            end do
+        end do
+    end do
+    !$OMP end do
+
     ! reduce thread-local virial into the shared virial_tensor safely
     !$OMP critical
        virial_tensor = virial_tensor + virial_private
     !$OMP end critical    
-    !$OMP end parallel 
+
+!$OMP end parallel 
     !##############################################################################
 
 end subroutine calculate_DWFF
@@ -376,6 +383,106 @@ end subroutine DWFF_3body
 
 end subroutine evaluate_2body_DWFF
 !
+!
+!
+!====================
+subroutine preprocess
+!====================
+    implicit none
+
+    ! Local variables
+    integer :: i, j, k, n_atoms
+
+    !------------------------------------
+    ! Basic system sizes
+    !------------------------------------
+    n_atoms = size(atom)
+    nOX     = count(atom%MMsymbol == "OX")
+    nHX     = count(atom%MMsymbol == "HX")
+
+    !------------------------------------
+    ! Build pointer lists for O and H
+    !------------------------------------
+    allocate(O_ptr(nOX))
+    allocate(H_ptr(nHX))
+
+    i = 0
+    j = 0
+    do k = 1, n_atoms
+        select case (atom(k)%MMsymbol)
+        case ("OX")
+            i = i + 1
+            O_ptr(i) = k
+        case ("HX")
+            j = j + 1
+            H_ptr(j) = k
+        end select
+    end do
+
+end subroutine preprocess
+!
+!
+!===========================
+subroutine HOH_bond_topology
+!===========================
+    implicit none
+
+    ! Local parameters
+    integer, parameter :: max_coord = 6
+
+    ! Local variables
+    integer :: i, j
+    real(8) :: rij2, rijlen, OH_bond_cut
+    real(8) :: rij(3), Txyz(3)
+    real(8), allocatable :: OH_distance_table(:,:)
+
+    Txyz = MM % box(:)
+
+    allocate( OH_distance_table(nOX, nHX) , source = 0.d0 )
+
+    ! --------------------------------------------------------
+    ! Compute O–H and O–O distances (minimum image convention)
+    ! --------------------------------------------------------
+    associate (OX => atom(O_ptr), HX => atom(H_ptr))
+        ! O–H distances
+        do i = 1, nOX
+            do j = 1, nHX
+                rij = OX(i)%xyz - HX(j)%xyz
+                rij = rij - Txyz * dnint(rij / Txyz) * PBC(:)
+
+                rij2   = dot_product(rij, rij)
+                rijlen = sqrt(rij2)
+                  
+                ! not a symmetric matrix
+                OH_distance_table(i, j) = rijlen
+            end do
+        end do
+    end associate
+
+    ! --------------------------------------------------------
+    !          build oxygen-centered adjacency
+    ! --------------------------------------------------------
+    if( .not. allocated(H_of_O) ) then
+        allocate( H_of_O (nOX , max_coord) )
+        allocate( nH_of_O(nOX) )
+    end if
+    nH_of_O = 0
+
+    OH_bond_cut = HOH%Angle(1,2)
+    do i = 1, nOX
+        do j = 1, nHX
+            if ( OH_distance_table(i,j) < OH_bond_cut ) then
+                if ( nH_of_O(i) < max_coord ) then
+                     nH_of_O(i) = nH_of_O(i) + 1
+                     H_of_O(i, nH_of_O(i)) = H_ptr(j)
+                     end if
+            end if
+        end do
+    end do
+
+    deallocate( OH_distance_table )
+
+end subroutine HOH_bond_topology
 !
 !
 !
