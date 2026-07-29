@@ -13,7 +13,7 @@ use Function_routines   , only : ad_hoc_tuning
 use diagnosis_m         , only : diagnosis
 use EDIT_routines       , only : Eliminate_Fragment , ReGroup , Replicate , Translation
 use Statistics_routines , only : Most_Representative_Configuration , Statistics
-use Topology_routines   , only : connect , dump_topol
+use Topology_routines   , only : custom_connection, dump_topol
 
 public :: Read_Trajectories
 
@@ -248,7 +248,7 @@ do
             do i = 1 , size( trj )
                 CALL Replicate( trj(i) )
             end do
-            CALL connect( trj(1) )
+            CALL custom_connection( trj(1) )
 
        case( 12 )
 

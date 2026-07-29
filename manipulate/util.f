@@ -378,6 +378,12 @@ then
            case("xyz")
                write(*,'(/,a)') "ls *.xyz"
                call system("ls *.xyz") 
+           case("psf")
+               write(*,'(/,a)') cyan // "ls *.psf" // reset
+               call system("ls *.psf") 
+           case("itp")
+               write(*,'(/,a)') cyan // "ls *.itp" // reset
+               call system("ls *.itp") 
     end select
 end if
 

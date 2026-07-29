@@ -518,12 +518,12 @@ do concurrent (i=1:3)
    system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
 end do
 
-! start regrouping 
+! start regrouping, assumes atoms of same nresidue are stored in sequence
 do nr = nr_min, nr_max
     ! atomic pointers of molecule with nresidue = nr
     indx1 = findloc(system%atom%nresid, nr, dim=1)
     if (indx1 == 0) then
-      Print*, "Residue ",nr," not found"; stop
+      Print*, "Error: Residue ",nr," not found"; stop
     end if
     indx2 = findloc(system%atom%nresid, nr, dim=1, back=.true.)
 
@@ -728,7 +728,6 @@ type(universe) , intent(inout) :: system
 type(atomic), allocatable :: temp(:)
 integer                   :: New_N_of_atoms , i , j , k , n , Replication_Factor 
 integer                   :: counter , S_counter , F_counter , S_span, F_span
-integer                   :: max_nresid = 0
 character(len=3)          :: string
 logical                   :: replicate_ALL = .true.
 type(integer_interval), save :: n_x , n_y , n_z

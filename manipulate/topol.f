@@ -6,7 +6,7 @@ use ansi_colors
 use color_funcs
 use Read_Parms  , only: Atomic_Mass
 
-public :: connect , dump_topol , InputIntegers , get_topology
+public :: custom_connection, dump_topol, InputIntegers, write_topology_file
 
 private
 
@@ -19,20 +19,20 @@ logical              :: done = .false.
 contains
 !
 !
-!=========================
- subroutine connect( sys )
-!=========================
+!===================================
+ subroutine custom_connection( sys )
+!===================================
 implicit none
 type(universe), intent(inout) :: sys 
 
 ! local varibles ...
-integer :: i, j, option
+integer:: option
 
 CALL system( "clear" )
 
 write(*,'(/a)') bold // cyan // ' Edit specific bonds :' // reset
 
-write(*,'(2a)') green_("(1)"),"= connect"
+write(*,'(2a)') green_("(1)"),"= custom_connection"
 write(*,'(4a)') green_("(0)"),"= do nothing (",orange_("default"),")"
 
 write(*,'(/a)', advance='no') bold//yellow_(">>> ")
@@ -48,7 +48,58 @@ end select
 
 CALL system( "clear" )
     
-end subroutine connect
+end subroutine custom_connection
+!
+!
+!
+!=============================
+ subroutine edit_topology(sys)
+!=============================
+implicit none
+type(universe), intent(inout) :: sys 
+
+! local varibles ...
+character(len=2) :: S1, S2
+integer          :: i, j
+real*8           :: cutoff
+logical          :: flag1, flag2
+
+allocate( sys%topol (sys%N_of_atoms,sys%N_of_atoms) , source = .false. )
+do
+    write(*,'(1x,3a)') &
+                        yellow//"Enter the chemical elements (not MMSymbols) to connect, one at a time ("//reset, &
+                        orange//"@ to exit"//reset, &
+                        yellow//") : "//reset
+    read(*,*) S1
+    If( trim(S1) == "@" ) exit
+    read(*,*) S2
+
+    S1 = trim(adjustl(S1))
+    S2 = trim(adjustl(S2))
+
+    write(*,'(1x,a)') yellow//"cut-off distance for the bond: "//reset
+    read*, cutoff
+
+    do j = 1 , sys%N_of_atoms 
+    do i = j+1 , sys%N_of_atoms 
+
+        flag1 =  &
+            (trim(sys%atom(i)%Symbol)==S1 .AND. trim(sys%atom(j)%Symbol)==S2) .or. &  
+            (trim(sys%atom(i)%Symbol)==S2 .AND. trim(sys%atom(j)%Symbol)==S1) 
+
+        If (.not. flag1) cycle
+
+        flag2 = (norm2(sys%atom(i)%xyz - sys%atom(j)%xyz) < cutoff )
+        if (flag2) then
+           sys % topol(i,j) = .true. 
+           sys % topol(j,i) = .true.
+        end if
+
+    end do
+    end do
+end do
+
+end subroutine edit_topology
 !
 !
 !
@@ -82,9 +133,9 @@ end subroutine dump_topol
 !
 !
 !
-!=========================================
-subroutine get_topology( sys , file_type )
-!=========================================
+!================================================
+subroutine write_topology_file( sys , file_type )
+!================================================
 implicit none 
 type(universe) , intent(inout) :: sys
 integer        , intent(in)    :: file_type
@@ -92,7 +143,7 @@ integer        , intent(in)    :: file_type
 ! local variables ...
 logical :: TorF
 integer :: i, j, n, total_bonds, total_angs, total_diheds 
-integer :: mol_conect
+integer :: mol_conect, f_unit
 
 !----------------------------------------------
 !         generate topology files 
@@ -100,9 +151,9 @@ integer :: mol_conect
 
 select case( file_type )
        case(1)
-           OPEN(unit=10,file='seed.itp',status='unknown')
+           OPEN(newunit=f_unit,file='seed.itp',status='unknown')
        case(2)
-           OPEN(unit=10,file='seed.psf',status='unknown')
+           OPEN(newunit=f_unit,file='seed.psf',status='unknown')
        end select
 
 ! get the Atomic_Masses ...
@@ -113,14 +164,14 @@ do n = 1 , maxval(sys%atom%nresid)
        !----------------------------------------
        ! heading 
        !----------------------------------------
-       write(10,101) "[ moleculetype ]"
-       write(10,*) , "SPECIES", 3
-       write(10,*) 
+       write(f_unit,101) "[ moleculetype ]"
+       write(f_unit,*) , "SPECIES", 3
+       write(f_unit,*) 
        
-       write(10,102) "[ atoms ]"
+       write(f_unit,102) "[ atoms ]"
        do i = 1 , sys%N_of_atoms
 
-           write(10,5) i                    ,  &  ! <== serial number within the residue
+           write(f_unit,5) i                    ,  &  ! <== serial number within the residue
                        sys%atom(i)%Symbol   ,  &  ! <== force field descriptor of atom type
                        sys%atom(i)%nresid   ,  &  ! <== residue identifier
                        sys%atom(i)%resid    ,  &  ! <== residue name
@@ -130,11 +181,11 @@ do n = 1 , maxval(sys%atom%nresid)
                        sys%atom(i)%mass           ! <== mass of chemical element 
        end do
 end do
-write(10,*)
-write(10,*)
+write(f_unit,*)
+write(f_unit,*)
 
 !----------------------------------------
-! start topology connections
+! start topology conections
 !----------------------------------------
 mol_conect = 0
 do i = 1 , sys%total_conect
@@ -145,7 +196,7 @@ end do
 if( mol_conect == 0 ) then
     Write(*,*)
     Write(*,*) "======================= W A R N I N G ========================"
-    Write(*,*) "No CONNECT in the pdb file; cannot generate bonds, angles, etc"
+    Write(*,*) "No conect in the pdb file; cannot generate bonds, angles, etc"
     Write(*,*) "=============================================================="
     Write(*,*)
 endif
@@ -173,12 +224,14 @@ CALL generate_topology_list( sys%atom )
 
 select case( file_type )
     case(1)
-        CALL write_seed_itp
+        CALL write_seed_itp(f_unit)
     case(2)
-        CALL write_seed_psf
+        CALL write_seed_psf(f_unit)
     end select
 
-TorF = Checking_Topology( bond_list , angle_list , dihedral_list )
+close(f_unit)
+
+TorF = Checking_Topology( bond_list, angle_list, dihedral_list )
 If( TorF ) then
     Print*, "error detected in Topology , check Topology.log"
     stop
@@ -190,7 +243,7 @@ deallocate( bond_matrix, angle_matrix, dihedral_matrix )
 101 FORMAT(a16)
 102 FORMAT(a9)
 
-end subroutine get_topology
+end subroutine write_topology_file
 !
 !
 !
@@ -395,10 +448,11 @@ end subroutine generate_topology_list
 !
 !
 !
-!========================
-subroutine write_seed_itp
-!========================
+!=================================
+subroutine write_seed_itp (f_unit)
+!=================================
 implicit none 
+integer, intent(in):: f_unit
 
 ! local variables ...
 integer :: j , k , Nbonds , Nangs , Ndiheds
@@ -408,28 +462,26 @@ integer :: j , k , Nbonds , Nangs , Ndiheds
 !-----------------------------------------------------------
 
 Nbonds = size(bond_list(:,1))
-write(10,105) "[ bonds ]"
+write(f_unit,105) "[ bonds ]"
 do k = 1 , Nbonds
-     write(10,102) (bond_list(k,j) , j=1,2) , 1
+     write(f_unit,102) (bond_list(k,j) , j=1,2) , 1
 end do
 
-write(10,*) " "
-write(10,*) " "
+write(f_unit,*) " "
+write(f_unit,*) " "
 Nangs = size(angle_list(:,1))
-write(10,106) "[ angles ]"
+write(f_unit,106) "[ angles ]"
 do k = 1 , Nangs
-     write(10,103) (angle_list(k,j) , j=1,3) , 1
+     write(f_unit,103) (angle_list(k,j) , j=1,3) , 1
 end do
 
-write(10,*) " "
-write(10,*) " "
+write(f_unit,*) " "
+write(f_unit,*) " "
 Ndiheds = size(dihedral_list(:,1))
-write(10,107) "[ dihedrals ]"
+write(f_unit,107) "[ dihedrals ]"
 do k = 1 , Ndiheds
-     write(10,104) (dihedral_list(k,j) , j=1,4) ,3
+     write(f_unit,104) (dihedral_list(k,j) , j=1,4) ,3
 end do 
-
-close(10)
 
 102 format(3I4)
 103 format(4I4)
@@ -442,10 +494,11 @@ end subroutine write_seed_itp
 !
 !
 !
-!========================
-subroutine write_seed_psf
-!========================
-implicit none 
+!=================================
+subroutine write_seed_psf (f_unit)
+!=================================
+implicit none
+integer, intent(in):: f_unit
 
 ! local variables ...
 integer :: j , k , n , ioerr , Nbonds , Nangs , Ndiheds
@@ -455,32 +508,30 @@ integer :: j , k , n , ioerr , Nbonds , Nangs , Ndiheds
 !-----------------------------------------------------------
 
 Nbonds = size(bond_list(:,1))
-write(10,105) Nbonds , "   !NBOND: bonds"
+write(f_unit,105) Nbonds , "   !NBOND: bonds"
 do k = 1 , ceiling( Nbonds / four ) - 1
-  write(10 ,100, iostat=ioerr )  ( ( bond_list((k-1)*4+n,j) , j=1,2 ) , n=1,4 )
+  write(f_unit ,100, iostat=ioerr )  ( ( bond_list((k-1)*4+n,j) , j=1,2 ) , n=1,4 )
 end do
-write(10 ,100, iostat=ioerr )  ( ( bond_list((k-1)*4+n,j) , j=1,2 ) , n=1,merge(4,mod(NBonds,4),mod(NBonds,4)==0) )
+write(f_unit ,100, iostat=ioerr )  ( ( bond_list((k-1)*4+n,j) , j=1,2 ) , n=1,merge(4,mod(NBonds,4),mod(NBonds,4)==0) )
 
-write(10,*) " "
-write(10,*) " "
+write(f_unit,*) " "
+write(f_unit,*) " "
 Nangs = size(angle_list(:,1))
-write(10,106) Nangs , "   !NTHETA: angles"
+write(f_unit,106) Nangs , "   !NTHETA: angles"
 do k = 1 , ceiling(Nangs/three)-1
-  write(10 ,101, iostat=ioerr )  ( ( angle_list((k-1)*3+n,j) , j=1,3 ) , n=1,3 )
+  write(f_unit ,101, iostat=ioerr )  ( ( angle_list((k-1)*3+n,j) , j=1,3 ) , n=1,3 )
 end do
-write(10 ,101, iostat=ioerr )  ( ( angle_list((k-1)*3+n,j) , j=1,3 ) , n=1,merge(3,mod(NAngs,3),mod(NAngs,3)==0) )
+write(f_unit ,101, iostat=ioerr )  ( ( angle_list((k-1)*3+n,j) , j=1,3 ) , n=1,merge(3,mod(NAngs,3),mod(NAngs,3)==0) )
 
 
-write(10,*) " "
-write(10,*) " "
+write(f_unit,*) " "
+write(f_unit,*) " "
 Ndiheds = size(dihedral_list(:,1))
-write(10,107) Ndiheds , "   !NPHI: dihedrals"
+write(f_unit,107) Ndiheds , "   !NPHI: dihedrals"
 do k = 1 , ceiling(Ndiheds/two)-1
-   write(10 ,102, iostat=ioerr )  ( ( dihedral_list((k-1)*2+n,j) , j=1,4 ) , n=1,2 )
+   write(f_unit ,102, iostat=ioerr )  ( ( dihedral_list((k-1)*2+n,j) , j=1,4 ) , n=1,2 )
 end do 
-write(10 ,102, iostat=ioerr )  ( ( dihedral_list((k-1)*2+n,j) , j=1,4 ) , n=1,merge(2,mod(Ndiheds,2),mod(Ndiheds,2)==0) )
-
-close(10)
+write(f_unit ,102, iostat=ioerr )  ( ( dihedral_list((k-1)*2+n,j) , j=1,4 ) , n=1,merge(2,mod(Ndiheds,2),mod(Ndiheds,2)==0) )
 
 100 FORMAT(t10,I4,t16,I4,t30,I4,t36,I4,t50,I4,t56,I4,t70,I4,t76,I4)
 101 FORMAT(t10,I4,t16,I4,t22,I4,t35,I4,t41,I4,t47,I4,t60,I4,t66,I4,t72,I4)
@@ -564,7 +615,6 @@ end do
 ! prepare to leave ...
 if( done ) then  
     TorF = .true.     ! <==  error detected
-    close(10)
 else
     TorF = .false.    ! <==  NO error detected
 end If
@@ -655,57 +705,6 @@ flag = .true.
 
 end subroutine error_message
 !
-!
-!
-!=============================
- subroutine edit_topology(sys)
-!=============================
-implicit none
-type(universe), intent(inout) :: sys 
-
-! local varibles ...
-character(len=2) :: S1, S2
-integer          :: i, j
-real*8           :: cutoff
-logical          :: flag1, flag2
-
-allocate( sys%topol (sys%N_of_atoms,sys%N_of_atoms) , source = .false. )
-do
-    write(*,'(1x,3a)') &
-                        yellow//"Choose chemical elements (not MMSymbols) whose bonds are to be edited ("//reset, &
-                        orange//"@ to exit"//reset, &
-                        yellow//") : "//reset
-    read(*,*) S1
-    If( trim(S1) == "@" ) exit
-    read(*,*) S2
-
-    S1 = trim(adjustl(S1))
-    S2 = trim(adjustl(S1))
-
-    write(*,'(1x,a)') yellow//"cut-off distance for the bond: "//reset
-    read*, cutoff
-
-    do j = 1 , sys%N_of_atoms 
-    do i = j+1 , sys%N_of_atoms 
-
-        flag1 =  &
-            (trim(sys%atom(i)%Symbol)==S1 .AND. trim(sys%atom(j)%Symbol)==S2) .or.                                                           &  
-            (trim(sys%atom(i)%Symbol)==S2 .AND. trim(sys%atom(j)%Symbol)==S1) 
-
-        If (.not. flag1) cycle
-
-        flag2 = (norm2(sys%atom(i)%xyz - sys%atom(j)%xyz) < cutoff )
-        if (flag2) then
-           sys % topol(i,j) = .true. 
-           sys % topol(j,i) = .true.
-        end if
-
-    end do
-    end do
-end do
-
-end subroutine edit_topology
-
 !
 !
 end module Topology_routines

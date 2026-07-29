@@ -5,7 +5,7 @@ use Read_Parms          , only : MMSymbol_2_Symbol , Symbol_2_AtNo
 use RW_routines         , only : Initialize_System
 use diagnosis_m
 use FUNCTION_routines   , only : res , Solvent_residue_groups 
-use Topology_routines   , only : connect , dump_topol , InputIntegers
+use Topology_routines   , only : custom_connection, dump_topol, InputIntegers
 
 contains
 !
@@ -36,7 +36,7 @@ where( sys % atom % MMSymbol == "XXX" ) sys % atom % MMSymbol = sys % atom % Sym
 
 CALL diagnosis(sys)
 
-CALL Connect(sys)
+CALL custom_connection(sys)
 
 CALL Dump_pdb(sys)
 
