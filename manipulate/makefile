@@ -51,6 +51,7 @@ SOURCE = types_m.o \
 		 parms.o \
 		 tuning.o \
 		 topol.o \
+         visual_topo.o \
          amber.o \
 		 RW.o \
 		 gmx.o \

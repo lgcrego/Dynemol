@@ -1,12 +1,13 @@
 module RW_driver
 
 use ansi_colors
+use diagnosis_m    
 use RW_routines       , only : View_XYZ, View_Yaehmop, Save_POSCAR, Save_MD_Urht
 use types_m           , only : universe
 use GMX_routines      , only : Save_GROMACS
-use Topology_routines , only : get_topology
+use Topology_routines , only : write_topology_file
 use Read_Parms        , only : atom 
-use diagnosis_m    
+use visual_topology   , only : bond_check
 
 public :: WritingRoutines
 
@@ -21,7 +22,7 @@ implicit none
 type(universe) , intent(inout) :: structure
 
 ! local variables
-integer            :: AtNo, N_of_atom_type, file_type
+integer            :: AtNo, N_of_atom_type, option
 character(len=1)   :: Writing_Method
 
 !-----------------------------------------------------------
@@ -39,9 +40,8 @@ do
      write(*,'(a)') green // ' 2 :' // reset // ' Yaehmop format'
      write(*,'(a)') green // ' 3 :' // reset // ' POSCAR format'
      write(*,'(a)') green // ' 4 :' // reset // ' PDB format'
-     write(*,'(a)') green // ' 5 :' // reset // ' Generate topology ' // &
-                          '(requires CONECT in PDB; obabel -ipdb input.pdb -opdb -O output.pdb)'
-     
+     write(*,'(a)') green // ' 5 :' // reset // ' Generate topology ' 
+
      write(*,'(a)') bold // orange // ' 0 :' // reset // ' DONE'
      
      write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
@@ -63,15 +63,37 @@ do
              CALL Save_GROMACS( structure )
      
          case ('5')
-             write(*,'(/a)') bold // cyan // 'Choose topology format:' // reset
-             write(*,'(a)') green // ' 1 ' // reset // '= OPLS'
-             write(*,'(a)') green // ' 2 ' // reset // '= GAFF / NAMD / Amber'
+             write(*,'(/a)') cyan // '============================' // reset
+             write(*,'(a)')  cyan // ' Select topology file format' // reset
+             write(*,'(a)')  cyan // '============================' // reset
              
-             write(*,'(/a)', advance='no') bold // yellow // '>>> ' // reset
-             read (*,*) file_type
+             write(*,'(a,t50,a)') green // '  1) OPLS' // reset , '(requires CONECT record on input)'
+             write(*,'(a,t50,a)') green // '  2) GAFF / AMBER / NAMD' // reset , '(requires CONECT record on input)'
+             write(*,'(a)')       green // '  3) Generate CONECT records from .itp or .psf' // reset
              
-             call get_topology(structure, file_type)
+             write(*,'(/a)') bold // 'Notes:' // reset
              
+             write(*,'(a)') &
+                 '  • Options 1 and 2 require the INPUT PDB file to already contain CONECT records.', &
+                 '  • If CONECT records are missing, they can be generated with Open Babel:',         &
+                 '      obabel -ipdb input.pdb -opdb -O output.pdb'
+             
+             write(*,'(/a)',advance='no') bold // yellow // &
+                 'Enter option [1-3]: ' // reset
+             
+             read(*,*) option
+             
+             select case (option)
+                  case(1,2)
+                  call write_topology_file(structure, option)
+            
+                  case(3) 
+                  call bond_check(structure)
+
+                  case default
+                  write(*,'(/a)') red // 'Invalid option.' // reset
+             end select
+                   
              write(*,'(a)') bold // green // '>>> DONE <<< ' // reset
      
          case default

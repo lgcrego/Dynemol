@@ -65,6 +65,7 @@ module types_m
         integer                       :: N_of_Surface_Atoms
         integer                       :: N_of_Solvent_Atoms
         integer                       :: N_of_Solvent_Molecules
+        integer         , allocatable :: OH_pair(:,:)
         logical         , allocatable :: topol(:,:)
         character(1)    , allocatable :: list_of_fragments(:)
         character(3)    , allocatable :: list_of_residues(:)

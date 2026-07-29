@@ -5,8 +5,8 @@ module Dissociative
     use ansi_colors
     use color_funcs
     use Read_parms
-    use EDIT_routines, only : ReGroup, Bring_into_PBCBox
     use EDT_util_m   , only : parse_this
+    use diagnosis_m  , only : diagnosis
     
     implicit none    
     private
@@ -19,19 +19,20 @@ module Dissociative
        real*8 :: sdv
     end type statistics 
 
-    ! Arrays describing connectivity and species
+    ! Arrays describing conectivity and species
     integer, allocatable :: O_ptr(:)             ! O-atom indices
     integer, allocatable :: H_ptr(:)             ! H-atom indices
     integer, allocatable :: OH_bond_order(:)     ! bond order per-water
     integer, allocatable :: HOH_indices(:,:)     ! per-water H indices (2)
     integer, allocatable :: dimer_counter (:,:)  ! life-time counter
     integer, allocatable :: dimer_list(:)        ! indices of atoms in dimers
+    integer, allocatable :: adj_mtx(:,:)         ! adjacency matrix
 
     real(8), allocatable :: OH_distance_table(:,:)
     real(8), allocatable :: OO_distance_table(:,:)
 
     logical, allocatable :: HOH_modified(:)
-    type(universe), allocatable :: new_trj(:)
+    type(universe), allocatable :: work_trj(:)
 
     ! module variables
     integer :: n_frames, n_atoms, n_mols, nHX, nOX, unit1, unit2, unit3, unit4, unit5
@@ -73,7 +74,7 @@ subroutine DWFF(trj)
     call preprocess(trj(1)%atom, n_frames)
 
     ! Copy trajectory for optional visualization
-    new_trj = trj
+    work_trj = trj
 
     !------------------------------------
     ! Main analysis loop
@@ -111,7 +112,7 @@ subroutine bond_topology(frame, atom, Txyz)
     real(8)     , intent(in) :: Txyz(3)
 
     ! Local variables
-    integer :: i, j
+    integer :: i, j, k, idx(2)
     real(8) :: rij(3), rij2, rijlen
 
     ! --------------------------------------------------------
@@ -130,7 +131,8 @@ subroutine bond_topology(frame, atom, Txyz)
 
                 rij2   = dot_product(rij, rij)
                 rijlen = sqrt(rij2)
-
+                  
+                ! not a symmetric matrix
                 OH_distance_table(i, j) = rijlen
             end do
         end do
@@ -153,18 +155,35 @@ subroutine bond_topology(frame, atom, Txyz)
     end associate
 
     ! --------------------------------------------------------
+    ! Build adjacency matrix
+    ! given HX, find the closest OX
+    ! --------------------------------------------------------
+    allocate( work_trj(frame)% OH_pair(nHx,2) )
+
+    do j = 1, nHx
+
+       i = minloc( OH_distance_table(:, j), dim=1 )
+
+       work_trj(frame)%OH_pair(j, 1) = O_ptr(i)
+       work_trj(frame)%OH_pair(j, 2) = H_ptr(j)
+
+    end do
+
+    ! --------------------------------------------------------
     ! Count neighbors for each oxygen
     ! --------------------------------------------------------
     OH_bond_order = 0
 
-    do concurrent (i = 1:nOX)
-        OH_bond_order(i) = count( OH_distance_table(i, :) <  OH_covalent_len )
+    do i = 1, nOX
+        OH_bond_order(i) = count( work_trj(frame)%OH_pair(:, 1) == O_ptr(i) )
     end do
 
     HOH_modified = .false.
     where (OH_bond_order /= 2)
         HOH_modified = .true.
     end where
+ 
+    write(22,'(4I5)') frame , count(OH_bond_order == 1),  count(OH_bond_order == 2), count(OH_bond_order == 3)
 
     ! --------------------------------------------------------
     ! Bond-order sanity check
@@ -179,14 +198,21 @@ subroutine bond_topology(frame, atom, Txyz)
     end do
 
     ! --------------------------------------------------------
-    ! Build HOH triplets (H–O–H)
+    ! Build HOH triplets (H–O–H) on the fly for each frame
     ! --------------------------------------------------------
     HOH_indices = 0
     do i = 1, nOX
-        j = 2*(i - 1)
-        HOH_indices(i, 1) = H_ptr(j + 1)
-        HOH_indices(i, 2) = O_ptr(i)
-        HOH_indices(i, 3) = H_ptr(j + 2)
+       
+        if(HOH_modified(i)) cycle
+
+        idx = pack( [(k, k=1,nHX)], OH_distance_table(i, :) < OH_covalent_len )
+ 
+        if(size(idx) /= 2) write(*,*) "Error in build HOH triplets (H–O–H):  Oxygen", i
+ 
+        HOH_indices(i, 1) = H_ptr( idx(1) )
+        HOH_indices(i, 2) = O_ptr( i )
+        HOH_indices(i, 3) = H_ptr( idx(2) )
+
     end do
 
     call identify_species(frame, atom)
@@ -206,7 +232,7 @@ function get_OH_covalent_bond_length(atom, Txyz, verbose) result(this)
     ! Local variables
     real(8) :: rij(3), rik(3)
     real(8) :: rijlen, riklen
-    real(8) :: OH_bond_mean, OH_bond_sdv
+    real(8) :: OH_bond_mean, OH_bond_sdv, sqr_dev
     integer :: ati, atj, atk, n, n_bond
     real(8), allocatable :: OH_bond_length(:)
     type(statistics) :: this
@@ -226,7 +252,7 @@ function get_OH_covalent_bond_length(atom, Txyz, verbose) result(this)
         if (HOH_modified(n)) cycle
 
         atj = HOH_indices(n, 1)   ! first hydrogen
-        ati = HOH_indices(n, 2)   ! oxygen
+        ati = HOH_indices(n, 2)   ! oxygen O_n
         atk = HOH_indices(n, 3)   ! second hydrogen
 
         ! rij = r_j - r_i (minimum image)
@@ -250,8 +276,8 @@ function get_OH_covalent_bond_length(atom, Txyz, verbose) result(this)
 
     if (n_bond > 0) then
         OH_bond_mean = sum(OH_bond_length, mask=.not. HOH_modified) / n_bond
-        OH_bond_sdv  = sqrt( sum( (OH_bond_length - OH_bond_mean)**2, &
-                                  mask=.not. HOH_modified ) / n_bond )
+        sqr_dev      = sum( (OH_bond_length - OH_bond_mean)**2, mask=.not. HOH_modified )
+        OH_bond_sdv  = sqrt( sqr_dev / n_bond )
     else
         OH_bond_mean = 0.0d0
         OH_bond_sdv  = 0.0d0
@@ -285,7 +311,7 @@ function get_HOH_angles(atom, Txyz, verbose) result(this)
     real(8) :: rij(3), rik(3)
     real(8) :: rijlen, riklen
     real(8) :: cos_theta, theta
-    real(8) :: HOH_ang_mean, HOH_ang_sdv
+    real(8) :: HOH_ang_mean, HOH_ang_sdv, sqr_dev
     integer :: ati, atj, atk, n, n_ang
     real(8), allocatable :: HOH_angles(:)
     type(statistics) :: this
@@ -338,8 +364,8 @@ function get_HOH_angles(atom, Txyz, verbose) result(this)
 
     if (n_ang > 0) then
         HOH_ang_mean = sum(HOH_angles, mask=.not. HOH_modified) / n_ang
-        HOH_ang_sdv  = sqrt( sum( (HOH_angles - HOH_ang_mean)**2, &
-                                  mask=.not. HOH_modified ) / n_ang )
+        sqr_dev      = sum( (HOH_angles - HOH_ang_mean)**2, mask=.not. HOH_modified )
+        HOH_ang_sdv  = sqrt( sqr_dev / n_ang )
     else
         HOH_ang_mean = 0.0d0
         HOH_ang_sdv  = 0.0d0
@@ -452,37 +478,30 @@ end subroutine data_output
 !
 !
 !
-!=============================================
+!======================================
  subroutine ask_user_visualization(trj)
+!======================================
     implicit none
     type(universe), intent(in) :: trj(:)
-!=============================================
 
     ! local variables
-    character(1)      :: YorN
-    character(len=80) :: line
-    integer, allocatable :: O_list(:)
+    character(1)         :: YorN
 
-    write(*,'(/a)') bold//cyan//'Visualize a particular structure (y/n)?'//reset
+    write(*,'(/a)') bold//cyan//'Save trajectory with regrouped molecules? (y/n)'//reset
     write(*,'(a)', advance='no') yellow//'>>> '//reset
     read(*,'(a)') YorN
 
     if (YorN /= 'y') return
 
-    write(*,'(/a)') bold//cyan//'Enter the Oxygen atom indices for visualization:'//reset
-    write(*,'(a)') 'List them separated by spaces:'
-    read(*,'(a)') line
-
-    O_list = parse_this(line)
-    call Save_PDB_Trajectory(trj, "frames-DWFF.pdb", O_list)
+    call Save_PDB_Trajectory(trj, "frames-DWFF.pdb")
 
 end subroutine ask_user_visualization
 !
 !
 !
-!=============================================
+!==============================
  subroutine open_output_files()
-!=============================================
+!==============================
     open(newunit=unit1, file="DWFF.trunk/DWFF_data",   status="unknown", action="write")
     open(newunit=unit2, file="DWFF.trunk/dimer_list",  status="unknown", action="write")
     open(newunit=unit3, file="DWFF.trunk/charged_species_list", status="unknown", action="write")
@@ -492,85 +511,96 @@ end subroutine open_output_files
 !
 !
 !
-!======================================================
- subroutine Save_PDB_Trajectory(trj, file_name, O_list)
-!======================================================
+!==============================================
+ subroutine Save_PDB_Trajectory(trj, file_name)
+!==============================================
     implicit none
     type(universe)        , intent(in) :: trj(:)
     character(*), optional, intent(in) :: file_name
-    integer               , intent(in) :: O_list(:)
     
     ! local variables ...
-    integer      :: i, j, k, frame_step
+    integer      :: i, j, k, n, frame_step, O_idx
     character(1) :: YorN 
-    integer      :: un               ! output file unit
-    integer, allocatable :: res_number(:)
+    integer      :: out1, out2               ! output file unit
     
     ! Ask user for a frame step
     write(*,'(/a)',advance='no') bold//cyan//'Saving with Frame step : '//reset
     read (*,'(i3)'             ) frame_step
     
-    ! Open output file
-    If( present(file_name) ) then
-        OPEN(newunit=un, file='DWFF.trunk/'//file_name, status='unknown', action='write')
-    else
-        OPEN(newunit=un, file='DWFF.trunk/frames-output.pdb', status='unknown', action='write')
-    end if
+    ! Open output files
+    OPEN(newunit=out1, file='DWFF.trunk/'//file_name, status='unknown', action='write')
+    OPEN(newunit=out2, file='DWFF.trunk/frames.top', status='unknown', action='write')
     
     !-------------------------------------------
-    ! Prepare: mark residues belonging to O_list
+    ! Prepare: 
     !-------------------------------------------
-    allocate(res_number(size(O_list)))
-    
-    do i = 1 , size(trj)
-       associate( atom => new_trj(i)% atom )
-           res_number = atom(O_list)% nresid
-       
-           do j = 1, size(res_number)
-              where( atom% nresid == res_number(j) )  atom% resid = "XXX"
-           end do
-       
-           atom% group = .true.
-           call ReGroup( new_trj(i) )                                                                                                                
-           call Bring_into_PBCBox(new_trj(i), res_name = "XXX")
-       end associate
-    end do
-    
-    deallocate(res_number)
+    do i = 1, size(work_trj)                                                                                                                                  
+                                                                                                                                                              
+       associate( atom => work_trj(i)%atom )                                                                                                                  
+          !-------------------------------------------------                                                                                                  
+          ! Assign each hydrogen to its current oxygen owner                                                                                                  
+          !-------------------------------------------------                                                                                                  
+          do n = 1, nHx                                                                                                                                       
+             O_idx = work_trj(i)% OH_pair(n, 1)
+                                                                                                                                                              
+             atom( H_ptr(n) )% nresid = atom( O_idx )% nresid
+          end do                                                                                                                                              
+       end associate                                                                                                                                          
+       !-------------------------------------------------                                                                                                     
+       ! Regroup molecules using the updated conectivity                                                                                                     
+       !-------------------------------------------------                                                                                                     
+       call ReGroup(work_trj(i))                                                                                                                              
+                                                                                                                                                              
+    end do        
     
     !-------------------------------------------
     !             Write frames 
     !-------------------------------------------
-    do j = 1 , size(trj) , frame_step
+    do j = 1, size(trj) , frame_step
     
-        write(un,5) 'TITLE'  , 'manipulated by DynEMol    t= ',trj(j)%time
-        write(un,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
-        write(un,3) 'MODEL' , j
+        write(out1,5) 'TITLE'  , 'manipulated by DynEMol    t= ',trj(j)%time
+        write(out1,1) 'CRYST1' , trj(j)%box(1) , trj(j)%box(2) , trj(j)%box(3) , 90.0 , 90.0 , 90.0 , 'P 1' , '1'
+        write(out1,3) 'MODEL' , j
     
-        do i = 1 , size(trj(1)%atom)
-            write(un,2) 'ATOM  '                      ,  &    ! <== non-standard atom
+        do i = 1, size(trj(1)%atom)
+            write(out1,2) 'ATOM  '                    ,  &    ! <== non-standard atom
                  i                                    ,  &    ! <== global number
-                 new_trj(j)%atom(i)%MMSymbol          ,  &    ! <== atom type
+                 work_trj(j)%atom(i)%MMSymbol         ,  &    ! <== atom type
                  ' '                                  ,  &    ! <== alternate location indicator
-                 new_trj(j)%atom(i)%resid             ,  &    ! <== residue name
+                 work_trj(j)%atom(i)%resid            ,  &    ! <== residue name
                  ' '                                  ,  &    ! <== chain identifier
-                 new_trj(j)%atom(i)%nresid            ,  &    ! <== residue sequence number
+                 work_trj(j)%atom(i)%nresid           ,  &    ! <== residue sequence number
                  ' '                                  ,  &    ! <== code for insertion of residues
-                 ( new_trj(j)%atom(i)%xyz(k) , k=1,3 ),  &    ! <== xyz coordinates 
+                 ( work_trj(j)%atom(i)%xyz(k), k=1,3 ),  &    ! <== xyz coordinates 
                  1.00                                 ,  &    ! <== occupancy
                  0.00                                 ,  &    ! <== temperature factor
                  ' '                                  ,  &    ! <== segment identifier
                  ' '                                  ,  &    ! <== here only for tabulation purposes
-                 new_trj(j)%atom(i)%symbol            ,  &    ! <== chemical element symbol
-                 new_trj(j)%atom(i)%charge                    ! <== charge on the atom
+                 work_trj(j)%atom(i)%symbol           ,  &    ! <== chemical element symbol
+                 work_trj(j)%atom(i)%charge                   ! <== charge on the atom
         end do
-        write(un,'(a)') 'MASTER'
-        write(un,'(a)') 'END'
+        write(out1,'(a)') 'MASTER'
+        write(out1,'(a)') 'END'
     
     end do
+    close(out1)
+    !--------------------------------------------------------
+    ! Write O-H conectivity for each trajectory frame
+    !--------------------------------------------------------
+    do i = 1, size(work_trj), frame_step
     
-    close(un)
+       write(out2,'("FRAME ",I0)') i-1
     
+       do n = 1, nHx
+          O_idx = work_trj(i)% OH_pair(n, 1)
+    
+          write(out2,'(2(I8,1X))') O_idx, H_ptr(n)
+       end do
+       write(out2,*)
+    end do
+    close(out2)
+    !--------------------------------------------------------
+
     1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
     2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
     3 FORMAT(a5,i8)
@@ -788,7 +818,7 @@ end subroutine identify_dimer
     real(8) :: r_OdH_proj, r_OaH_proj
 
     ! Periodic box
-    Txyz = new_trj(frame)% box
+    Txyz = work_trj(frame)% box
 
     !--------------------------------------------------
     ! Atom indices
@@ -882,7 +912,7 @@ subroutine preprocess(atom, n_frames)
     !------------------------------------
     ! Trajectory copy for visualization
     !------------------------------------
-    allocate(new_trj(n_frames))
+    allocate(work_trj(n_frames))
 
 end subroutine preprocess
 !
@@ -910,6 +940,94 @@ subroutine save_charged_species(i, frame)
 10  format(t1,a8,i4,t21,a4,t33,a9,i4,t54,a9,i4)
 
 end subroutine save_charged_species
+!
+!
+!
+!=========================
+subroutine ReGroup(system)
+!=========================
+implicit none
+type(universe) , intent(inout) :: system
+
+!local variables
+integer :: nr, i, k, ref
+integer :: nr_min, nr_max 
+real*8  :: dxyz(3), Txyz(3), centroid(3)
+integer, allocatable :: in_range(:)
+
+if (product(system%box) == 0) then
+  Print*, "ERROR: simulation box has zero length in at least one dimension", system%box; stop
+end if
+
+Txyz = system%box
+
+associate( atom => system%atom )
+
+    !pre-process
+    call translate_to_centroid(system)
+    
+    nr_min = minval(atom%nresid)
+    nr_max = maxval(atom%nresid)
+
+    do nr = nr_min, nr_max
+
+        in_range = pack( [(k, k=1,system%N_of_atoms)], atom%nresid == nr )
+
+        ! sanity check
+        if( size(in_range) == 0 ) cycle
+    
+        ! find the OX of this residue and use it as the unwrap reference
+        ref = 0
+        do k = 1, size(in_range)
+           if ( atom(in_range(k))%MMSymbol == "OX" ) then
+              ref = in_range(k); exit
+           end if
+        end do
+        if( ref == 0 ) ref = in_range(1)  ! no OX in this group → use first atom
+        
+        do k = 1, size(in_range)
+           if ( in_range(k) == ref ) cycle
+           dxyz = atom(in_range(k))%xyz - atom(ref)%xyz
+           dxyz = dxyz - Txyz * dnint(dxyz / Txyz)
+           atom(in_range(k))%xyz = atom(ref)%xyz + dxyz
+        end do
+
+        ! centroid of the molecule of residue number nr 
+        do i = 1, 3 
+           centroid(i) = sum(atom(in_range)%xyz(i)) / size(in_range)
+        end do  
+
+        ! move molecule inside the box, if originally outside
+        dxyz = Txyz * dnint( centroid / Txyz )
+        do k = 1, size(in_range)
+           atom(in_range(k))%xyz = atom(in_range(k))%xyz - dxyz
+        end do
+
+    end do
+    
+end associate
+
+end subroutine ReGroup
+!
+!
+!
+!=======================================
+subroutine translate_to_centroid(system)
+!=======================================
+    implicit none
+    type(universe) , intent(inout) :: system
+    
+    !local variables
+    integer :: i
+    real*8  :: centroid(3)
+
+    do i = 1, 3
+       centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
+       ! translate coordinates to the centroid of the system ...
+       system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
+    end do
+
+end  subroutine translate_to_centroid
 !
 !
 !
