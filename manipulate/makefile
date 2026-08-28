@@ -59,6 +59,7 @@ SOURCE = types_m.o \
 		 EDT.o \
          alignment.o \
 		 crystal.o \
+         QM_DW_droplet.o \
 		 solvent.o \
 		 scan_DWFF.o \
 		 elastic.o \

@@ -568,7 +568,7 @@ end subroutine open_output_files
                  work_trj(j)%atom(i)%MMSymbol         ,  &    ! <== atom type
                  ' '                                  ,  &    ! <== alternate location indicator
                  work_trj(j)%atom(i)%resid            ,  &    ! <== residue name
-                 ' '                                  ,  &    ! <== chain identifier
+                 work_trj(j)%atom(i)%fragment         ,  &    ! <== fragment name
                  work_trj(j)%atom(i)%nresid           ,  &    ! <== residue sequence number
                  ' '                                  ,  &    ! <== code for insertion of residues
                  ( work_trj(j)%atom(i)%xyz(k), k=1,3 ),  &    ! <== xyz coordinates 
