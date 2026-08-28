@@ -48,7 +48,7 @@ do
 
     write(*,'(a)') green // ' 1  :' // reset // ' Read "poscar.dat" file (VASP CONTCAR)'
     write(*,'(a)') green // ' 2  :' // reset // ' Read XYZ file'
-    write(*,'(a)') green // ' 3  :' // reset // ' Read "solvent.dat" file'
+    write(*,'(a)') green // ' 3  :' // reset // ' setup solvent environment'
     write(*,'(a)') green // ' 4  :' // reset // ' AMBER stuff'
     write(*,'(a)') green // ' 5  :' // reset // ' Read PDB file'
     write(*,'(a)') green // ' 6  :' // reset // ' Build up crystal'

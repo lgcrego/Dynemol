@@ -1,11 +1,14 @@
 module solvent_routines
 
     use constants_m
+    use ansi_colors
+    use color_funcs
+    use util_m          , only : read_file_name
     use Read_Parms      , only : atomic , atomic_mass , Symbol_2_AtNo
     use types_m         , only : molecular , universe
     use RW_routines     , only : Read_from_XYZ
-    use GMX_routines    , only : Dump_pdb
-    use diagnosis_m
+    use GMX_routines    , only : Dump_pdb, Read_GROMACS
+    use test_droplet    , only : DWFF_QM_droplet
 
     public  ::  Include_Solvent
 
@@ -28,37 +31,51 @@ implicit none
 type(universe) , intent(inout) :: structure
 
 ! local variables ...
-character(len=1) :: choice
-type(molecular)  :: sol_mol
+character(len=1)  :: choice
+character(len=30) :: f_name
+type(molecular)   :: sol_mol
 
 
 CALL system( "clear" )
 
-write(*,'(/a)') ' (w) = wet the surface '
-write(*,'(/a)') ' (c) = read solvent box '
-write(*,'(/a)') ' (b) = build solvent box - I '
-write(*,'(/a)') ' (x) = build solvent box - Standard '
-write(*,'(/a)',advance='no') '>>>   '
+write(*,'(/a/)') bold // cyan // '>>>    setup solvent environemt     <<<' // reset
+
+write(*,'(a)') green // ' 1 :' // reset // ' setup QMMM droplet '
+write(*,'(a)') green // ' 2 :' // reset // ' wet the surface '
+write(*,'(a)') green // ' 3 :' // reset // ' read solvent box to build a Solid_Liquid_Interface'
+write(*,'(a)') green // ' 4 :' // reset // ' build solvent box - I '
+write(*,'(a)') green // ' 5 :' // reset // ' build solvent box - Standard '
+write(*,'(a)') bold  // orange // ' 0 :' // reset // ' DONE / ADVANCE'
+
+write(*,'(/a)',advance='no') bold // yellow // '>>> ' // reset
 read (*,'(a)') choice
 
 select case( choice )
 
-    case( 'w' ) 
+    case( '1' ) 
+        CALL read_file_name(f_name, file_type="pdb")                                                                                                      
+        CALL Read_GROMACS(structure, f_name, file_type="pdb")
+        CALL DWFF_QM_droplet (structure)
+
+    case( '2' ) 
         CALL Read_Solvent_Molecule   ( sol_mol )
         CALL Place_solvent_Molecules ( structure,sol_mol )
         
-    case( 'x' ) 
+    case( '3' ) 
         CALL Solid_Liquid_Interface ( structure )
         
-    case( 'c' )
+    case( '4' )
         CALL Read_Solvent_Cube( structure )
         CALL dump_pdb( structure )
         write(*,'(/a)') '>>>  Saving seed.pdb  <<<'
 
-    case( 'b' )
+    case( '5' )
         CALL Build_Solvent_Cube( structure )
         CALL dump_pdb( structure )
         write(*,'(/a)') '>>>  Saving seed.pdb  <<<'
+
+    case default
+        stop red // 'error: invalid choice' // reset
 
 end select
 
@@ -469,7 +486,7 @@ type(universe)  , intent(inout)   :: system
 
 ! local variables
 integer                         :: Nx , Ny , N_layers , New_No_of_atoms , Old_No_of_atoms
-integer                         :: i , j , k , n , counter , layer , nresid
+integer                         :: i , j , k , counter , layer , nresid
 real                            :: random
 real*8                          :: x0 , y0 , delta_x , delta_y , delta_z , geo_center_x , geo_center_y , geo_center_z
 real*8                          :: cell_height , cell_area , density , solvent_mass 

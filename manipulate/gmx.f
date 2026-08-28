@@ -414,6 +414,7 @@ end if
             do i = 1 , system%N_of_atoms
                 read(3,115)  MMSymbol_char                      ,  &    ! <== atom type
                              system%atom(i)%resid               ,  &    ! <== residue name
+                             system%atom(i)%fragment            ,  &    ! <== fragment
                              system%atom(i)%nresid              ,  &    ! <== residue sequence number
                              (system%atom(i)%xyz(j) , j=1,3)    ,  &    ! <== xyz coordinates 
                              system%atom(i)%symbol              ,  &    ! <== chemical element symbol
@@ -483,7 +484,7 @@ end do
 103 format(a80)
 105 format(a6)
 110 format(t8, i4)
-115 FORMAT(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2,t80,f8.4,t90,a3)
+115 FORMAT(t12,a5,t18,a3,t22,a,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2,t80,f8.4,t90,a3)
 
 
 end subroutine read_GROMACS
