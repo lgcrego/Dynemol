@@ -1,18 +1,20 @@
 module tuning_m
 
-    use type_m
+    use type_m  
     use constants_m
+    use color_funcs
     use card_reading       , only : ReadInputCard_ADHOC , electron_fragment , hole_fragment , solvent_QM_droplet_radius
     use parameters_m       , only : static , electron_state , hole_state , n_part , Survival , ad_hoc_droplet
 
-    public :: ad_hoc_tuning , eh_tag , orbital 
+    public :: ad_hoc_tuning , eh_tag , orbital , solvent_residues
 
     private
 
     ! module variables ...
-    integer      , allocatable :: orbital(:)
-    character(2) , allocatable :: eh_tag(:)
-    logical                    :: done = .false.
+    integer          , allocatable :: orbital(:)
+    character(2)     , allocatable :: eh_tag(:)
+    character(len=:) , allocatable :: solvent_residues(:)
+    logical :: done = .false.
 
     ! module parameters ...
     logical, parameter :: T_ = .true. , F_ = .false.
@@ -104,6 +106,10 @@ DO i = 1 , size(univ%atom)
             univ%atom(i)%fragment = 'S'
             univ%atom(i)%solvation_hardcore = 3.d0
 
+        case( 'HOH' )
+            univ%atom(i)%fragment = 'S'
+            univ%atom(i)%solvation_hardcore = 3.d0
+
         ! this is acetonitrile ...
         case( 'ACN' )
             univ%atom(i)%fragment = 'S'
@@ -118,7 +124,9 @@ DO i = 1 , size(univ%atom)
 
 END DO
 
-if(ad_hoc_droplet) call QM_droplet( univ )
+solvent_residues = ['H2O','WAT','TIP','HOH','ACN','SOL']
+
+if(ad_hoc_droplet) call QM_droplet_marker( univ )
 
 call warnings( univ%atom ) 
 
@@ -130,53 +138,84 @@ end subroutine ad_hoc_tuning
 !
 !
 !
-!=============================
- subroutine QM_droplet( univ )
-!=============================
-implicit none
-type(universe) , intent(inout) :: univ
+!=================================
+subroutine QM_droplet_marker(univ)
+!=================================
+   use iso_fortran_env, only : real64
+   implicit none
 
-!local variables ...
-integer :: i, nr , nr_max
-real*8  :: distance
-real*8  :: solvent_CG(3) , solute_CG(3)
+   type(universe), intent(inout) :: univ
 
-call ReGroup_Molecules(univ)
+   integer :: i
+   integer :: nr
+   integer :: nr_max
+   integer :: n_solute
+   integer :: n_molecule
 
-nr_max =  maxval(univ%atom(:)%nr)
+   real(real64) :: distance
+   real(real64) :: solvent_cg(3)
+   real(real64) :: solute_cg(3)
 
-if( any(univ % atom % El) ) &
-then
-       univ % atom % solute = univ % atom % El 
-else
-       where( univ % atom % nr == 1 ) univ % atom % solute = .true. 
-end if
+   ! Regroup only if no HOH residues are present.
+   if (.not. any(univ%atom%residue == "HOH")) then
+      call ReGroup_nonReactive_Molecules(univ)
+   end if
 
-! identify the CG of the solute ...
-forall( i=1:3 ) solute_CG(i) = sum( univ%atom%xyz(i) , univ%atom%solute == .true. ) / count(univ%atom%solute)
+   nr_max = maxval(univ% atom% nr)
 
-do nr = 1 , nr_max
+   if( any(univ % atom % El) ) then
+       univ% atom% solute = univ% atom% El 
+   else
+       where(univ% atom% nr == 1) univ% atom% solute = .true. 
+   end if
 
-      forall( i=1:3 ) solvent_CG(i) = sum( univ%atom%xyz(i) , univ%atom%nr == nr ) / count(univ%atom%nr==nr)
-      
-      distance = sqrt( (solute_CG(1) - solvent_CG(1))**2 + &
-                       (solute_CG(2) - solvent_CG(2))**2 + &
-                       (solute_CG(3) - solvent_CG(3))**2   )
+   !---------------------------------------
+   !       define quantum droplet
+   !---------------------------------------
+   if( any(univ% atom% residue == "HOH" ) ) then
+       ! HOH case
+       ! Only update labels for an already defined QM droplet.
+       where( univ% atom% fragment == "Q" .or. univ% atom% fragment == "D") 
+           univ% atom% QMMM  = "QM"
+       end where
+   else
+       ! default case: nonReactive solvent
+       ! Calculate the solute centroid.
+       n_solute = count(univ%atom%solute)
 
-      if( distance <= solvent_QM_droplet_radius ) &
-      then
-          where( univ%atom%nr == nr ) 
-               univ%atom%QMMM    = "QM"
-               univ%atom%fragment = "Q"
-          end where
-      end if
-end do
+       if (n_solute == 0) error stop "QM_droplet_marker: no solute atoms identified"
 
-end subroutine QM_droplet
+       do i = 1, 3  
+           solute_CG(i) = sum( univ% atom% xyz(i) , mask = univ% atom% solute ) / real(n_solute, kind=real64)
+       end do
+       
+       ! Define and label the QM droplet.
+       do nr = 1, nr_max
+           n_molecule = count(univ% atom% nr == nr)
+
+           if (n_molecule == 0) cycle
+
+           do i = 1, 3
+               solvent_CG(i) = sum( univ% atom% xyz(i), univ% atom% nr == nr ) / real(n_molecule, kind=real64)
+           end do
+           
+           distance = norm2(solute_CG - solvent_CG)
+       
+           if( distance <= solvent_QM_droplet_radius ) then
+               where( univ% atom% nr == nr ) 
+                   univ% atom% QMMM     = "QM"
+                   univ% atom% fragment = "Q"
+               end where
+           end if
+       end do
+   end if
+   !---------------------------------------
+
+end subroutine QM_droplet_marker
 !
-!=================================
-subroutine ReGroup_Molecules(univ)
-!=================================
+!=============================================
+subroutine ReGroup_nonReactive_Molecules(univ)
+!=============================================
 implicit none
 type(universe) , intent(inout) :: univ
 
@@ -200,7 +239,7 @@ do nr = minval(univ%atom%nr) , maxval(univ%atom%nr)
     end do
 end do
 
-end subroutine ReGroup_Molecules
+end subroutine ReGroup_nonReactive_Molecules
 !
 !
 !

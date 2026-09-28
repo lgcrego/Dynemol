@@ -85,6 +85,7 @@ module type_m
         real*8                        :: CG(3)
         real*8                        :: CC(3)
         real*8                        :: DP(3)
+        integer         , allocatable :: sys_id(:) 
         integer                       :: N_of_Atoms 
         integer                       :: nr
         integer                       :: copy_No

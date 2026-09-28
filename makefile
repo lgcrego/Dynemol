@@ -133,6 +133,7 @@ SOURCE2 = constants_m.o \
 		  namd2mdflex.o \
 		  md_read.o	\
 		  md_setup.o \
+          reactive_util.o \
           MM_forces/DWFF_QMMM_onthefly.o \
 		  MM_forces/FF_cutoff.o \
 		  data_output.o \

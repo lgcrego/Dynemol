@@ -4,9 +4,11 @@ module Dielectric_Potential
     use constants_m
     use blas95
     use f95_precision
-    use parameters_m            , only : PBC , EnvField_ , Environ_type , verbose
-    use MD_read_m               , only : atom
-    use DP_potential_m          , only : Dipole_Potentials
+    use color_funcs
+    use parameters_m   , only : PBC , EnvField_ , Environ_type , verbose
+    use MD_read_m      , only : atom, molecule
+    use DP_potential_m , only : Dipole_Potentials
+    use reactive       , only : DWFF_atom_indices, deal_with_proton_transfer
 
     public :: Environment_SetUp , Q_phi
 
@@ -27,9 +29,11 @@ contains
  subroutine Environment_SetUp( sys )
 !===================================
 implicit none
-type(structure) , intent(in)  :: sys
+type(structure), intent(in) :: sys
 
 If( EnvField_ .and. (.not. any(sys%fragment=="S")) ) stop 'execution halted: did not define solvent fragment'
+
+if(any(molecule%DWFF)) call deal_with_proton_transfer 
 
 select case (Environ_Type)
 
@@ -58,85 +62,74 @@ implicit none
 type(structure) , intent(in)  :: sys
 
 ! local variables ...
-integer                       :: i, j, I1, I2, nr, na, last_nr, first_nr, N_of_Q, N_of_Mols
+integer                       :: i, j, na, N_of_Mols
 real*8                        :: total_valence
-real*8          , allocatable :: Qi_Ri(:,:) 
+real*8          , allocatable :: Qi_Ri(:,:)
 type(molecular) , allocatable :: Env_Mols(:)
+logical                       :: DWFF_env
 
-! find positions of environment molecules ...
-! pdb entries must be in a single block ...
-first_nr = minval( sys%nr , sys%fragment == "S" )
-last_nr  = maxval( sys%nr , sys%fragment == "S" )
-
-! total number of molecules comprising the dielectric domain ...
-N_of_Mols = last_nr - first_nr + 1
-
-CALL Allocation( sys, Env_Mols , N_of_Mols )
-
-! total number of point-charges in dielectric domain ...
-N_of_Q = sum( Env_Mols(:)% N_of_Atoms )
-
-! consistency checks ...
-If( N_of_Q /= count( sys%nr >= first_nr .and. sys%nr <= last_nr ) ) stop '>>> something wrong in Environment_SetUp <<<'
-If( verbose ) Print 157 , N_of_Mols
+DWFF_env = any( molecule%DWFF )
 
 !======================================================
 ! Setting Up Env_Atoms and Env_Mols ...
-!
-allocate( Qi_Ri(sys%atoms ,3) , source=D_zero )
 
-Env_Mols(:)% nr = [( i , i=first_nr,last_nr )]
+! Env_Mols(i)%sys_id = position of nr residue in sys[1:atoms] ...
+! (contiguous for standard water, possibly scattered for dissociative HOH).
+if( DWFF_env ) then
+    call DWFF_atom_indices(sys, Env_Mols)
+else
+    call atom_indices(sys, Env_Mols)
+end if
+
+N_of_Mols = size(Env_Mols)
+if( verbose ) Print 157 , N_of_Mols
+
+allocate( Qi_Ri(sys%atoms, 3) , source=D_zero )
 
 do i = 1 , N_of_Mols
-
-    nr = Env_Mols(i)% nr
-    na = Env_Mols(i)% N_of_Atoms
-
-    ! position of nr residue in variable sys[1:atoms] ...
-    I1 = minloc( sys%nr , 1 , sys%nr == nr ) 
-    I2 = (I1-1) + na
-
-    !-----------------------------------------------------------------------------------------------
+    na = size( Env_Mols(i)% sys_id )
+    if (na /= Env_Mols(i)%N_of_atoms) stop '>>> mismatch <<<'
+    !--------------------------------------------
     ! Point Charges of environment molecules ...
-
-                  Env_Mols(i)% PC% Q  (1:na) = atom(I1:I2)% MM_charge 
-
-    forall(j=1:3) Env_Mols(i)% PC% xyz(1:na,j) = sys% coord(I1:I2,j) 
-
-                  Env_Mols(i)% PC% nr (1:na)   = nr
-
+    associate( indx => Env_Mols(i)% sys_id )
+        Env_Mols(i)% PC% Q  (1:na)     = atom(indx)% MM_charge
+        Env_Mols(i)% PC% xyz(1:na,1:3) = sys% coord(indx,1:3)
+        Env_Mols(i)% PC% nr (1:na)     = Env_Mols(i)% nr
+        !----------------------------------------------------------
+        ! calculate Center_of_Charge for each environment molecule:
+        ! sum_i = (q_i * vec{r}_i) / sum_i q_i ...
+        !----------------------------------------------------------
+        do j = 1, 3
+            Qi_Ri(indx,j) = sys%Nvalen(indx) * sys%coord(indx,j)
+        end do
+        total_valence = sum( sys%Nvalen(indx) )
+        if( total_valence == D_zero ) stop '>>> zero total valence in Classical_Point_Charges <<<'
+        do j = 1, 3
+            Env_Mols(i)% CC(j) = sum( Qi_Ri(indx,j) ) / total_valence
+        end do
+    end associate
     !-----------------------------------------------------------------------------------------------
-    ! calculate Center_of_Charge for each environment molecule: sum_i = (q_i * vec{r}_i) / sum_i q_i ...
-
-    forall( j=1:3 , i=I1:I2 ) Qi_Ri(i,j) = sys%Nvalen(i) * sys%coord(i,j) 
-
-    total_valence = sum( sys%Nvalen(I1:I2) )
-
-    forall(j=1:3) Env_Mols(i)% CC(j) = sum( Qi_Ri(I1:I2,j) ) / total_valence
-
-    !-----------------------------------------------------------------------------------------------
-
 end do
 
-deallocate( Qi_Ri)
+deallocate( Qi_Ri )
 !======================================================
 
 ! generate periodic structure of dielectric domain ; if PBCx=PBCy=PBCz=0 ==> Q_atoms_pbc = Q_atoms ...
 CALL give_me_PBC( sys, Env_Mols, MolPBC )
 
-!do i = 1 , size(MolPBC)
-!   do j = 1 , molpbc(i)% N_of_Atoms
-!      if( MOLpbc(i) %pc% Q(j) <0. ) then
-!          write(33,'(A4,3F9.4)')  "O" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
-!      else
-!          write(33,'(A4,3F9.4)')  "H" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
-!      end if
-!   end do
-!end do
-!
-!do i = 1 , size(MolPBC)
-!       write(34,'(A4,3F9.4)')  "I" , MolPBC(i)%CC(1) , MolPBC(i)%CC(2) , MolPBC(i)%CC(3)
-!end do
+do i = 1 , size(MolPBC)
+   do j = 1 , molpbc(i)% N_of_Atoms
+      if( MOLpbc(i) %pc% Q(j) <0. ) then
+          write(33,'(A4,3F9.4)')  "O" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
+      else
+          write(33,'(A4,3F9.4)')  "H" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
+      end if
+   end do
+end do
+
+do i = 1 , size(MolPBC)
+       write(34,'(A4,3F9.4)')  "I" , MolPBC(i)%CC(1) , MolPBC(i)%CC(2) , MolPBC(i)%CC(3)
+end do
 
 include 'formats.h'
 
@@ -379,44 +372,67 @@ end subroutine give_me_PBC
 !
 !
 !
-!===================================
- subroutine Allocation( sys, a , n )
-!===================================
-implicit none
-type(structure)               , intent(in)    :: sys
-type(molecular) , allocatable , intent(inout) :: a(:)
-integer                       , intent(in)    :: n
+!=================================
+subroutine atom_indices( sys, a )
+!=================================
+    implicit none
+    type(structure)               , intent(in)  :: sys
+    type(molecular) , allocatable , intent(out) :: a(:)
+    
+    ! local variables ...
+    integer :: i, j, nr
+    integer :: nr_atoms, I1, I2
+    integer :: lowest_nr, highest_nr
+    integer :: N_of_S_Mols
+    
+    ! find positions of environment molecules ...
+    lowest_nr  = minval(sys%nr, mask=is_solvent(sys%residue))
+    highest_nr = maxval(sys%nr, mask=is_solvent(sys%residue))
+    
+    ! total number of molecules comprising the dielectric domain ...
+    N_of_S_Mols = highest_nr - lowest_nr + 1
+    
+    allocate( a(N_of_S_Mols) )
+    
+    i = 0
+    do nr = lowest_nr, highest_nr
+    
+        i = i + 1
+    
+        ! nr is used LOCALLY as a mol identifier
+        a(i)% nr = nr
+    
+        ! # of atoms with tag nr ...
+        nr_atoms = count( sys%nr == nr )
+        a(i)% N_of_atoms = nr_atoms
+    
+        ! NOTE: assumes atoms of residue `nr` are stored contiguously (and in
+        ! order) within sys. If that invariant isn't guaranteed elsewhere in
+        ! the codebase, replace I1/I2 below with:
+        !   a(i)% sys_id = pack( [(j, j = 1, size(sys%nr))], sys%nr == nr )
+        ! which is robust to any ordering
+        I1 = minloc( sys%nr, 1, sys%nr == nr )
+        if( I1 == 0 ) stop '>>> residue nr not found in Classical_Point_Charges <<<'
+        I2 = (I1 - 1) + nr_atoms
+    
+        allocate( a(i)% sys_id (nr_atoms)   )
+        allocate( a(i)% PC% Q  (nr_atoms)   )
+        allocate( a(i)% PC% nr (nr_atoms)   )
+        allocate( a(i)% PC% xyz(nr_atoms,3) )
+    
+        a(i)% sys_id = [( j, j = I1, I2 )]
+    
+    end do
 
-! local variables ...
-integer :: i , I1, I2, nr_atoms, nr, first_nr, last_nr
-
-allocate( a(n) )
-
-! find positions of environment molecules ...
-first_nr = minval( sys%nr , sys%fragment == "S" )
-last_nr  = maxval( sys%nr , sys%fragment == "S" )
-
-i = 0
-do nr = first_nr , last_nr 
-
-    i = i + 1
-
-    ! # of atoms with tag nr ...
-    nr_atoms = count( sys%nr == nr ) 
-
-    a(i)% N_of_atoms = nr_atoms
-
-    ! position of nr residue in variable sys[1:atoms] ...
-    I1 = minloc( sys%nr , 1 , sys%nr == nr ) 
-    I2 = (I1-1) + nr_atoms 
-
-    allocate( a(i)% PC% Q  (nr_atoms)   )
-    allocate( a(i)% PC% nr (nr_atoms)   )
-    allocate( a(i)% PC% xyz(nr_atoms,3) )
-
-end do
-   
-end subroutine Allocation
+end subroutine atom_indices
+!
+!
+!
+elemental logical function is_solvent(resname) result(solvent)
+    use tuning_m, only : solvent_residues
+    character(len=*), intent(in) :: resname
+    solvent = any(resname == solvent_residues)
+end function is_solvent
 !
 !
 !

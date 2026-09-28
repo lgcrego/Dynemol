@@ -233,6 +233,7 @@ do
             read(3 , 115 , iostat=io_err , err=12)             &
                          MMSymbol_char                      ,  &    ! <== atom type
                          system%atom(i)%residue             ,  &    ! <== residue name
+                         system%atom(i)%fragment            ,  &    ! <== fragment
                          system%atom(i)%nr                  ,  &    ! <== residue sequence number
                         (system%atom(i)%xyz(j) , j=1,3)     ,  &    ! <== xyz coordinates 
                          system%atom(i)%Symbol                      ! <== chemical element symbol
@@ -287,7 +288,7 @@ deallocate( system%atom , system%list_of_fragments , system%list_of_residues )
 43  format(a72)
 100 format(t7,3f9.3)
 105 format(a6)
-115 FORMAT(t12,a5,t18,a3,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
+115 FORMAT(t12,a5,t18,a3,t22,a,t23,i7,t31,f8.3,t39,f8.3,t47,f8.3,t77,a2)
 
 end subroutine Read_from_PDB
 !
