@@ -384,6 +384,9 @@ then
            case("itp")
                write(*,'(/,a)') cyan // "ls *.itp" // reset
                call system("ls *.itp") 
+           case("velocity")
+               write(*,'(/,a)') cyan // "ls velocity*.*" // reset
+               call system("ls velocity*.*") 
     end select
 end if
 

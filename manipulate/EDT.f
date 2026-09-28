@@ -484,7 +484,6 @@ end do
 
 ! place solute in the center of the PBC box
 do i=1,3
-!   GeoCenter(i) = GeoCenter(i) - system%box(i)*HALF
    ! translate coordinates to the geometric center ...
    system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - GeoCenter(i)
 end do

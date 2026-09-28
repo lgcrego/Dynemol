@@ -1,5 +1,6 @@
 module test_droplet
 
+    use constants_m
     use types_m
     use ansi_colors
     use color_funcs
@@ -22,6 +23,7 @@ module test_droplet
 
     ! module variables
     integer :: n_atoms, nHX, nOX, unit3
+    integer :: n_HOH_resids, n_WAT_resids
 
 contains
 !
@@ -46,8 +48,6 @@ subroutine DWFF_QM_droplet(sys)
     call bond_topology(sys%atom, sys%box)
 
     call save_pdb_file()
-
-    call post_processing_analysis
 
     call deallocate_and_leave
 
@@ -89,6 +89,9 @@ subroutine post_processing_analysis()
 
     total_MM_charge = -2*zero_H + -1*one_H + 1*three_H
     print*, green_("total MM charge of the HOH solvent = "), total_MM_charge
+    print*, green_("total HOH solvent residues = "), n_HOH_resids
+    print*, green_("total WAT solvent residues = "), n_WAT_resids
+    print*, green_("total solvent residues     = "), n_HOH_resids + n_WAT_resids
 
 end subroutine post_processing_analysis
 !
@@ -185,10 +188,10 @@ end subroutine bond_topology
     
     ! local variables ...
     integer :: i, j, k, n, O_idx
-    integer :: out1  
+    integer :: out1, out2
     real(8) :: cutoff_radius
     character(3) :: res_name = "None"
-    character(1) :: YorN
+    character(1) :: YorN, choice
     
     !-----------------------------------------------------------
     ! Assign each hydrogen's nr to its current oxygen owner's nr
@@ -221,10 +224,23 @@ end subroutine bond_topology
 
     call QM_droplet( work_sys, cutoff_radius, res_name )
 
-    call sort_HOH_residue_numbers(work_sys, res_name)
+    write(*,'(/a/)') bold // orange_(">>> Save as: <<<") // reset
+    write(*,'(a)') green // ' 1 :' // reset // ' keep only the QM atoms '
+    write(*,'(a)') green // ' 2 :' // reset // ' embed the QM-HOH droplet in WAT box'
+    read (*,'(a)') choice
+
+    select case (choice)
+        case("1")
+            call eliminate_classical_atoms( work_sys )
+            call pack_HOH_atoms(work_sys%atom)
+            call post_processing_analysis
+        case("2") 
+            call pack_solvent_atoms(work_sys%atom)
+            call post_processing_analysis
+    end select 
 
     !-------------------------------------------
-    !             Write seed 
+    !             Writing seed.pdb 
     !-------------------------------------------
     ! Open output files
     OPEN(newunit=out1, file='DWFF.trunk/seed-DWFF.pdb', status='replace', action='write')
@@ -255,10 +271,24 @@ end subroutine bond_topology
     close(out1)
     !--------------------------------------------------------
 
+    !--------------------------------------------------------
+    !             Writing velocities 
+    !--------------------------------------------------------
+    if( .not. any(work_sys%atom%vel(1) > low_prec) ) then
+        ! do nothing
+    else
+        OPEN(newunit=out2, file='DWFF.trunk/seed-velocity_MM', status='unknown', action='write')
+            do i = 1, size(work_sys%atom)
+                write(out1,*) work_sys%atom(i)%vel
+            end do
+        close(out2)
+    end if
+    !--------------------------------------------------------
+
     1 FORMAT(a6,3F9.3,3F7.2,a11,a4)
     2 FORMAT(a6,i5,a5,a1,a3,a2,i4,a4,3F8.3,2F6.2,a4,a6,a2,F8.4)
     5 FORMAT(a5,t1,a35,f12.7)
-    
+
 end subroutine save_pdb_file
 !
 !
@@ -538,51 +568,250 @@ end subroutine QM_droplet
 !
 !
 !
-!====================================================
-subroutine sort_HOH_residue_numbers(system, res_name)
-!====================================================
+!==============================================
+subroutine eliminate_classical_atoms( system )
+!==============================================
+implicit none
+type(universe), intent(inout) :: system
+
+!local variables
+type(universe)       :: temp
+integer              :: New_No_of_atoms
+logical, allocatable :: quantum_atoms(:)
+
+! mask
+quantum_atoms = (system% atom% fragment == "Q" )
+
+New_No_of_atoms = count(quantum_atoms)
+allocate( temp%atom( New_No_of_atoms ) )
+
+temp%atom = pack( system%atom, quantum_atoms )
+
+CALL move_alloc(from=temp%atom,to=system%atom)
+system%N_of_atoms = New_No_of_atoms
+
+end subroutine eliminate_classical_atoms
 !
-! Assigns a consistent, sequential nresid to each water molecule, using
-! the current OH connectivity (OH_pair) rather than file position, so it
-! is correct even when proton transfer has scrambled the OX,HX,HX order.
-! Every oxygen and the hydrogens currently bonded to it share one nresid.
 !
+!
+!==============================
+subroutine pack_HOH_atoms(atom)
+!==============================
     implicit none
-    type(universe), intent(inout) :: system
-    character(*)  , intent(in), optional :: res_name
+    type(atomic), intent(inout) :: atom(:)
 
-    integer :: io, max_donor, OX_offset
+    ! local variables ...
+    integer :: k, nr, ref, HOH_resid
+    integer :: droplet_size
+    integer :: lowest_nr, highest_nr, offset
+    integer, allocatable :: in_range(:)
+    type(atomic), allocatable :: aux_atom(:)
 
-    ! start water numbering past the highest solute residue number
-    if ( any(system%atom(:)%resid /= "HOH") ) then
-        max_donor = findloc(system%atom(:)%resid == res_name, value = .true., dim = 1, back  = .true.)
-    else
-        max_donor = 0
+    droplet_size = size(atom)
+    aux_atom     = atom
+
+    associate( ref_nr => aux_atom%nresid, ref_name => aux_atom%resid )
+
+        lowest_nr  = minval(ref_nr, mask=(ref_name=="HOH"))
+        highest_nr = maxval(ref_nr, mask=(ref_name=="HOH"))
+
+        offset = findloc(ref_name, value="HOH", dim=1) - 1
+
+        call get_n_of_S_residues(offset, atom)
+
+        ! highest residue number before the water block; 
+        if ( offset==0 ) then
+            HOH_resid = 1
+        else
+            HOH_resid = maxval(ref_nr, mask=(ref_nr < lowest_nr)) + 1
+        end if
+
+        do nr = lowest_nr, highest_nr
+
+            ! atoms of THIS water molecule only
+            in_range = pack( [(k, k=1,droplet_size)], (ref_nr==nr) .and. (ref_name=="HOH") )
+
+            if ( size(in_range) == 0 ) cycle   ! nr is not a water molecule here; skip it
+
+            ! find the OX of this residue and use it as the unwrap reference ...
+            ref = 0
+            do k = 1, size(in_range)
+                if ( aux_atom(in_range(k))%MMSymbol == "OX" ) then
+                    ref         = in_range(1)
+                    in_range(1) = in_range(k)
+                    in_range(k) = ref
+                    exit
+                end if
+            end do
+
+            if ( ref == 0 ) then
+                write(*,'(a,i0)') "ERROR: lone proton found in residue = ", nr
+            end if
+
+            ! copy this molecule's atoms into contiguous slots, renumbering nresid in sequence ...
+            do k = 1, size(in_range)
+                atom(offset+k)        = aux_atom(in_range(k))
+                atom(offset+k)%nresid = HOH_resid
+            end do
+
+            offset    = offset + size(in_range)
+            HOH_resid = HOH_resid + 1
+
+        end do
+
+    end associate
+
+end subroutine pack_HOH_atoms
+!
+!
+!
+!==================================
+subroutine pack_solvent_atoms(atom)
+!==================================
+    implicit none
+    type(atomic), intent(inout) :: atom(:)
+
+    ! local variables ...
+    integer :: k, nr, ref
+    integer :: HOH_nr, WAT_nr
+    integer :: lowest_nr, highest_nr
+    integer :: droplet_size, n_Q_atoms
+    integer :: offset, HOH_offset, WAT_offset
+    integer     , allocatable :: in_range(:)
+    type(atomic), allocatable :: aux_atom(:)
+
+    droplet_size = size(atom)
+    aux_atom     = atom
+
+    associate( ref_nr   => aux_atom%nresid , &
+               ref_name => aux_atom%resid  )
+
+        lowest_nr  = minval(ref_nr, mask=(ref_name=="HOH"))
+        highest_nr = maxval(ref_nr, mask=(ref_name=="HOH"))
+
+        offset = findloc(ref_name, value="HOH", dim=1) - 1
+        HOH_offset = offset
+        WAT_offset = offset + count( atom%resid=="HOH" .and. atom%fragment=="Q")
+
+        call get_n_of_S_residues(offset, atom)
+        if( (n_HOH_resids + n_WAT_resids) /= (highest_nr - lowest_nr + 1) ) then
+            stop "ERROR: (n_HOH_resids + n_WAT_resids) /= total number of solvent residues "
+        end if
+
+        ! highest residue number before the water block; 
+        if ( HOH_offset==0 ) then
+            HOH_nr = 1
+        else
+            HOH_nr = maxval( ref_nr(1:offset) ) + 1
+        end if
+        WAT_nr = HOH_nr + n_HOH_resids
+
+        do nr = lowest_nr, highest_nr
+
+            ! atoms of THIS water molecule only
+            in_range = pack( [(k, k=1,droplet_size)], (ref_nr==nr) .and. (ref_name=="HOH") )
+
+            ! find the OX of this residue and use it as the unwrap reference ...
+            ref = 0
+            do k = 1, size(in_range)
+                if ( aux_atom(in_range(k))%MMSymbol == "OX" ) then
+                    ref         = in_range(1)
+                    in_range(1) = in_range(k)
+                    in_range(k) = ref
+                    exit
+                end if
+            end do
+
+            if ( ref == 0 ) then
+                Print*, red_bg("ERROR: lone proton found in residue = "), nr
+                stop
+            end if
+
+            ! copy this molecule's atoms into contiguous slots, renumbering nresid in sequence ...
+            if( aux_atom(in_range(1))%fragment == "Q" ) then
+                do k = 1, size(in_range)
+                    atom(HOH_offset+k)        = aux_atom(in_range(k))
+                    atom(HOH_offset+k)%nresid = HOH_nr
+                end do
+                HOH_offset = HOH_offset + size(in_range)
+                HOH_nr  = HOH_nr + 1
+            else
+                do k = 1, size(in_range)
+                    atom(WAT_offset+k)          = aux_atom(in_range(k))
+                    atom(WAT_offset+k)%nresid   = WAT_nr
+                    atom(WAT_offset+k)%resid    = "WAT"
+                    atom(WAT_offset+k)%fragment = "S"
+                    if(atom(WAT_offset+k)%MMSymbol == "OX") atom(WAT_offset+k)%MMSymbol = "OW"
+                    if(atom(WAT_offset+k)%MMSymbol == "HX") atom(WAT_offset+k)%MMSymbol = "HW"
+                end do
+                WAT_offset = WAT_offset + size(in_range)
+                WAT_nr = WAT_nr + 1
+            end if
+
+        end do
+
+    end associate
+
+    n_Q_atoms = count( atom(offset+1:)%fragment == "Q" )
+    ! consistency check: every solvent atom was copied exactly once
+    if( HOH_offset /= offset + n_Q_atoms .or. WAT_offset /= droplet_size ) then
+        print*, red_bg("ERROR in pack_solvent_atoms: solvent atoms were lost or duplicated")
+        error stop 
     end if
 
-    OX_offset = O_ptr(1) - max_donor
+end subroutine pack_solvent_atoms
+!
+!
+!
+!===========================================
+subroutine get_n_of_S_residues(offset, atom)
+!===========================================
+! Counts the distinct solvent residues in atom(offset+1:), by fragment:
+!     fragment "Q"  ->  HOH residues
+!     fragment "X"  ->  WAT residues
+!-------------------------------------------
+    implicit none
 
-    select case( OX_offset)
-         case(1)
-              do io = 1, nOX
-                  system%atom( O_ptr(io)+1 )%nresid = system%atom(O_ptr(io))%nresid
-                  system%atom( O_ptr(io)+2 )%nresid = system%atom(O_ptr(io))%nresid
-              end do
+    integer     , intent(in)  :: offset
+    type(atomic), intent(in)  :: atom(:)
 
-         case(2)
-              do io = 1, nOX
-                  system%atom( O_ptr(io)-1 )%nresid = system%atom(O_ptr(io))%nresid
-                  system%atom( O_ptr(io)+1 )%nresid = system%atom(O_ptr(io))%nresid
-              end do
+    ! Local variables
+    integer :: i, first
 
-         case(3)
-              do io = 1, nOX
-                  system%atom( O_ptr(io)-2 )%nresid = system%atom(O_ptr(io))%nresid
-                  system%atom( O_ptr(io)-1 )%nresid = system%atom(O_ptr(io))%nresid
-              end do
-    end select   
+    n_HOH_resids = 0
+    n_WAT_resids = 0
 
-end subroutine sort_HOH_residue_numbers
+    first = offset + 1
+
+    if (first > size(atom)) return
+
+    do i = first, size(atom)
+
+        ! Skip residue if its nresid has already been encountered
+        ! within the region being analyzed.
+        if (i > first) then
+            if (any(atom(first:i-1)%nresid == atom(i)%nresid)) cycle
+        end if
+
+        ! This is the first occurrence of this residue.
+        select case (atom(i)%fragment)
+
+        case ("Q")
+            n_HOH_resids = n_HOH_resids + 1
+
+        case ("X")
+            n_WAT_resids = n_WAT_resids + 1
+
+        case default
+            write(*,'(a,a,a,i0)') &
+            "ERROR: unrecognized fragment '", atom(i)%fragment, "' in residue ", atom(i)%nresid
+            error stop
+
+        end select
+
+    end do
+
+end subroutine get_n_of_S_residues
 !
 !
 !
