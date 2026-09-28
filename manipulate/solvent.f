@@ -3,7 +3,7 @@ module solvent_routines
     use constants_m
     use ansi_colors
     use color_funcs
-    use util_m          , only : read_file_name
+    use util_m          , only : read_file_name, count_lines
     use Read_Parms      , only : atomic , atomic_mass , Symbol_2_AtNo
     use types_m         , only : molecular , universe
     use RW_routines     , only : Read_from_XYZ
@@ -24,16 +24,16 @@ contains
 !
 !
 !
-!==========================================
+!====================================
 subroutine Include_Solvent(structure)
-!==========================================
+!====================================
 implicit none
 type(universe) , intent(inout) :: structure
 
 ! local variables ...
-character(len=1)  :: choice
-character(len=30) :: f_name
-type(molecular)   :: sol_mol
+character(len=1)      :: choice
+character(len=30)     :: f_name
+type(molecular)       :: sol_mol
 
 
 CALL system( "clear" )
@@ -55,6 +55,14 @@ select case( choice )
     case( '1' ) 
         CALL read_file_name(f_name, file_type="pdb")                                                                                                      
         CALL Read_GROMACS(structure, f_name, file_type="pdb")
+
+        write(*,'(/a)', advance='no') yellow_("Want to upload the velocity file? (y/n): ")
+        read (*,'(a)') choice
+
+        if(choice=="y") then
+           call read_velocity_file( structure )
+        end if  
+
         CALL DWFF_QM_droplet (structure)
 
     case( '2' ) 
@@ -651,6 +659,38 @@ end do
 Write(*,'(/a,i3)') ">>> Molecules marked for deletion = ", count(system%atom%fragment == "D")/system%solvent%N_of_atoms
 
 end subroutine Mark_S_molecules
+!
+!
+!
+!=======================================
+subroutine read_velocity_file(structure)
+!=======================================
+    implicit none
+    type(universe) , intent(inout) :: structure
+    
+    ! local variables ...
+    integer           :: i, j, n_lines, f_unit, iostat
+    character(len=30) :: buffer
+    character(len=:) , allocatable :: f_name
+    
+    call read_file_name(buffer, file_type="velocity")
+    f_name = trim(buffer)
+
+    n_lines = count_lines(f_name)
+
+    ! matrix of strings
+    if( n_lines /= structure% N_of_atoms ) then
+        stop "Number of lines in velocity file is different from number of atoms in the structure"
+    end if
+    
+    OPEN( file=f_name , status='old' , action="read" , newunit=f_unit)
+        do i = 1 , n_lines
+           if (iostat < 0) stop "Unexpected EoF"
+           read(f_unit,*) (structure% atom(i)% vel(j) , j=1,3)
+        end do
+    close(f_unit)
+
+end subroutine read_velocity_file
 !
 !
 !

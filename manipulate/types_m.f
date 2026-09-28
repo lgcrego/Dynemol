@@ -4,6 +4,7 @@ module types_m
 
     type atomic
         real*8              :: xyz(3)
+        real*8              :: vel(3)
         real*8              :: mass
         real*8              :: charge
         integer             :: indx
