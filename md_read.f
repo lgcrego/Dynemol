@@ -749,20 +749,29 @@ end If
 CALL allocate_molecule( MM % N_of_molecules )
 
 MM% N_of_atoms = 0
-l = 1 ; k = 1
+l = 1
+k = 1
 do i = 1 , MM % N_of_species
+
     do j = 1 , species(i)% N_of_molecules
         molecule(l)% my_species = i
         l = l + 1
-        end do
+    end do
 
     Total_N_of_atoms_of_species_i = species(i)% N_of_molecules * species(i)% N_of_atoms
     do j = 1 , Total_N_of_atoms_of_species_i
+
+        If( k > size(atom) ) then
+            CALL warning("error: sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ; check MM input parms")
+            STOP 
+        end If
+
         atom(k)% my_species = i
         k = k + 1
-        end do
+    end do
 
     MM% N_of_atoms = MM% N_of_atoms + Total_N_of_atoms_of_species_i 
+
 end do
 
 If( sum(species%N_of_Molecules * species%N_of_atoms) /= Unit_Cell%atoms ) then
@@ -777,6 +786,11 @@ end If
 
 If( maxval(atom%nr) < MM%N_of_species ) then
     CALL warning("# of residues must be (>=) # of species; check input.pdb and MM input parms")
+    STOP 
+end If
+
+If( any(species%residue == "HOH") .and.  (DWFF_type == "none")) then
+    CALL warning("DWFF_type must be defined when using HOH species.")
     STOP 
 end If
 
