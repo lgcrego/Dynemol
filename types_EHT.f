@@ -481,7 +481,7 @@ end do
 10 Format(50a3)
 20 Format(37a4)
 30 Format(50i3)
-40 Format(30i5)
+40 Format(30a5)
 50 Format(37i4)
 60 Format(18F8.4)
 70 Format(50L3)

@@ -108,13 +108,20 @@ do l = k+1 , MM % N_of_atoms
      !-------------------------------------------------------------------------------                                                                    
      if( using_barostat% inter ) &
      then
-           nresidk = atom(k)% nr
-           nresidl = atom(l)% nr
-           cm_kl(:) = molecule(nresidk)% cm(:) - molecule(nresidl) % cm(:)
-           cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+!           nresidk = atom(k)% nr
+!           nresidl = atom(l)% nr
+!           cm_kl(:) = molecule(nresidk)% cm(:) - molecule(nresidl) % cm(:)
+!           cm_kl(:) = cm_kl(:) - MM % box * DNINT( cm_kl(:) * MM % ibox(:) ) * PBC(:)
+!           do i=1,3 ; do j=i,3
+!              virial_private(i,j) = virial_private(i,j) + cm_kl(i)*(fs + Fcoul)*rkl(j)
+!           end do; end do
+
+
            do i=1,3 ; do j=i,3
-              virial_private(i,j) = virial_private(i,j) + cm_kl(i)*(fs + Fcoul)*rkl(j)
+              virial_private(i,j) = virial_private(i,j) + rkl(i)*(fs + Fcoul)*rkl(j)
            end do; end do
+
+
      end if
      !---------------------------------------------------------------------------------
 
