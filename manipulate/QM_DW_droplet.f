@@ -23,7 +23,7 @@ module test_droplet
 
     ! module variables
     integer :: n_atoms, nHX, nOX, unit3
-    integer :: n_HOH_resids, n_WAT_resids
+    integer :: n_HOH_resids, n_WAT_resids, n0_WAT_resids
 
 contains
 !
@@ -90,8 +90,10 @@ subroutine post_processing_analysis()
     total_MM_charge = -2*zero_H + -1*one_H + 1*three_H
     print*, green_("total MM charge of the HOH solvent = "), total_MM_charge
     print*, green_("total HOH solvent residues = "), n_HOH_resids
-    print*, green_("total WAT solvent residues = "), n_WAT_resids
-    print*, green_("total solvent residues     = "), n_HOH_resids + n_WAT_resids
+    if ( any(work_sys%atom%resid == "WAT") ) then
+        print*, green_("total WAT solvent residues = "), n_WAT_resids
+        print*, green_("total solvent residues     = "), n_HOH_resids + n_WAT_resids
+    end if
 
 end subroutine post_processing_analysis
 !
@@ -187,9 +189,9 @@ end subroutine bond_topology
     implicit none
     
     ! local variables ...
-    integer :: i, j, k, n, O_idx
-    integer :: out1, out2
-    real(8) :: cutoff_radius
+    integer      :: i, j, k, n, O_idx
+    integer      :: out1, out2
+    real(8)      :: cutoff_radius
     character(3) :: res_name = "None"
     character(1) :: YorN, choice
     
@@ -235,8 +237,10 @@ end subroutine bond_topology
             call pack_HOH_atoms(work_sys%atom)
             call post_processing_analysis
         case("2") 
-            call pack_solvent_atoms(work_sys%atom)
+            call group_by_residue( work_sys%atom )
+            call pack_solvent_atoms( work_sys%atom )
             call post_processing_analysis
+        case default
     end select 
 
     !-------------------------------------------
@@ -375,6 +379,22 @@ subroutine preprocess(atom)
     allocate(OO_distance_table(nOX, nOX), source=0.0d0)
     allocate(OH_bond_order(nOX)         , source=0)
 
+    !------------------------------------
+    ! count pre-existing WAT molecules
+    !------------------------------------
+    n0_WAT_resids = 0
+    do i = 1, size(atom)
+
+        ! Skip residue if its nresid has already been encountered
+        ! within the region being analyzed.
+        if (any(atom(1:i-1)%nresid == atom(i)%nresid)) cycle
+
+        if (atom(i)%resid == "WAT") then
+            n0_WAT_resids = n0_WAT_resids + 1
+        end if
+
+    end do
+
 end subroutine preprocess
 !
 !
@@ -480,26 +500,26 @@ subroutine translate_to_centroid(system, res_name)
     integer :: i, N_of_solute_atoms
     real*8  :: centroid(3)
 
-if( .not. present(res_name) ) then 
-
-    do i = 1, 3
-       centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
-       ! translate coordinates to the centroid of the box ...
-       system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
-    end do
-
-else
-
-    N_of_solute_atoms = count(system%atom(:)%resid==res_name)                                                                                             
-    if( N_of_solute_atoms == 0 ) stop "No solute with this residue name"   
-
-    ! place solute in the center of the PBC box
-    do i=1,3
-       centroid(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==res_name) / N_of_solute_atoms
-       system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
-    end do 
-
-end if
+    if( .not. present(res_name) ) then 
+    
+        do i = 1, 3
+           centroid(i) = sum(system%atom(:)%xyz(i)) / system%N_of_atoms
+           ! translate coordinates to the centroid of the box ...
+           system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
+        end do
+    
+    else
+    
+        N_of_solute_atoms = count(system%atom(:)%resid==res_name)                                                                                             
+        if( N_of_solute_atoms == 0 ) stop "No solute with this residue name"   
+    
+        ! place solute in the center of the PBC box
+        do i=1,3
+           centroid(i) = sum(system%atom(:)%xyz(i) , system%atom(:)%resid==res_name) / N_of_solute_atoms
+           system%atom(:)%xyz(i) = system%atom(:)%xyz(i) - centroid(i)
+        end do 
+    
+    end if
 
 end  subroutine translate_to_centroid
 !
@@ -530,39 +550,47 @@ integer :: i, nr , nr_max, N_of_solute_atoms, N_of_atoms_in_nr
 real*8  :: distance
 real*8  :: solvent_CG(3) , solute_CG(3)
 
-sys % atom % fragment = "X"  !> default fragment
-if( present(res_name) ) &
-then
-    where( sys % atom % resid == res_name ) sys % atom % fragment = "D"  !> donor fragment
-else
-    where( sys % atom % nresid == 1 ) sys % atom % fragment = "D" 
-end if
-
-! identify the centroid of the solute ...
-N_of_solute_atoms = count(sys%atom%fragment == "D")
-if( N_of_solute_atoms == 0 ) then
-    stop "solute was not found"
-end if
-
-forall( i=1:3 ) solute_CG(i) = sum( sys%atom%xyz(i) , sys%atom%fragment == "D" ) / N_of_solute_atoms
-
-nr_max =  maxval(sys%atom(:)%nresid)
-
-do nr = 1 , nr_max
-
-      N_of_atoms_in_nr = count(sys%atom%nresid==nr)
-      if( N_of_atoms_in_nr == 0 ) cycle
- 
-      forall( i=1:3 ) solvent_CG(i) = sum( sys%atom%xyz(i) , sys%atom%nresid == nr ) / N_of_atoms_in_nr
-      
-      distance = norm2(solute_CG - solvent_CG)
-
-      if( distance <= QM_droplet_radius ) then
-          where( sys%atom%nresid == nr ) 
-               sys%atom%fragment = "Q"
-               end where
-      end if
-end do
+    sys % atom % fragment = "X"  !> default fragment
+    if( present(res_name) ) &
+    then
+        where( sys % atom % resid == res_name ) sys % atom % fragment = "D"  !> donor fragment
+    else
+        where( sys % atom % nresid == 1 ) sys % atom % fragment = "D" 
+    end if
+    
+    ! identify the centroid of the solute ...
+    N_of_solute_atoms = count(sys%atom%fragment == "D")
+    if( N_of_solute_atoms == 0 ) then
+        stop "solute was not found"
+    end if
+    
+    forall( i=1:3 ) solute_CG(i) = sum( sys%atom%xyz(i) , sys%atom%fragment == "D" ) / N_of_solute_atoms
+    
+    nr_max =  maxval(sys%atom(:)%nresid)
+    
+    do nr = 1 , nr_max
+    
+        N_of_atoms_in_nr = count(sys%atom%nresid==nr)
+        if( N_of_atoms_in_nr == 0 ) cycle
+     
+        forall( i=1:3 ) solvent_CG(i) = sum( sys%atom%xyz(i) , sys%atom%nresid == nr ) / N_of_atoms_in_nr
+        
+        distance = norm2(solute_CG - solvent_CG)
+    
+        if( distance <= QM_droplet_radius ) then
+            where( sys%atom%nresid == nr ) 
+                 sys%atom%fragment = "Q"
+                 end where
+        end if
+    end do
+    
+    ! check residue identification ...
+    associate( atom => sys%atom )
+        ! WAT in Q --> HOH
+        where( (atom%resid == "WAT") .and. (atom%fragment == "Q") ) atom%resid = "HOH"
+        ! HOH not in Q --> WAT
+        where( (atom%resid == "HOH") .and. (atom%fragment /= "Q") ) atom%resid = "WAT"
+    end associate
 
 end subroutine QM_droplet
 !
@@ -579,16 +607,16 @@ type(universe)       :: temp
 integer              :: New_No_of_atoms
 logical, allocatable :: quantum_atoms(:)
 
-! mask
-quantum_atoms = (system% atom% fragment == "Q" )
-
-New_No_of_atoms = count(quantum_atoms)
-allocate( temp%atom( New_No_of_atoms ) )
-
-temp%atom = pack( system%atom, quantum_atoms )
-
-CALL move_alloc(from=temp%atom,to=system%atom)
-system%N_of_atoms = New_No_of_atoms
+    ! mask
+    quantum_atoms = (system% atom% fragment == "Q" )
+    
+    New_No_of_atoms = count(quantum_atoms)
+    allocate( temp%atom( New_No_of_atoms ) )
+    
+    temp%atom = pack( system%atom, quantum_atoms )
+    
+    CALL move_alloc(from=temp%atom,to=system%atom)
+    system%N_of_atoms = New_No_of_atoms
 
 end subroutine eliminate_classical_atoms
 !
@@ -644,9 +672,10 @@ subroutine pack_HOH_atoms(atom)
                 end if
             end do
 
-            if ( ref == 0 ) then
-                write(*,'(a,i0)') "ERROR: lone proton found in residue = ", nr
-            end if
+!            false flag
+!            if ( ref == 0 ) then
+!                write(*,'(a,i0)') "ERROR: lone proton found in residue = ", nr
+!            end if
 
             ! copy this molecule's atoms into contiguous slots, renumbering nresid in sequence ...
             do k = 1, size(in_range)
@@ -668,6 +697,13 @@ end subroutine pack_HOH_atoms
 !==================================
 subroutine pack_solvent_atoms(atom)
 !==================================
+! Reorders the solvent block atom(offset+1:) so that
+!   1) all "Q-fragment" molecules come first, followed by all other molecules;
+!   2) the atoms of each molecule are contiguous, with the oxygen (OX) first;
+!   3) residues are renumbered consecutively, continuing from the highest
+!      residue number found before the "HOH" solvent block.
+! "X" molecules are relabelled: resid "WAT", fragment "S", OX->OW, HX->HW.
+!-----------------------------------------------------------------------       
     implicit none
     type(atomic), intent(inout) :: atom(:)
 
@@ -687,7 +723,7 @@ subroutine pack_solvent_atoms(atom)
                ref_name => aux_atom%resid  )
 
         lowest_nr  = minval(ref_nr, mask=(ref_name=="HOH"))
-        highest_nr = maxval(ref_nr, mask=(ref_name=="HOH"))
+        highest_nr = maxval(ref_nr)
 
         offset = findloc(ref_name, value="HOH", dim=1) - 1
         HOH_offset = offset
@@ -695,10 +731,10 @@ subroutine pack_solvent_atoms(atom)
 
         call get_n_of_S_residues(offset, atom)
         if( (n_HOH_resids + n_WAT_resids) /= (highest_nr - lowest_nr + 1) ) then
-            stop "ERROR: (n_HOH_resids + n_WAT_resids) /= total number of solvent residues "
+            print*, red_bg("ERROR: (n_HOH_resids + n_WAT_resids) /= total number of solvent residues ")
         end if
 
-        ! highest residue number before the water block; 
+        ! highest residue number before the HOH block; 
         if ( HOH_offset==0 ) then
             HOH_nr = 1
         else
@@ -709,7 +745,7 @@ subroutine pack_solvent_atoms(atom)
         do nr = lowest_nr, highest_nr
 
             ! atoms of THIS water molecule only
-            in_range = pack( [(k, k=1,droplet_size)], (ref_nr==nr) .and. (ref_name=="HOH") )
+            in_range = pack( [(k, k=1,droplet_size)], (ref_nr==nr) )
 
             ! find the OX of this residue and use it as the unwrap reference ...
             ref = 0
@@ -721,11 +757,6 @@ subroutine pack_solvent_atoms(atom)
                     exit
                 end if
             end do
-
-            if ( ref == 0 ) then
-                Print*, red_bg("ERROR: lone proton found in residue = "), nr
-                stop
-            end if
 
             ! copy this molecule's atoms into contiguous slots, renumbering nresid in sequence ...
             if( aux_atom(in_range(1))%fragment == "Q" ) then
@@ -812,6 +843,56 @@ subroutine get_n_of_S_residues(offset, atom)
     end do
 
 end subroutine get_n_of_S_residues
+!
+!
+!
+!=====================================================================
+subroutine group_by_residue( atom, n_solute, n_HOH, n_WAT )
+!=====================================================================
+! Reorders atom(:) in place into three contiguous blocks:
+!
+!       [ solute | HOH | WAT ]
+!
+! "solute" = every atom whose residue name is neither HOH nor WAT
+!            (e.g. HTZ in seed-DWFF.pdb).
+!
+! The grouping is stable: inside each block the atoms keep their
+! original relative order, so the atoms of a residue that were
+! contiguous before remain contiguous after the grouping.
+!
+! Cost: O(N) time, one temporary copy of atom(:).
+!---------------------------------------------------------------------
+    implicit none
+    type(atomic), intent(inout)         :: atom(:)
+    integer     , intent(out), optional :: n_solute   ! number of solute atoms
+    integer     , intent(out), optional :: n_HOH      ! number of HOH atoms
+    integer     , intent(out), optional :: n_WAT      ! number of WAT atoms
+
+    ! local variables ...
+    type(atomic), allocatable :: aux(:)
+    logical     , allocatable :: is_solute(:), is_HOH(:), is_WAT(:)
+    integer :: n_A, n_B, n_C
+
+    ! classify each atom by residue name (adjustl guards against leading blanks)
+    is_HOH    = ( adjustl(atom%resid) == "HOH" )
+    is_WAT    = ( adjustl(atom%resid) == "WAT" )
+    is_solute = .not. ( is_HOH .or. is_WAT )
+
+    n_A = count( is_solute )
+    n_B = count( is_HOH    )
+    n_C = count( is_WAT    )
+
+    ! stable partition: pack() preserves the original order within each group
+    aux = atom
+    atom(          1 : n_A         ) = pack( aux, is_solute )
+    atom( n_A    + 1 : n_A + n_B   ) = pack( aux, is_HOH    )
+    atom( n_A+n_B+ 1 : n_A+n_B+n_C ) = pack( aux, is_WAT    )
+
+    if( present(n_solute) ) n_solute = n_A
+    if( present(n_HOH)    ) n_HOH    = n_B
+    if( present(n_WAT)    ) n_WAT    = n_C
+
+end subroutine group_by_residue
 !
 !
 !
