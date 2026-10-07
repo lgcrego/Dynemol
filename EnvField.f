@@ -117,19 +117,19 @@ deallocate( Qi_Ri )
 ! generate periodic structure of dielectric domain ; if PBCx=PBCy=PBCz=0 ==> Q_atoms_pbc = Q_atoms ...
 CALL give_me_PBC( sys, Env_Mols, MolPBC )
 
-do i = 1 , size(MolPBC)
-   do j = 1 , molpbc(i)% N_of_Atoms
-      if( MOLpbc(i) %pc% Q(j) <0. ) then
-          write(33,'(A4,3F9.4)')  "O" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
-      else
-          write(33,'(A4,3F9.4)')  "H" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
-      end if
-   end do
-end do
-
-do i = 1 , size(MolPBC)
-       write(34,'(A4,3F9.4)')  "I" , MolPBC(i)%CC(1) , MolPBC(i)%CC(2) , MolPBC(i)%CC(3)
-end do
+!do i = 1 , size(MolPBC)
+!   do j = 1 , molpbc(i)% N_of_Atoms
+!      if( MOLpbc(i) %pc% Q(j) <0. ) then
+!          write(33,'(A4,3F9.4)')  "O" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
+!      else
+!          write(33,'(A4,3F9.4)')  "H" , molpbc(i)%pc%xyz(j,1) , molpbc(i)%pc%xyz(j,2) , molpbc(i)%pc%xyz(j,3)
+!      end if
+!   end do
+!end do
+!
+!do i = 1 , size(MolPBC)
+!       write(34,'(A4,3F9.4)')  "I" , MolPBC(i)%CC(1) , MolPBC(i)%CC(2) , MolPBC(i)%CC(3)
+!end do
 
 include 'formats.h'
 
