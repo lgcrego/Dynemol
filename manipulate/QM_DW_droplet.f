@@ -587,9 +587,17 @@ real*8  :: solvent_CG(3) , solute_CG(3)
     ! check residue identification ...
     associate( atom => sys%atom )
         ! WAT in Q --> HOH
-        where( (atom%resid == "WAT") .and. (atom%fragment == "Q") ) atom%resid = "HOH"
+        where( (atom%resid == "WAT") .and. (atom%fragment == "Q") ) 
+            atom%resid = "HOH"
+            where( atom%MMSymbol == "OW" ) atom%MMSymbol = "OX"
+            where( atom%MMSymbol == "HW" ) atom%MMSymbol = "HX"
+        end where
         ! HOH not in Q --> WAT
-        where( (atom%resid == "HOH") .and. (atom%fragment /= "Q") ) atom%resid = "WAT"
+        where( (atom%resid == "HOH") .and. (atom%fragment /= "Q") ) 
+            atom%resid = "WAT"
+            where( atom%MMSymbol == "OX" ) atom%MMSymbol = "OW"
+            where( atom%MMSymbol == "HX" ) atom%MMSymbol = "HW"
+        end where
     end associate
 
 end subroutine QM_droplet
@@ -671,11 +679,6 @@ subroutine pack_HOH_atoms(atom)
                     exit
                 end if
             end do
-
-!            false flag
-!            if ( ref == 0 ) then
-!                write(*,'(a,i0)') "ERROR: lone proton found in residue = ", nr
-!            end if
 
             ! copy this molecule's atoms into contiguous slots, renumbering nresid in sequence ...
             do k = 1, size(in_range)
