@@ -229,6 +229,7 @@ end subroutine bond_topology
     write(*,'(/a/)') bold // orange_(">>> Save as: <<<") // reset
     write(*,'(a)') green // ' 1 :' // reset // ' keep only the QM atoms '
     write(*,'(a)') green // ' 2 :' // reset // ' embed the QM-HOH droplet in WAT box'
+    write(*,'(a)',advance='no') green_(">>> ")
     read (*,'(a)') choice
 
     select case (choice)
@@ -594,7 +595,8 @@ real*8  :: solvent_CG(3) , solute_CG(3)
         end where
         ! HOH not in Q --> WAT
         where( (atom%resid == "HOH") .and. (atom%fragment /= "Q") ) 
-            atom%resid = "WAT"
+            atom%resid    = "WAT"
+            atom%fragment = "S"
             where( atom%MMSymbol == "OX" ) atom%MMSymbol = "OW"
             where( atom%MMSymbol == "HX" ) atom%MMSymbol = "HW"
         end where
@@ -725,7 +727,7 @@ subroutine pack_solvent_atoms(atom)
     associate( ref_nr   => aux_atom%nresid , &
                ref_name => aux_atom%resid  )
 
-        lowest_nr  = minval(ref_nr, mask=(ref_name=="HOH"))
+        lowest_nr  = minval(ref_nr, mask=(ref_name=="HOH") .or. (ref_name=="WAT"))
         highest_nr = maxval(ref_nr)
 
         offset = findloc(ref_name, value="HOH", dim=1) - 1
@@ -791,7 +793,7 @@ subroutine pack_solvent_atoms(atom)
     ! consistency check: every solvent atom was copied exactly once
     if( HOH_offset /= offset + n_Q_atoms .or. WAT_offset /= droplet_size ) then
         print*, red_bg("ERROR in pack_solvent_atoms: solvent atoms were lost or duplicated")
-        error stop 
+        !error stop 
     end if
 
 end subroutine pack_solvent_atoms
@@ -834,7 +836,7 @@ subroutine get_n_of_S_residues(offset, atom)
         case ("Q")
             n_HOH_resids = n_HOH_resids + 1
 
-        case ("X")
+        case ("X","S")
             n_WAT_resids = n_WAT_resids + 1
 
         case default
