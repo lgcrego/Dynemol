@@ -750,10 +750,11 @@ subroutine pack_solvent_atoms(atom)
             ! atoms of THIS water molecule only
             in_range = pack( [(k, k=1,droplet_size)], (ref_nr==nr) )
 
-            ! find the OX of this residue and use it as the unwrap reference ...
+            ! find the oxygen atom ("OX" or "OW") of this residue and use it as the unwrap reference ...
             ref = 0
             do k = 1, size(in_range)
-                if ( aux_atom(in_range(k))%MMSymbol == "OX" ) then
+                if ( (aux_atom(in_range(k))%MMSymbol == "OX") &
+               .or.  (aux_atom(in_range(k))%MMSymbol == "OW") ) then
                     ref         = in_range(1)
                     in_range(1) = in_range(k)
                     in_range(k) = ref
